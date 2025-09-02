@@ -60,4 +60,16 @@ export const SelectBudgetOptions = [
         }
 ]
 
-export const AI_PROMPT=`I want you to act as a travel guide. I will provide you with details about a trip, including the location, duration, number of travelers, and budget, and you will create a detailed itinerary for the trip. The itinerary should include recommendations for accommodations, transportation, activities, and dining options. The itinerary should be tailored to the specific needs and preferences of the travelers, taking into account their budget and interests. My first request is "{location}", "{duration}" days, "{travelers}", "{budget}" budget.`
+export const AI_PROMPT=`I want you to act as a travel guide. I will provide you with details about a trip, including the location, duration (in days), the number of travelers, and the budget. Based on this information, you will create a detailed travel itinerary.
+
+The itinerary should include recommendations for:
+
+Accommodations
+Transportation
+Activities
+Dining options
+
+The itinerary must be tailored to the specific needs and preferences of the travelers, taking into account their budget and interests.
+
+My first request is:
+{location}, {duration} days, {travelers}, {budget} budget. IN JSON FORMAT`
