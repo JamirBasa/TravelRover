@@ -18,7 +18,7 @@ import axios from 'axios';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
-
+import { useNavigate } from 'react-router-dom';
 
 function CreateTrip() {
   const [place,setPlace]=useState(null);
@@ -26,13 +26,15 @@ function CreateTrip() {
   const [openDialog,setOpenDialog]=useState(false);
   const [loading,setLoading]=useState(false);
 
-  
+  const navigate=useNavigate();
+
   const handleInputChange=(name,value)=>{
 
     setFormData({ 
       ...formData,
       [name]:value
     })
+    
   }
   useEffect(()=>{
     console.log(formData)  
@@ -88,12 +90,13 @@ function CreateTrip() {
         id:docId
       });
       toast("Trip saved successfully!");
+      navigate('/view-trip/'+docId);
     } catch (error) {
       console.error("Error saving trip: ", error);
       toast("Failed to save trip: " + (error.message || "Permission denied"));
     }
-    
-    setLoading(false);
+   setLoading(false);
+
   }
 
   const GetUserProfile=(tokenInfo) => {
