@@ -1,9 +1,12 @@
+
 import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import GooglePlacesAutocomplete from 'react-google-places-autocomplete'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { SelectBudgetOptions, SelectTravelList, AI_PROMPT } from '../constants/options';
 import { toast } from "sonner"
+
 import { chatSession } from '../config/aimodel';
 import {
   Dialog,
@@ -20,9 +23,11 @@ import { db } from '../config/firebaseConfig';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { useNavigate } from 'react-router-dom';
 
+
 function CreateTrip() {
   const [place,setPlace]=useState(null);
   const [formData, setFormData]= useState({});
+
   const [openDialog,setOpenDialog]=useState(false);
   const [loading,setLoading]=useState(false);
 
@@ -34,11 +39,12 @@ function CreateTrip() {
       ...formData,
       [name]:value
     })
-    
+
   }
   useEffect(()=>{
     console.log(formData)  
   },[formData])
+
 
   const googleLogin=useGoogleLogin({
     onSuccess:(codeResp)=>GetUserProfile(codeResp),
@@ -52,11 +58,16 @@ function CreateTrip() {
       return ;
     }
 
+
+  const onGenerateTrip=()=>{
+
     if(formData?.duration>5&&!formData?.location ||!formData?.budget&& !formData?.travelers){
       toast("Please fill all the details.")
       return;
     }
+
     setLoading(true);
+
     const FINAL_PROMPT=AI_PROMPT
     .replace('{location}', formData?.location)
     .replace('{duration}', formData?.duration)
@@ -116,6 +127,10 @@ function CreateTrip() {
         toast("Failed to get user profile");
       });
     }
+
+  }
+
+
 
   return (
     <div className='sm:px-10 md:px-32 lg:px-56 xl:px-72 px-5 mt-10'>
@@ -182,6 +197,7 @@ function CreateTrip() {
           </div>
           
           <div className='my-10 flex justify-end'>
+
             <Button 
               disabled={loading}
             onClick={OnGenerateTrip}>
@@ -210,6 +226,10 @@ function CreateTrip() {
             </DialogHeader>
           </DialogContent>
         </Dialog>
+
+            <Button onClick={onGenerateTrip}>Generate Trip</Button>
+          </div>
+    
 
       </div>
     </div>
