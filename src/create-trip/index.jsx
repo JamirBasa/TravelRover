@@ -90,9 +90,21 @@ function CreateTrip() {
     try {
       const user=JSON.parse(localStorage.getItem('user'));
       const docId=Date.now().toString()
+
+
+    let parsedTripData;
+    try {
+      parsedTripData = JSON.parse(TripData);
+    } catch (e) {
+      console.error("Failed to parse AI trip data:", e);
+      toast("Generated trip is not valid JSON.");
+      setLoading(false);
+      return;
+    }
+
       await setDoc(doc(db, "AITrips", docId), {
         userSelection:formData,
-        tripData:TripData,
+        tripData:parsedTripData,
         userEmail:user?.email,
         id:docId
       });
