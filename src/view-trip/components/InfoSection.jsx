@@ -1,8 +1,24 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Share2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { GetPlaceDetails } from '@/config/GlobalApi';
 
 function InfoSection({trip}) {
+
+  useEffect(()=>{
+    trip&&GetPlacePhoto();
+  },[trip])
+
+  const data={
+    textQuery: trip?.userSelection?.location
+  }
+
+  const GetPlacePhoto=async()=>{
+    const result=await GetPlaceDetails(data).then(resp=>{
+      console.log(resp.data);
+    })
+  }
+
   return (
     <div>
         <img src='../placeholder.png' alt='Trip' className='w-full h-[300px] object-cover rounded-lg mb-4' />

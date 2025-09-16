@@ -6,9 +6,8 @@ function PlacesToVisit({trip}) {
     <div>
       <h2 className="font-bold text-xl mt-5">Places to Visit</h2>
 
-      <div>
         {trip.tripData?.tripData?.itinerary?.map((item, index)=>(
-            <div key={index}>
+            <div className='mt-5' key={index}>
                 <h2 className='font-medium text-lg'>{item.date}</h2>
                 <div className='grid md:grid-cols-2 gap-5'>
                   {item.activities.map((activity, activityIndex) => (
@@ -20,7 +19,7 @@ function PlacesToVisit({trip}) {
                 </div>
             </div>
         ))}
-      </div>
+
     </div>
   )
 }
