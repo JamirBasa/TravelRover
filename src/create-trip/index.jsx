@@ -1,17 +1,14 @@
 
 import { useState, useEffect } from 'react'
-import React, { useState, useEffect } from 'react'
 import GooglePlacesAutocomplete from 'react-google-places-autocomplete'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { SelectBudgetOptions, SelectTravelList, AI_PROMPT } from '../constants/options';
 import { toast } from "sonner"
-
 import { chatSession } from '../config/aimodel';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -51,7 +48,7 @@ function CreateTrip() {
     onError:(error)=>console.log(error)
   })
   const OnGenerateTrip= async ()=>{
-    const user =localStorage.getItem('user');
+    const user=localStorage.getItem('user');
 
     if(!user){
       setOpenDialog(true);
@@ -59,7 +56,6 @@ function CreateTrip() {
     }
 
 
-  const onGenerateTrip=()=>{
 
     if(formData?.duration>5&&!formData?.location ||!formData?.budget&& !formData?.travelers){
       toast("Please fill all the details.")
@@ -127,8 +123,6 @@ function CreateTrip() {
         toast("Failed to get user profile");
       });
     }
-
-  }
 
 
 
@@ -226,11 +220,6 @@ function CreateTrip() {
             </DialogHeader>
           </DialogContent>
         </Dialog>
-
-            <Button onClick={onGenerateTrip}>Generate Trip</Button>
-          </div>
-    
-
       </div>
     </div>
   )
