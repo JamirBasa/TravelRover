@@ -29,9 +29,9 @@ function PlaceCardItem({ place }) {
     hover:scale-105 transition-all hover:shadow-md cursor-pointer'>
       <img 
         src={photoUrl || '/placeholder.png'}
-      className='w-[130px] h-[130px] rounded-xl'
+        className='w-[130px] h-[130px] rounded-xl object-cover' alt={place?.activity}
       />
-      
+
       <div>
         <h2 className='font-bold text-lg'>{place?.activity}</h2>
         <p className='text-sm text-gray-600'>{place?.description}</p>

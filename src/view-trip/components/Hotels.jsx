@@ -1,5 +1,5 @@
-import React from 'react'
-import HotelCardItem from './HotelCardItem';
+import React from "react";
+import HotelCardItem from "./HotelCardItem";
 
 function Hotels({ trip }) {
   return (
@@ -8,7 +8,10 @@ function Hotels({ trip }) {
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 mt-3">
         {trip?.tripData?.tripData?.accommodations?.map((hotel, index) => (
-          <HotelCardItem hotel={hotel}/>
+          <HotelCardItem
+            key={hotel?.id || hotel?.name || `hotel-${index}`} // ✅ Prefer unique ID
+            hotel={hotel}
+          />
         ))}
       </div>
     </div>
