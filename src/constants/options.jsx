@@ -1,65 +1,70 @@
-import { 
-    FaUser, 
-    FaUsers, 
-    FaUserFriends, 
-    FaHeart, 
-    FaCoins, 
-    FaMoneyBillWave, 
-    FaGem 
+import {
+  FaUser,
+  FaUsers,
+  FaUserFriends,
+  FaHeart,
+  FaCoins,
+  FaMoneyBillWave,
+  FaGem,
 } from "react-icons/fa";
 
-export const SelectTravelList=[
-        {
-                id: 1,
-                title: 'Just Me',
-                desc: 'A solo travels in exploring the beauty of the Philippines.',
-                icon: <FaUser style={{ color: '#3498db' }} />,
-                people: '1'
-        },
-        {
-                id: 2,
-                title: 'Family Trip',
-                desc: 'A fun-filled adventure for the whole family.',
-                icon: <FaUsers style={{ color: '#27ae60' }} />,
-                people: '3 to 5 People'
-        },
-        {
-                id: 3,
-                title: 'Group Tour',
-                desc: 'Explore the Philippines with friends and make unforgettable memories.',
-                icon: <FaUserFriends style={{ color: '#f39c12' }} />,
-                people: '5 to 10 People'
-        },
-        {
-                id: 4,
-                title: 'Couple Getaway',
-                desc: 'A romantic escape for couples to enjoy the beauty of the Philippines.',
-                icon: <FaHeart style={{ color: '#e74c3c' }} />,
-                people: '2 People'
-        }
-]
+export const SelectTravelList = [
+  {
+    id: 1,
+    title: "Just Me",
+    desc: "A solo travels in exploring the beauty of the Philippines.",
+    icon: <FaUser style={{ color: "#3498db" }} />,
+    people: "1",
+  },
+  {
+    id: 2,
+    title: "Family Trip",
+    desc: "A fun-filled adventure for the whole family.",
+    icon: <FaUsers style={{ color: "#27ae60" }} />,
+    people: "3 to 5 People",
+  },
+  {
+    id: 3,
+    title: "Group Tour",
+    desc: "Explore the Philippines with friends and make unforgettable memories.",
+    icon: <FaUserFriends style={{ color: "#f39c12" }} />,
+    people: "5 to 10 People",
+  },
+  {
+    id: 4,
+    title: "Couple Getaway",
+    desc: "A romantic escape for couples to enjoy the beauty of the Philippines.",
+    icon: <FaHeart style={{ color: "#e74c3c" }} />,
+    people: "2 People",
+  },
+];
 
 export const SelectBudgetOptions = [
-        {
-                id: 1,
-                title: 'Budget',
-                desc: 'A budget-friendly option for travelers looking to save money.',
-                icon: <FaCoins style={{ color: '#f1c40f' }} />
-        },
-        {
-                id: 2,
-                title: 'Moderate',
-                desc: 'A comfortable option for travelers who want a balance of cost and quality.',
-                icon: <FaMoneyBillWave style={{ color: '#2ecc71' }} />
-        },
-        {
-                id: 3,
-                title: 'Luxury',
-                desc: 'A high-end option for travelers seeking the best experiences.',
-                icon: <FaGem style={{ color: '#9b59b6' }} />
-        }
-]
-
+  {
+    id: 1,
+    title: "Budget",
+    desc: "A budget-friendly option for travelers looking to save money.",
+    icon: <FaCoins style={{ color: "#f1c40f" }} />,
+    range: "₱2,000 - ₱8,000", // ✅ Added price range
+    value: "Budget", // ✅ Added value for easier handling
+  },
+  {
+    id: 2,
+    title: "Moderate",
+    desc: "A comfortable option for travelers who want a balance of cost and quality.",
+    icon: <FaMoneyBillWave style={{ color: "#2ecc71" }} />,
+    range: "₱8,000 - ₱20,000", // ✅ Added price range
+    value: "Moderate", // ✅ Added value
+  },
+  {
+    id: 3,
+    title: "Luxury",
+    desc: "A high-end option for travelers seeking the best experiences.",
+    icon: <FaGem style={{ color: "#9b59b6" }} />,
+    range: "₱20,000+", // ✅ Added price range
+    value: "Luxury", // ✅ Added value
+  },
+];
 
 export const AI_PROMPT = `You are an expert travel guide specializing in creating comprehensive, budget-conscious travel itineraries. I will provide you with trip details, and you must create a detailed travel plan in strict JSON format.
 
@@ -73,9 +78,14 @@ Your response must be valid JSON with this exact structure:
     "destination": "string - full destination name",
     "location": "string - city/region, country", 
     "duration": number,
-    "travelers": number,
-    "budgetLevel": "string - Budget/Mid-range/Luxury",
-    "currency": "string - local currency code (USD, PHP, EUR, etc.)",
+    "travelers": "string - traveler description",
+    "budgetLevel": "string - Budget/Moderate/Luxury or Custom amount",
+    "travelDates": {
+      "startDate": "string - departure date if specified",
+      "endDate": "string - return date if specified",
+      "flexibility": "string - date flexibility notes"
+    },
+    "currency": "string - local currency code (PHP for Philippines)",
     "totalEstimatedCost": "string - cost range in local currency",
     "bestTimeToVisit": "string - seasonal recommendations"
   },
@@ -279,4 +289,21 @@ RESPONSE GUIDELINES:
 
 Remember: The goal is to create a comprehensive, actionable travel plan that respects the traveler's budget while maximizing their experience. Every recommendation should be practical, affordable within the specified budget range, and culturally appropriate.
 
-My request is: {location}, {duration} days, {travelers}, {budget} budget.`;
+BUDGET CONSIDERATIONS:
+- If custom budget amount is provided, tailor all recommendations to that specific amount
+- For custom budgets, provide detailed breakdown showing how the budget is allocated
+- Consider seasonal pricing variations for the specified travel dates
+- If dates are provided, check for local festivals, peak seasons, or events that might affect pricing
+
+My request is: {location}, {duration} days, {travelers}, {budget} budget.
+
+SPECIFIC DAILY REQUESTS:
+{specificRequests}
+
+IMPORTANT INSTRUCTIONS:
+- If specific activities or locations are mentioned for certain days, prioritize those in the itinerary
+- If multiple locations are mentioned (e.g., different cities), treat this as a multi-city trip
+- Calculate realistic travel times between different locations
+- Adjust accommodation and transportation accordingly
+- If travel between locations takes significant time, allocate appropriate days for travel
+- Provide warnings if the itinerary seems too rushed or logistically challenging`;

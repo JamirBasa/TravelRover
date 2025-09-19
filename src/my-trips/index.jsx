@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { GetPlaceDetails, PHOTO_REF_URL } from "@/config/GlobalApi";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 
-// ✅ Individual Trip Card Component with photo loading
 function TripCard({ trip }) {
   const [photoUrl, setPhotoUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +28,6 @@ function TripCard({ trip }) {
     setError(null);
 
     try {
-      // ✅ Add random delay to prevent rate limiting
       await new Promise((resolve) => setTimeout(resolve, Math.random() * 1000));
 
       const data = {
@@ -40,7 +38,6 @@ function TripCard({ trip }) {
 
       const response = await GetPlaceDetails(data);
 
-      // ✅ Better error checking
       if (!response.data.places || response.data.places.length === 0) {
         throw new Error("No places found for this location");
       }
@@ -53,7 +50,6 @@ function TripCard({ trip }) {
         return;
       }
 
-      // ✅ Safer photo access
       const photoReference = place.photos[0]?.name;
 
       if (photoReference) {
@@ -64,7 +60,6 @@ function TripCard({ trip }) {
     } catch (error) {
       console.error("Error fetching trip photo:", error);
 
-      // ✅ Handle rate limiting
       if (error.response?.status === 429) {
         console.warn("Rate limited, will retry...");
         setTimeout(() => GetPlacePhoto(), 2000 + Math.random() * 1000);
@@ -80,7 +75,7 @@ function TripCard({ trip }) {
 
   return (
     <div
-      className="border rounded-lg overflow-hidden shadow hover:shadow-lg transition-all cursor-pointer hover:scale-105"
+      className="group border rounded-lg overflow-hidden shadow hover:shadow-lg transition-all cursor-pointer hover:scale-105 bg-white"
       onClick={() => navigate(`/view-trip/${trip.id}`)}
     >
       {/* ✅ Trip Photo with loading state */}
@@ -92,7 +87,7 @@ function TripCard({ trip }) {
         <img
           src={photoUrl || "../placeholder.png"}
           alt={`${trip.userSelection?.location || "Trip"} photo`}
-          className="w-full h-48 object-cover"
+          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
           onError={(e) => {
             console.log("Trip image failed to load, using placeholder");
             e.target.src = "../placeholder.png";
@@ -100,32 +95,38 @@ function TripCard({ trip }) {
         />
       )}
 
-      {/* ✅ Trip Details */}
+      {/* ✅ Professional Trip Summary */}
       <div className="p-5">
-        <h3 className="font-bold text-lg mb-3 text-gray-800 group-hover:text-blue-600 transition-colors duration-200 line-clamp-1">
+        <h3 className="font-bold text-lg mb-3 text-gray-800 group-hover:text-blue-600 transition-colors duration-200 line-clamp-1 flex items-center gap-2">
+          <span className="text-base">📍</span>
           {trip.userSelection?.location || "Unknown Destination"}
         </h3>
 
-        <div className="flex flex-wrap gap-2 mb-4">
-          <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
-            📅 {trip.userSelection?.duration} days
+        {/* ✅ Brief Professional Summary */}
+        <p className="text-gray-600 text-sm mb-4 leading-relaxed flex items-start gap-2">
+          <span className="text-xs mt-0.5 flex-shrink-0">🗓️</span>
+          <span>
+            {trip.userSelection?.duration || "Multi"} day trip with{" "}
+            {trip.userSelection?.budget?.toLowerCase() || "flexible"} budget
+            {trip.userSelection?.travelers &&
+              trip.userSelection.travelers !== "Just Me" && (
+                <span> for {trip.userSelection.travelers.toLowerCase()}</span>
+              )}
           </span>
-          <span className="inline-flex items-center px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">
-            👥 {trip.userSelection?.travelers}
-          </span>
-          <span className="inline-flex items-center px-2.5 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
-            💰 {trip.userSelection?.budget}
-          </span>
-        </div>
+        </p>
 
         {/* ✅ Show error state */}
         {error && (
-          <p className="text-red-500 text-xs mb-3">Failed to load photo</p>
+          <p className="text-red-500 text-xs mb-3 flex items-center gap-1">
+            <span>⚠️</span>
+            Failed to load photo
+          </p>
         )}
 
-        {/* ✅ Aesthetic View Details */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-          <span className="text-blue-600 font-medium text-sm group-hover:text-blue-700 transition-colors duration-200">
+        {/* ✅ Clean View Details */}
+        <div className="flex items-center justify-between pt-3 border-t border-gray-100 group-hover:border-gray-200 transition-colors">
+          <span className="text-blue-600 font-medium text-sm group-hover:text-blue-700 transition-colors duration-200 flex items-center gap-1.5">
+            <span className="text-xs">✈️</span>
             View Trip Details
           </span>
           <svg
@@ -147,7 +148,6 @@ function TripCard({ trip }) {
   );
 }
 
-// ✅ Main MyTrips Component
 function MyTrips() {
   const [userTrips, setUserTrips] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -165,7 +165,6 @@ function MyTrips() {
     try {
       const userString = localStorage.getItem("user");
 
-      // ✅ Early return if no user
       if (!userString) {
         console.warn("No user found, redirecting to home");
         navigate("/");
@@ -201,7 +200,6 @@ function MyTrips() {
     } catch (error) {
       console.error("Error fetching user trips:", error);
 
-      // ✅ Handle different error types
       if (error.code === "permission-denied") {
         setError("Access denied. Please check your permissions.");
       } else if (error.code === "unavailable") {
@@ -214,7 +212,6 @@ function MyTrips() {
     }
   };
 
-  // ✅ Loading state
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -230,7 +227,6 @@ function MyTrips() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* ✅ Header Section */}
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">My Trips</h1>
@@ -247,7 +243,6 @@ function MyTrips() {
         </Button>
       </div>
 
-      {/* ✅ Error state */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
           <div className="flex items-center">
@@ -265,7 +260,6 @@ function MyTrips() {
         </div>
       )}
 
-      {/* ✅ Empty state */}
       {!error && userTrips.length === 0 ? (
         <div className="text-center py-12">
           <div className="max-w-md mx-auto">
@@ -286,7 +280,6 @@ function MyTrips() {
           </div>
         </div>
       ) : (
-        /* ✅ Trips Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {userTrips.map((trip) => (
             <TripCard key={trip.id} trip={trip} />

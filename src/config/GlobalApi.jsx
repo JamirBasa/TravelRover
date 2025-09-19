@@ -10,11 +10,19 @@ const config = {
   headers: {
     "Content-Type": "application/json",
     "X-Goog-Api-Key": import.meta.env.VITE_GOOGLE_PLACE_API_KEY,
-    "X-Goog-FieldMask": "places.id,places.displayName,places.photos",
+    "X-Goog-FieldMask":
+      "places.id,places.displayName,places.photos,places.formattedAddress", // ✅ Added more fields
   },
 };
 
-// ✅ Enhanced API function with caching and rate limiting
+// ✅ Add function to clear cache
+export const clearPlacesCache = () => {
+  cache.clear();
+  pendingRequests.clear();
+  console.log("🗑️ Places cache cleared!");
+};
+
+// ✅ Enhanced API function with better caching and debugging
 export const GetPlaceDetails = async (data) => {
   try {
     if (!data.textQuery) {
@@ -26,7 +34,19 @@ export const GetPlaceDetails = async (data) => {
     // ✅ Return cached result if available
     if (cache.has(cacheKey)) {
       console.log("Returning cached result for:", data.textQuery);
-      return cache.get(cacheKey);
+      const cachedResponse = cache.get(cacheKey);
+
+      // ✅ DEBUG: Check if cached response has photos
+      const place = cachedResponse?.data?.places?.[0];
+      if (place) {
+        console.log("📸 Cached place photos:", {
+          hasPhotos: !!place.photos,
+          photoCount: place.photos?.length || 0,
+          firstPhotoRef: place.photos?.[0]?.name?.substring(0, 50) + "...",
+        });
+      }
+
+      return cachedResponse;
     }
 
     // ✅ Prevent duplicate simultaneous requests
@@ -35,8 +55,8 @@ export const GetPlaceDetails = async (data) => {
       return await pendingRequests.get(cacheKey);
     }
 
-    console.log("Making API request to:", BASE_URL);
-    console.log("Request payload:", data);
+    console.log("🌐 Making NEW API request to:", BASE_URL);
+    console.log("📤 Request payload:", data);
 
     // ✅ Create and store the promise
     const requestPromise = axios.post(BASE_URL, data, config);
@@ -44,18 +64,29 @@ export const GetPlaceDetails = async (data) => {
 
     const response = await requestPromise;
 
+    // ✅ DEBUG: Log what we got back
+    const place = response?.data?.places?.[0];
+    if (place) {
+      console.log("📍 New API response:", {
+        placeName: place.displayName?.text,
+        hasPhotos: !!place.photos,
+        photoCount: place.photos?.length || 0,
+        firstPhotoRef: place.photos?.[0]?.name,
+      });
+    }
+
     // ✅ Cache successful response
     cache.set(cacheKey, response);
     pendingRequests.delete(cacheKey);
 
     return response;
   } catch (error) {
-    console.error("API request failed:", error);
+    console.error("🚨 API request failed:", error);
     pendingRequests.delete(data.textQuery?.toLowerCase().trim());
 
     if (error.response) {
-      console.error("Response data:", error.response.data);
-      console.error("Response status:", error.response.status);
+      console.error("📄 Response data:", error.response.data);
+      console.error("📊 Response status:", error.response.status);
     }
 
     throw error;
@@ -65,3 +96,13 @@ export const GetPlaceDetails = async (data) => {
 export const PHOTO_REF_URL =
   "https://places.googleapis.com/v1/{NAME}/media?maxHeightPx=600&maxWidthPx=600&key=" +
   import.meta.env.VITE_GOOGLE_PLACE_API_KEY;
+
+// ✅ Helper function to validate photo URLs
+export const validatePhotoUrl = (photoRef) => {
+  if (!photoRef) return false;
+
+  const url = PHOTO_REF_URL.replace("{NAME}", photoRef);
+  console.log("🔗 Generated photo URL:", url);
+
+  return url;
+};
