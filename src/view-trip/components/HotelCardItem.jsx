@@ -73,25 +73,29 @@ function HotelCardItem({ hotel }) {
   };
 
   return (
-    <div>
-      <Link
-        to={
-          "https://www.google.com/maps/search/?api=1&query=" +
-          encodeURIComponent(hotel?.name || "")
-        }
-        target="_blank"
-      >
-        <div className="border rounded-lg shadow p-3 hover:scale-105 transition-all cursor-pointer">
-          {/* ✅ Better loading state */}
+    <Link
+      to={
+        "https://www.google.com/maps/search/?api=1&query=" +
+        encodeURIComponent(hotel?.name || "")
+      }
+      target="_blank"
+      className="block group"
+    >
+      <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 group-hover:border-gray-300">
+        {/* Hotel Image */}
+        <div className="relative mb-3">
           {isLoading ? (
-            <div className="w-full h-40 bg-gray-200 rounded animate-pulse flex items-center justify-center">
-              <span className="text-gray-500 text-sm">Loading...</span>
+            <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                <p className="mt-1 text-xs text-gray-500">Loading...</p>
+              </div>
             </div>
           ) : (
             <img
               src={photoUrl || "../placeholder.png"}
               alt={hotel?.name || "Hotel"}
-              className="w-full h-40 object-cover rounded cursor-pointer"
+              className="w-full h-32 object-cover rounded-lg"
               onError={(e) => {
                 console.log("Hotel image failed to load, using placeholder");
                 e.target.src = "../placeholder.png";
@@ -99,20 +103,47 @@ function HotelCardItem({ hotel }) {
             />
           )}
 
-          <h3 className="font-semibold mt-2">{hotel?.name}</h3>
-          <p className="text-sm text-gray-600">{hotel?.address}</p>
-          <p className="text-sm text-gray-800">
-            {hotel?.pricePerNight || hotel?.priceRange}
-          </p>
-          <p className="text-yellow-500 text-sm">⭐ {hotel?.rating}</p>
-
-          {/* ✅ Show error state */}
           {error && (
-            <p className="text-red-500 text-xs mt-1">Failed to load photo</p>
+            <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-gray-400 text-lg">🏨</p>
+                <p className="text-xs text-gray-400">Photo unavailable</p>
+              </div>
+            </div>
           )}
         </div>
-      </Link>
-    </div>
+
+        {/* Hotel Info */}
+        <div className="space-y-1">
+          <h4 className="font-medium text-gray-900 text-sm line-clamp-2 group-hover:text-blue-600">
+            {hotel?.name}
+          </h4>
+
+          {hotel?.address && (
+            <p className="text-xs text-gray-500 line-clamp-2">
+              📍 {hotel.address}
+            </p>
+          )}
+
+          <div className="flex items-center justify-between pt-1">
+            {hotel?.rating && (
+              <div className="flex items-center gap-1">
+                <span className="text-yellow-500 text-xs">⭐</span>
+                <span className="text-xs font-medium text-gray-700">
+                  {hotel.rating}
+                </span>
+              </div>
+            )}
+
+            {(hotel?.pricePerNight || hotel?.priceRange) && (
+              <p className="text-xs font-medium text-green-700">
+                {hotel?.pricePerNight || hotel?.priceRange}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </Link>
   );
 }
 

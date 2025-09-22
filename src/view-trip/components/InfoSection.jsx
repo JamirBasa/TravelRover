@@ -78,50 +78,68 @@ function InfoSection({ trip }) {
   };
 
   return (
-    <div>
-      {/* ✅ Better loading and error states */}
-      {isLoading ? (
-        <div className="w-full h-[300px] bg-gray-200 rounded-lg mb-4 flex items-center justify-center">
-          <span>Loading photo...</span>
-        </div>
-      ) : (
-        <img
-          src={photoUrl || "../placeholder.png"}
-          alt={`${trip?.userSelection?.location || "Trip"} photo`}
-          className="w-full h-[300px] object-cover rounded-lg mb-4"
-          onError={(e) => {
-            console.log("Image failed to load, using placeholder");
-            e.target.src = "../placeholder.png";
-          }}
-        />
-      )}
+    <div className="space-y-6">
+      {/* Location Image */}
+      <div className="relative">
+        {isLoading ? (
+          <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-2 text-sm text-gray-500">Loading photo...</p>
+            </div>
+          </div>
+        ) : (
+          <img
+            src={photoUrl || "../placeholder.png"}
+            alt={`${trip?.userSelection?.location || "Trip"} photo`}
+            className="w-full h-64 object-cover rounded-lg"
+            onError={(e) => {
+              console.log("Image failed to load, using placeholder");
+              e.target.src = "../placeholder.png";
+            }}
+          />
+        )}
 
-      {error && (
-        <div className="text-red-500 text-sm mb-2">
-          Failed to load location photo: {error}
-        </div>
-      )}
+        {error && (
+          <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center">
+            <div className="text-center p-4">
+              <p className="text-sm text-gray-500">📷</p>
+              <p className="text-xs text-gray-400 mt-1">Photo unavailable</p>
+            </div>
+          </div>
+        )}
+      </div>
 
-      <div className="flex justify-between items-center">
-        <div className="my-5 flex flex-col gap-2">
-          <h2 className="font-bold text-2xl">
-            {trip?.userSelection?.location}
-          </h2>
-          <div className="flex items-center gap-2">
-            <span className="p-1 px-3 bg-gray-200 rounded-full text-gray-500 text-xs md:text-md">
-              📅 {trip?.userSelection?.duration} days
-            </span>
-            <span className="p-1 px-3 bg-gray-200 rounded-full text-gray-500 text-xs md:text-md">
-              🧑 No of Travelers: {trip?.userSelection?.travelers}
-            </span>
-            <span className="p-1 px-3 bg-gray-200 rounded-full text-gray-500 text-xs md:text-md">
-              💲 {trip?.userSelection?.budget}
-            </span>
+      {/* Trip Details */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">
+          Trip Details
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <div className="text-2xl mb-1">📅</div>
+            <div className="text-sm font-medium text-gray-900">Duration</div>
+            <div className="text-xs text-gray-600">
+              {trip?.userSelection?.duration} days
+            </div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <div className="text-2xl mb-1">👥</div>
+            <div className="text-sm font-medium text-gray-900">Travelers</div>
+            <div className="text-xs text-gray-600">
+              {trip?.userSelection?.travelers}
+            </div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <div className="text-2xl mb-1">💰</div>
+            <div className="text-sm font-medium text-gray-900">Budget</div>
+            <div className="text-xs text-gray-600">
+              {trip?.userSelection?.customBudget
+                ? `₱${trip?.userSelection?.customBudget}`
+                : trip?.userSelection?.budget}
+            </div>
           </div>
         </div>
-        <Button>
-          <Share2 />
-        </Button>
       </div>
     </div>
   );

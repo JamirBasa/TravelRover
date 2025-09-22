@@ -1,53 +1,134 @@
-import { useState, useEffect } from "react";
-import GooglePlacesAutocomplete from "react-google-places-autocomplete";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  SelectBudgetOptions,
-  SelectTravelList,
-  AI_PROMPT,
-} from "../constants/options";
+// src/create-trip/index.jsx
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { chatSession } from "../config/aimodel";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { FcGoogle } from "react-icons/fc";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "../config/firebaseConfig";
-import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { useNavigate } from "react-router-dom";
+import { AI_PROMPT } from "../constants/options";
+import { FlightAgent } from "../config/flightAgent";
+
+// Import components
+import LocationSelector from "./components/LocationSelector";
+import DateRangePicker from "./components/DateRangePicker";
 import BudgetSelector from "./components/BugetSelector";
+import TravelerSelector from "./components/TravelerSelector";
+import SpecificRequests from "./components/SpecificRequests";
+import GenerateTripButton from "./components/GenerateTripButton";
+import LoginDialog from "./components/LoginDialog";
 
 function CreateTrip() {
+  // State management
   const [place, setPlace] = useState(null);
   const [formData, setFormData] = useState({});
   const [customBudget, setCustomBudget] = useState("");
-
   const [openDialog, setOpenDialog] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [flightLoading, setFlightLoading] = useState(false);
 
   const navigate = useNavigate();
 
-  const handleInputChange = (name, value) => {
-    setFormData({
-      ...formData,
+  // Handlers
+  const handleInputChange = useCallback((name, value) => {
+    setFormData((prev) => ({
+      ...prev,
       [name]: value,
-    });
-  };
-  useEffect(() => {
-    console.log(formData);
-  }, [formData]);
+    }));
+  }, []);
 
+  const handleStartDateChange = useCallback(
+    (date) => {
+      handleInputChange("startDate", date);
+    },
+    [handleInputChange]
+  );
+
+  const handleEndDateChange = useCallback(
+    (date) => {
+      handleInputChange("endDate", date);
+    },
+    [handleInputChange]
+  );
+
+  const handleDurationChange = useCallback(
+    (duration) => {
+      handleInputChange("duration", duration);
+    },
+    [handleInputChange]
+  );
+
+  const handleLocationChange = useCallback(
+    (location) => {
+      handleInputChange("location", location);
+    },
+    [handleInputChange]
+  );
+
+  const handleTravelersChange = useCallback(
+    (travelers) => {
+      handleInputChange("travelers", travelers);
+    },
+    [handleInputChange]
+  );
+
+  const handleSpecificRequestsChange = useCallback(
+    (requests) => {
+      handleInputChange("specificRequests", requests);
+    },
+    [handleInputChange]
+  );
+
+  const handleBudgetChange = useCallback(
+    (budget) => {
+      handleInputChange("budget", budget);
+    },
+    [handleInputChange]
+  );
+
+  // Google Login
   const googleLogin = useGoogleLogin({
     onSuccess: (codeResp) => GetUserProfile(codeResp),
     onError: (error) => console.log(error),
   });
+
+  // Validation helper
+  const validateForm = () => {
+    if (
+      !formData?.location ||
+      !formData?.startDate ||
+      !formData?.endDate ||
+      !formData?.travelers
+    ) {
+      toast("Please fill all the details including travel dates.");
+      return false;
+    }
+
+    const startDate = new Date(formData.startDate);
+    const endDate = new Date(formData.endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (startDate < today) {
+      toast("Start date cannot be in the past.");
+      return false;
+    }
+
+    if (endDate <= startDate) {
+      toast("End date must be after start date.");
+      return false;
+    }
+
+    if (!formData?.budget && !customBudget) {
+      toast("Please select or enter your budget.");
+      return false;
+    }
+
+    return true;
+  };
+
+  // Main trip generation function
   const OnGenerateTrip = async () => {
     const user = localStorage.getItem("user");
 
@@ -56,45 +137,102 @@ function CreateTrip() {
       return;
     }
 
-    if (!formData?.location || !formData?.duration || !formData?.travelers) {
-      toast("Please fill all the details.");
-      return;
-    }
-
-    if (!formData?.budget && !customBudget) {
-      toast("Please select or enter your budget.");
+    if (!validateForm()) {
       return;
     }
 
     setLoading(true);
-
-    const FINAL_PROMPT = AI_PROMPT.replace("{location}", formData?.location)
-      .replace("{duration}", formData?.duration)
-      .replace("{travelers}", formData?.travelers)
-      .replace(
-        "{budget}",
-        customBudget ? `Custom: ₱${customBudget}` : formData?.budget
-      )
-      .replace(
-        "{specificRequests}",
-        formData?.specificRequests ||
-          "No specific requests - create a balanced itinerary"
-      );
-    console.log(FINAL_PROMPT);
+    setFlightLoading(true);
 
     try {
-      const result = await chatSession.sendMessage(FINAL_PROMPT);
-      console.log("Generated trip:", result?.response.text());
-      setLoading(false);
-      SaveAiTrip(result?.response.text());
+      console.log("🔍 Starting flight search...");
 
-      // Use the result here
+      const flightResults = await FlightAgent.searchFlights({
+        from_airport: "MNL",
+        to_airport: FlightAgent.extractAirportCode(formData.location),
+        departure_date: formData.startDate,
+        return_date: formData.endDate,
+        adults: FlightAgent.parseAdults(formData.travelers),
+        trip_type: "round-trip",
+      });
+
+      setFlightLoading(false);
+
+      let enhancedPrompt = AI_PROMPT.replace("{location}", formData?.location)
+        .replace("{duration}", formData?.duration + " days")
+        .replace("{travelers}", formData?.travelers)
+        .replace(
+          "{budget}",
+          customBudget ? `Custom: ₱${customBudget}` : formData?.budget
+        )
+        .replace(
+          "{specificRequests}",
+          formData?.specificRequests ||
+            "No specific requests - create a balanced itinerary"
+        );
+
+      enhancedPrompt += `
+
+📅 TRAVEL DATES:
+Start Date: ${formData.startDate}
+End Date: ${formData.endDate}
+Duration: ${formData.duration} days
+
+Please create the itinerary for these exact dates.`;
+
+      if (flightResults.success && flightResults.flights.length > 0) {
+        const flightInfo = `
+
+🛫 REAL FLIGHT OPTIONS AVAILABLE:
+${flightResults.flights
+  .slice(0, 3)
+  .map(
+    (flight, index) => `
+✈️ Option ${index + 1}: ${flight.name}
+   💰 Price: ${flight.price}
+   🕐 Departure: ${flight.departure}
+   🕑 Arrival: ${flight.arrival}
+   ⏱️ Duration: ${flight.duration}
+   🛑 Stops: ${flight.stops === 0 ? "Non-stop" : `${flight.stops} stop(s)`}
+   ${flight.is_best ? "⭐ Best Value" : ""}
+`
+  )
+  .join("")}
+
+📊 Current Price Level: ${flightResults.current_price}
+
+IMPORTANT: Please incorporate these ACTUAL flight options into the itinerary. 
+Recommend the best flight based on the traveler's budget and preferences.
+Include the real prices in your budget breakdown.
+`;
+
+        enhancedPrompt += flightInfo;
+        console.log("✅ Enhanced prompt with real flight data");
+      } else {
+        console.log(
+          "⚠️ No flight data available, using AI-generated suggestions"
+        );
+        enhancedPrompt += `
+
+⚠️ Note: Real-time flight data unavailable. Please provide estimated flight costs for ${formData.location}.
+`;
+      }
+
+      console.log("📝 Final prompt:", enhancedPrompt);
+
+      const result = await chatSession.sendMessage(enhancedPrompt);
+      console.log("🎉 Generated trip:", result?.response.text());
+
+      SaveAiTrip(result?.response.text(), flightResults);
     } catch (error) {
+      console.error("❌ Trip generation error:", error);
       toast("Error generating trip: " + error.message);
+      setLoading(false);
+      setFlightLoading(false);
     }
   };
 
-  const SaveAiTrip = async (TripData) => {
+  const SaveAiTrip = async (TripData, flightData = null) => {
     setLoading(true);
 
     try {
@@ -105,22 +243,62 @@ function CreateTrip() {
       try {
         parsedTripData = JSON.parse(TripData);
       } catch (e) {
-        console.error("Failed to parse AI trip data:", e);
-        toast("Generated trip is not valid JSON.");
-        setLoading(false);
-        return;
+        console.error("Initial parse failed, attempting to clean JSON:", e);
+
+        try {
+          const jsonMatch = TripData.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const cleanedJson = jsonMatch[0];
+            parsedTripData = JSON.parse(cleanedJson);
+          } else {
+            throw new Error("No valid JSON found in response");
+          }
+        } catch (cleanupError) {
+          console.error("JSON cleanup failed:", cleanupError);
+
+          try {
+            let fixedJson = TripData.replace(/,(\s*[}```])/g, "$1")
+              .replace(/([{,]\s*)(\w+):/g, '$1"$2":')
+              .trim();
+
+            const jsonStart = fixedJson.indexOf("{");
+            const jsonEnd = fixedJson.lastIndexOf("}") + 1;
+
+            if (jsonStart !== -1 && jsonEnd > jsonStart) {
+              fixedJson = fixedJson.substring(jsonStart, jsonEnd);
+              parsedTripData = JSON.parse(fixedJson);
+            } else {
+              throw new Error("Could not extract valid JSON");
+            }
+          } catch (finalError) {
+            console.error("All JSON parsing attempts failed:", finalError);
+            toast("The AI generated an invalid response. Please try again.");
+            setLoading(false);
+            return;
+          }
+        }
       }
 
-      await setDoc(doc(db, "AITrips", docId), {
+      if (!parsedTripData || typeof parsedTripData !== "object") {
+        throw new Error("Parsed data is not a valid object");
+      }
+
+      const tripDocument = {
         userSelection: {
           ...formData,
           customBudget: customBudget,
         },
         tripData: parsedTripData,
+        realFlightData: flightData || null,
         userEmail: user?.email,
         id: docId,
-      });
-      toast("Trip saved successfully!");
+        createdAt: new Date().toISOString(),
+        hasRealFlights: flightData?.success || false,
+      };
+
+      await setDoc(doc(db, "AITrips", docId), tripDocument);
+
+      toast("🎉 Trip saved successfully with real flight data!");
       navigate("/view-trip/" + docId);
     } catch (error) {
       console.error("Error saving trip: ", error);
@@ -152,6 +330,10 @@ function CreateTrip() {
       });
   };
 
+  useEffect(() => {
+    console.log(formData);
+  }, [formData]);
+
   return (
     <div className="sm:px-10 md:px-32 lg:px-56 xl:px-72 px-5 mt-10">
       <h2 className="text-3xl font-bold">Customize your adventure</h2>
@@ -161,128 +343,45 @@ function CreateTrip() {
       </p>
 
       <div className="mt-20 flex flex-col gap-10">
-        <div className="mb-8">
-          <h2 className="text-xl mb-3 font-medium">
-            Where would you like to go?
-          </h2>
-          <GooglePlacesAutocomplete
-            apiKey={import.meta.env.VITE_GOOGLE_PLACE_API_KEY}
-            autocompletionRequest={{
-              componentRestrictions: {
-                country: ["ph"],
-              },
-            }}
-            selectProps={{
-              value: place,
-              onChange: (v) => {
-                setPlace(v);
-                handleInputChange("location", v.label);
-              },
-            }}
-          />
-        </div>
+        <LocationSelector
+          place={place}
+          onPlaceChange={setPlace}
+          onLocationChange={handleLocationChange}
+        />
 
-        <div className="mb-8">
-          <h2 className="text-xl mb-3 font-medium">
-            How many days will your trip last?
-          </h2>
-          <Input
-            placeholder={""}
-            type="number"
-            onChange={(e) => handleInputChange("duration", e.target.value)}
-          />
-        </div>
+        <DateRangePicker
+          startDate={formData.startDate}
+          endDate={formData.endDate}
+          onStartDateChange={handleStartDateChange}
+          onEndDateChange={handleEndDateChange}
+          onDurationChange={handleDurationChange}
+        />
 
-        <div className="mb-8">
-          <h2 className="text-xl mb-3 font-medium">
-            Enter your estimated budget
-          </h2>
-          <BudgetSelector
-            value={formData?.budget}
-            customValue={customBudget}
-            onBudgetChange={(budget) => handleInputChange("budget", budget)}
-            onCustomBudgetChange={(amount) => setCustomBudget(amount)}
-            error={null}
-          />
-        </div>
+        <BudgetSelector
+          value={formData?.budget}
+          customValue={customBudget}
+          onBudgetChange={handleBudgetChange}
+          onCustomBudgetChange={setCustomBudget}
+          error={null}
+        />
 
-        <div className="mb-8">
-          <h2 className="text-xl mb-3 font-medium">
-            Who will be joining you on your adventure?
-          </h2>
-          <div className="grid grid-cols-3 gap-5 mt-5">
-            {SelectTravelList.map((item, index) => (
-              <div
-                key={index}
-                onClick={() => handleInputChange("travelers", item.people)}
-                className={`p-4 cursor-pointer border rounded-lg hover:shadow-lg
-                ${
-                  formData?.travelers == item.people && "shadow-lg border-black"
-                }
-                `}
-              >
-                <h2 className="text-4xl">{item.icon}</h2>
-                <h2 className="font-bold text-lg">{item.title}</h2>
-                <h2 className="text-sm text-gray">{item.desc}</h2>
-              </div>
-            ))}
-          </div>
-        </div>
+        <TravelerSelector
+          selectedTravelers={formData?.travelers}
+          onTravelersChange={handleTravelersChange}
+        />
 
-        <div className="mb-8">
-          <h2 className="text-xl mb-3 font-medium">
-            🎯 Specific Activities or Places (Optional)
-          </h2>
-          <p className="text-sm text-gray-600 mb-3">
-            Tell us what you want to do on specific days or places you want to
-            visit
-          </p>
-          <textarea
-            className="w-full p-3 border rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            rows="4"
-            placeholder="Examples:&#10;• Day 3: Visit Ocean Park&#10;• Day 4: Go to Palawan&#10;• Day 5: Island hopping in El Nido&#10;• Visit Underground River&#10;• Try local seafood"
-            value={formData?.specificRequests || ""}
-            onChange={(e) =>
-              handleInputChange("specificRequests", e.target.value)
-            }
-          />
-          <p className="text-xs text-gray-500 mt-2">
-            💡 You can mention specific days, activities, or places you want to
-            include
-          </p>
-        </div>
+        <SpecificRequests
+          value={formData?.specificRequests}
+          onChange={handleSpecificRequestsChange}
+        />
 
-        <div className="my-10 flex justify-end">
-          <Button disabled={loading} onClick={OnGenerateTrip}>
-            {loading ? (
-              <AiOutlineLoading3Quarters className="h-7 w-7 animate-spin" />
-            ) : (
-              "Generate Trip"
-            )}
-          </Button>
-        </div>
+        <GenerateTripButton
+          loading={loading}
+          flightLoading={flightLoading}
+          onClick={OnGenerateTrip}
+        />
 
-        <Dialog open={openDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center justify-center">
-                <img src="/logo.svg" alt="Logo" className="h-16 w-auto" />
-                <span className="ml-2 text-xl font-bold text-gray-800">
-                  Travel Rover
-                </span>
-              </DialogTitle>
-              <div className="mt-5">
-                <Button
-                  className="w-full mt-5 flex gap-4 items-center"
-                  onClick={() => googleLogin()}
-                >
-                  <FcGoogle />
-                  Sign In With Google
-                </Button>
-              </div>
-            </DialogHeader>
-          </DialogContent>
-        </Dialog>
+        <LoginDialog open={openDialog} onGoogleLogin={() => googleLogin()} />
       </div>
     </div>
   );
