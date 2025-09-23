@@ -10,11 +10,16 @@ import { Toaster } from "sonner";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import ViewTrip from "./view-trip/[tripId]/index.jsx";
 import MyTrips from "./my-trips/index.jsx";
+import Home from "./home/home.jsx";
 
 const router = createBrowserRouter([
-  {
+   {
     path: "/",
     element: <App />,
+  },
+  {
+    path: "/home",
+    element: <Home />,
   },
   {
     path: "/create-trip",
