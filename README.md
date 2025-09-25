@@ -1,65 +1,67 @@
 # 🌍 TravelRover
 
-A modern travel planning application built with **React frontend** and **Django backend**, featuring real-time **flight search**, **secure booking management**, and **user authentication**.  
+A modern travel planning application built with **React frontend** and **Django backend**, featuring real-time **flight search**, **secure booking management**, and **user authentication**.
 
 ---
 
 ## 📸 Demo & Screenshots
 
->(CURRENTLY BUILDING IT)
+> (CURRENTLY BUILDING IT)
 
 ---
 
 ## 📋 Table of Contents
 
-- [✨ Features](#-features)  
-- [🛠 Tech Stack](#-tech-stack)  
-- [📋 Prerequisites](#-prerequisites)  
-- [🚀 Installation](#-installation)  
-- [⚙️ Configuration](#-configuration)  
-- [🏃‍♂️ Running the Application](#-running-the-application)  
-- [🐛 Troubleshooting](#-troubleshooting)  
-- [📜 License](#-license)  
+- [✨ Features](#-features)
+- [🛠 Tech Stack](#-tech-stack)
+- [📋 Prerequisites](#-prerequisites)
+- [🚀 Installation](#-installation)
+- [⚙️ Configuration](#-configuration)
+- [🏃‍♂️ Running the Application](#-running-the-application)
+- [🐛 Troubleshooting](#-troubleshooting)
+- [📜 License](#-license)
 
 ---
 
 ## ✨ Features
 
-- 🔍 **Flight Search** – Search and browse flights with **Google Places API**  
-- 📅 **Booking Management** – Create, update, and cancel bookings  
-- 👤 **User Authentication** – Secure JWT-based auth with Django  
-- 🎨 **Modern UI** – Responsive **Tailwind CSS** design for a clean, mobile-first experience  
-- 🔔 **Smart Notifications** – Toast alerts so you’re always in the loop  
-- 📱 **Mobile-friendly** – Seamless view across devices  
+- 🔍 **Flight Search** – Search and browse flights with **Google Places API**
+- 📅 **Booking Management** – Create, update, and cancel bookings
+- 👤 **User Authentication** – Secure JWT-based auth with Django
+- 🎨 **Modern UI** – Responsive **Tailwind CSS** design for a clean, mobile-first experience
+- 🔔 **Smart Notifications** – Toast alerts so you’re always in the loop
+- 📱 **Mobile-friendly** – Seamless view across devices
 
 ---
 
 ## 🛠 Tech Stack
 
 ### Frontend
-- ⚛️ **React 18** (with Hooks & Context)  
-- ⚡ **Vite** – next-gen frontend tooling  
-- 🎨 **Tailwind CSS** – utility-first styling  
-- 🧭 **React Router** – smooth navigation  
-- 🎛️ **React Select** + **React Icons** – polished UI components  
-- 🔔 **Sonner** – toast notifications  
+
+- ⚛️ **React 18** (with Hooks & Context)
+- ⚡ **Vite** – next-gen frontend tooling
+- 🎨 **Tailwind CSS** – utility-first styling
+- 🧭 **React Router** – smooth navigation
+- 🎛️ **React Select** + **React Icons** – polished UI components
+- 🔔 **Sonner** – toast notifications
 
 ### Backend
-- 🐍 **Django** – robust Python web framework  
-- 🛠 **Django REST Framework** – for clean REST APIs  
-- 🗄 **SQLite** (development DB, easy to upgrade to Postgres/MySQL)  
-- 🌍 **django-cors-headers** – cross-origin handling  
+
+- 🐍 **Django** – robust Python web framework
+- 🛠 **Django REST Framework** – for clean REST APIs
+- 🗄 **SQLite** (development DB, easy to upgrade to Postgres/MySQL)
+- 🌍 **django-cors-headers** – cross-origin handling
 
 ---
 
 ## 📋 Prerequisites
 
-Make sure you’ve got these installed:  
+Make sure you’ve got these installed:
 
-- **Node.js** (v16 or higher) → [Download](https://nodejs.org/)  
-- **Python** (v3.8 or higher) → [Download](https://www.python.org/)  
-- **npm** or **yarn** – package manager of choice  
-- **Git** – version control  
+- **Node.js** (v16 or higher) → [Download](https://nodejs.org/)
+- **Python** (v3.8 or higher) → [Download](https://www.python.org/)
+- **npm** or **yarn** – package manager of choice
+- **Git** – version control
 
 ---
 
@@ -139,7 +141,8 @@ Stop other Django processes or switch to Postgres for production.
 
 
 📜 License
-MIT License © 2024 TravelRover Team
+MIT License © 2025 TravelRover Team
 
 
 
+```
