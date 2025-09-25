@@ -1,27 +1,33 @@
 // src/view-trip/components/TripStatusBadges.jsx
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, DollarSign } from "lucide-react";
+import { DollarSign, Star, MapPin } from "lucide-react";
 
 function TripStatusBadges({ trip }) {
+  const hasBadges =
+    trip?.userSelection?.customBudget ||
+    trip?.userSelection?.specificRequests ||
+    trip?.hasRealFlights;
+
+  if (!hasBadges) return null;
+
   return (
-    <div className="flex flex-wrap gap-2 mb-8">
-      <Badge variant="outline" className="flex items-center gap-1">
-        <Calendar className="h-3 w-3" />
-        {trip?.userSelection?.duration} Day Trip
-      </Badge>
-      <Badge variant="outline" className="flex items-center gap-1">
-        <Users className="h-3 w-3" />
-        {trip?.userSelection?.travelers}
-      </Badge>
+    <div className="flex flex-wrap gap-2 mb-6">
       {trip?.userSelection?.customBudget && (
-        <Badge variant="outline" className="flex items-center gap-1">
+        <Badge
+          variant="outline"
+          className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-200"
+        >
           <DollarSign className="h-3 w-3" />
           Custom Budget
         </Badge>
       )}
       {trip?.userSelection?.specificRequests && (
-        <Badge variant="outline">
-          Custom Activities
+        <Badge
+          variant="outline"
+          className="flex items-center gap-1 bg-purple-50 text-purple-700 border-purple-200"
+        >
+          <Star className="h-3 w-3" />
+          Personalized
         </Badge>
       )}
     </div>

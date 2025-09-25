@@ -8,20 +8,22 @@ const apiKey = import.meta.env.VITE_GOOGLE_GEMINI_AI_API_KEY;
 
 // Add error checking for API key
 if (!apiKey) {
-  throw new Error("VITE_GOOGLE_GEMINI_AI_API_KEY is not defined in environment variables");
+  throw new Error(
+    "VITE_GOOGLE_GEMINI_AI_API_KEY is not defined in environment variables"
+  );
 }
 
 console.log("API KEY configured:", apiKey ? "✓" : "✗");
 
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// Improved generation config with better settings for structured JSON output
+// Optimized generation config for travel itinerary generation
 const generationConfig = {
-  temperature: 0.7, // Reduced for more consistent structured output
-  topP: 0.8, // Slightly reduced for better consistency
-  topK: 40, // Reduced for more focused responses
+  temperature: 0.3, // Slightly lower for more consistent travel recommendations
+  topP: 0.8, // Better for creative but accurate travel suggestions
+  topK: 40, // Increased slightly for more diverse location options
   maxOutputTokens: 8192,
-  responseMimeType: "application/json",
+  responseMimeType: "application/json", // Force JSON output
 };
 
 // Add safety settings to prevent harmful content
@@ -44,8 +46,8 @@ const safetySettings = [
   },
 ];
 
-export const model = genAI.getGenerativeModel({ 
-  model: "gemini-1.5-flash",
+export const model = genAI.getGenerativeModel({
+  model: "gemini-2.5-flash",
   safetySettings,
 });
 
@@ -75,24 +77,24 @@ export const chatSession = model.startChat({
       role: "user",
       parts: [
         {
-          text: systemPrompt
-        }
+          text: systemPrompt,
+        },
       ],
     },
     {
       role: "model",
       parts: [
         {
-          text: "I understand. I will generate detailed travel plans in the exact JSON format specified, with complete hotel information for each day, realistic pricing, and proper structure. I'll ensure all locations are real and provide comprehensive details for hotels and attractions."
-        }
+          text: "I understand. I will generate detailed travel plans in the exact JSON format specified, with complete hotel information for each day, realistic pricing, and proper structure. I'll ensure all locations are real and provide comprehensive details for hotels and attractions.",
+        },
       ],
     },
     {
       role: "user",
       parts: [
         {
-          text: "Generate Travel Plan for Location: Cebu Philippines, Currency PHP, for 3 Days for Couple with a Cheap budget. Give me multiple Hotels options (at least 3-5 hotels) with HotelName, Hotel address, Price, hotel image url, geo coordinates, rating, descriptions and suggest itinerary with placeName, Place Details, Place Image Url, Geo Coordinates, rating, ticket Pricing, Time travel each of the location for 3 days with each day plan with best time to visit in JSON format. Structure the response with 'hotels' array at the top level of tripData, and also include accommodation recommendations for each day in the itinerary. IMPORTANT: For daily accommodations, always provide full hotel details (name, address, price, etc.) even if it's the same hotel across multiple days. Avoid using references like 'Same as Day 1' - instead repeat the complete accommodation information."
-        }
+          text: "Generate Travel Plan for Location: Cebu Philippines, Currency PHP, for 3 Days for Couple with a Cheap budget. Give me multiple Hotels options (at least 3-5 hotels) with HotelName, Hotel address, Price, hotel image url, geo coordinates, rating, descriptions and suggest itinerary with placeName, Place Details, Place Image Url, Geo Coordinates, rating, ticket Pricing, Time travel each of the location for 3 days with each day plan with best time to visit in JSON format. Structure the response with 'hotels' array at the top level of tripData, and also include accommodation recommendations for each day in the itinerary. IMPORTANT: For daily accommodations, always provide full hotel details (name, address, price, etc.) even if it's the same hotel across multiple days. Avoid using references like 'Same as Day 1' - instead repeat the complete accommodation information.",
+        },
       ],
     },
     {
@@ -357,9 +359,9 @@ export const chatSession = model.startChat({
       }
     ]
   }
-}`
-        }
-      ]
-    }
-  ]
+}`,
+        },
+      ],
+    },
+  ],
 });

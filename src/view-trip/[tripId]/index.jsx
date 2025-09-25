@@ -11,7 +11,6 @@ import ErrorState from "../components/ErrorState";
 import EmptyState from "../components/EmptyState";
 import TripHeader from "../components/TripHeader";
 import FlightDataBanner from "../components/FlightDataBanner";
-import TripStatusBadges from "../components/TripStatusBadges";
 import DevMetadata from "../components/DevMetadata";
 import InfoSection from "../components/infoSection";
 import Hotels from "../components/Hotels";
@@ -46,7 +45,9 @@ function ViewTrip() {
 
       if (docSnap.exists()) {
         const tripData = docSnap.data();
-        console.log("Document data:", tripData);
+        console.log("🔍 ViewTrip - Full document data:", tripData);
+        console.log("🔍 ViewTrip - tripData field:", tripData?.tripData);
+        console.log("🔍 ViewTrip - tripData type:", typeof tripData?.tripData);
         setTrip(tripData);
 
         const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -128,63 +129,40 @@ function ViewTrip() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Trip Status and Flight Banner */}
-        <div className="mb-8 space-y-4">
-          <FlightDataBanner trip={trip} />
-          <TripStatusBadges trip={trip} />
-        </div>
+        {/* Flight Data Banner (only if flights available) */}
+        {trip?.hasRealFlights && (
+          <div className="mb-8">
+            <FlightDataBanner trip={trip} />
+          </div>
+        )}
 
         {/* Content Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Main Content */}
-          <div className="xl:col-span-2 space-y-8">
+          <div className="lg:col-span-3 space-y-8">
             {/* Trip Overview */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <span className="text-blue-600 text-sm">📍</span>
-                  </div>
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    Trip Overview
-                  </h2>
-                </div>
-                <InfoSection trip={trip} />
-              </div>
-            </div>
+            <InfoSection trip={trip} />
 
             {/* Daily Itinerary */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                    <span className="text-green-600 text-sm">📅</span>
-                  </div>
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    Daily Itinerary
-                  </h2>
-                </div>
-                <PlacesToVisit trip={trip} />
-              </div>
-            </div>
+            <PlacesToVisit trip={trip} />
 
             {/* Flight Booking Section */}
             {trip?.hasRealFlights && (
-              <div
-                id="flight-booking-section"
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
-              >
-                <div className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <span className="text-blue-600 text-sm">✈️</span>
-                    </div>
-                    <h2 className="text-xl font-semibold text-gray-900">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <span className="text-blue-600 text-lg">✈️</span>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">
                       Flight Booking
                     </h2>
+                    <p className="text-sm text-gray-600">
+                      Book your flights with our travel partners
+                    </p>
                   </div>
-                  <FlightBooking trip={trip} />
                 </div>
+                <FlightBooking trip={trip} />
               </div>
             )}
           </div>
@@ -192,101 +170,109 @@ function ViewTrip() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Hotels Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <div className="p-6">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <span className="text-purple-600 text-sm">🏨</span>
+                  <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                    <span className="text-amber-600 text-sm">🏨</span>
                   </div>
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Hotels
-                  </h2>
+                  <h3 className="text-lg font-bold text-gray-900">Hotels</h3>
                 </div>
                 <Hotels trip={trip} />
               </div>
             </div>
 
-            {/* Trip Stats Card */}
-            <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-6 text-white">
-              <h3 className="text-lg font-semibold mb-4">Trip Summary</h3>
+            {/* Trip Summary Card */}
+            <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 rounded-lg p-6 text-white shadow-lg">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                  <span className="text-white text-sm">📊</span>
+                </div>
+                <h3 className="text-lg font-bold">Trip Summary</h3>
+              </div>
               <div className="space-y-3">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center py-1">
                   <span className="text-blue-100">Duration</span>
-                  <span className="font-medium">
+                  <span className="font-semibold">
                     {trip?.userSelection?.duration} days
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center py-1">
                   <span className="text-blue-100">Travelers</span>
-                  <span className="font-medium">
+                  <span className="font-semibold">
                     {trip?.userSelection?.travelers}
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center py-1">
                   <span className="text-blue-100">Budget</span>
-                  <span className="font-medium">
+                  <span className="font-semibold">
                     {trip?.userSelection?.customBudget
                       ? `₱${trip?.userSelection?.customBudget}`
                       : trip?.userSelection?.budget}
                   </span>
                 </div>
-                {trip.hasRealFlights && (
-                  <div className="flex justify-between items-center">
+                {trip?.hasRealFlights && (
+                  <div className="flex justify-between items-center py-1">
                     <span className="text-blue-100">Flight Data</span>
-                    <span className="font-medium text-green-300">
-                      ✅ Real-time
+                    <span className="font-semibold text-green-300">
+                      ✅ Live
                     </span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Quick Actions Card */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Actions
+            {/* Quick Actions */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                Quick Actions
               </h3>
               <div className="space-y-3">
                 <button
                   onClick={handleShare}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-4 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 hover:shadow-md"
                 >
-                  <span>📤</span> Share Trip
+                  <span className="text-lg">📤</span> Share Trip
                 </button>
                 <button
                   onClick={handleDownload}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 px-4 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 hover:shadow-md"
                 >
-                  <span>📄</span> Download PDF
+                  <span className="text-lg">📄</span> Download PDF
                 </button>
                 <button
                   onClick={handleEdit}
-                  className="w-full bg-gray-600 hover:bg-gray-700 text-white py-2.5 px-4 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+                  className="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 hover:shadow-md"
                 >
-                  <span>✏️</span> Edit Trip
+                  <span className="text-lg">✏️</span> Edit Trip
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer Section */}
+        {/* Travel Tips */}
         <div className="mt-12">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                <span className="text-orange-600 text-sm">💡</span>
+              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-orange-600 text-lg">💡</span>
               </div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                Travel Tips & Information
-              </h2>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Travel Tips & Information
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Essential information for your trip
+                </p>
+              </div>
             </div>
             <Footer trip={trip} />
           </div>
         </div>
 
-        {/* Development Metadata */}
-        <DevMetadata trip={trip} />
+        {/* Development Info (only in dev mode) */}
+        {process.env.NODE_ENV === "development" && <DevMetadata trip={trip} />}
       </div>
     </div>
   );

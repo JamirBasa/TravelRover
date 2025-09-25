@@ -66,244 +66,79 @@ export const SelectBudgetOptions = [
   },
 ];
 
-export const AI_PROMPT = `You are an expert travel guide specializing in creating comprehensive, budget-conscious travel itineraries. I will provide you with trip details, and you must create a detailed travel plan in strict JSON format.
+export const AI_PROMPT = `Generate a comprehensive travel itinerary in valid JSON format for: {location}, {duration} days, {travelers}, {budget} budget.
 
-TRIP REQUEST FORMAT: {location}, {duration} days, {travelers}, {budget} budget
-
-CRITICAL JSON STRUCTURE REQUIREMENTS:
-Your response must be valid JSON with this exact structure:
-
+REQUIRED JSON STRUCTURE:
 {
-  "travelPlan": {
-    "destination": "string - full destination name",
-    "location": "string - city/region, country", 
-    "duration": number,
-    "travelers": "string - traveler description",
-    "budgetLevel": "string - Budget/Moderate/Luxury or Custom amount",
-    "travelDates": {
-      "startDate": "string - departure date if specified",
-      "endDate": "string - return date if specified",
-      "flexibility": "string - date flexibility notes"
-    },
-    "currency": "string - local currency code (PHP for Philippines)",
-    "totalEstimatedCost": "string - cost range in local currency",
-    "bestTimeToVisit": "string - seasonal recommendations"
-  },
-  "tripData": {
-    "accommodations": [
-      {
-        "name": "string",
-        "type": "string - hotel/hostel/guesthouse/etc",
-        "address": "string - full address",
-        "pricePerNight": "string - price range in local currency",
-        "rating": number,
-        "amenities": ["array", "of", "amenities"],
-        "imageUrl": "string - use https://images.unsplash.com/... format",
-        "geoCoordinates": {
-          "latitude": number,
-          "longitude": number
-        },
-        "description": "string - detailed description",
-        "bookingTips": "string - how to get best rates",
-        "alternativeOptions": [
-          {
-            "name": "string",
-            "priceRange": "string",
-            "description": "string"
-          }
-        ]
-      }
-    ],
-    "transportation": {
-      "gettingThere": {
-        "international": {
-          "method": "string",
-          "estimatedCost": "string",
-          "duration": "string",
-          "tips": "string"
-        },
-        "domestic": {
-          "method": "string", 
-          "estimatedCost": "string",
-          "duration": "string",
-          "bookingAdvice": "string"
-        }
+  "tripName": "Trip to [Location]",
+  "destination": "[Full destination name]",
+  "duration": "[X] days",
+  "budget": "[Budget level]",
+  "travelers": "[Traveler type]",
+  "startDate": "[Start date if provided]",
+  "endDate": "[End date if provided]",
+  "currency": "PHP",
+  "hotels": [
+    {
+      "hotelName": "Hotel Name",
+      "hotelAddress": "Complete address",
+      "pricePerNight": "₱X,XXX - ₱X,XXX",
+      "imageUrl": "https://images.unsplash.com/photo-xxx",
+      "geoCoordinates": {
+        "latitude": 0.000,
+        "longitude": 0.000
       },
-      "localTransport": [
+      "rating": 4.5,
+      "description": "Hotel description"
+    }
+  ],
+  "itinerary": [
+    {
+      "day": 1,
+      "theme": "Day theme",
+      "plan": [
         {
-          "method": "string - bus/taxi/rental/walking",
-          "costPerDay": "string",
-          "pros": ["array", "of", "advantages"],
-          "cons": ["array", "of", "disadvantages"],
-          "budgetTips": "string"
+          "time": "9:00 AM",
+          "placeName": "Place Name",
+          "placeDetails": "Description",
+          "imageUrl": "https://images.unsplash.com/photo-xxx",
+          "geoCoordinates": {
+            "latitude": 0.000,
+            "longitude": 0.000
+          },
+          "ticketPricing": "₱XXX or Free",
+          "timeTravel": "X hours",
+          "rating": 4.0
         }
       ]
-    },
-    "itinerary": [
-      {
-        "day": number,
-        "date": "string - Day 1, Day 2, etc.",
-        "theme": "string - day's focus/theme",
-        "activities": [
-          {
-            "time": "string - time slot",
-            "activity": "string - activity name", 
-            "location": "string - specific location",
-            "description": "string - detailed description",
-            "cost": "string - price in local currency",
-            "duration": "string - time needed",
-            "imageUrl": "string - https://images.unsplash.com/...",
-            "geoCoordinates": {
-              "latitude": number,
-              "longitude": number
-            },
-            "rating": number,
-            "budgetTips": "string - how to save money",
-            "bestTimeToVisit": "string"
-          }
-        ],
-        "meals": {
-          "breakfast": {
-            "recommendation": "string",
-            "location": "string", 
-            "estimatedCost": "string",
-            "options": ["array", "of", "food", "options"]
-          },
-          "lunch": {
-            "recommendation": "string",
-            "location": "string",
-            "estimatedCost": "string", 
-            "options": ["array", "of", "food", "options"]
-          },
-          "dinner": {
-            "recommendation": "string",
-            "location": "string",
-            "estimatedCost": "string",
-            "options": ["array", "of", "food", "options"]
-          }
-        },
-        "accommodation": {
-          "name": "string - hotel name for this night",
-          "address": "string",
-          "pricePerNight": "string", 
-          "rating": number,
-          "amenities": ["array"],
-          "imageUrl": "string",
-          "geoCoordinates": {
-            "latitude": number,
-            "longitude": number
-          },
-          "description": "string"
-        },
-        "dailyBudgetBreakdown": {
-          "accommodation": "string",
-          "transportation": "string", 
-          "activities": "string",
-          "meals": "string",
-          "miscellaneous": "string",
-          "total": "string"
-        }
-      }
-    ]
-  },
-  "budgetBreakdown": {
-    "accommodationTotal": "string",
-    "transportationTotal": "string", 
-    "activitiesTotal": "string",
-    "mealsTotal": "string",
-    "miscellaneousTotal": "string",
-    "dailyAverages": {
-      "perDay": "string",
-      "perPerson": "string"
-    },
-    "grandTotal": "string",
-    "contingencyFund": "string - 10-15% extra",
-    "budgetTips": ["array", "of", "money", "saving", "tips"]
-  },
-  "practicalInformation": {
-    "visaRequirements": "string",
-    "vaccinations": "string",
-    "currency": "string",
-    "language": "string",
-    "timeZone": "string",
-    "emergencyContacts": "string",
-    "culturalTips": ["array", "of", "cultural", "advice"],
-    "packingEssentials": ["array", "of", "packing", "items"],
-    "safetyTips": ["array", "of", "safety", "advice"],
-    "weatherInfo": "string"
-  }
+    }
+  ],
+  "placesToVisit": [
+    {
+      "placeName": "Attraction Name",
+      "placeDetails": "Description",
+      "imageUrl": "https://images.unsplash.com/photo-xxx",
+      "geoCoordinates": {
+        "latitude": 0.000,
+        "longitude": 0.000
+      },
+      "ticketPricing": "₱XXX",
+      "timeTravel": "X hours",
+      "rating": 4.0
+    }
+  ]
 }
 
-SPECIFIC REQUIREMENTS:
-1. **Budget Alignment**: Strictly adhere to the specified budget level:
-   - Budget: Focus on hostels, street food, free activities, public transport
-   - Mid-range: Mix of mid-tier hotels, local restaurants, some paid attractions
-   - Luxury: High-end accommodations, fine dining, premium experiences
+REQUIREMENTS:
+1. Use real places and accurate coordinates for {location}
+2. Provide 3-5 hotel options with realistic Philippine peso pricing
+3. Create {duration} days of detailed itinerary
+4. Adjust recommendations for {budget} level (Budget: ₱2K-8K, Moderate: ₱8K-20K, Luxury: ₱20K+)
+5. Consider {travelers} type for activities and accommodations
+6. Use https://images.unsplash.com/ URLs for all images
+7. Include realistic pricing in Philippine pesos
+8. Ensure valid JSON format with proper commas and brackets
 
-2. **Traveler Count Considerations**: 
-   - Solo travelers: Safety tips, social activities, single supplements
-   - Couples: Romantic experiences, double rooms, couple activities
-   - Groups: Group discounts, larger accommodations, group-friendly activities
-   - Families: Kid-friendly activities, family rooms, safety considerations
+SPECIFIC REQUESTS: {specificRequests}
 
-3. **Location Accuracy**: 
-   - Use real places, accurate coordinates, and current pricing
-   - Research local currency and realistic costs
-   - Include cultural context and local customs
-   - Mention seasonal considerations and weather
-
-4. **Image URLs**: Always use high-quality Unsplash URLs in format:
-   https://images.unsplash.com/photo-[ID]?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80
-
-5. **Pricing Format**: 
-   - Always include local currency symbol/code
-   - Provide ranges (e.g., "PHP 800 - 1,200", "€50 - 80")
-   - Consider seasonal price variations
-
-6. **Coordinates**: Provide accurate latitude and longitude for all locations
-
-7. **Practical Details**:
-   - Operating hours for attractions
-   - Booking requirements and advance notice needed
-   - Transportation schedules and frequency
-   - Local customs and etiquette
-   - Emergency information
-
-8. **Budget Tips**: Include money-saving advice throughout:
-   - Free alternatives to paid activities
-   - Local market vs tourist restaurant prices
-   - Public transport vs private transport costs
-   - Seasonal pricing variations
-   - Group discounts and package deals
-
-RESPONSE GUIDELINES:
-- Output ONLY valid JSON, no additional text
-- Ensure all JSON brackets and commas are properly formatted
-- Include realistic, researched pricing in local currency
-- Provide 3-5 accommodation options per location
-- Create detailed daily itineraries with time slots
-- Include backup plans for weather-dependent activities
-- Consider travel time between locations
-- Provide both popular attractions and hidden gems
-- Include local food recommendations and dietary alternatives
-
-Remember: The goal is to create a comprehensive, actionable travel plan that respects the traveler's budget while maximizing their experience. Every recommendation should be practical, affordable within the specified budget range, and culturally appropriate.
-
-BUDGET CONSIDERATIONS:
-- If custom budget amount is provided, tailor all recommendations to that specific amount
-- For custom budgets, provide detailed breakdown showing how the budget is allocated
-- Consider seasonal pricing variations for the specified travel dates
-- If dates are provided, check for local festivals, peak seasons, or events that might affect pricing
-
-My request is: {location}, {duration} days, {travelers}, {budget} budget.
-
-SPECIFIC DAILY REQUESTS:
-{specificRequests}
-
-IMPORTANT INSTRUCTIONS:
-- If specific activities or locations are mentioned for certain days, prioritize those in the itinerary
-- If multiple locations are mentioned (e.g., different cities), treat this as a multi-city trip
-- Calculate realistic travel times between different locations
-- Adjust accommodation and transportation accordingly
-- If travel between locations takes significant time, allocate appropriate days for travel
-- Provide warnings if the itinerary seems too rushed or logistically challenging`;
+Generate ONLY valid JSON, no additional text.`;

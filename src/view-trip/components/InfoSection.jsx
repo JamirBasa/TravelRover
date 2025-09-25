@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { Share2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { GetPlaceDetails, PHOTO_REF_URL } from "@/config/GlobalApi";
 
 function InfoSection({ trip }) {
@@ -9,14 +7,12 @@ function InfoSection({ trip }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // ✅ Better condition check
     if (trip?.userSelection?.location) {
       GetPlacePhoto();
     }
-  }, [trip?.userSelection?.location]); // ✅ More specific dependency
+  }, [trip?.userSelection?.location]);
 
   const GetPlacePhoto = async () => {
-    // ✅ Early return if no location
     if (!trip?.userSelection?.location) {
       console.warn("No location provided for photo search");
       return;
@@ -26,17 +22,9 @@ function InfoSection({ trip }) {
     setError(null);
 
     try {
-      const data = {
-        textQuery: trip.userSelection.location,
-      };
-
-      console.log("Searching for photos of:", data.textQuery); // Debug log
-
+      const data = { textQuery: trip.userSelection.location };
       const response = await GetPlaceDetails(data);
 
-      console.log("API Response:", response.data); // ✅ See full response structure
-
-      // ✅ Better error checking
       if (!response.data.places || response.data.places.length === 0) {
         throw new Error("No places found for this location");
       }
@@ -45,42 +33,38 @@ function InfoSection({ trip }) {
 
       if (!place.photos || place.photos.length === 0) {
         console.warn("No photos available for this place");
-        setPhotoUrl(""); // Use placeholder
+        setPhotoUrl("");
         return;
       }
 
-      // ✅ Safer photo access
-      const photoReference = place.photos[0]?.name; // Use first photo, not [3]
-
+      const photoReference = place.photos[0]?.name;
       if (photoReference) {
         const photoUrl = PHOTO_REF_URL.replace("{NAME}", photoReference);
         setPhotoUrl(photoUrl);
-        console.log("Photo URL generated:", photoUrl);
       }
     } catch (error) {
       console.error("Error fetching place photo:", error);
-
-      // ✅ Handle different error types
-      if (error.response?.status === 400) {
-        console.error(
-          "Bad request - check your request format:",
-          error.response.data
-        );
-      } else if (error.response?.status === 403) {
-        console.error("API key invalid or quota exceeded");
-      }
-
       setError(error.message);
-      setPhotoUrl(""); // Fallback to placeholder
+      setPhotoUrl("");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+          <span className="text-blue-600 text-lg">📍</span>
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Trip Overview</h2>
+          <p className="text-sm text-gray-600">Your destination at a glance</p>
+        </div>
+      </div>
+
       {/* Location Image */}
-      <div className="relative">
+      <div className="relative mb-6">
         {isLoading ? (
           <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
             <div className="text-center">
@@ -94,7 +78,6 @@ function InfoSection({ trip }) {
             alt={`${trip?.userSelection?.location || "Trip"} photo`}
             className="w-full h-64 object-cover rounded-lg"
             onError={(e) => {
-              console.log("Image failed to load, using placeholder");
               e.target.src = "../placeholder.png";
             }}
           />
@@ -103,44 +86,22 @@ function InfoSection({ trip }) {
         {error && (
           <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center">
             <div className="text-center p-4">
-              <p className="text-sm text-gray-500">📷</p>
-              <p className="text-xs text-gray-400 mt-1">Photo unavailable</p>
+              <p className="text-4xl text-gray-400 mb-2">📷</p>
+              <p className="text-sm text-gray-500">Photo unavailable</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Trip Details */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">
-          Trip Details
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="bg-gray-50 rounded-lg p-3 text-center">
-            <div className="text-2xl mb-1">📅</div>
-            <div className="text-sm font-medium text-gray-900">Duration</div>
-            <div className="text-xs text-gray-600">
-              {trip?.userSelection?.duration} days
-            </div>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-3 text-center">
-            <div className="text-2xl mb-1">👥</div>
-            <div className="text-sm font-medium text-gray-900">Travelers</div>
-            <div className="text-xs text-gray-600">
-              {trip?.userSelection?.travelers}
-            </div>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-3 text-center">
-            <div className="text-2xl mb-1">💰</div>
-            <div className="text-sm font-medium text-gray-900">Budget</div>
-            <div className="text-xs text-gray-600">
-              {trip?.userSelection?.customBudget
-                ? `₱${trip?.userSelection?.customBudget}`
-                : trip?.userSelection?.budget}
-            </div>
-          </div>
+      {/* Special Requests */}
+      {trip?.userSelection?.specificRequests && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-semibold text-blue-900 mb-2">Special Requests</h4>
+          <p className="text-blue-800 text-sm">
+            {trip.userSelection.specificRequests}
+          </p>
         </div>
-      </div>
+      )}
     </div>
   );
 }

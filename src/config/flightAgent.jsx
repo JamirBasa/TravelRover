@@ -43,33 +43,81 @@ export const FlightAgent = {
   },
 
   extractAirportCode(location) {
+    if (!location) return "MNL";
+
     const airportMap = {
       Manila: "MNL",
+      "Metro Manila": "MNL",
+      "Manila City": "MNL",
       Cebu: "CEB",
+      "Cebu City": "CEB",
       Davao: "DVO",
+      "Davao City": "DVO",
       Palawan: "PPS",
       "Puerto Princesa": "PPS",
+      "El Nido": "PPS",
+      Coron: "PPS",
       Boracay: "KLO",
+      Malay: "KLO", // Boracay's actual municipality
       Kalibo: "KLO",
       Bohol: "TAG",
       Tagbilaran: "TAG",
+      "Tagbilaran City": "TAG",
       Siargao: "IAO",
+      "General Luna": "IAO",
       Clark: "CRK",
+      Angeles: "CRK",
+      "Angeles City": "CRK",
       Iloilo: "ILO",
+      "Iloilo City": "ILO",
       Bacolod: "BCD",
+      "Bacolod City": "BCD",
+      Dumaguete: "DGT",
+      "Dumaguete City": "DGT",
+      Cagayan: "CGY",
+      "Cagayan de Oro": "CGY",
+      Butuan: "BXU",
+      Surigao: "SUG",
+      Zamboanga: "ZAM",
     };
 
+    // Clean the location string - handle various formats
+    const locationLower = location.toLowerCase();
     const city = location.split(",")[0].trim();
+    const cityLower = city.toLowerCase();
 
+    console.log(
+      `🔍 Extracting airport code for: "${location}" -> City: "${city}"`
+    );
+
+    // Direct exact matches first
     for (const [key, code] of Object.entries(airportMap)) {
-      if (
-        city.toLowerCase().includes(key.toLowerCase()) ||
-        key.toLowerCase().includes(city.toLowerCase())
-      ) {
+      const keyLower = key.toLowerCase();
+
+      // Check if the key matches the full location or city part
+      if (cityLower === keyLower || locationLower.includes(keyLower)) {
+        console.log(`✅ Found exact match: ${key} -> ${code}`);
         return code;
       }
     }
 
+    // Partial matches - check if any airport city is contained in the location
+    for (const [key, code] of Object.entries(airportMap)) {
+      const keyLower = key.toLowerCase();
+
+      if (
+        cityLower.includes(keyLower) ||
+        keyLower.includes(cityLower) ||
+        locationLower.includes(keyLower)
+      ) {
+        console.log(`✅ Found partial match: ${key} -> ${code}`);
+        return code;
+      }
+    }
+
+    console.log(
+      `⚠️ No airport code found for "${location}", defaulting to MNL`
+    );
     return "MNL"; // Default to Manila
   },
 
@@ -86,7 +134,7 @@ export const FlightAgent = {
   calculateDates(duration) {
     const today = new Date();
     const departureDate = new Date(today);
-    departureDate.setDate(today.getDate() + 7); // Start trip in 7 days
+    departureDate.setDate(today.getDate() + 7);
 
     const returnDate = new Date(departureDate);
     returnDate.setDate(departureDate.getDate() + parseInt(duration));

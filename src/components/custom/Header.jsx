@@ -107,13 +107,23 @@ function Header() {
                   <span className="font-medium">{user?.name}</span>
                   <span className="text-sm text-gray-500">{user?.email}</span>
                 </div>
-                <Button
-                  variant="outline"
-                  className="w-full text-left mt-3 cursor-pointer"
-                  onClick={handleLogout} // ← Use your new function
-                >
-                  Logout
-                </Button>
+                <div className="flex flex-col gap-2 mt-3">
+                  <a href="/user-profile">
+                    <Button
+                      variant="outline"
+                      className="w-full text-left cursor-pointer"
+                    >
+                      Profile Settings
+                    </Button>
+                  </a>
+                  <Button
+                    variant="outline"
+                    className="w-full text-left cursor-pointer"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </Button>
+                </div>
               </PopoverContent>
             </Popover>
           </div>
