@@ -6,14 +6,12 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 import {
-  FaUser,
-  FaUtensils,
-  FaPlane,
-  FaArrowRight,
-  FaArrowLeft,
-  FaCheck,
-  FaShieldAlt,
-} from "react-icons/fa";
+  STEP_CONFIGS,
+  DEFAULT_VALUES,
+  MESSAGES,
+  calculateProgress,
+} from "../constants/options";
+import { FaArrowRight, FaArrowLeft, FaCheck } from "react-icons/fa";
 
 // Import step components
 import PersonalInfoStep from "./components/PersonalInfoStep";
@@ -22,38 +20,8 @@ import FoodCultureStep from "./components/FoodCultureStep";
 import BudgetSafetyStep from "./components/BudgetSafetyStep";
 import ReviewStep from "./components/ReviewStep";
 
-const STEPS = [
-  {
-    id: 1,
-    title: "Personal Info",
-    description: "Basic information about you",
-    icon: FaUser,
-  },
-  {
-    id: 2,
-    title: "Travel Style",
-    description: "Your travel preferences",
-    icon: FaPlane,
-  },
-  {
-    id: 3,
-    title: "Food & Culture",
-    description: "Dietary and cultural needs",
-    icon: FaUtensils,
-  },
-  {
-    id: 4,
-    title: "Budget & Safety",
-    description: "Budget range and emergency contact",
-    icon: FaShieldAlt,
-  },
-  {
-    id: 5,
-    title: "Review",
-    description: "Confirm your profile",
-    icon: FaCheck,
-  },
-];
+// Use centralized step configuration
+const STEPS = STEP_CONFIGS.USER_PROFILE;
 
 const UserProfile = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -107,7 +75,7 @@ const UserProfile = () => {
   });
 
   const navigate = useNavigate();
-  const progress = (currentStep / STEPS.length) * 100;
+  const progress = calculateProgress(currentStep, STEPS.length);
 
   useEffect(() => {
     checkExistingProfile();

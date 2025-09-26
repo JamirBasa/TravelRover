@@ -2,6 +2,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { FaCalendarAlt, FaClock } from "react-icons/fa";
+import {
+  calculateDuration,
+  getMinDate,
+  getMinEndDate,
+} from "../../constants/options";
 
 function DateRangePicker({
   startDate,
@@ -23,42 +28,16 @@ function DateRangePicker({
     [onDurationChange]
   );
 
-  // Calculate duration when dates change
+  // Calculate duration when dates change using centralized function
   useEffect(() => {
-    if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const diffTime = Math.abs(end - start);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays !== duration) {
-        setDuration(diffDays);
-        handleDurationChange(diffDays);
-      }
-    } else {
-      if (duration !== 0) {
-        setDuration(0);
-        handleDurationChange(0);
-      }
+    const newDuration = calculateDuration(startDate, endDate);
+    if (newDuration !== duration) {
+      setDuration(newDuration);
+      handleDurationChange(newDuration);
     }
   }, [startDate, endDate, duration, handleDurationChange]);
 
-  // Helper function to get minimum date (tomorrow)
-  const getMinDate = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split("T")[0];
-  };
-
-  // Helper function to get minimum end date (day after start date)
-  const getMinEndDate = () => {
-    if (startDate) {
-      const minEnd = new Date(startDate);
-      minEnd.setDate(minEnd.getDate() + 1);
-      return minEnd.toISOString().split("T")[0];
-    }
-    return getMinDate();
-  };
+  // Use centralized helper functions for date calculations
 
   return (
     <div className={`max-w-2xl mx-auto ${className}`}>
@@ -95,7 +74,7 @@ function DateRangePicker({
             </label>
             <Input
               type="date"
-              min={getMinEndDate()}
+              min={getMinEndDate(startDate)}
               value={endDate || ""}
               onChange={(e) => onEndDateChange(e.target.value)}
               className="text-base py-3 px-3 rounded-lg border-2 focus:border-black h-auto"

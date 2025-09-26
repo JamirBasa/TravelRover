@@ -238,22 +238,21 @@ export class UserPreferencesConfig {
   }
 }
 
-// Export individual functions for backward compatibility
-export const formatTripTypes = UserPreferencesConfig.formatTripTypes.bind(
-  UserPreferencesConfig
-);
-export const formatTravelStyle = UserPreferencesConfig.formatTravelStyle.bind(
-  UserPreferencesConfig
-);
-export const formatBudgetRange = UserPreferencesConfig.formatBudgetRange.bind(
-  UserPreferencesConfig
-);
-export const formatAccommodation =
-  UserPreferencesConfig.formatAccommodation.bind(UserPreferencesConfig);
-export const getUserInterestSummary =
-  UserPreferencesConfig.getUserInterestSummary.bind(UserPreferencesConfig);
-export const formatUserProfileSummary =
-  UserPreferencesConfig.formatUserProfileSummary.bind(UserPreferencesConfig);
+// Export class as default and individual methods for convenience
+export const {
+  formatTripTypes,
+  formatTravelStyle,
+  formatBudgetRange,
+  formatAccommodation,
+  getUserInterestSummary,
+  formatUserProfileSummary,
+  getTripTypes,
+  getTravelStyles,
+  getBudgetRanges,
+  getAccommodationTypes,
+  isValidTripType,
+  isValidTravelStyle,
+  isValidBudgetRange,
+} = UserPreferencesConfig;
 
-// Default export
 export default UserPreferencesConfig;

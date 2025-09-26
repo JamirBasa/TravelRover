@@ -6,6 +6,11 @@ import {
   FaPlane,
   FaListAlt,
 } from "react-icons/fa";
+import {
+  calculateDuration,
+  formatCurrency,
+  DATE_CONFIG,
+} from "../../constants/options";
 
 const ReviewTripStep = ({
   formData,
@@ -14,29 +19,25 @@ const ReviewTripStep = ({
   userProfile,
   place,
 }) => {
-  // Format dates nicely
+  // Use centralized formatting functions
   const formatDate = (dateString) => {
     if (!dateString) return "Not selected";
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    return date.toLocaleDateString(
+      DATE_CONFIG.DATE_FORMAT,
+      DATE_CONFIG.DATE_OPTIONS
+    );
   };
 
   const getDuration = () => {
-    if (!formData.startDate || !formData.endDate) return "Not calculated";
-    const start = new Date(formData.startDate);
-    const end = new Date(formData.endDate);
-    const diffTime = Math.abs(end - start);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return `${diffDays} ${diffDays === 1 ? "day" : "days"}`;
+    const days = calculateDuration(formData.startDate, formData.endDate);
+    return days > 0
+      ? `${days} ${days === 1 ? "day" : "days"}`
+      : "Not calculated";
   };
 
   const getBudgetDisplay = () => {
-    if (customBudget) return `₱${customBudget} (Custom)`;
+    if (customBudget) return `${formatCurrency(customBudget)} (Custom)`;
     return formData.budget || "Not selected";
   };
 

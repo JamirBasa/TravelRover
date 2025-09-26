@@ -7,7 +7,14 @@ import axios from "axios";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../config/firebaseConfig";
 import { useNavigate } from "react-router-dom";
-import { AI_PROMPT } from "../constants/options";
+import {
+  AI_PROMPT,
+  STEP_CONFIGS,
+  DEFAULT_VALUES,
+  MESSAGES,
+  calculateProgress,
+  calculateDuration,
+} from "../constants/options";
 import { FlightAgent } from "../config/flightAgent";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
@@ -16,11 +23,7 @@ import {
   formatTripTypes,
 } from "../config/formatUserPreferences";
 import {
-  FaMapMarkerAlt,
   FaCalendarAlt,
-  FaCog,
-  FaPlane,
-  FaCheck,
   FaArrowRight,
   FaArrowLeft,
   FaUser,
@@ -37,33 +40,10 @@ import ReviewTripStep from "./components/ReviewTripStep";
 import GenerateTripButton from "./components/GenerateTripButton";
 import LoginDialog from "./components/LoginDialog";
 import { UserProfileConfig } from "../config/userProfile";
+import { ProfileLoading, ErrorState } from "../components/common/LoadingStates";
 
-const STEPS = [
-  {
-    id: 1,
-    title: "Destination & Dates",
-    description: "Where, when, and special requests for your trip",
-    icon: FaMapMarkerAlt,
-  },
-  {
-    id: 2,
-    title: "Travel Preferences",
-    description: "Budget and group size preferences",
-    icon: FaCog,
-  },
-  {
-    id: 3,
-    title: "Flight Options",
-    description: "Include flights in your itinerary",
-    icon: FaPlane,
-  },
-  {
-    id: 4,
-    title: "Review & Generate",
-    description: "Confirm details and create your trip",
-    icon: FaCheck,
-  },
-];
+// Use centralized step configuration
+const STEPS = STEP_CONFIGS.CREATE_TRIP;
 
 function CreateTrip() {
   // State management
@@ -84,7 +64,7 @@ function CreateTrip() {
   const [profileLoading, setProfileLoading] = useState(true);
 
   const navigate = useNavigate();
-  const progress = (currentStep / STEPS.length) * 100;
+  const progress = calculateProgress(currentStep, STEPS.length);
 
   // Check user profile on component mount
   useEffect(() => {
@@ -790,63 +770,17 @@ Focus on accommodations, activities, dining, and ground transportation only.
 
   // Show loading while checking profile
   if (profileLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center bg-white rounded-xl shadow-lg p-8 border border-gray-200">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <FaUser className="text-blue-600 text-xl" />
-            </div>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">
-            Loading Your Profile
-          </h3>
-          <p className="text-gray-600">
-            Preparing your personalized experience...
-          </p>
-        </div>
-      </div>
-    );
+    return <ProfileLoading />;
   }
 
   // Show message if profile not found
   if (!userProfile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-6">
-          <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
-            <div className="bg-blue-100 p-4 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center">
-              <FaUser className="text-blue-600 text-2xl" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Complete Your Profile First
-            </h2>
-            <p className="text-gray-600 mb-6 leading-relaxed">
-              To create{" "}
-              <span className="font-medium text-blue-600">
-                personalized travel itineraries
-              </span>
-              , we need to know your preferences, dietary requirements, and
-              travel style.
-            </p>
-            <div className="space-y-3">
-              <button
-                onClick={() => navigate("/user-profile")}
-                className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              >
-                Complete Profile Now
-              </button>
-              <button
-                onClick={() => navigate("/")}
-                className="w-full text-gray-600 hover:text-gray-800 text-sm underline"
-              >
-                Back to Home
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ErrorState
+        error={MESSAGES.ERROR.PROFILE_REQUIRED}
+        onRetry={() => navigate("/user-profile")}
+        onCreateNew={() => navigate("/")}
+      />
     );
   }
 

@@ -1,7 +1,8 @@
 // src/config/flightAgent.js
+import { API_CONFIG, FLIGHT_CONFIG } from "../constants/options";
 
 // ⚙️ Configuration
-const API_BASE_URL = "http://localhost:8000/api";
+const API_BASE_URL = API_CONFIG.BASE_URL;
 const USE_MOCK_DATA = false; // 🎭 Set to false when backend server is running
 
 // 🛠️ Development Note:
