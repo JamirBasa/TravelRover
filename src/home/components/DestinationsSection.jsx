@@ -74,7 +74,7 @@ function DestinationsSection() {
             <div className="p-4">
               <h3 className="font-semibold text-lg">{dest.name}</h3>
               <p className="text-gray-500 text-sm">{dest.desc}</p>
-              <Button className="mt-4 w-full">View Details</Button>
+              <Button className="mt-4 w-full cursor-pointer">View Details</Button>
             </div>
           </div>
         ))}

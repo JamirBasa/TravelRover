@@ -27,7 +27,7 @@ function HeroSection() {
           placeholder="Where do you want to go? (e.g., Baguio, Cebu)"
           className="flex-1 rounded-full px-5 py-6 text-lg shadow"
         />
-        <Button className="rounded-full px-6 py-6">
+        <Button className="rounded-full px-6 py-6 cursor-pointer">
           <Search className="mr-2 h-5 w-5" /> Search
         </Button>
       </div>
@@ -38,7 +38,7 @@ function HeroSection() {
           <Button
             key={cat.id}
             variant="outline"
-            className="flex items-center gap-2 px-6 py-5 rounded-xl"
+            className="flex items-center gap-2 px-6 py-5 rounded-xl cursor-pointer"
           >
             <span>{cat.icon}</span> {cat.name}
           </Button>
@@ -47,7 +47,7 @@ function HeroSection() {
 
       {/* Plan your trip button */}
       <Link to="/create-trip">
-        <Button className="mt-8 px-8 py-6 rounded-full">
+        <Button className="mt-8 px-8 py-6 rounded-full cursor-pointer">
           Plan your trip
         </Button>
       </Link>
