@@ -2,18 +2,27 @@ import React from "react";
 import HotelCardItem from "./HotelCardItem";
 
 function Hotels({ trip }) {
-  return (
-    <div>
-      <h2 className="font-bold text-xl mt-5">Hotel Recommendations</h2>
+  const hotels = trip?.tripData?.tripData?.accommodations || [];
 
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 mt-3">
-        {trip?.tripData?.tripData?.accommodations?.map((hotel, index) => (
-          <HotelCardItem
-            key={hotel?.id || hotel?.name || `hotel-${index}`} // ✅ Prefer unique ID
-            hotel={hotel}
-          />
-        ))}
+  if (!hotels || hotels.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-4xl mb-2">🏨</div>
+        <p className="text-gray-500 text-sm">
+          No hotel recommendations available
+        </p>
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {hotels.map((hotel, index) => (
+        <HotelCardItem
+          key={hotel?.id || hotel?.name || `hotel-${index}`}
+          hotel={hotel}
+        />
+      ))}
     </div>
   );
 }

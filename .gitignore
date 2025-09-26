@@ -22,3 +22,68 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment variables - CRITICAL: NEVER COMMIT THESE!
+.env
+*.env
+.env.local
+.env.development
+.env.production
+travel-backend/.env
+
+# Django Backend
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Database
+*.sqlite3
+*.db
+db.sqlite3
+
+# Django specific
+*.log
+local_settings.py
+media/
+staticfiles/
+
+# Python virtual environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+travel-backend/venv/
+
+# Cache directories
+.cache/
+.npm/
+.eslintcache
+
+# Firebase cache
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# OS generated files
+.DS_Store?
+ehthumbs.db
+Icon?
+Thumbs.db
