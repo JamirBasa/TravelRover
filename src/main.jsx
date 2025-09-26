@@ -5,6 +5,7 @@ import App from "./App.jsx";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Header from "./components/custom/Header.jsx";
 import CreateTrip from "./create-trip/index.jsx";
+import UserProfile from "./user-profile/index.jsx";
 import { Toaster } from "sonner";
 
 import { GoogleOAuthProvider } from "@react-oauth/google";
@@ -18,8 +19,13 @@ const router = createBrowserRouter([
     element: <App />,
   },
   {
+    path: "/user-profile",
+    element: <UserProfile />,
+  },
+  {
     path: "/home",
     element: <Home />,
+
   },
   {
     path: "/create-trip",

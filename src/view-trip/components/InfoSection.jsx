@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { Share2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { GetPlaceDetails, PHOTO_REF_URL } from "@/config/GlobalApi";
 
 function InfoSection({ trip }) {
@@ -9,14 +7,12 @@ function InfoSection({ trip }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // ✅ Better condition check
     if (trip?.userSelection?.location) {
       GetPlacePhoto();
     }
-  }, [trip?.userSelection?.location]); // ✅ More specific dependency
+  }, [trip?.userSelection?.location]);
 
   const GetPlacePhoto = async () => {
-    // ✅ Early return if no location
     if (!trip?.userSelection?.location) {
       console.warn("No location provided for photo search");
       return;
@@ -26,17 +22,9 @@ function InfoSection({ trip }) {
     setError(null);
 
     try {
-      const data = {
-        textQuery: trip.userSelection.location,
-      };
-
-      console.log("Searching for photos of:", data.textQuery); // Debug log
-
+      const data = { textQuery: trip.userSelection.location };
       const response = await GetPlaceDetails(data);
 
-      console.log("API Response:", response.data); // ✅ See full response structure
-
-      // ✅ Better error checking
       if (!response.data.places || response.data.places.length === 0) {
         throw new Error("No places found for this location");
       }
@@ -45,84 +33,75 @@ function InfoSection({ trip }) {
 
       if (!place.photos || place.photos.length === 0) {
         console.warn("No photos available for this place");
-        setPhotoUrl(""); // Use placeholder
+        setPhotoUrl("");
         return;
       }
 
-      // ✅ Safer photo access
-      const photoReference = place.photos[0]?.name; // Use first photo, not [3]
-
+      const photoReference = place.photos[0]?.name;
       if (photoReference) {
         const photoUrl = PHOTO_REF_URL.replace("{NAME}", photoReference);
         setPhotoUrl(photoUrl);
-        console.log("Photo URL generated:", photoUrl);
       }
     } catch (error) {
       console.error("Error fetching place photo:", error);
-
-      // ✅ Handle different error types
-      if (error.response?.status === 400) {
-        console.error(
-          "Bad request - check your request format:",
-          error.response.data
-        );
-      } else if (error.response?.status === 403) {
-        console.error("API key invalid or quota exceeded");
-      }
-
       setError(error.message);
-      setPhotoUrl(""); // Fallback to placeholder
+      setPhotoUrl("");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div>
-      {/* ✅ Better loading and error states */}
-      {isLoading ? (
-        <div className="w-full h-[300px] bg-gray-200 rounded-lg mb-4 flex items-center justify-center">
-          <span>Loading photo...</span>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+          <span className="text-blue-600 text-lg">📍</span>
         </div>
-      ) : (
-        <img
-          src={photoUrl || "../placeholder.png"}
-          alt={`${trip?.userSelection?.location || "Trip"} photo`}
-          className="w-full h-[300px] object-cover rounded-lg mb-4"
-          onError={(e) => {
-            console.log("Image failed to load, using placeholder");
-            e.target.src = "../placeholder.png";
-          }}
-        />
-      )}
-
-      {error && (
-        <div className="text-red-500 text-sm mb-2">
-          Failed to load location photo: {error}
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Trip Overview</h2>
+          <p className="text-sm text-gray-600">Your destination at a glance</p>
         </div>
-      )}
-
-      <div className="flex justify-between items-center">
-        <div className="my-5 flex flex-col gap-2">
-          <h2 className="font-bold text-2xl">
-            {trip?.userSelection?.location}
-          </h2>
-          <div className="flex items-center gap-2">
-            <span className="p-1 px-3 bg-gray-200 rounded-full text-gray-500 text-xs md:text-md">
-              📅 {trip?.userSelection?.duration} days
-            </span>
-            <span className="p-1 px-3 bg-gray-200 rounded-full text-gray-500 text-xs md:text-md">
-              🧑 No of Travelers: {trip?.userSelection?.travelers}
-            </span>
-            <span className="p-1 px-3 bg-gray-200 rounded-full text-gray-500 text-xs md:text-md">
-              💲 {trip?.userSelection?.budget}
-            </span>
-          </div>
-        </div>
-        <Button>
-          <Share2 />
-        </Button>
       </div>
+
+      {/* Location Image */}
+      <div className="relative mb-6">
+        {isLoading ? (
+          <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-2 text-sm text-gray-500">Loading photo...</p>
+            </div>
+          </div>
+        ) : (
+          <img
+            src={photoUrl || "../placeholder.png"}
+            alt={`${trip?.userSelection?.location || "Trip"} photo`}
+            className="w-full h-64 object-cover rounded-lg"
+            onError={(e) => {
+              e.target.src = "../placeholder.png";
+            }}
+          />
+        )}
+
+        {error && (
+          <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center">
+            <div className="text-center p-4">
+              <p className="text-4xl text-gray-400 mb-2">📷</p>
+              <p className="text-sm text-gray-500">Photo unavailable</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Special Requests */}
+      {trip?.userSelection?.specificRequests && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-semibold text-blue-900 mb-2">Special Requests</h4>
+          <p className="text-blue-800 text-sm">
+            {trip.userSelection.specificRequests}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
