@@ -100,19 +100,46 @@ python manage.py migrate
 # (Optional) Create superuser
 python manage.py createsuperuser
 ⚙️ Configuration
+
 🔐 Environment Variables
-Frontend (.env.local)
-env
 
-VITE_GOOGLE_PLACES_API_KEY=your_google_places_api_key_here
+**Frontend (.env.local):**
+
+Create a `.env.local` file in the root directory with:
+
+```env
+# Firebase Configuration
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+
+# Google APIs
+VITE_GOOGLE_PLACE_API_KEY=your_google_places_api_key
+VITE_GOOGLE_GEMINI_AI_API_KEY=your_google_gemini_api_key
+
+# Backend API
 VITE_API_BASE_URL=http://localhost:8000
-Backend (travel-backend/.env)
-env
+```
 
+**Backend (travel-backend/.env):**
+
+Create a `.env` file in the `travel-backend` directory with:
+
+```env
+# Django Configuration
 SECRET_KEY=your_secret_key_here
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
-GOOGLE_PLACES_API_KEY=your_google_places_api_key_here
+
+# External APIs
+SERPAPI_KEY=your_serpapi_key
+```
+
+**⚠️ Security Note:** Never commit your `.env` files to version control. Use the provided `.env.example` files as templates.
 🏃‍♂️ Running the Application
 Backend
 Bash
