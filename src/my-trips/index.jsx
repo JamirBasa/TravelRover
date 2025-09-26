@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { query, collection, where, getDocs } from "firebase/firestore";
-import { db } from "@/config/FirebaseConfig";
+import { db } from "@/config/firebaseConfig";
 import { Button } from "@/components/ui/button";
 import { GetPlaceDetails, PHOTO_REF_URL } from "@/config/GlobalApi";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
