@@ -1,7 +1,7 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Input } from "../../components/ui/input";
 import Select from "../../components/ui/select";
-import { FaPlane, FaMapMarkerAlt, FaInfoCircle } from "react-icons/fa";
+import { FaPlane, FaMapMarkerAlt, FaInfoCircle, FaCheck } from "react-icons/fa";
 import {
   getRegionsByCountry,
   getCitiesByRegion,
@@ -10,9 +10,66 @@ import {
 import { useMemo } from "react";
 
 const FlightPreferences = ({ flightData, onFlightDataChange, userProfile }) => {
+  // Debug log to see what we're receiving
+  React.useEffect(() => {
+    if (userProfile) {
+      const profileRegionCode =
+        userProfile.address?.regionCode || userProfile.address?.region;
+      const regionName = getRegionName("PH", profileRegionCode);
+
+      console.log("🔍 FlightPreferences received userProfile:", {
+        address: userProfile.address,
+        city: userProfile.address?.city,
+        region: userProfile.address?.region,
+        regionCode: userProfile.address?.regionCode,
+        "🔧 FIXED - profileRegionCode": profileRegionCode,
+        "🔧 FIXED - regionName": regionName,
+        "✅ Will auto-populate":
+          !!profileRegionCode && !!userProfile.address?.city,
+      });
+    }
+  }, [userProfile]);
+
   // Set default departure location from user profile
+  // Fix: Handle both possible data structures (regionCode vs region containing the code)
   const defaultDepartureCity = userProfile?.address?.city || "";
-  const defaultDepartureRegion = userProfile?.address?.regionCode || "";
+  const defaultDepartureRegionCode =
+    userProfile?.address?.regionCode || userProfile?.address?.region || "";
+
+  // Get the region name from the code
+  const defaultDepartureRegionName = defaultDepartureRegionCode
+    ? getRegionName("PH", defaultDepartureRegionCode)
+    : "";
+
+  // Auto-populate when flights are enabled and we have profile data
+  React.useEffect(() => {
+    const profileRegionCode =
+      userProfile?.address?.regionCode || userProfile?.address?.region;
+
+    if (
+      flightData.includeFlights &&
+      userProfile?.address?.city &&
+      profileRegionCode &&
+      !flightData.departureCity &&
+      !flightData.departureRegionCode
+    ) {
+      const regionName = getRegionName("PH", profileRegionCode);
+
+      console.log("✈️ Auto-populating flight data on enable:", {
+        city: userProfile.address.city,
+        regionCode: profileRegionCode,
+        regionName: regionName,
+        originalData: userProfile.address,
+      });
+
+      onFlightDataChange({
+        ...flightData,
+        departureCity: userProfile.address.city,
+        departureRegionCode: profileRegionCode,
+        departureRegion: regionName,
+      });
+    }
+  }, [flightData.includeFlights, userProfile]);
 
   const regionOptions = useMemo(() => {
     return getRegionsByCountry("PH").map((region) => ({
@@ -87,21 +144,34 @@ const FlightPreferences = ({ flightData, onFlightDataChange, userProfile }) => {
             <input
               type="checkbox"
               checked={flightData.includeFlights}
-              onChange={(e) =>
+              onChange={(e) => {
+                const isEnabled = e.target.checked;
+
                 onFlightDataChange({
                   ...flightData,
-                  includeFlights: e.target.checked,
-                  // Set default departure city when enabled
-                  departureCity:
-                    e.target.checked && !flightData.departureCity
-                      ? defaultDepartureCity
-                      : flightData.departureCity,
-                  departureRegionCode:
-                    e.target.checked && !flightData.departureRegionCode
-                      ? defaultDepartureRegion
-                      : flightData.departureRegionCode,
-                })
-              }
+                  includeFlights: isEnabled,
+                  // Auto-populate when enabling flights
+                  ...(isEnabled &&
+                  userProfile?.address?.city &&
+                  !flightData.departureCity
+                    ? (() => {
+                        const profileRegionCode =
+                          userProfile.address.regionCode ||
+                          userProfile.address.region;
+                        const regionName = getRegionName(
+                          "PH",
+                          profileRegionCode
+                        );
+
+                        return {
+                          departureCity: userProfile.address.city,
+                          departureRegionCode: profileRegionCode,
+                          departureRegion: regionName,
+                        };
+                      })()
+                    : {}),
+                });
+              }}
               className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
             />
             <div className="flex items-center gap-2">
@@ -115,10 +185,19 @@ const FlightPreferences = ({ flightData, onFlightDataChange, userProfile }) => {
           {flightData.includeFlights && (
             <div className="ml-7 pl-4 border-l-2 border-blue-200 space-y-4">
               <div className="bg-gray-50 p-4 rounded-lg">
+                {/* Auto-populated indicator */}
+                {flightData.departureCity &&
+                  userProfile?.address?.city === flightData.departureCity && (
+                    <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-2 text-green-700 text-sm">
+                        <FaCheck className="text-xs" />
+                        <span>Auto-populated from your profile</span>
+                      </div>
+                    </div>
+                  )}
                 <h4 className="font-medium text-gray-800 mb-3">
                   Where will you be departing from?
-                </h4>
-
+                </h4>{" "}
                 {/* Departure Region */}
                 <div className="space-y-3">
                   <div>
@@ -173,7 +252,6 @@ const FlightPreferences = ({ flightData, onFlightDataChange, userProfile }) => {
                     )}
                   </div>
                 </div>
-
                 <div className="mt-3 text-xs text-gray-600">
                   💡 We'll find the best flight options from your departure city
                   to your destination and include pricing in your itinerary.
@@ -194,6 +272,21 @@ const FlightPreferences = ({ flightData, onFlightDataChange, userProfile }) => {
             <li>• Integrated into your total trip budget</li>
             <li>• Direct booking links for convenience</li>
             <li>• Price level indicators (Low, Fair, High)</li>
+            {userProfile?.address?.city && (
+              <li>
+                • 🏠 Using your home location:{" "}
+                <strong>
+                  {userProfile.address.city},{" "}
+                  {getRegionName(
+                    "PH",
+                    userProfile.address?.regionCode ||
+                      userProfile.address?.region
+                  ) ||
+                    userProfile.address?.region ||
+                    "Unknown Region"}
+                </strong>
+              </li>
+            )}
           </ul>
         </div>
       </div>

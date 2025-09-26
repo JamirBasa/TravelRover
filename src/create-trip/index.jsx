@@ -12,6 +12,10 @@ import { FlightAgent } from "../config/flightAgent";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 import {
+  formatUserProfileSummary,
+  formatTripTypes,
+} from "../config/formatUserPreferences";
+import {
   FaMapMarkerAlt,
   FaCalendarAlt,
   FaCog,
@@ -32,6 +36,7 @@ import FlightPreferences from "./components/FlightPreferences";
 import ReviewTripStep from "./components/ReviewTripStep";
 import GenerateTripButton from "./components/GenerateTripButton";
 import LoginDialog from "./components/LoginDialog";
+import { UserProfileConfig } from "../config/userProfile";
 
 const STEPS = [
   {
@@ -87,34 +92,58 @@ function CreateTrip() {
   }, []);
 
   const checkUserProfile = async () => {
+    setProfileLoading(true);
     try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (!user?.email) {
-        setProfileLoading(false);
-        return;
-      }
+      const profile = await UserProfileConfig.loadCurrentUserProfile();
 
-      const docRef = doc(db, "UserProfiles", user.email);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const profile = docSnap.data();
-        setUserProfile(profile);
-        // Pre-fill form data with user preferences
-        setFormData((prev) => ({
-          ...prev,
-          budget: profile.budgetRange || "",
-          travelers: profile.travelStyle || "",
-        }));
-      } else {
-        // Profile doesn't exist, redirect to profile setup
+      if (!profile) {
+        console.log("📝 No user profile found, redirecting to profile setup");
         navigate("/user-profile");
         return;
       }
+
+      if (!profile.isProfileComplete) {
+        console.log("🔄 User profile incomplete, redirecting to complete it");
+        navigate("/user-profile");
+        return;
+      }
+
+      console.log("✅ User profile loaded successfully", profile);
+      console.log("🏠 Profile address data:", profile.address);
+      setUserProfile(profile);
+
+      // Auto-populate form data with user preferences
+      setFormData((prev) => ({
+        ...prev,
+        budget: profile.budgetRange || prev.budget,
+        travelers: getDefaultTravelers(profile) || prev.travelers,
+      }));
+
+      // Auto-populate flight data with user's home location using new method
+      const autoPopulatedFlightData = UserProfileConfig.autoPopulateFlightData(
+        profile,
+        flightData
+      );
+
+      if (autoPopulatedFlightData !== flightData) {
+        setFlightData(autoPopulatedFlightData);
+        console.log("🏠 Auto-populated flight departure from profile");
+      }
     } catch (error) {
-      console.error("Error checking profile:", error);
+      console.error("❌ Error checking profile:", error);
+      toast.error("Failed to load your profile. Please try again.");
+    } finally {
+      setProfileLoading(false);
     }
-    setProfileLoading(false);
+  };
+
+  // Helper function to determine default travelers based on profile
+  const getDefaultTravelers = (profile) => {
+    // Try to infer from profile data
+    if (profile.preferredTripTypes?.includes("Romantic")) return "A Couple";
+    if (profile.preferredTripTypes?.includes("Family")) return "Family";
+    if (profile.preferredTripTypes?.includes("Group")) return "Friends";
+    return "Just Me"; // Default fallback
   };
 
   // Handlers
@@ -326,6 +355,17 @@ function CreateTrip() {
           adults: FlightAgent.parseAdults(formData.travelers),
           trip_type: "round-trip",
         });
+
+        // Show notification if using mock data
+        if (
+          flightResults?.message?.includes("Mock") ||
+          flightResults?.fallback
+        ) {
+          toast("🎭 Using mock flight data - Backend server not connected", {
+            description:
+              "Flight prices are simulated. Connect backend for real-time data.",
+          });
+        }
 
         setFlightLoading(false);
       } else {
@@ -635,7 +675,15 @@ Focus on accommodations, activities, dining, and ground transportation only.
 
       await setDoc(doc(db, "AITrips", docId), sanitizedTripDocument);
 
-      toast("🎉 Trip saved successfully with real flight data!");
+      const hasRealFlights =
+        flightResults?.success &&
+        !flightResults?.fallback &&
+        !flightResults?.message?.includes("Mock");
+      const flightMessage = hasRealFlights
+        ? "with real flight data"
+        : "with flight recommendations";
+
+      toast(`🎉 Trip saved successfully ${flightMessage}!`);
       navigate("/view-trip/" + docId);
     } catch (error) {
       console.error("Error saving trip: ", error);
@@ -743,10 +791,20 @@ Focus on accommodations, activities, dining, and ground transportation only.
   // Show loading while checking profile
   if (profileLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking your profile...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center bg-white rounded-xl shadow-lg p-8 border border-gray-200">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <FaUser className="text-blue-600 text-xl" />
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            Loading Your Profile
+          </h3>
+          <p className="text-gray-600">
+            Preparing your personalized experience...
+          </p>
         </div>
       </div>
     );
@@ -755,21 +813,38 @@ Focus on accommodations, activities, dining, and ground transportation only.
   // Show message if profile not found
   if (!userProfile) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-4">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            Complete Your Profile First
-          </h2>
-          <p className="text-gray-600 mb-6">
-            To create personalized travel itineraries, we need to know your
-            preferences, dietary requirements, and travel style.
-          </p>
-          <button
-            onClick={() => navigate("/user-profile")}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Complete Profile
-          </button>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-6">
+          <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
+            <div className="bg-blue-100 p-4 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center">
+              <FaUser className="text-blue-600 text-2xl" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              Complete Your Profile First
+            </h2>
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              To create{" "}
+              <span className="font-medium text-blue-600">
+                personalized travel itineraries
+              </span>
+              , we need to know your preferences, dietary requirements, and
+              travel style.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => navigate("/user-profile")}
+                className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Complete Profile Now
+              </button>
+              <button
+                onClick={() => navigate("/")}
+                className="w-full text-gray-600 hover:text-gray-800 text-sm underline"
+              >
+                Back to Home
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -791,29 +866,57 @@ Focus on accommodations, activities, dining, and ground transportation only.
 
           {/* User Profile Summary */}
           {userProfile && (
-            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-5 shadow-sm">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <FaUser className="text-blue-600" />
+                <div className="flex items-center gap-4">
+                  <div className="bg-blue-100 p-3 rounded-full">
+                    <FaUser className="text-blue-600 text-lg" />
+                  </div>
                   <div>
-                    <h3 className="font-semibold text-blue-800">
-                      Welcome back,{" "}
-                      {userProfile.firstName || userProfile.fullName}!
+                    <h3 className="font-bold text-blue-900 text-lg">
+                      Welcome back, {formatUserProfileSummary(userProfile).name}
+                      !
                     </h3>
-                    <p className="text-blue-600 text-sm">
-                      Creating personalized trips based on your preferences:{" "}
-                      {userProfile.preferredTripTypes?.slice(0, 2).join(", ")}
-                      {userProfile.preferredTripTypes?.length > 2 &&
-                        ` +${userProfile.preferredTripTypes.length - 2} more`}
+                    <p className="text-blue-700 text-sm font-medium mt-1">
+                      Creating personalized trips based on your preferences:
                     </p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {userProfile.preferredTripTypes
+                        ?.slice(0, 2)
+                        .map((typeId, index) => {
+                          const tripTypeLabels = {
+                            adventure: "Adventure & Outdoor",
+                            beach: "Beach & Island",
+                            cultural: "Cultural & Historical",
+                            nature: "Nature & Wildlife",
+                            photography: "Photography & Scenic",
+                            wellness: "Wellness & Spa",
+                            food: "Food & Culinary",
+                            romantic: "Romantic Getaways",
+                          };
+                          return (
+                            <span
+                              key={typeId}
+                              className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                            >
+                              {tripTypeLabels[typeId] || typeId}
+                            </span>
+                          );
+                        })}
+                      {userProfile.preferredTripTypes?.length > 2 && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                          +{userProfile.preferredTripTypes.length - 2} more
+                        </span>
+                      )}
+                    </div>
+                    {userProfile.travelStyle && (
+                      <p className="text-blue-600 text-xs mt-2">
+                        <span className="font-medium">Travel Style:</span>{" "}
+                        {formatUserProfileSummary(userProfile).travelStyle}
+                      </p>
+                    )}
                   </div>
                 </div>
-                <button
-                  onClick={() => navigate("/user-profile")}
-                  className="text-blue-600 hover:text-blue-800 text-sm underline"
-                >
-                  Update Profile
-                </button>
               </div>
             </div>
           )}

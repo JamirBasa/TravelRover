@@ -59,7 +59,6 @@ const UserProfile = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [hasExistingProfile, setHasExistingProfile] = useState(false);
   const [profileData, setProfileData] = useState({
     // Personal Information
     firstName: "",
@@ -139,11 +138,9 @@ const UserProfile = () => {
         const existingData = docSnap.data();
 
         if (existingData.isProfileComplete) {
-          setHasExistingProfile(true);
-          toast.success(
-            "Profile already exists! Redirecting to create trip..."
-          );
-          setTimeout(() => navigate("/create-trip"), 2000);
+          // Redirect existing users to settings page
+          toast.info("Profile already exists! Redirecting to settings...");
+          setTimeout(() => navigate("/settings"), 1500);
           return;
         } else {
           setProfileData((prev) => ({ ...prev, ...existingData }));
@@ -262,7 +259,7 @@ const UserProfile = () => {
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
       toast.success("🎉 Profile saved successfully!");
-      navigate("/create-trip");
+      navigate("/");
     } catch (error) {
       console.error("Error saving profile:", error);
       toast.error("Failed to save profile: " + error.message);
@@ -323,24 +320,6 @@ const UserProfile = () => {
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600 mb-2">Checking your profile...</p>
           <p className="text-sm text-gray-500">Please wait a moment</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show existing profile message
-  if (hasExistingProfile) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
-        <div className="text-center bg-white p-8 rounded-lg shadow-lg">
-          <FaCheck className="text-green-500 text-6xl mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            Profile Already Complete!
-          </h2>
-          <p className="text-gray-600 mb-4">
-            Your travel profile is already set up. Redirecting you to create
-            trips...
-          </p>
         </div>
       </div>
     );
