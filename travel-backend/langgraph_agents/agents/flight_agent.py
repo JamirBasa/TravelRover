@@ -28,17 +28,43 @@ class FlightAgent(BaseAgent):
             }
         
         try:
-            # Use Django's existing FlightSearchView in a synchronous way
-            # Create a mock request using APIRequestFactory
-            factory = APIRequestFactory()
-            request = factory.post('/api/flights/search/', flight_params, format='json')
-            
-            # Create FlightSearchView instance and call it
+            # Call the flight search logic directly instead of through Django view
             view = FlightSearchView()
-            response = view.post(request)
             
-            # Convert Django Response to dict
-            flight_results = response.data
+            # Call the flight search methods directly
+            from_airport = flight_params.get('from_airport')
+            to_airport = flight_params.get('to_airport')
+            departure_date = flight_params.get('departure_date')
+            return_date = flight_params.get('return_date')
+            adults = flight_params.get('adults', 1)
+            trip_type = flight_params.get('trip_type', 'round-trip')
+
+            # Validate required fields
+            if not all([from_airport, to_airport, departure_date]):
+                return {
+                    'success': False,
+                    'error': 'Missing required fields: from_airport, to_airport, departure_date',
+                    'flights': []
+                }
+
+            # Use the view's search logic directly
+            from django.conf import settings
+            
+            # Check if SerpAPI key is configured
+            if not getattr(settings, 'SERPAPI_KEY', None):
+                logger.warning("SerpAPI key not configured, using fallback data")
+                flight_results = view.fallback_response(from_airport, to_airport, trip_type)
+            else:
+                try:
+                    # Search flights using SerpAPI
+                    flight_results = view.search_flights_serpapi(
+                        from_airport, to_airport, departure_date, return_date, adults, trip_type
+                    )
+                except Exception as e:
+                    logger.error(f"SerpAPI error: {e}")
+                    flight_results = view.fallback_response(from_airport, to_airport, trip_type)
+                    flight_results['note'] = f'SerpAPI error: {str(e)}'
+                    flight_results['source'] = 'fallback_error'
             
             # Enhance results with LangGraph-specific analysis
             if flight_results.get('success'):
@@ -77,7 +103,7 @@ class FlightAgent(BaseAgent):
             'flights': flights,
             'langgraph_analysis': analysis,
             'agent_type': 'flight',
-            'processing_time': self.execution_log.execution_time_ms if self.execution_log else None
+            'processing_time': getattr(self, 'execution_time_ms', None)
         }
     
     def _calculate_flight_score(self, flight: Dict[str, Any]) -> int:

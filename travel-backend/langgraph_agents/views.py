@@ -2,169 +2,210 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .agents.coordinator import CoordinatorAgent
-from .models import TravelPlanningSession, AgentExecutionLog
-import uuid
-import logging
-from asgiref.sync import sync_to_async
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
-logger = logging.getLogger(__name__)
+from .services import OrchestrationService, SessionService
+from .utils import get_agent_logger, validate_email
+from .exceptions import LangGraphAgentError, DataValidationError
+from .models import TravelPlanningSession, AgentExecutionLog
 
+logger = get_agent_logger("LangGraphViews")
+
+@method_decorator(csrf_exempt, name='dispatch')
 class LangGraphTravelPlannerView(APIView):
     """
-    Main LangGraph Travel Planner API endpoint
-    Orchestrates multi-agent travel planning workflow
+    Main LangGraph Travel Planner API endpoint using modular services
     """
     
     def post(self, request):
         """Execute LangGraph travel planning workflow"""
         
-        try:
-            # Generate unique session ID
-            session_id = str(uuid.uuid4())
-            
-            logger.info(f"🤖 Starting LangGraph session: {session_id}")
-            
-            # Validate required parameters
-            required_fields = ['destination', 'startDate', 'endDate', 'travelers']
-            missing_fields = [field for field in required_fields if not request.data.get(field)]
-            
-            if missing_fields:
+        async def async_handler():
+            try:
+                logger.info("🤖 Starting LangGraph travel planning request")
+                
+                # Extract and validate user email
+                user_email = validate_email(
+                    request.data.get('userEmail', request.data.get('user_email', ''))
+                )
+                
+                # Extract trip parameters
+                trip_params = request.data.get('tripParams', request.data)
+                
+                logger.info(f"🎯 Processing request for {user_email}: {trip_params.get('destination', 'Unknown')}")
+                
+                # Create orchestration service and execute workflow
+                orchestration_service = OrchestrationService()
+                results = await orchestration_service.execute_workflow(user_email, trip_params)
+                
+                logger.info(f"✅ LangGraph workflow completed: {results.get('session_id')}")
+                
+                return Response(results)
+                
+            except DataValidationError as e:
+                logger.warning(f"⚠️ Validation error: {str(e)}")
                 return Response({
                     'success': False,
-                    'error': f'Missing required fields: {", ".join(missing_fields)}'
+                    'error': f"Validation error: {str(e)}",
+                    'error_type': 'validation'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Add session ID to request data
-            trip_data = dict(request.data)
-            trip_data['session_id'] = session_id
-            
-            # Execute LangGraph workflow synchronously (Django handles async internally)
-            results = self._execute_langgraph_workflow_sync(session_id, trip_data)
-            
-            # Return results
-            return Response({
-                'success': True,
-                'session_id': session_id,
-                'results': results
-            })
-            
-        except Exception as e:
-            logger.error(f"❌ LangGraph execution failed: {e}")
-            return Response({
-                'success': False,
-                'error': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    def _execute_langgraph_workflow_sync(self, session_id: str, trip_data: dict) -> dict:
-        """Execute the complete LangGraph workflow synchronously"""
+                
+            except LangGraphAgentError as e:
+                logger.error(f"❌ LangGraph agent error: {str(e)}")
+                return Response({
+                    'success': False,
+                    'error': str(e),
+                    'error_type': 'agent_error'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+            except Exception as e:
+                logger.error(f"❌ Unexpected error: {str(e)}")
+                return Response({
+                    'success': False,
+                    'error': f"Internal server error: {str(e)}",
+                    'error_type': 'internal_error'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+        # Run async handler synchronously
+        import asyncio
         try:
-            # Create coordinator agent
-            coordinator = CoordinatorAgent(session_id)
-            
-            # Execute workflow synchronously - coordinator will handle async internally
-            results = coordinator.execute_sync(trip_data)
-            
-            logger.info(f"✅ LangGraph workflow completed for session: {session_id}")
-            return results
-            
-        except Exception as e:
-            logger.error(f"❌ LangGraph workflow failed for session {session_id}: {e}")
-            raise e
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        return loop.run_until_complete(async_handler())
 
 class LangGraphSessionStatusView(APIView):
     """
-    Get status and results of a LangGraph session
+    Get status and results of a LangGraph session using services
     """
     
     def get(self, request, session_id):
         """Get session status and results"""
         
-        try:
-            # Get session
-            session = TravelPlanningSession.objects.get(session_id=session_id)
-            
-            # Get agent execution logs
-            agent_logs = AgentExecutionLog.objects.filter(session=session).order_by('started_at')
-            
-            # Prepare response
-            response_data = {
-                'session_id': str(session.session_id),
-                'status': session.status,
-                'destination': session.destination,
-                'travelers': session.travelers,
-                'budget': session.budget,
-                'optimization_score': session.optimization_score,
-                'total_estimated_cost': float(session.total_estimated_cost) if session.total_estimated_cost else 0,
-                'cost_efficiency': session.cost_efficiency,
-                'created_at': session.created_at.isoformat(),
-                'completed_at': session.completed_at.isoformat() if session.completed_at else None,
-                'agent_executions': [
-                    {
-                        'agent_type': log.agent_type,
-                        'status': log.status,
-                        'execution_time_ms': log.execution_time_ms,
-                        'error_message': log.error_message,
-                        'started_at': log.started_at.isoformat(),
-                        'completed_at': log.completed_at.isoformat() if log.completed_at else None
+        async def async_handler():
+            try:
+                logger.info(f"📊 Getting session status: {session_id}")
+                
+                session_service = SessionService()
+                
+                # Get session data
+                session_data = await session_service.get_session(session_id)
+                if not session_data:
+                    return Response({
+                        'success': False,
+                        'error': 'Session not found'
+                    }, status=status.HTTP_404_NOT_FOUND)
+                
+                # Get execution logs
+                logs = await session_service.get_session_logs(session_id)
+                
+                response_data = {
+                    'success': True,
+                    'session': session_data,
+                    'execution_logs': logs,
+                    'summary': {
+                        'total_agents': len(set(log['agent_type'] for log in logs)),
+                        'successful_executions': len([log for log in logs if log['status'] == 'success']),
+                        'failed_executions': len([log for log in logs if log['status'] == 'failed']),
+                        'total_execution_time_ms': sum(log.get('execution_time_ms', 0) for log in logs)
                     }
-                    for log in agent_logs
-                ]
-            }
-            
-            return Response(response_data)
-            
-        except TravelPlanningSession.DoesNotExist:
-            return Response({
-                'success': False,
-                'error': 'Session not found'
-            }, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            logger.error(f"Error retrieving session {session_id}: {e}")
-            return Response({
-                'success': False,
-                'error': 'Internal server error'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                }
+                
+                return Response(response_data)
+                
+            except Exception as e:
+                logger.error(f"❌ Error retrieving session {session_id}: {str(e)}")
+                return Response({
+                    'success': False,
+                    'error': str(e)
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        # Run async handler synchronously
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        return loop.run_until_complete(async_handler())
 
 class LangGraphHealthCheckView(APIView):
     """
-    Health check endpoint for LangGraph system
+    Health check endpoint for LangGraph system with comprehensive checks
     """
     
     def get(self, request):
         """Check LangGraph system health"""
         
         try:
-            # Check database connectivity
-            session_count = TravelPlanningSession.objects.count()
+            from datetime import timedelta
+            from django.db import connection
+            from django.utils import timezone
             
-            # Check recent sessions
-            recent_sessions = TravelPlanningSession.objects.filter(
-                status='completed'
-            ).order_by('-completed_at')[:5]
-            
-            # Calculate success rate
-            total_recent = TravelPlanningSession.objects.count()
-            completed_recent = TravelPlanningSession.objects.filter(status='completed').count()
-            success_rate = (completed_recent / total_recent * 100) if total_recent > 0 else 0
-            
-            return Response({
+            health_status = {
                 'status': 'healthy',
-                'total_sessions': session_count,
-                'success_rate': round(success_rate, 1),
-                'recent_sessions': len(recent_sessions),
-                'agents': {
-                    'coordinator': 'active',
-                    'flight': 'active', 
-                    'hotel': 'active'
+                'timestamp': timezone.now().isoformat(),
+                'version': '1.0.0',
+                'components': {}
+            }
+            
+            # Check database connectivity
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT 1")
+                health_status['components']['database'] = 'healthy'
+                
+                # Get session statistics
+                session_count = TravelPlanningSession.objects.count()
+                recent_sessions = TravelPlanningSession.objects.filter(
+                    created_at__gte=timezone.now() - timedelta(hours=24)
+                )
+                
+                completed_sessions = recent_sessions.filter(status='completed')
+                success_rate = (completed_sessions.count() / recent_sessions.count() * 100) if recent_sessions.count() > 0 else 100
+                
+                health_status['metrics'] = {
+                    'total_sessions': session_count,
+                    'recent_sessions_24h': recent_sessions.count(),
+                    'success_rate_24h': round(success_rate, 1)
                 }
-            })
+                
+            except Exception as e:
+                health_status['components']['database'] = f'unhealthy: {str(e)}'
+                health_status['status'] = 'degraded'
+            
+            # Check agent services
+            try:
+                from .services import OrchestrationService
+                orchestration_service = OrchestrationService()
+                health_status['components']['orchestration_service'] = 'healthy'
+                health_status['components']['agents'] = {
+                    'coordinator': 'active',
+                    'flight_agent': 'active',
+                    'hotel_agent': 'active'
+                }
+            except Exception as e:
+                health_status['components']['orchestration_service'] = f'unhealthy: {str(e)}'
+                health_status['status'] = 'degraded'
+            
+            # Overall status
+            if any('unhealthy' in str(v) for v in health_status['components'].values()):
+                health_status['status'] = 'unhealthy'
+            elif any('degraded' in str(v) for v in health_status['components'].values()):
+                health_status['status'] = 'degraded'
+            
+            response_status = status.HTTP_200_OK if health_status['status'] == 'healthy' else status.HTTP_503_SERVICE_UNAVAILABLE
+            
+            return Response(health_status, status=response_status)
             
         except Exception as e:
+            logger.error(f"❌ Health check failed: {str(e)}")
             return Response({
                 'status': 'unhealthy',
-                'error': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                'error': str(e),
+                'timestamp': timezone.now().isoformat()
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)

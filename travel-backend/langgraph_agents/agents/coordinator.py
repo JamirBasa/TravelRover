@@ -3,6 +3,7 @@ from typing import Dict, Any
 import asyncio
 import uuid
 from datetime import datetime
+from django.utils import timezone
 from .base_agent import BaseAgent
 from .flight_agent import FlightAgent
 from .hotel_agent import HotelAgent
@@ -130,21 +131,25 @@ class CoordinatorAgent(BaseAgent):
             'parallel_tasks': []
         }
         
-        # Add flight task if requested
-        if trip_params.get('flight_data', {}).get('includeFlights', False):
+        # Add flight task (default to True unless explicitly disabled)
+        include_flights = trip_params.get('flight_data', {}).get('includeFlights', True)
+        if include_flights:
             flight_params = self._build_flight_params(trip_params)
             plan['parallel_tasks'].append({
                 'agent_type': 'flight',
                 'params': {'flight_params': flight_params}
             })
+            logger.info(f"🛫 Flight search enabled with params: {flight_params}")
         
-        # Add hotel task if requested
-        if trip_params.get('hotel_data', {}).get('includeHotels', False):
+        # Add hotel task (default to True unless explicitly disabled)
+        include_hotels = trip_params.get('hotel_data', {}).get('includeHotels', True)
+        if include_hotels:
             hotel_params = self._build_hotel_params(trip_params)
             plan['parallel_tasks'].append({
                 'agent_type': 'hotel',
                 'params': {'hotel_params': hotel_params}
             })
+            logger.info(f"🏨 Hotel search enabled with params: {hotel_params}")
         
         logger.info(f"Created execution plan with {len(plan['parallel_tasks'])} parallel tasks")
         return plan
@@ -153,18 +158,27 @@ class CoordinatorAgent(BaseAgent):
         """Build flight search parameters"""
         
         flight_data = trip_params.get('flight_data', {})
+        user_profile = trip_params.get('user_profile', {})
         
-        # Extract airport codes (simplified - you might want to enhance this)
+        # Extract departure city from flight data or user profile
         departure_city = flight_data.get('departureCity', '')
+        if not departure_city and user_profile:
+            # Try to extract from user profile city
+            profile_city = user_profile.get('city', '')
+            if profile_city:
+                departure_city = profile_city
+        
         destination = trip_params.get('destination', '')
         
-        # Simple airport code extraction (you can enhance with a proper mapping)
-        from_airport = self._extract_airport_code(departure_city)
+        # Extract airport codes
+        from_airport = self._extract_airport_code(departure_city) if departure_city else 'ZAM'  # Default to Zamboanga
         to_airport = self._extract_airport_code(destination)
         
         # Parse number of adults
         travelers = trip_params.get('travelers', 'Just Me')
         adults = self._parse_adults(travelers)
+        
+        logger.info(f"Flight params: {departure_city} ({from_airport}) → {destination} ({to_airport})")
         
         return {
             'from_airport': from_airport,
@@ -204,6 +218,9 @@ class CoordinatorAgent(BaseAgent):
         # This is a simplified version - you might want to use a proper airport database
         airport_mapping = {
             'Manila': 'MNL',
+            'Intramuros': 'MNL',  # Intramuros is in Manila
+            'Metro Manila': 'MNL',
+            'Zamboanga': 'ZAM',
             'Cebu': 'CEB',
             'Davao': 'DVO',
             'Puerto Princesa': 'PPS',
@@ -217,6 +234,7 @@ class CoordinatorAgent(BaseAgent):
             'Bacolod': 'BCD'
         }
         
+        # Check for exact matches first
         for city, code in airport_mapping.items():
             if city.lower() in location.lower():
                 return code
@@ -276,7 +294,11 @@ class CoordinatorAgent(BaseAgent):
                     }
                 else:
                     logger.info(f"Agent {task_name} completed successfully")
-                    results[task_name] = result
+                    # Unwrap the data field from BaseAgent response
+                    if result.get('success') and 'data' in result:
+                        results[task_name] = result['data']
+                    else:
+                        results[task_name] = result
         
         return results
     
@@ -471,7 +493,7 @@ class CoordinatorAgent(BaseAgent):
                 session.optimization_score = results.get('optimization_score', 0)
                 session.total_estimated_cost = results.get('total_estimated_cost', 0)
                 session.cost_efficiency = results.get('cost_efficiency', 'unknown')
-                session.completed_at = datetime.now()
+                session.completed_at = timezone.now()
                 
                 # Update completion flags
                 if results.get('flights', {}).get('success'):

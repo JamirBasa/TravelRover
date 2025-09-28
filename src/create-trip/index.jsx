@@ -598,7 +598,12 @@ Generate general accommodation recommendations without specific pricing or booki
       const result = await chatSession.sendMessage(enhancedPrompt);
       console.log("🎉 Generated trip:", result?.response.text());
 
-      SaveAiTrip(result?.response.text(), flightResults);
+      SaveAiTrip(
+        result?.response.text(),
+        flightResults,
+        hotelResults,
+        langGraphResults
+      );
     } catch (error) {
       console.error("❌ Trip generation error:", error);
       toast("Error generating trip: " + error.message);
@@ -656,7 +661,12 @@ Generate general accommodation recommendations without specific pricing or booki
     return obj;
   };
 
-  const SaveAiTrip = async (TripData, flightResults = null) => {
+  const SaveAiTrip = async (
+    TripData,
+    flightResults = null,
+    hotelResults = null,
+    langGraphResults = null
+  ) => {
     setLoading(true);
 
     try {
@@ -673,24 +683,46 @@ Generate general accommodation recommendations without specific pricing or booki
           // More aggressive JSON cleaning
           let cleanedJson = TripData;
 
-          // Remove any markdown code blocks
+          // Remove any markdown code blocks and extra text
           cleanedJson = cleanedJson
             .replace(/```json\s*/g, "")
-            .replace(/```\s*/g, "");
+            .replace(/```\s*/g, "")
+            .replace(/^[^{]*/, "") // Remove everything before first {
+            .replace(/[^}]*$/, ""); // Remove everything after last }
 
-          // Find JSON boundaries
-          const jsonStart = cleanedJson.indexOf("{");
-          const jsonEnd = cleanedJson.lastIndexOf("}") + 1;
+          // Find JSON boundaries more carefully
+          let jsonStart = -1;
+          let braceCount = 0;
+          let jsonEnd = -1;
+
+          // Find the start of the JSON object
+          for (let i = 0; i < cleanedJson.length; i++) {
+            if (cleanedJson[i] === "{") {
+              if (jsonStart === -1) jsonStart = i;
+              braceCount++;
+            } else if (cleanedJson[i] === "}") {
+              braceCount--;
+              if (braceCount === 0 && jsonStart !== -1) {
+                jsonEnd = i + 1;
+                break;
+              }
+            }
+          }
 
           if (jsonStart !== -1 && jsonEnd > jsonStart) {
             cleanedJson = cleanedJson.substring(jsonStart, jsonEnd);
 
-            // Fix common JSON issues
+            // Fix common JSON issues in order
             cleanedJson = cleanedJson
               .replace(/,(\s*[}\]])/g, "$1") // Remove trailing commas
               .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":') // Quote unquoted keys
-              .replace(/,\s*,/g, ",") // Remove double commas
-              .replace(/'/g, '"'); // Replace single quotes with double quotes
+              .replace(/,\s*,+/g, ",") // Remove multiple commas
+              .replace(/([}\]]),(\s*[}\]])/g, "$1$2") // Remove comma before closing brackets
+              .replace(/'/g, '"') // Replace single quotes with double quotes
+              .replace(/(\w+):\s*([^",{\[\s][^,}]*[^,}\s])/g, '$1: "$2"') // Quote unquoted string values
+              .replace(/"\s*\n\s*"/g, '" "') // Fix line breaks in strings
+              .replace(/\n/g, " ") // Remove all line breaks
+              .replace(/\s+/g, " "); // Normalize whitespace
 
             parsedTripData = JSON.parse(cleanedJson);
           } else {

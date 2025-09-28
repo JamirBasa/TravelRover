@@ -2,77 +2,115 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 import time
-import logging
-from asgiref.sync import sync_to_async
-from ..models import AgentExecutionLog
 
-logger = logging.getLogger(__name__)
+from ..utils import AgentLoggerMixin
+from ..exceptions import AgentExecutionError
 
-class BaseAgent(ABC):
-    """Base class for all LangGraph agents"""
+
+class BaseAgent(AgentLoggerMixin, ABC):
+    """
+    Base class for all LangGraph agents with integrated logging and error handling
+    """
     
-    def __init__(self, session_id: str, agent_type: str):
+    def __init__(self, session_id: str = None, agent_type: str = None):
+        super().__init__()
         self.session_id = session_id
-        self.agent_type = agent_type
-        self.execution_log: Optional[AgentExecutionLog] = None
+        self.agent_type = agent_type or self.__class__.__name__
     
     async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute the agent with proper logging and error handling"""
+        """
+        Execute the agent with comprehensive logging and error handling
+        
+        Args:
+            input_data: Input parameters for the agent
+            
+        Returns:
+            Agent execution results
+            
+        Raises:
+            AgentExecutionError: If agent execution fails
+        """
         start_time = time.time()
-        
-        # Create execution log using sync_to_async
-        from ..models import TravelPlanningSession
-        
-        @sync_to_async
-        def create_execution_log():
-            session = TravelPlanningSession.objects.get(session_id=self.session_id)
-            return AgentExecutionLog.objects.create(
-                session=session,
-                agent_type=self.agent_type,
-                status='running',
-                input_data=input_data
-            )
-        
-        self.execution_log = await create_execution_log()
+        method_name = "execute"
         
         try:
-            logger.info(f"🤖 {self.agent_type} agent starting execution")
-            result = await self._execute_logic(input_data)
+            # Log execution start
+            self.log_execution_start(method_name, input_data)
+            
+            # Validate input data
+            validated_input = self._validate_input(input_data)
+            
+            # Execute agent logic
+            result = await self._execute_logic(validated_input)
             
             # Calculate execution time
-            execution_time = int((time.time() - start_time) * 1000)
+            execution_time_ms = int((time.time() - start_time) * 1000)
             
-            # Update log with success using sync_to_async
-            @sync_to_async
-            def update_success_log():
-                self.execution_log.status = 'completed'
-                self.execution_log.output_data = result
-                self.execution_log.execution_time_ms = execution_time
-                self.execution_log.save()
+            # Validate and sanitize output
+            validated_result = self._validate_output(result)
             
-            await update_success_log()
+            # Log success
+            self.log_execution_success(
+                method_name, 
+                f"completed in {execution_time_ms}ms"
+            )
             
-            logger.info(f"✅ {self.agent_type} agent completed in {execution_time}ms")
-            return result
+            return {
+                'success': True,
+                'agent_type': self.agent_type,
+                'execution_time_ms': execution_time_ms,
+                'data': validated_result,
+                'timestamp': time.time()
+            }
             
         except Exception as e:
-            # Calculate execution time
-            execution_time = int((time.time() - start_time) * 1000)
+            execution_time_ms = int((time.time() - start_time) * 1000)
             
-            # Update log with failure using sync_to_async
-            @sync_to_async
-            def update_failure_log():
-                self.execution_log.status = 'failed'
-                self.execution_log.error_message = str(e)
-                self.execution_log.execution_time_ms = execution_time
-                self.execution_log.save()
+            # Log error
+            self.log_execution_error(method_name, e)
             
-            await update_failure_log()
+            # Wrap in custom exception
+            agent_error = AgentExecutionError(
+                f"{self.agent_type} execution failed: {str(e)}", 
+                self.agent_type, 
+                e
+            )
             
-            logger.error(f"❌ {self.agent_type} agent failed in {execution_time}ms: {e}")
-            raise e
+            raise agent_error
+    
+    def _validate_input(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate input data (override in subclasses for specific validation)
+        
+        Args:
+            input_data: Raw input data
+            
+        Returns:
+            Validated input data
+        """
+        return input_data
+    
+    def _validate_output(self, output_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate output data (override in subclasses for specific validation)
+        
+        Args:
+            output_data: Raw output data
+            
+        Returns:
+            Validated output data
+        """
+        return output_data
     
     @abstractmethod
     async def _execute_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Implement the actual agent logic"""
+        """
+        Implement the actual agent logic
+        
+        Args:
+            input_data: Validated input parameters
+            
+        Returns:
+            Agent results (will be validated by _validate_output)
+        """
         pass

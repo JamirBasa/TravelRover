@@ -50,7 +50,7 @@ class HotelAgent(BaseAgent):
                 'checkout': hotel_params.get('checkout_date'),
                 'guests': hotel_params.get('guests'),
                 'agent_type': 'hotel',
-                'processing_time': self.execution_log.execution_time_ms if self.execution_log else None
+                'processing_time': getattr(self, 'execution_time_ms', None)
             }
             
         except Exception as e:
