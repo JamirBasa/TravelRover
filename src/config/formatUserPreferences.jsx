@@ -238,21 +238,41 @@ export class UserPreferencesConfig {
   }
 }
 
-// Export class as default and individual methods for convenience
-export const {
-  formatTripTypes,
-  formatTravelStyle,
-  formatBudgetRange,
-  formatAccommodation,
-  getUserInterestSummary,
-  formatUserProfileSummary,
-  getTripTypes,
-  getTravelStyles,
-  getBudgetRanges,
-  getAccommodationTypes,
-  isValidTripType,
-  isValidTravelStyle,
-  isValidBudgetRange,
-} = UserPreferencesConfig;
+// Export individual functions for backward compatibility
+export const formatTripTypes = (tripTypes, maxDisplay = 2) =>
+  UserPreferencesConfig.formatTripTypes(tripTypes, maxDisplay);
+
+export const formatTravelStyle = (travelStyle) =>
+  UserPreferencesConfig.formatTravelStyle(travelStyle);
+
+export const formatBudgetRange = (budgetRange) =>
+  UserPreferencesConfig.formatBudgetRange(budgetRange);
+
+export const formatAccommodation = (accommodation) =>
+  UserPreferencesConfig.formatAccommodation(accommodation);
+
+export const getUserInterestSummary = (userProfile) =>
+  UserPreferencesConfig.getUserInterestSummary(userProfile);
+
+export const formatUserProfileSummary = (userProfile) =>
+  UserPreferencesConfig.formatUserProfileSummary(userProfile);
+
+export const getTripTypes = () => UserPreferencesConfig.getTripTypes();
+
+export const getTravelStyles = () => UserPreferencesConfig.getTravelStyles();
+
+export const getBudgetRanges = () => UserPreferencesConfig.getBudgetRanges();
+
+export const getAccommodationTypes = () =>
+  UserPreferencesConfig.getAccommodationTypes();
+
+export const isValidTripType = (tripType) =>
+  UserPreferencesConfig.isValidTripType(tripType);
+
+export const isValidTravelStyle = (travelStyle) =>
+  UserPreferencesConfig.isValidTravelStyle(travelStyle);
+
+export const isValidBudgetRange = (budgetRange) =>
+  UserPreferencesConfig.isValidBudgetRange(budgetRange);
 
 export default UserPreferencesConfig;

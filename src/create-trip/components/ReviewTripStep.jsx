@@ -4,6 +4,7 @@ import {
   FaUsers,
   FaMoneyBillWave,
   FaPlane,
+  FaHotel,
   FaListAlt,
 } from "react-icons/fa";
 import {
@@ -16,6 +17,7 @@ const ReviewTripStep = ({
   formData,
   customBudget,
   flightData,
+  hotelData,
   userProfile,
   place,
 }) => {
@@ -136,6 +138,33 @@ const ReviewTripStep = ({
           </div>
         </div>
 
+        {/* Hotel Preferences */}
+        <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <FaHotel className="text-orange-600 mt-1 flex-shrink-0" />
+            <div>
+              <h3 className="font-medium text-gray-800 mb-1">Hotel Options</h3>
+              {hotelData?.includeHotels ? (
+                <div>
+                  <p className="text-green-600 text-sm font-medium">
+                    ✓ Include hotel search
+                  </p>
+                  <p className="text-gray-600 text-sm">
+                    Preferred Type: {hotelData.preferredType || "Not specified"}
+                  </p>
+                  <p className="text-gray-600 text-sm">
+                    Budget Range: {hotelData.priceRange || "Not specified"}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-gray-600 text-sm">
+                  No hotel search requested
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Special Requests */}
         {formData.specificRequests && (
           <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
@@ -173,6 +202,31 @@ const ReviewTripStep = ({
           </div>
         )}
 
+        {/* LangGraph Multi-Agent Notice */}
+        {(flightData?.includeFlights || hotelData?.includeHotels) && (
+          <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
+            <h3 className="font-medium text-purple-800 mb-2">
+              🤖 LangGraph Multi-Agent System
+            </h3>
+            <p className="text-purple-700 text-sm">
+              Our AI agents will work together to find the best options:
+            </p>
+            <ul className="text-purple-700 text-sm mt-2 space-y-1">
+              {flightData?.includeFlights && (
+                <li>
+                  • ✈️ Flight Agent: Real-time flight search and optimization
+                </li>
+              )}
+              {hotelData?.includeHotels && (
+                <li>
+                  • 🏨 Hotel Agent: Accommodation recommendations and pricing
+                </li>
+              )}
+              <li>• 🎯 Coordinator: Smart optimization and cost analysis</li>
+            </ul>
+          </div>
+        )}
+
         {/* Generation Notice */}
         <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
           <h3 className="font-medium text-green-800 mb-2">
@@ -182,6 +236,8 @@ const ReviewTripStep = ({
             Your personalized itinerary will include accommodations, activities,
             dining recommendations, and transportation options based on your
             preferences and profile.
+            {(flightData?.includeFlights || hotelData?.includeHotels) &&
+              " Plus real-time flight and hotel data from our AI agents!"}
           </p>
         </div>
       </div>

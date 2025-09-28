@@ -147,7 +147,7 @@ export const FlightAgent = {
       "El Nido": "PPS",
       Coron: "PPS",
       Boracay: "KLO",
-      Malay: "KLO", // Boracay's actual municipality
+      Malay: "KLO", 
       Kalibo: "KLO",
       Bohol: "TAG",
       Tagbilaran: "TAG",
@@ -181,18 +181,6 @@ export const FlightAgent = {
       Naga: "WNP",
       "Naga City": "WNP",
 
-      // International destinations (common from Philippines)
-      Singapore: "SIN",
-      "Hong Kong": "HKG",
-      Bangkok: "BKK",
-      "Kuala Lumpur": "KUL",
-      Jakarta: "CGK",
-      Tokyo: "NRT",
-      Seoul: "ICN",
-      Dubai: "DXB",
-      "Los Angeles": "LAX",
-      "San Francisco": "SFO",
-      Sydney: "SYD",
     };
 
     // Clean the location string - handle various formats

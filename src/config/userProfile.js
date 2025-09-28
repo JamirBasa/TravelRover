@@ -80,9 +80,14 @@ export class UserProfileConfig {
    * @returns {Object} Departure information
    */
   static extractDepartureInfo(userProfile) {
-    // Import centralized default values
-    const { FLIGHT_CONFIG } = require("../constants/options");
-    const defaultInfo = FLIGHT_CONFIG.DEFAULT_DEPARTURE;
+    // Use centralized default values
+    const defaultInfo = {
+      city: "Manila",
+      region: "National Capital Region", 
+      regionCode: "NCR",
+      country: "Philippines",
+      countryCode: "PH",
+    };
 
     if (!userProfile?.address) {
       console.log("🏠 No address in user profile, using defaults");

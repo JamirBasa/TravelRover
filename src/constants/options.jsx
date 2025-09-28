@@ -9,6 +9,7 @@ import {
   FaMapMarkerAlt,
   FaCog,
   FaPlane,
+  FaHotel,
   FaCheck,
   FaUtensils,
   FaShieldAlt,
@@ -144,6 +145,12 @@ export const STEP_CONFIGS = {
     },
     {
       id: 4,
+      title: "Hotel Options",
+      description: "Include hotel recommendations",
+      icon: FaHotel,
+    },
+    {
+      id: 5,
       title: "Review & Generate",
       description: "Confirm details and create your trip",
       icon: FaCheck,
@@ -376,3 +383,18 @@ REQUIREMENTS:
 SPECIFIC REQUESTS: {specificRequests}
 
 Generate ONLY valid JSON, no additional text.`;
+
+export const HOTEL_CONFIG = {
+  GOOGLE_PLACES_API_KEY: import.meta.env.VITE_GOOGLE_PLACES_API_KEY,
+  SEARCH_RADIUS: 50000, // 50km radius
+  HOTEL_TYPES: ["lodging", "hotel", "resort"],
+  MAX_RESULTS: 20,
+  PRICE_LEVELS: {
+    1: "Budget (₱1,000-2,500)",
+    2: "Mid-range (₱2,500-5,000)",
+    3: "Upscale (₱5,000-10,000)",
+    4: "Luxury (₱10,000+)",
+  },
+  DEFAULT_CHECKIN_DAYS: 7, // Days from now
+  DEFAULT_CHECKOUT_DAYS: 10, // Days from now
+};
