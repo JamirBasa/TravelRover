@@ -17,6 +17,9 @@ import {
 import { googleLogout } from "@react-oauth/google";
 import { useGoogleLogin } from "@react-oauth/google";
 import { FcGoogle } from "react-icons/fc";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../config/firebaseConfig";
+import { useNavigate } from "react-router-dom";
 
 function Header() {
   const [user, setUser] = useState(() => {
@@ -27,6 +30,8 @@ function Header() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const [openDialog, setOpenDialog] = useState(false);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     console.log(user);
@@ -40,31 +45,67 @@ function Header() {
     },
   });
 
-  const getUserProfile = useCallback(async (tokenInfo) => {
-    setIsLoggingIn(true); // ✅ Add loading state
-    try {
-      const response = await axios.get(
-        `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${tokenInfo?.access_token}`,
-        {
-          headers: {
-            Authorization: `Bearer ${tokenInfo?.access_token}`,
-            Accept: "application/json",
-          },
-        }
-      );
+  const getUserProfile = useCallback(
+    async (tokenInfo) => {
+      setIsLoggingIn(true);
+      try {
+        const response = await axios.get(
+          `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${tokenInfo?.access_token}`,
+          {
+            headers: {
+              Authorization: `Bearer ${tokenInfo?.access_token}`,
+              Accept: "application/json",
+            },
+          }
+        );
 
-      const userData = response.data;
-      localStorage.setItem("user", JSON.stringify(userData));
-      setUser(userData);
-      setOpenDialog(false);
-      toast.success("Successfully signed in!"); // ✅ Success feedback
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-      toast.error("Failed to get user profile");
-    } finally {
-      setIsLoggingIn(false); // ✅ Clear loading state
-    }
-  }, []);
+        const userData = response.data;
+
+        // Check if user has a profile in Firestore
+        try {
+          if (userData.email) {
+            const docRef = doc(db, "UserProfiles", userData.email);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+              const profileData = docSnap.data();
+              // If user has a complete profile, mark it in userData
+              if (profileData && profileData.isProfileComplete) {
+                userData.hasProfile = true;
+              }
+            }
+          }
+        } catch (profileError) {
+          console.warn("Could not check user profile:", profileError);
+          // Continue with login even if profile check fails
+          // Default to no profile if there's an error
+          userData.hasProfile = false;
+        }
+
+        localStorage.setItem("user", JSON.stringify(userData));
+        setUser(userData);
+        setOpenDialog(false);
+        toast.success("Successfully signed in!");
+
+        // Redirect based on profile status
+        if (userData.hasProfile) {
+          // User has a profile, redirect to homepage
+          toast.success("Welcome back! Taking you to the homepage...");
+          setTimeout(() => navigate("/"), 1000);
+        } else {
+          // First-time user or incomplete profile, redirect to user profile
+          toast.success("Welcome! Let's set up your travel profile...");
+          setTimeout(() => navigate("/user-profile"), 1000);
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        toast.error("Failed to get user profile");
+      } finally {
+        setIsLoggingIn(false);
+      }
+    },
+    [navigate]
+  );
 
   const handleLogout = useCallback(() => {
     googleLogout();
@@ -82,26 +123,25 @@ function Header() {
       </div>
       <div>
         {user ? (
-          
           <div className="flex items-center gap-5">
-            <a href="/home">
-              <Button variant="outline" className="rounded-full cursor-pointer">
-                Home
-              </Button>
-            </a>
-
-            <a href="/my-trips">
-              <Button variant="outline" className="rounded-full cursor-pointer">
-                My Trips
-              </Button>
-            </a>
-
-            {/* ✅ Added greeting here */}
+            <Button
+              variant="outline"
+              className="rounded-full cursor-pointer"
+              onClick={() => navigate("/home")}
+            >
+              Home
+            </Button>
+            <Button
+              variant="outline"
+              className="rounded-full cursor-pointer"
+              onClick={() => navigate("/my-trips")}
+            >
+              My Trips
+            </Button>
             <span className="text-gray-700 font-medium">
               Hello,{" "}
               {user?.given_name || user?.name?.trim().split(" ")[0] || "there"}!
             </span>
-
             <Popover>
               <PopoverTrigger>
                 <img
@@ -115,14 +155,13 @@ function Header() {
                   <span className="text-sm text-gray-500">{user?.email}</span>
                 </div>
                 <div className="flex flex-col gap-2 mt-3">
-                  <a href="/user-profile">
-                    <Button
-                      variant="outline"
-                      className="w-full text-left cursor-pointer"
-                    >
-                      Profile Settings
-                    </Button>
-                  </a>
+                  <Button
+                    variant="outline"
+                    className="w-full text-left cursor-pointer hover:bg-blue-50 hover:border-blue-200"
+                    onClick={() => navigate("/settings")}
+                  >
+                    ⚙️ Settings
+                  </Button>
                   <Button
                     variant="outline"
                     className="w-full text-left cursor-pointer"

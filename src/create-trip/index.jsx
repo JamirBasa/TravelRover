@@ -7,19 +7,27 @@ import axios from "axios";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../config/firebaseConfig";
 import { useNavigate } from "react-router-dom";
-import { AI_PROMPT } from "../constants/options";
+import {
+  AI_PROMPT,
+  STEP_CONFIGS,
+  DEFAULT_VALUES,
+  MESSAGES,
+  calculateProgress,
+  calculateDuration,
+} from "../constants/options";
 import { FlightAgent } from "../config/flightAgent";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 import {
-  FaMapMarkerAlt,
+  formatUserProfileSummary,
+  formatTripTypes,
+} from "../config/formatUserPreferences";
+import {
   FaCalendarAlt,
-  FaCog,
-  FaPlane,
-  FaCheck,
   FaArrowRight,
   FaArrowLeft,
   FaUser,
+  FaCheck,
 } from "react-icons/fa";
 
 // Import components
@@ -29,36 +37,16 @@ import BudgetSelector from "./components/BugetSelector";
 import TravelerSelector from "./components/TravelerSelector";
 import SpecificRequests from "./components/SpecificRequests";
 import FlightPreferences from "./components/FlightPreferences";
+import HotelPreferences from "./components/HotelPreferences";
 import ReviewTripStep from "./components/ReviewTripStep";
 import GenerateTripButton from "./components/GenerateTripButton";
 import LoginDialog from "./components/LoginDialog";
+import { UserProfileConfig } from "../config/userProfile";
+import { ProfileLoading, ErrorState } from "../components/common/LoadingStates";
+import { LangGraphTravelAgent } from "../config/langGraphAgent";
 
-const STEPS = [
-  {
-    id: 1,
-    title: "Destination & Dates",
-    description: "Where, when, and special requests for your trip",
-    icon: FaMapMarkerAlt,
-  },
-  {
-    id: 2,
-    title: "Travel Preferences",
-    description: "Budget and group size preferences",
-    icon: FaCog,
-  },
-  {
-    id: 3,
-    title: "Flight Options",
-    description: "Include flights in your itinerary",
-    icon: FaPlane,
-  },
-  {
-    id: 4,
-    title: "Review & Generate",
-    description: "Confirm details and create your trip",
-    icon: FaCheck,
-  },
-];
+// Use centralized step configuration
+const STEPS = STEP_CONFIGS.CREATE_TRIP;
 
 function CreateTrip() {
   // State management
@@ -72,14 +60,22 @@ function CreateTrip() {
     departureRegion: "",
     departureRegionCode: "",
   });
+  const [hotelData, setHotelData] = useState({
+    includeHotels: false,
+    preferredType: "",
+    budgetLevel: 2,
+    priceRange: "",
+  });
   const [openDialog, setOpenDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [flightLoading, setFlightLoading] = useState(false);
+  const [hotelLoading, setHotelLoading] = useState(false);
+  const [langGraphLoading, setLangGraphLoading] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
   const navigate = useNavigate();
-  const progress = (currentStep / STEPS.length) * 100;
+  const progress = calculateProgress(currentStep, STEPS.length);
 
   // Check user profile on component mount
   useEffect(() => {
@@ -87,34 +83,58 @@ function CreateTrip() {
   }, []);
 
   const checkUserProfile = async () => {
+    setProfileLoading(true);
     try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (!user?.email) {
-        setProfileLoading(false);
-        return;
-      }
+      const profile = await UserProfileConfig.loadCurrentUserProfile();
 
-      const docRef = doc(db, "UserProfiles", user.email);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const profile = docSnap.data();
-        setUserProfile(profile);
-        // Pre-fill form data with user preferences
-        setFormData((prev) => ({
-          ...prev,
-          budget: profile.budgetRange || "",
-          travelers: profile.travelStyle || "",
-        }));
-      } else {
-        // Profile doesn't exist, redirect to profile setup
+      if (!profile) {
+        console.log("📝 No user profile found, redirecting to profile setup");
         navigate("/user-profile");
         return;
       }
+
+      if (!profile.isProfileComplete) {
+        console.log("🔄 User profile incomplete, redirecting to complete it");
+        navigate("/user-profile");
+        return;
+      }
+
+      console.log("✅ User profile loaded successfully", profile);
+      console.log("🏠 Profile address data:", profile.address);
+      setUserProfile(profile);
+
+      // Auto-populate form data with user preferences
+      setFormData((prev) => ({
+        ...prev,
+        budget: profile.budgetRange || prev.budget,
+        travelers: getDefaultTravelers(profile) || prev.travelers,
+      }));
+
+      // Auto-populate flight data with user's home location using new method
+      const autoPopulatedFlightData = UserProfileConfig.autoPopulateFlightData(
+        profile,
+        flightData
+      );
+
+      if (autoPopulatedFlightData !== flightData) {
+        setFlightData(autoPopulatedFlightData);
+        console.log("🏠 Auto-populated flight departure from profile");
+      }
     } catch (error) {
-      console.error("Error checking profile:", error);
+      console.error("❌ Error checking profile:", error);
+      toast.error("Failed to load your profile. Please try again.");
+    } finally {
+      setProfileLoading(false);
     }
-    setProfileLoading(false);
+  };
+
+  // Helper function to determine default travelers based on profile
+  const getDefaultTravelers = (profile) => {
+    // Try to infer from profile data
+    if (profile.preferredTripTypes?.includes("Romantic")) return "A Couple";
+    if (profile.preferredTripTypes?.includes("Family")) return "Family";
+    if (profile.preferredTripTypes?.includes("Group")) return "Friends";
+    return "Just Me"; // Default fallback
   };
 
   // Handlers
@@ -178,6 +198,10 @@ function CreateTrip() {
     setFlightData(newFlightData);
   }, []);
 
+  const handleHotelDataChange = useCallback((newHotelData) => {
+    setHotelData(newHotelData);
+  }, []);
+
   // Step validation
   const validateCurrentStep = () => {
     switch (currentStep) {
@@ -223,7 +247,14 @@ function CreateTrip() {
         }
         break;
 
-      case 4: // Review & Generate - no additional validation needed
+      case 4: // Hotel Options
+        if (hotelData.includeHotels && !hotelData.preferredType) {
+          toast.error("Please select your preferred accommodation type");
+          return false;
+        }
+        break;
+
+      case 5: // Review & Generate - no additional validation needed
         break;
     }
     return true;
@@ -301,35 +332,78 @@ function CreateTrip() {
 
     setLoading(true);
 
+    // Initialize LangGraph results
+    let langGraphResults = null;
     let flightResults = null;
+    let hotelResults = null;
 
     try {
-      // Only search for flights if user requested it
-      if (flightData.includeFlights) {
-        setFlightLoading(true);
-        console.log("🔍 Starting flight search...");
-        console.log("📍 Departure City:", flightData.departureCity);
-        console.log("📍 Destination:", formData.location);
+      // Use LangGraph Multi-Agent System if either flights or hotels are requested
+      if (flightData.includeFlights || hotelData.includeHotels) {
+        setLangGraphLoading(true);
+        console.log("🤖 Starting LangGraph Multi-Agent orchestration...");
 
-        const fromAirport = FlightAgent.extractAirportCode(
-          flightData.departureCity
-        );
-        const toAirport = FlightAgent.extractAirportCode(formData.location);
+        const langGraphAgent = new LangGraphTravelAgent();
 
-        console.log("✈️ Airport Codes:", { from: fromAirport, to: toAirport });
+        const tripParams = {
+          destination: formData.location,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          duration: formData.duration,
+          travelers: formData.travelers,
+          budget: customBudget ? `Custom: ₱${customBudget}` : formData.budget,
+          flightData: flightData,
+          hotelData: hotelData,
+          userProfile: userProfile,
+        };
 
-        flightResults = await FlightAgent.searchFlights({
-          from_airport: fromAirport,
-          to_airport: toAirport,
-          departure_date: formData.startDate,
-          return_date: formData.endDate,
-          adults: FlightAgent.parseAdults(formData.travelers),
-          trip_type: "round-trip",
-        });
+        langGraphResults = await langGraphAgent.orchestrateTrip(tripParams);
 
-        setFlightLoading(false);
+        // Extract individual results for compatibility
+        flightResults = langGraphResults.flights;
+        hotelResults = langGraphResults.hotels;
+
+        // Show notifications based on results
+        if (flightResults?.success) {
+          if (
+            flightResults?.message?.includes("Mock") ||
+            flightResults?.fallback
+          ) {
+            toast("🎭 Using mock flight data - Backend server not connected", {
+              description:
+                "Flight prices are simulated. Connect backend for real-time data.",
+            });
+          } else {
+            toast("✈️ Real flight data loaded successfully!");
+          }
+        }
+
+        if (hotelResults?.success) {
+          if (hotelResults?.fallback) {
+            toast("🏨 Using sample hotel data - API unavailable", {
+              description:
+                "Hotel recommendations are examples. Enable API for real data.",
+            });
+          } else {
+            toast("🏨 Real hotel data loaded successfully!");
+          }
+        }
+
+        // Show LangGraph optimization results
+        if (langGraphResults.optimized_plan) {
+          toast(
+            `🤖 Smart optimization completed! Score: ${langGraphResults.optimized_plan.optimization_score}`,
+            {
+              description: `Cost efficiency: ${langGraphResults.optimized_plan.cost_efficiency}`,
+            }
+          );
+        }
+
+        setLangGraphLoading(false);
       } else {
-        console.log("🚫 Skipping flight search - user opted out");
+        console.log(
+          "🚫 Skipping agent search - user opted out of both flights and hotels"
+        );
       }
 
       // Enhanced prompt with user profile data
@@ -394,9 +468,34 @@ PERSONALIZATION INSTRUCTIONS:
 
 Please create a highly personalized itinerary for these exact dates.`;
 
+      // Handle LangGraph Multi-Agent results in prompt
+      if (langGraphResults?.success) {
+        enhancedPrompt += `
+
+🤖 LANGGRAPH MULTI-AGENT ANALYSIS:
+Optimization Score: ${
+          langGraphResults.optimized_plan?.optimization_score || "N/A"
+        }
+Cost Efficiency: ${
+          langGraphResults.optimized_plan?.cost_efficiency || "Unknown"
+        }
+Total Estimated Cost: ₱${
+          langGraphResults.merged_data?.total_estimated_cost?.toLocaleString() ||
+          "N/A"
+        }
+
+📊 SMART RECOMMENDATIONS:
+${
+  langGraphResults.optimized_plan?.final_recommendations
+    ?.map((rec) => `- ${rec.message} (${rec.priority} priority)`)
+    .join("\n") || "No specific recommendations"
+}
+`;
+      }
+
       // Handle flight information in prompt
       if (flightData.includeFlights) {
-        if (flightResults?.success && flightResults.flights.length > 0) {
+        if (flightResults?.success && flightResults.flights?.length > 0) {
           const flightInfo = `
 
 🛫 REAL FLIGHT OPTIONS AVAILABLE:
@@ -444,12 +543,67 @@ Focus on accommodations, activities, dining, and ground transportation only.
 `;
       }
 
+      // Handle hotel information in prompt
+      if (hotelData.includeHotels) {
+        if (hotelResults?.success && hotelResults.hotels?.length > 0) {
+          const hotelInfo = `
+
+🏨 REAL HOTEL OPTIONS AVAILABLE:
+Destination: ${formData.location}
+Accommodation Preference: ${hotelData.preferredType}
+Budget Level: ${hotelData.priceRange}
+
+${hotelResults.hotels
+  .slice(0, 3)
+  .map(
+    (hotel, index) => `
+🏨 Option ${index + 1}: ${hotel.name}
+   ⭐ Rating: ${hotel.rating}/5.0
+   💰 Price Range: ${hotel.price_range}
+   📍 Location: ${hotel.address}
+   🛏️ Amenities: ${hotel.amenities?.join(", ") || "Basic amenities"}
+   📏 Distance: ${hotel.distance}
+   ${hotel.is_recommended ? "⭐ Highly Recommended" : ""}
+`
+  )
+  .join("")}
+
+IMPORTANT: Please incorporate these ACTUAL hotel options into the itinerary. 
+Recommend the best hotel based on the traveler's preferences and budget.
+Include the real prices and amenities in your recommendations.
+`;
+
+          enhancedPrompt += hotelInfo;
+          console.log("✅ Enhanced prompt with real hotel data");
+        } else {
+          console.log(
+            "⚠️ No hotel data available, using AI-generated suggestions"
+          );
+          enhancedPrompt += `
+
+⚠️ Note: User requested hotel information but real-time data unavailable. 
+Please provide estimated accommodation options for ${formData.location} matching ${hotelData.preferredType} preference.
+`;
+        }
+      } else {
+        enhancedPrompt += `
+
+🚫 HOTEL PREFERENCES: User opted NOT to include hotel search in this itinerary.
+Generate general accommodation recommendations without specific pricing or booking details.
+`;
+      }
+
       console.log("📝 Final prompt:", enhancedPrompt);
 
       const result = await chatSession.sendMessage(enhancedPrompt);
       console.log("🎉 Generated trip:", result?.response.text());
 
-      SaveAiTrip(result?.response.text(), flightResults);
+      SaveAiTrip(
+        result?.response.text(),
+        flightResults,
+        hotelResults,
+        langGraphResults
+      );
     } catch (error) {
       console.error("❌ Trip generation error:", error);
       toast("Error generating trip: " + error.message);
@@ -507,7 +661,12 @@ Focus on accommodations, activities, dining, and ground transportation only.
     return obj;
   };
 
-  const SaveAiTrip = async (TripData, flightResults = null) => {
+  const SaveAiTrip = async (
+    TripData,
+    flightResults = null,
+    hotelResults = null,
+    langGraphResults = null
+  ) => {
     setLoading(true);
 
     try {
@@ -524,24 +683,46 @@ Focus on accommodations, activities, dining, and ground transportation only.
           // More aggressive JSON cleaning
           let cleanedJson = TripData;
 
-          // Remove any markdown code blocks
+          // Remove any markdown code blocks and extra text
           cleanedJson = cleanedJson
             .replace(/```json\s*/g, "")
-            .replace(/```\s*/g, "");
+            .replace(/```\s*/g, "")
+            .replace(/^[^{]*/, "") // Remove everything before first {
+            .replace(/[^}]*$/, ""); // Remove everything after last }
 
-          // Find JSON boundaries
-          const jsonStart = cleanedJson.indexOf("{");
-          const jsonEnd = cleanedJson.lastIndexOf("}") + 1;
+          // Find JSON boundaries more carefully
+          let jsonStart = -1;
+          let braceCount = 0;
+          let jsonEnd = -1;
+
+          // Find the start of the JSON object
+          for (let i = 0; i < cleanedJson.length; i++) {
+            if (cleanedJson[i] === "{") {
+              if (jsonStart === -1) jsonStart = i;
+              braceCount++;
+            } else if (cleanedJson[i] === "}") {
+              braceCount--;
+              if (braceCount === 0 && jsonStart !== -1) {
+                jsonEnd = i + 1;
+                break;
+              }
+            }
+          }
 
           if (jsonStart !== -1 && jsonEnd > jsonStart) {
             cleanedJson = cleanedJson.substring(jsonStart, jsonEnd);
 
-            // Fix common JSON issues
+            // Fix common JSON issues in order
             cleanedJson = cleanedJson
               .replace(/,(\s*[}\]])/g, "$1") // Remove trailing commas
               .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":') // Quote unquoted keys
-              .replace(/,\s*,/g, ",") // Remove double commas
-              .replace(/'/g, '"'); // Replace single quotes with double quotes
+              .replace(/,\s*,+/g, ",") // Remove multiple commas
+              .replace(/([}\]]),(\s*[}\]])/g, "$1$2") // Remove comma before closing brackets
+              .replace(/'/g, '"') // Replace single quotes with double quotes
+              .replace(/(\w+):\s*([^",{\[\s][^,}]*[^,}\s])/g, '$1: "$2"') // Quote unquoted string values
+              .replace(/"\s*\n\s*"/g, '" "') // Fix line breaks in strings
+              .replace(/\n/g, " ") // Remove all line breaks
+              .replace(/\s+/g, " "); // Normalize whitespace
 
             parsedTripData = JSON.parse(cleanedJson);
           } else {
@@ -617,14 +798,20 @@ Focus on accommodations, activities, dining, and ground transportation only.
           customBudget: customBudget,
         },
         flightPreferences: flightData, // Include flight preferences
+        hotelPreferences: hotelData, // Include hotel preferences
+        langGraphResults: langGraphResults, // Include LangGraph analysis
         userProfile: userProfile, // Will be sanitized below
         tripData: parsedTripData, // Will be sanitized below
         realFlightData: flightResults || null, // Will be sanitized below
+        realHotelData: hotelResults || null, // Include hotel data
         userEmail: user?.email,
         id: docId,
         createdAt: new Date().toISOString(),
         hasRealFlights: flightResults?.success || false,
+        hasRealHotels: hotelResults?.success || false,
         flightSearchRequested: flightData.includeFlights, // Track if user wanted flights
+        hotelSearchRequested: hotelData.includeHotels, // Track if user wanted hotels
+        langGraphUsed: !!(flightData.includeFlights || hotelData.includeHotels), // Track LangGraph usage
         isPersonalized: true, // Flag to indicate this trip was created with profile data
       };
 
@@ -635,7 +822,35 @@ Focus on accommodations, activities, dining, and ground transportation only.
 
       await setDoc(doc(db, "AITrips", docId), sanitizedTripDocument);
 
-      toast("🎉 Trip saved successfully with real flight data!");
+      const hasRealFlights =
+        flightResults?.success &&
+        !flightResults?.fallback &&
+        !flightResults?.message?.includes("Mock");
+      const hasRealHotels = hotelResults?.success && !hotelResults?.fallback;
+
+      let successMessage = "🎉 Trip saved successfully";
+
+      if (langGraphResults?.success) {
+        successMessage += " with LangGraph AI optimization";
+
+        const features = [];
+        if (hasRealFlights) features.push("real flight data");
+        if (hasRealHotels) features.push("real hotel data");
+        if (flightData.includeFlights && !hasRealFlights)
+          features.push("flight recommendations");
+        if (hotelData.includeHotels && !hasRealHotels)
+          features.push("hotel recommendations");
+
+        if (features.length > 0) {
+          successMessage += ` and ${features.join(", ")}`;
+        }
+      } else if (hasRealFlights) {
+        successMessage += " with flight recommendations";
+      }
+
+      successMessage += "!";
+
+      toast(successMessage);
       navigate("/view-trip/" + docId);
     } catch (error) {
       console.error("Error saving trip: ", error);
@@ -721,10 +936,20 @@ Focus on accommodations, activities, dining, and ground transportation only.
         );
       case 4:
         return (
+          <HotelPreferences
+            hotelData={hotelData}
+            onHotelDataChange={handleHotelDataChange}
+            formData={formData}
+            userProfile={userProfile}
+          />
+        );
+      case 5:
+        return (
           <ReviewTripStep
             formData={formData}
             customBudget={customBudget}
             flightData={flightData}
+            hotelData={hotelData}
             userProfile={userProfile}
             place={place}
           />
@@ -742,36 +967,17 @@ Focus on accommodations, activities, dining, and ground transportation only.
 
   // Show loading while checking profile
   if (profileLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking your profile...</p>
-        </div>
-      </div>
-    );
+    return <ProfileLoading />;
   }
 
   // Show message if profile not found
   if (!userProfile) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-4">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            Complete Your Profile First
-          </h2>
-          <p className="text-gray-600 mb-6">
-            To create personalized travel itineraries, we need to know your
-            preferences, dietary requirements, and travel style.
-          </p>
-          <button
-            onClick={() => navigate("/user-profile")}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Complete Profile
-          </button>
-        </div>
-      </div>
+      <ErrorState
+        error={MESSAGES.ERROR.PROFILE_REQUIRED}
+        onRetry={() => navigate("/user-profile")}
+        onCreateNew={() => navigate("/")}
+      />
     );
   }
 
@@ -791,29 +997,57 @@ Focus on accommodations, activities, dining, and ground transportation only.
 
           {/* User Profile Summary */}
           {userProfile && (
-            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-5 shadow-sm">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <FaUser className="text-blue-600" />
+                <div className="flex items-center gap-4">
+                  <div className="bg-blue-100 p-3 rounded-full">
+                    <FaUser className="text-blue-600 text-lg" />
+                  </div>
                   <div>
-                    <h3 className="font-semibold text-blue-800">
-                      Welcome back,{" "}
-                      {userProfile.firstName || userProfile.fullName}!
+                    <h3 className="font-bold text-blue-900 text-lg">
+                      Welcome back, {formatUserProfileSummary(userProfile).name}
+                      !
                     </h3>
-                    <p className="text-blue-600 text-sm">
-                      Creating personalized trips based on your preferences:{" "}
-                      {userProfile.preferredTripTypes?.slice(0, 2).join(", ")}
-                      {userProfile.preferredTripTypes?.length > 2 &&
-                        ` +${userProfile.preferredTripTypes.length - 2} more`}
+                    <p className="text-blue-700 text-sm font-medium mt-1">
+                      Creating personalized trips based on your preferences:
                     </p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {userProfile.preferredTripTypes
+                        ?.slice(0, 2)
+                        .map((typeId, index) => {
+                          const tripTypeLabels = {
+                            adventure: "Adventure & Outdoor",
+                            beach: "Beach & Island",
+                            cultural: "Cultural & Historical",
+                            nature: "Nature & Wildlife",
+                            photography: "Photography & Scenic",
+                            wellness: "Wellness & Spa",
+                            food: "Food & Culinary",
+                            romantic: "Romantic Getaways",
+                          };
+                          return (
+                            <span
+                              key={typeId}
+                              className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                            >
+                              {tripTypeLabels[typeId] || typeId}
+                            </span>
+                          );
+                        })}
+                      {userProfile.preferredTripTypes?.length > 2 && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                          +{userProfile.preferredTripTypes.length - 2} more
+                        </span>
+                      )}
+                    </div>
+                    {userProfile.travelStyle && (
+                      <p className="text-blue-600 text-xs mt-2">
+                        <span className="font-medium">Travel Style:</span>{" "}
+                        {formatUserProfileSummary(userProfile).travelStyle}
+                      </p>
+                    )}
                   </div>
                 </div>
-                <button
-                  onClick={() => navigate("/user-profile")}
-                  className="text-blue-600 hover:text-blue-800 text-sm underline"
-                >
-                  Update Profile
-                </button>
               </div>
             </div>
           )}
@@ -904,6 +1138,8 @@ Focus on accommodations, activities, dining, and ground transportation only.
                 <GenerateTripButton
                   loading={loading}
                   flightLoading={flightLoading}
+                  hotelLoading={hotelLoading}
+                  langGraphLoading={langGraphLoading}
                   onClick={OnGenerateTrip}
                 />
               )}
