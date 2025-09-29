@@ -81,65 +81,119 @@ function HotelCardItem({ hotel }) {
       target="_blank"
       className="block group"
     >
-      <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 group-hover:border-gray-300">
-        {/* Hotel Image */}
-        <div className="relative mb-3">
-          {isLoading ? (
-            <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-              <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                <p className="mt-1 text-xs text-gray-500">Loading...</p>
+      <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-300 group-hover:border-purple-200 group-hover:shadow-purple-100/50 relative overflow-hidden">
+        {/* Subtle gradient overlay on hover */}
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-50/0 to-purple-100/0 group-hover:from-purple-50/30 group-hover:to-purple-100/20 transition-all duration-300 pointer-events-none"></div>
+
+        <div className="relative">
+          {/* Hotel Image */}
+          <div className="relative mb-4">
+            {isLoading ? (
+              <div className="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-150 rounded-xl flex items-center justify-center">
+                <div className="text-center">
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-purple-300 border-t-purple-600"></div>
+                  <p className="mt-2 text-sm text-gray-500 font-medium">
+                    Loading hotel...
+                  </p>
+                </div>
               </div>
-            </div>
-          ) : (
-            <img
-              src={photoUrl || "../placeholder.png"}
-              alt={hotel?.name || "Hotel"}
-              className="w-full h-32 object-cover rounded-lg"
-              onError={(e) => {
-                console.log("Hotel image failed to load, using placeholder");
-                e.target.src = "../placeholder.png";
-              }}
-            />
-          )}
-
-          {error && (
-            <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center">
-              <div className="text-center">
-                <p className="text-gray-400 text-lg">🏨</p>
-                <p className="text-xs text-gray-400">Photo unavailable</p>
+            ) : (
+              <div className="relative overflow-hidden rounded-xl group-hover:shadow-lg transition-shadow duration-300">
+                <img
+                  src={photoUrl || "../placeholder.png"}
+                  alt={hotel?.name || "Hotel"}
+                  className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105"
+                  onError={(e) => {
+                    console.log(
+                      "Hotel image failed to load, using placeholder"
+                    );
+                    e.target.src = "../placeholder.png";
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
 
-        {/* Hotel Info */}
-        <div className="space-y-1">
-          <h4 className="font-medium text-gray-900 text-sm line-clamp-2 group-hover:text-blue-600">
-            {hotel?.name}
-          </h4>
+            {error && (
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-200">
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <span className="text-2xl">🏨</span>
+                  </div>
+                  <p className="text-sm text-gray-500 font-medium">
+                    Photo unavailable
+                  </p>
+                </div>
+              </div>
+            )}
 
-          {hotel?.address && (
-            <p className="text-xs text-gray-500 line-clamp-2">
-              📍 {hotel.address}
-            </p>
-          )}
-
-          <div className="flex items-center justify-between pt-1">
+            {/* Rating Badge */}
             {hotel?.rating && (
-              <div className="flex items-center gap-1">
-                <span className="text-yellow-500 text-xs">⭐</span>
-                <span className="text-xs font-medium text-gray-700">
-                  {hotel.rating}
+              <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-full px-2 py-1 shadow-sm">
+                <div className="flex items-center gap-1">
+                  <span className="text-yellow-500 text-sm">⭐</span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    {hotel.rating}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Hotel Info */}
+          <div className="space-y-3">
+            <div>
+              <h4 className="font-semibold text-gray-900 text-base line-clamp-2 group-hover:text-purple-600 transition-colors duration-200 leading-tight">
+                {hotel?.name || hotel?.hotelName}
+              </h4>
+
+              {hotel?.address && (
+                <p className="text-sm text-gray-600 line-clamp-2 mt-1 flex items-start gap-1">
+                  <span className="text-gray-400 flex-shrink-0 mt-0.5">📍</span>
+                  <span>{hotel.address}</span>
+                </p>
+              )}
+            </div>
+
+            {/* Amenities or Description */}
+            {(hotel?.amenities || hotel?.description) && (
+              <div className="text-sm text-gray-600">
+                {hotel?.amenities && (
+                  <p className="line-clamp-2">
+                    <span className="text-gray-500">Amenities:</span>{" "}
+                    {Array.isArray(hotel.amenities)
+                      ? hotel.amenities.join(", ")
+                      : hotel.amenities}
+                  </p>
+                )}
+                {hotel?.description && !hotel?.amenities && (
+                  <p className="line-clamp-2">{hotel.description}</p>
+                )}
+              </div>
+            )}
+
+            {/* Price and Action */}
+            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+              <div className="flex items-center gap-3">
+                {(hotel?.pricePerNight || hotel?.priceRange) && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-green-600 font-semibold text-base">
+                      {hotel?.pricePerNight || hotel?.priceRange}
+                    </span>
+                    {hotel?.pricePerNight && (
+                      <span className="text-gray-500 text-sm">/night</span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 text-purple-600 font-medium text-sm group-hover:text-purple-700 transition-colors duration-200">
+                <span>View on Map</span>
+                <span className="transform group-hover:translate-x-0.5 transition-transform duration-200">
+                  →
                 </span>
               </div>
-            )}
-
-            {(hotel?.pricePerNight || hotel?.priceRange) && (
-              <p className="text-xs font-medium text-green-700">
-                {hotel?.pricePerNight || hotel?.priceRange}
-              </p>
-            )}
+            </div>
           </div>
         </div>
       </div>
