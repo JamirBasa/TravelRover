@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { SelectBudgetOptions } from "../../constants/options";
 import { FaMoneyBillWave, FaInfoCircle } from "react-icons/fa";
@@ -10,7 +10,14 @@ const BudgetSelector = ({
   onCustomBudgetChange,
   error,
 }) => {
-  const [showCustom, setShowCustom] = useState(false);
+  const [showCustom, setShowCustom] = useState(!!customValue); // Show custom if there's already a custom value
+
+  // Keep showCustom state in sync with customValue
+  useEffect(() => {
+    if (customValue && !showCustom) {
+      setShowCustom(true);
+    }
+  }, [customValue, showCustom]);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -52,7 +59,7 @@ const BudgetSelector = ({
                 onCustomBudgetChange("");
               }}
               className={`p-4 cursor-pointer border-2 rounded-lg hover:shadow-lg transition-all duration-200 ${
-                value === option.title && !showCustom
+                value === option.title && !customValue
                   ? "shadow-lg border-black bg-gray-50"
                   : "border-gray-200 hover:border-gray-300"
               }`}
@@ -68,7 +75,7 @@ const BudgetSelector = ({
                     {option.range}
                   </p>
                 </div>
-                {value === option.title && !showCustom && (
+                {value === option.title && !customValue && (
                   <div className="w-5 h-5 bg-black rounded-full flex items-center justify-center">
                     <div className="w-2 h-2 bg-white rounded-full"></div>
                   </div>
@@ -81,54 +88,88 @@ const BudgetSelector = ({
         {/* Custom Budget Option */}
         <div className="border-t-2 border-gray-200 pt-4">
           <div
-            onClick={() => setShowCustom(!showCustom)}
-            className={`p-4 cursor-pointer border-2 rounded-lg hover:shadow-lg transition-all duration-200 ${
+            className={`border-2 rounded-lg hover:shadow-lg transition-all duration-200 ${
               showCustom || customValue
                 ? "shadow-lg border-black bg-gray-50"
                 : "border-gray-200 hover:border-gray-300"
             }`}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FaMoneyBillWave
-                  style={{ color: "#3498db", fontSize: "24px" }}
-                />
-                <div>
-                  <h3 className="font-semibold text-lg text-gray-800">
-                    Custom Budget
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Enter your specific budget amount
-                  </p>
+            <div
+              onClick={() => {
+                if (!showCustom) {
+                  setShowCustom(true);
+                  // Clear preset budget when opening custom
+                  onBudgetChange("");
+                }
+              }}
+              className="p-4 cursor-pointer"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FaMoneyBillWave
+                    style={{ color: "#3498db", fontSize: "24px" }}
+                  />
+                  <div>
+                    <h3 className="font-semibold text-lg text-gray-800">
+                      Custom Budget
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Enter your specific budget amount
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {(showCustom || customValue) && (
+                    <div className="w-5 h-5 bg-black rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    </div>
+                  )}
+                  {showCustom && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowCustom(false);
+                        onCustomBudgetChange("");
+                      }}
+                      className="text-gray-500 hover:text-gray-700 text-sm ml-2"
+                      title="Close custom budget"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               </div>
-              {(showCustom || customValue) && (
-                <div className="w-5 h-5 bg-black rounded-full flex items-center justify-center">
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                </div>
-              )}
             </div>
 
             {showCustom && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-medium text-gray-800">₱</span>
-                  <Input
-                    type="number"
-                    placeholder="Enter your budget amount"
-                    value={customValue}
-                    onChange={(e) => {
-                      onCustomBudgetChange(e.target.value);
-                      onBudgetChange("");
-                    }}
-                    className="text-base py-3 px-3 rounded-lg border-2 focus:border-black h-auto"
-                    min="1000"
-                    step="500"
-                  />
+              <div
+                className="px-4 pb-4 border-t border-gray-200"
+                onClick={(e) => e.stopPropagation()} // Prevent event bubbling
+              >
+                <div className="mt-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-medium text-gray-800">
+                      ₱
+                    </span>
+                    <Input
+                      type="number"
+                      placeholder="Enter your budget amount"
+                      value={customValue}
+                      onChange={(e) => {
+                        onCustomBudgetChange(e.target.value);
+                        onBudgetChange("");
+                      }}
+                      className="text-base py-3 px-3 rounded-lg border-2 focus:border-black h-auto"
+                      min="1000"
+                      step="500"
+                      autoFocus
+                    />
+                  </div>
+                  <p className="text-xs text-gray-600 mt-2">
+                    💡 Include accommodation, food, activities, and
+                    transportation
+                  </p>
                 </div>
-                <p className="text-xs text-gray-600 mt-2">
-                  💡 Include accommodation, food, activities, and transportation
-                </p>
               </div>
             )}
           </div>

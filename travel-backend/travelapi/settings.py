@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'flights',
+    'langgraph_agents',
 ]
 
 MIDDLEWARE = [
@@ -147,6 +148,9 @@ REST_FRAMEWORK = {
 
 # SerpAPI Configuration
 SERPAPI_KEY = config('SERPAPI_KEY', default='')
+
+# Google Places API Configuration  
+GOOGLE_PLACES_API_KEY = config('GOOGLE_PLACES_API_KEY', default='')
 
 # Logging
 LOGGING = {
