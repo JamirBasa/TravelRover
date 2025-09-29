@@ -401,8 +401,9 @@ class CoordinatorAgent(BaseAgent):
                 optimization['cost_efficiency'] = 'over_budget'
                 optimization['optimization_score'] -= 10
         
-        # Convenience scoring
-        flights = merged_results.get('flights', {}).get('flights', [])
+        # Convenience scoring - Safe handling for None values
+        flights_data = merged_results.get('flights') or {}
+        flights = flights_data.get('flights', []) if isinstance(flights_data, dict) else []
         if flights:
             direct_flights = [f for f in flights if f.get('stops', 0) == 0]
             if direct_flights:
@@ -420,7 +421,8 @@ class CoordinatorAgent(BaseAgent):
                     'priority': 'medium'
                 })
         
-        hotels = merged_results.get('hotels', {}).get('hotels', [])
+        hotels_data = merged_results.get('hotels') or {}
+        hotels = hotels_data.get('hotels', []) if isinstance(hotels_data, dict) else []
         if hotels:
             high_rated = [h for h in hotels if h.get('rating', 0) >= 4.0]
             if high_rated:
