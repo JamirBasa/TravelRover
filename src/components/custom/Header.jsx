@@ -89,9 +89,9 @@ function Header() {
 
         // Redirect based on profile status
         if (userData.hasProfile) {
-          // User has a profile, redirect to homepage
+          // User has a profile, redirect to home page
           toast.success("Welcome back! Taking you to the homepage...");
-          setTimeout(() => navigate("/"), 1000);
+          setTimeout(() => navigate("/home"), 1000);
         } else {
           // First-time user or incomplete profile, redirect to user profile
           toast.success("Welcome! Let's set up your travel profile...");
@@ -114,96 +114,120 @@ function Header() {
   }, []);
 
   return (
-    <div className="p-4 shadow-md flex justify-between items-center px-8 bg-white sticky top-0 z-10">
-      <div className="flex items-center">
-        <img src="/logo.svg" alt="Logo" className="h-16 w-auto" />
-        <span className="ml-2 text-xl font-bold text-gray-800">
-          Travel Rover
-        </span>
-      </div>
-      <div>
-        {user ? (
-          <div className="flex items-center gap-5">
+    <div className="px-4 py-3 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-lg sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto flex justify-between items-center">
+        <div
+          className="flex items-center cursor-pointer group"
+          onClick={() => navigate("/")}
+        >
+          <img
+            src="/logo.svg"
+            alt="Logo"
+            className="h-12 w-auto transition-transform duration-200 group-hover:scale-105"
+          />
+          <span className="ml-3 text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Travel Rover
+          </span>
+        </div>
+        <div>
+          {user ? (
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                className="rounded-full cursor-pointer font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                onClick={() => navigate("/home")}
+              >
+                Home
+              </Button>
+              <Button
+                variant="ghost"
+                className="rounded-full cursor-pointer font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                onClick={() => navigate("/my-trips")}
+              >
+                My Trips
+              </Button>
+              <span className="text-gray-700 font-medium text-sm">
+                Hello,{" "}
+                <span className="text-sky-600 font-semibold">
+                  {user?.given_name ||
+                    user?.name?.trim().split(" ")[0] ||
+                    "there"}
+                </span>
+                !
+              </span>
+              <Popover>
+                <PopoverTrigger>
+                  <div className="relative">
+                    <img
+                      src={user?.picture}
+                      className="h-[35px] w-[35px] rounded-full cursor-pointer border-2 border-sky-200 hover:border-sky-400 transition-all duration-200 shadow-sm"
+                      alt="Profile"
+                    />
+                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-xl rounded-xl p-4">
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-gray-800">
+                      {user?.name}
+                    </span>
+                    <span className="text-sm text-gray-500">{user?.email}</span>
+                  </div>
+                  <div className="flex flex-col gap-2 mt-4">
+                    <Button
+                      variant="ghost"
+                      className="w-full text-left cursor-pointer hover:bg-sky-50 hover:text-sky-600 transition-all duration-200 rounded-lg"
+                      onClick={() => navigate("/settings")}
+                    >
+                      ⚙️ Settings
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full text-left cursor-pointer hover:bg-red-50 hover:text-red-600 transition-all duration-200 rounded-lg"
+                      onClick={handleLogout}
+                    >
+                      🚪 Logout
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          ) : (
             <Button
-              variant="outline"
-              className="rounded-full cursor-pointer"
-              onClick={() => navigate("/home")}
+              onClick={() => setOpenDialog(true)}
+              disabled={isLoggingIn}
+              className="brand-button px-6 py-2"
             >
-              Home
+              {isLoggingIn ? "Signing in..." : "Sign In"}
             </Button>
-            <Button
-              variant="outline"
-              className="rounded-full cursor-pointer"
-              onClick={() => navigate("/my-trips")}
-            >
-              My Trips
-            </Button>
-            <span className="text-gray-700 font-medium">
-              Hello,{" "}
-              {user?.given_name || user?.name?.trim().split(" ")[0] || "there"}!
-            </span>
-            <Popover>
-              <PopoverTrigger>
-                <img
-                  src={user?.picture}
-                  className="h-[35px] w-[35px] rounded-full cursor-pointer"
-                />
-              </PopoverTrigger>
-              <PopoverContent>
-                <div className="flex flex-col">
-                  <span className="font-medium">{user?.name}</span>
-                  <span className="text-sm text-gray-500">{user?.email}</span>
-                </div>
-                <div className="flex flex-col gap-2 mt-3">
-                  <Button
-                    variant="outline"
-                    className="w-full text-left cursor-pointer hover:bg-blue-50 hover:border-blue-200"
-                    onClick={() => navigate("/settings")}
-                  >
-                    ⚙️ Settings
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full text-left cursor-pointer"
-                    onClick={handleLogout}
-                  >
-                    Logout
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-        ) : (
-          <Button
-            onClick={() => setOpenDialog(true)}
-            className="bg-gradient-to-r from-blue-500 to-sky-600 hover:from-blue-600 hover:to-sky-700 text-white font-medium rounded-full px-6 transition-all duration-200"
-          >
-            Sign In
-          </Button>
-        )}
+          )}
+        </div>
       </div>
+
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent>
+        <DialogContent className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-2xl rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-center">
-              <img src="/logo.svg" alt="Logo" className="h-16 w-auto" />
-              <span className="ml-2 text-xl font-bold text-gray-800">
+              <img src="/logo.svg" alt="Logo" className="h-12 w-auto" />
+              <span className="ml-3 text-xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Travel Rover
               </span>
             </DialogTitle>
 
-            <DialogDescription className="mt-2 text-sm text-gray-500">
+            <DialogDescription className="mt-3 text-sm text-gray-600 text-center">
               Sign in to save your trips and access them from any device.
             </DialogDescription>
 
-            <div className="mt-5">
-              <h2 className="text-lg font-semibold">Start Your Journey</h2>
+            <div className="mt-6">
+              <h2 className="text-lg font-semibold text-gray-800 text-center mb-4">
+                Start Your Journey
+              </h2>
               <Button
-                className="w-full mt-5 flex gap-4 items-center"
+                className="w-full mt-4 flex gap-3 items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
                 onClick={() => googleLogin()}
                 disabled={isLoggingIn}
               >
-                <FcGoogle />
+                <FcGoogle className="text-xl" />
                 {isLoggingIn ? "Signing in..." : "Sign In With Google"}
               </Button>
             </div>
