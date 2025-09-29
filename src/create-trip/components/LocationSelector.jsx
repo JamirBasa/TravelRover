@@ -39,7 +39,7 @@ function LocationSelector({ place, onPlaceChange, onLocationChange }) {
           </label>
           <div className="relative">
             <GooglePlacesAutocomplete
-              apiKey={import.meta.env.VITE_GOOGLE_PLACE_API_KEY}
+              apiKey={import.meta.env.VITE_GOOGLE_PLACES_API_KEY}
               autocompletionRequest={{
                 componentRestrictions: {
                   country: ["ph"],
