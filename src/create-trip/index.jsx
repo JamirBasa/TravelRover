@@ -466,7 +466,14 @@ PERSONALIZATION INSTRUCTIONS:
 - Respect all dietary restrictions and cultural preferences
 - Include specific tips relevant to travelers from ${userProfile.address?.city}
 
-Please create a highly personalized itinerary for these exact dates.`;
+Please create a highly personalized itinerary for these exact dates.
+
+🚨 CRITICAL JSON REQUIREMENTS:
+- Return ONLY complete, valid JSON
+- Ensure all braces {} and brackets [] are properly closed  
+- Keep descriptions concise (under 100 characters each)
+- Do not truncate the response - complete the entire JSON structure
+- The response must be parseable by JSON.parse() without errors`;
 
       // Handle LangGraph Multi-Agent results in prompt
       if (langGraphResults?.success) {
@@ -596,14 +603,27 @@ Generate general accommodation recommendations without specific pricing or booki
       console.log("📝 Final prompt:", enhancedPrompt);
 
       const result = await chatSession.sendMessage(enhancedPrompt);
-      console.log("🎉 Generated trip:", result?.response.text());
+      const aiResponseText = result?.response.text();
 
-      SaveAiTrip(
-        result?.response.text(),
-        flightResults,
-        hotelResults,
-        langGraphResults
-      );
+      console.log("🎉 Generated trip:", aiResponseText);
+      console.log("📊 AI Response Analysis:", {
+        length: aiResponseText?.length || 0,
+        startsWithBrace: aiResponseText?.trim().startsWith("{") || false,
+        endsWithBrace: aiResponseText?.trim().endsWith("}") || false,
+        isComplete: aiResponseText?.includes('"placesToVisit"') || false,
+        lastChars: aiResponseText?.slice(-100) || "No response",
+      });
+
+      // Validate basic response structure before processing
+      if (!aiResponseText || aiResponseText.length < 100) {
+        throw new Error("AI response is too short or empty");
+      }
+
+      if (!aiResponseText.trim().startsWith("{")) {
+        console.warn("⚠️ AI response doesn't start with JSON brace");
+      }
+
+      SaveAiTrip(aiResponseText, flightResults, hotelResults, langGraphResults);
     } catch (error) {
       console.error("❌ Trip generation error:", error);
       toast("Error generating trip: " + error.message);
@@ -678,10 +698,61 @@ Generate general accommodation recommendations without specific pricing or booki
         parsedTripData = JSON.parse(TripData);
       } catch (e) {
         console.error("Initial parse failed, attempting to clean JSON:", e);
+        console.log(
+          "Response length:",
+          TripData.length,
+          "| Last 200 chars:",
+          TripData.slice(-200)
+        );
 
         try {
-          // More aggressive JSON cleaning
+          // Smart truncation recovery for incomplete JSON
           let cleanedJson = TripData;
+
+          // First, check if this is a truncation issue
+          if (
+            cleanedJson.includes('"placesToVisit"') === false &&
+            cleanedJson.length > 10000
+          ) {
+            console.log(
+              "🔧 Detected truncated response, attempting smart completion..."
+            );
+
+            // Find the last complete object
+            let lastCompletePos = -1;
+            let braceCount = 0;
+            let inString = false;
+
+            for (let i = 0; i < cleanedJson.length; i++) {
+              const char = cleanedJson[i];
+              if (char === '"' && (i === 0 || cleanedJson[i - 1] !== "\\")) {
+                inString = !inString;
+              } else if (!inString) {
+                if (char === "{") braceCount++;
+                else if (char === "}") {
+                  braceCount--;
+                  if (braceCount === 1) lastCompletePos = i; // Mark position within main object
+                }
+              }
+            }
+
+            if (lastCompletePos > 0) {
+              // Truncate at last complete position and close JSON properly
+              cleanedJson = cleanedJson.substring(0, lastCompletePos + 1);
+
+              // Add minimal placesToVisit array if missing
+              if (!cleanedJson.includes('"placesToVisit"')) {
+                cleanedJson =
+                  cleanedJson.slice(0, -1) + ', "placesToVisit": []}';
+              } else {
+                cleanedJson += "}";
+              }
+
+              console.log("✅ Smart truncation recovery completed");
+            }
+          }
+
+          // Standard JSON cleaning
 
           // Remove any markdown code blocks and extra text
           cleanedJson = cleanedJson

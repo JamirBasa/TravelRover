@@ -406,11 +406,11 @@ const UserProfile = () => {
               })}
             </div>
 
-            <div className="text-center mb-4">
-              <h2 className="text-2xl font-bold text-gray-800 mb-1">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold brand-gradient-text mb-3">
                 {STEPS[currentStep - 1].title}
               </h2>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-700 text-lg">
                 {STEPS[currentStep - 1].description}
               </p>
             </div>
@@ -440,7 +440,7 @@ const UserProfile = () => {
               {currentStep < STEPS.length ? (
                 <Button
                   onClick={nextStep}
-                  className="flex items-center gap-2 bg-black hover:bg-gray-800 px-6"
+                  className="brand-button flex items-center gap-2 px-8 py-3"
                 >
                   Next
                   <FaArrowRight />

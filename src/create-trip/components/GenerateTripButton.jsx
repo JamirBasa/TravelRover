@@ -25,7 +25,7 @@ function GenerateTripButton({
     <Button
       disabled={isAnyLoading || disabled}
       onClick={onClick}
-      className="flex items-center gap-2 bg-green-600 hover:bg-green-700 px-6 py-3"
+      className="brand-button flex items-center gap-2 px-8 py-3 text-lg font-bold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
     >
       {isAnyLoading ? (
         <>
