@@ -127,17 +127,21 @@ function Header() {
             <Button
               variant="outline"
               className="rounded-full cursor-pointer"
+              onClick={() => navigate("/home")}
+            >
+              Home
+            </Button>
+            <Button
+              variant="outline"
+              className="rounded-full cursor-pointer"
               onClick={() => navigate("/my-trips")}
             >
               My Trips
             </Button>
-
-            {/* Added greeting here */}
             <span className="text-gray-700 font-medium">
               Hello,{" "}
               {user?.given_name || user?.name?.trim().split(" ")[0] || "there"}!
             </span>
-
             <Popover>
               <PopoverTrigger>
                 <img

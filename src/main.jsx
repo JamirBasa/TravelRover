@@ -7,10 +7,10 @@ import Layout from "./components/Layout.jsx";
 import CreateTrip from "./create-trip/index.jsx";
 import UserProfile from "./user-profile/index.jsx";
 import Settings from "./settings/index.jsx";
-
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import ViewTrip from "./view-trip/[tripId]/index.jsx";
 import MyTrips from "./my-trips/index.jsx";
+import Home from "./home/home.jsx";
 
 const router = createBrowserRouter([
   {
@@ -19,7 +19,11 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <App />,
+        element: <App />,  // or Home if you want Home as "/"
+      },
+      {
+        path: "home",
+        element: <Home />,
       },
       {
         path: "user-profile",
