@@ -6,25 +6,27 @@ function LocationSelector({ place, onPlaceChange, onLocationChange }) {
   return (
     <div className="max-w-2xl mx-auto">
       {/* Main Question */}
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           Where would you like to go?
         </h2>
-        <p className="text-gray-600 text-sm">
-          Choose your dream destination to start planning
+        <p className="text-gray-700 text-base font-medium">
+          Choose your dream destination to start planning ✈️
         </p>
       </div>
 
       {/* Location Input */}
       <div className="space-y-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <FaGlobe className="text-blue-600 mt-1 flex-shrink-0" />
+        <div className="brand-card p-5 shadow-lg border-sky-200">
+          <div className="flex items-start gap-4">
+            <div className="brand-gradient p-2.5 rounded-full">
+              <FaGlobe className="text-white text-lg" />
+            </div>
             <div>
-              <h3 className="font-medium text-blue-800 mb-1">
+              <h3 className="font-semibold brand-gradient-text text-base mb-2">
                 Destination Search
               </h3>
-              <p className="text-blue-700 text-sm">
+              <p className="text-gray-700 text-sm leading-relaxed">
                 Start typing any city, landmark, or attraction within the
                 Philippines to see suggestions and detailed location options.
               </p>
@@ -33,8 +35,8 @@ function LocationSelector({ place, onPlaceChange, onLocationChange }) {
         </div>
 
         <div>
-          <label className="block text-base font-medium text-gray-800 mb-2">
-            <FaMapMarkerAlt className="inline mr-2" />
+          <label className="block text-base font-semibold text-gray-800 mb-3">
+            <FaMapMarkerAlt className="inline mr-2 text-sky-500" />
             Destination *
           </label>
           <div className="relative">
@@ -64,8 +66,8 @@ function LocationSelector({ place, onPlaceChange, onLocationChange }) {
                       borderColor: "#9ca3af",
                     },
                     "&:focus-within": {
-                      borderColor: "#000000",
-                      boxShadow: "none",
+                      borderColor: "#0ea5e9",
+                      boxShadow: "0 0 0 3px rgba(14, 165, 233, 0.1)",
                     },
                   }),
                   placeholder: (provided) => ({
@@ -85,11 +87,11 @@ function LocationSelector({ place, onPlaceChange, onLocationChange }) {
         </div>
 
         {place && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-green-800 font-medium text-sm">
-                Selected: {place.label}
+          <div className="bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 rounded-lg p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-gradient-to-r from-sky-500 to-blue-500 rounded-full animate-pulse"></div>
+              <span className="text-sky-800 font-semibold text-sm">
+                ✅ Selected: {place.label}
               </span>
             </div>
           </div>

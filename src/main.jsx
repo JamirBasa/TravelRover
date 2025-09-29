@@ -19,11 +19,11 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <App />,  // or Home if you want Home as "/"
+        element: <App />, // Landing page for unauthenticated users
       },
       {
         path: "home",
-        element: <Home />,
+        element: <Home />, // Authenticated user home page
       },
       {
         path: "user-profile",
