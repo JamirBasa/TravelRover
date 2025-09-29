@@ -22,25 +22,27 @@ const BudgetSelector = ({
   return (
     <div className="max-w-2xl mx-auto">
       {/* Main Question */}
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           What's your budget range?
         </h2>
-        <p className="text-gray-600 text-sm">
-          Choose a budget that works for you - we'll optimize your experience
+        <p className="text-gray-700 text-base font-medium">
+          Choose a budget that works for you - we'll optimize your experience 💰
         </p>
       </div>
 
       <div className="space-y-4">
         {/* Budget Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <FaInfoCircle className="text-blue-600 mt-1 flex-shrink-0" />
+        <div className="brand-card p-5 shadow-lg border-sky-200">
+          <div className="flex items-start gap-4">
+            <div className="brand-gradient p-2.5 rounded-full">
+              <FaInfoCircle className="text-white text-lg" />
+            </div>
             <div>
-              <h3 className="font-medium text-blue-800 mb-1">
+              <h3 className="font-semibold brand-gradient-text text-base mb-2">
                 Budget Planning
               </h3>
-              <p className="text-blue-700 text-sm">
+              <p className="text-gray-700 text-sm leading-relaxed">
                 Your budget helps us recommend the best accommodations, dining,
                 activities, and transportation options for your trip.
               </p>
@@ -58,10 +60,10 @@ const BudgetSelector = ({
                 setShowCustom(false);
                 onCustomBudgetChange("");
               }}
-              className={`p-4 cursor-pointer border-2 rounded-lg hover:shadow-lg transition-all duration-200 ${
+              className={`p-5 cursor-pointer border-2 rounded-xl hover:shadow-xl transition-all duration-300 ${
                 value === option.title && !customValue
-                  ? "shadow-lg border-black bg-gray-50"
-                  : "border-gray-200 hover:border-gray-300"
+                  ? "shadow-xl border-sky-500 bg-gradient-to-r from-sky-50 to-blue-50"
+                  : "border-gray-200 hover:border-sky-300 hover:shadow-lg"
               }`}
             >
               <div className="flex items-center gap-4">
@@ -71,13 +73,13 @@ const BudgetSelector = ({
                     {option.title}
                   </h3>
                   <p className="text-sm text-gray-600">{option.desc}</p>
-                  <p className="text-xs text-blue-600 font-medium mt-1">
+                  <p className="text-xs text-sky-600 font-semibold mt-1">
                     {option.range}
                   </p>
                 </div>
                 {value === option.title && !customValue && (
-                  <div className="w-5 h-5 bg-black rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <div className="brand-gradient w-6 h-6 rounded-full flex items-center justify-center shadow-lg">
+                    <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
                   </div>
                 )}
               </div>
@@ -88,10 +90,10 @@ const BudgetSelector = ({
         {/* Custom Budget Option */}
         <div className="border-t-2 border-gray-200 pt-4">
           <div
-            className={`border-2 rounded-lg hover:shadow-lg transition-all duration-200 ${
+            className={`border-2 rounded-xl hover:shadow-xl transition-all duration-300 ${
               showCustom || customValue
-                ? "shadow-lg border-black bg-gray-50"
-                : "border-gray-200 hover:border-gray-300"
+                ? "shadow-xl border-sky-500 bg-gradient-to-r from-sky-50 to-blue-50"
+                : "border-gray-200 hover:border-sky-300 hover:shadow-lg"
             }`}
           >
             <div
@@ -102,13 +104,13 @@ const BudgetSelector = ({
                   onBudgetChange("");
                 }
               }}
-              className="p-4 cursor-pointer"
+              className="p-5 cursor-pointer"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <FaMoneyBillWave
-                    style={{ color: "#3498db", fontSize: "24px" }}
-                  />
+                  <div className="brand-gradient p-2 rounded-full">
+                    <FaMoneyBillWave className="text-white text-lg" />
+                  </div>
                   <div>
                     <h3 className="font-semibold text-lg text-gray-800">
                       Custom Budget
@@ -120,8 +122,8 @@ const BudgetSelector = ({
                 </div>
                 <div className="flex items-center gap-2">
                   {(showCustom || customValue) && (
-                    <div className="w-5 h-5 bg-black rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    <div className="brand-gradient w-6 h-6 rounded-full flex items-center justify-center shadow-lg">
+                      <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
                     </div>
                   )}
                   {showCustom && (
@@ -159,7 +161,7 @@ const BudgetSelector = ({
                         onCustomBudgetChange(e.target.value);
                         onBudgetChange("");
                       }}
-                      className="text-base py-3 px-3 rounded-lg border-2 focus:border-black h-auto"
+                      className="text-base py-3 px-4 rounded-lg border-2 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 h-auto transition-all"
                       min="1000"
                       step="500"
                       autoFocus
