@@ -7,7 +7,7 @@ function DevMetadata({ trip }) {
   }
 
   return (
-    <div className="mt-12 bg-gray-900 text-white rounded-xl p-6">
+    <div className="mt-12 bg-gray-900 text-white rounded-lg p-4 sm:p-6">
       <div className="flex items-center gap-2 mb-4">
         <h3 className="font-semibold text-gray-100">🔧 Development Info</h3>
         <Badge variant="outline" className="border-gray-600 text-gray-300">

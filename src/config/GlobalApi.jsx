@@ -6,10 +6,20 @@ const BASE_URL = "https://places.googleapis.com/v1/places:searchText";
 const cache = new Map();
 const pendingRequests = new Map();
 
+// Debug API key availability
+const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
+console.log("🔑 Google Places API Key status:", {
+  hasKey: !!apiKey,
+  keyLength: apiKey?.length || 0,
+  keyPreview: apiKey
+    ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}`
+    : "MISSING",
+});
+
 const config = {
   headers: {
     "Content-Type": "application/json",
-    "X-Goog-Api-Key": import.meta.env.VITE_GOOGLE_PLACES_API_KEY,
+    "X-Goog-Api-Key": apiKey,
     "X-Goog-FieldMask":
       "places.id,places.displayName,places.photos,places.formattedAddress",
   },
@@ -95,7 +105,7 @@ export const GetPlaceDetails = async (data) => {
 
 export const PHOTO_REF_URL =
   "https://places.googleapis.com/v1/{NAME}/media?maxHeightPx=600&maxWidthPx=600&key=" +
-  import.meta.env.VITE_GOOGLE_PLACE_API_KEY;
+  import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
 
 // ✅ Helper function to validate photo URLs
 export const validatePhotoUrl = (photoRef) => {

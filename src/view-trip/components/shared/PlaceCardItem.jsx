@@ -97,23 +97,37 @@ function PlaceCardItem({ place }) {
   // Get the correct property names from the data
   const placeName = place?.placeName || place?.activity || "Unknown Place";
   const placeDetails = place?.placeDetails || place?.description || "";
-  const coordinates = place?.geoCoordinates;
-  const location = coordinates
-    ? `${coordinates.latitude},${coordinates.longitude}`
-    : placeName;
+  // Generate Google Maps URL with proper place query for directions
+  const generateMapsURL = () => {
+    const coordinates = place?.geoCoordinates;
+    const address = place?.address || place?.location || "";
+
+    // Prioritize coordinates for most accurate directions
+    if (coordinates && coordinates.latitude && coordinates.longitude) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${
+        coordinates.latitude
+      },${coordinates.longitude}&destination_place_id=${encodeURIComponent(
+        placeName
+      )}`;
+    }
+
+    // Fallback to comprehensive search query including name and address
+    let searchQuery = placeName;
+    if (address) {
+      searchQuery += ` ${address}`;
+    }
+
+    // Use Google Maps search with place query for better results and directions option
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      searchQuery
+    )}&query_place_id=${encodeURIComponent(placeName)}`;
+  };
 
   return (
-    <Link
-      to={
-        "https://www.google.com/maps/search/?api=1&query=" +
-        encodeURIComponent(placeName)
-      }
-      target="_blank"
-      className="block group"
-    >
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-2xl transition-all duration-500 group-hover:border-blue-300 group-hover:shadow-blue-200/30 relative overflow-hidden transform group-hover:-translate-y-1">
+    <Link to={generateMapsURL()} target="_blank" className="block group">
+      <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-all duration-300 group-hover:border-blue-300 group-hover:shadow-blue-200/20 relative overflow-hidden">
         {/* Enhanced gradient overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 via-indigo-50/0 to-purple-50/0 group-hover:from-blue-50/40 group-hover:via-indigo-50/30 group-hover:to-purple-50/20 transition-all duration-500 pointer-events-none"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 via-indigo-50/0 to-purple-50/0 group-hover:from-blue-50/30 group-hover:via-indigo-50/20 group-hover:to-purple-50/10 transition-all duration-300 pointer-events-none"></div>
 
         {/* Decorative corner element */}
         <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-blue-100/0 to-indigo-200/0 group-hover:from-blue-100/20 group-hover:to-indigo-200/30 rounded-bl-3xl transition-all duration-500"></div>
@@ -123,16 +137,16 @@ function PlaceCardItem({ place }) {
             {/* Place Image */}
             <div className="flex-shrink-0">
               {isLoading ? (
-                <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-150 rounded-xl flex items-center justify-center">
+                <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-150 rounded-lg flex items-center justify-center">
                   <div className="text-center">
                     <div className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-blue-300 border-t-blue-600"></div>
                   </div>
                 </div>
               ) : (
-                <div className="relative overflow-hidden rounded-xl group-hover:shadow-md transition-shadow duration-300">
+                <div className="relative overflow-hidden rounded-lg group-hover:shadow-sm transition-shadow duration-300">
                   <img
                     src={photoUrl || "/placeholder.png"}
-                    className="w-24 h-24 rounded-xl object-cover transition-transform duration-300 group-hover:scale-105"
+                    className="w-20 h-20 rounded-lg object-cover transition-transform duration-300 group-hover:scale-105"
                     alt={placeName}
                     onError={(e) => {
                       e.target.src = "/placeholder.png";
@@ -143,7 +157,7 @@ function PlaceCardItem({ place }) {
               )}
 
               {error && (
-                <div className="w-24 h-24 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-200">
+                <div className="w-20 h-20 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200">
                   <span className="text-gray-400 text-2xl">📍</span>
                 </div>
               )}
@@ -153,7 +167,7 @@ function PlaceCardItem({ place }) {
             <div className="flex-1 min-w-0 space-y-2">
               <div>
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-bold text-gray-900 text-lg mb-1 group-hover:text-blue-600 line-clamp-2 leading-tight transition-colors duration-300 flex-1">
+                  <h3 className="font-bold text-gray-900 text-base mb-1 group-hover:text-blue-600 line-clamp-2 leading-tight transition-colors duration-300 flex-1">
                     {placeName}
                   </h3>
                   <div className="ml-2 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors duration-300 flex-shrink-0">

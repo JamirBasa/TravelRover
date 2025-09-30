@@ -1,0 +1,211 @@
+/* ViewTrip Specific Styles */
+
+/* Smooth scrolling for tabs */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Enhanced tab transition effects */
+.tab-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Custom focus styles for accessibility */
+.focus-visible-enhanced:focus-visible {
+  outline: 2px solid var(--brand-sky);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+}
+
+/* Enhanced gradient overlays */
+.gradient-overlay {
+  position: relative;
+}
+
+.gradient-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(14, 165, 233, 0.05) 100%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Micro-animations */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Status indicators */
+.status-ready {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  animation: pulse-subtle 2s infinite;
+}
+
+.status-live {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.status-live::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Enhanced typography hierarchy */
+.heading-primary {
+  font-size: clamp(1.5rem, 4vw, 3rem);
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.heading-secondary {
+  font-size: clamp(1.25rem, 3vw, 2rem);
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.heading-compact {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.text-body {
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+.text-compact {
+  line-height: 1.4;
+  font-size: 0.875rem;
+}
+
+/* Consistent spacing system */
+.section-spacing {
+  margin-bottom: 1.5rem;
+}
+
+.section-spacing-lg {
+  margin-bottom: 2rem;
+}
+
+.card-spacing {
+  padding: 1rem;
+}
+
+.card-spacing-lg {
+  padding: 1.5rem;
+}
+
+.compact-spacing {
+  padding: 0.75rem;
+}
+
+/* Mobile-first spacing */
+@media (min-width: 640px) {
+  .card-spacing {
+    padding: 1.5rem;
+  }
+  
+  .section-spacing {
+    margin-bottom: 2rem;
+  }
+}
+
+/* Responsive grid improvements */
+@media (min-width: 1280px) {
+  .sidebar-sticky {
+    position: sticky;
+    top: 5rem;
+    height: fit-content;
+  }
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .trip-header-mobile {
+    padding: 0.75rem 1rem;
+  }
+  
+  .tab-mobile {
+    min-width: auto;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .content-mobile {
+    padding: 1rem;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 641px) and (max-width: 1279px) {
+  .sidebar-mobile {
+    margin-top: 2rem;
+    border-left: none;
+    border-top: 1px solid #e5e7eb;
+  }
+}
+
+/* Print styles for PDF generation */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-friendly {
+    background: white !important;
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+  }
+}
+
+/* Dark mode support (future-proofing) */
+@media (prefers-color-scheme: dark) {
+  .dark-mode-ready {
+    --bg-primary: #1f2937;
+    --bg-secondary: #374151;
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .tab-transition,
+  .hover-lift,
+  .animate-spin,
+  .animate-pulse {
+    animation: none !important;
+    transition: none !important;
+  }
+}

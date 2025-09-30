@@ -4,14 +4,16 @@ import { useParams, useNavigate } from "react-router-dom";
 import { db } from "@/config/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import { toast } from "sonner";
+import { usePageTitle } from "../../hooks/usePageTitle";
 
-// Import components
-import LoadingState from "../components/LoadingState";
-import ErrorState from "../components/ErrorState";
-import EmptyState from "../components/EmptyState";
-import TripHeader from "../components/TripHeader";
-import DevMetadata from "../components/DevMetadata";
-import TabbedTripView from "../components/TabbedTripView";
+// Import enhanced styles
+import "../styles/ViewTrip.css";
+
+// Import components from organized folders
+import { LoadingState, ErrorState, EmptyState } from "../components/ui-states";
+import { TripHeader } from "../components/trip-management";
+import { DevMetaData } from "../components/shared";
+import { TabbedTripView } from "../components/navigation";
 
 function ViewTrip() {
   const { tripId } = useParams();
@@ -20,6 +22,12 @@ function ViewTrip() {
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Set dynamic page title based on trip data
+  const tripTitle = trip
+    ? trip.destination || trip.tripData?.destination || "Trip Details"
+    : "Loading Trip...";
+  usePageTitle(loading ? "Loading Trip..." : tripTitle);
 
   useEffect(() => {
     if (tripId) {
@@ -113,8 +121,8 @@ function ViewTrip() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50">
-      {/* Compact Header Section */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50/30 via-white to-slate-50/30">
+      {/* Compact Trip Header - positioned below main header */}
       <TripHeader
         trip={trip}
         onShare={handleShare}
@@ -122,18 +130,27 @@ function ViewTrip() {
         onEdit={handleEdit}
       />
 
-      {/* Main Content with Tabbed Interface */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Tabbed Content Interface */}
+      {/* Main Content with optimized spacing */}
+      <main
+        role="main"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"
+        aria-label={`Trip details for ${
+          trip?.userSelection?.location || "destination"
+        }`}
+      >
+        {/* Enhanced Tabbed Content Interface */}
         <TabbedTripView trip={trip} />
 
         {/* Development Info (only in dev mode) */}
         {process.env.NODE_ENV === "development" && (
-          <div className="mt-8">
-            <DevMetadata trip={trip} />
-          </div>
+          <aside
+            className="mt-8 border-t border-gray-100 pt-6"
+            aria-label="Development metadata"
+          >
+            <DevMetaData trip={trip} />
+          </aside>
         )}
-      </div>
+      </main>
     </div>
   );
 }

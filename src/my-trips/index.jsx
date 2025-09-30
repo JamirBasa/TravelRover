@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { query, collection, where, getDocs } from "firebase/firestore";
 import { db } from "@/config/FirebaseConfig";
 import { Button } from "@/components/ui/button";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 // Component imports
 import TripCard from "./components/TripCard";
@@ -11,6 +12,8 @@ import EmptyState from "./components/EmptyState";
 import LoadingState from "./components/LoadingState";
 
 function MyTrips() {
+  // Set page title for my trips
+  usePageTitle("My Trips");
   const [userTrips, setUserTrips] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -86,66 +89,85 @@ function MyTrips() {
   const filteredTrips = useMemo(() => {
     return userTrips.filter((trip) => {
       // Search in content only
-      const matchesSearch = !searchTerm || (() => {
-        const searchLower = searchTerm.toLowerCase().trim();
-        const searchWords = searchLower.split(/\s+/).filter(word => word.length > 0);
-        
-        const containsAllWords = (text) => {
-          if (!text || typeof text !== 'string') return false;
-          const lowerText = text.toLowerCase();
-          return searchWords.every(word => lowerText.includes(word));
-        };
+      const matchesSearch =
+        !searchTerm ||
+        (() => {
+          const searchLower = searchTerm.toLowerCase().trim();
+          const searchWords = searchLower
+            .split(/\s+/)
+            .filter((word) => word.length > 0);
 
-        const containsAnyWord = (text) => {
-          if (!text || typeof text !== 'string') return false;
-          const lowerText = text.toLowerCase();
-          return searchWords.some(word => lowerText.includes(word));
-        };
+          const containsAllWords = (text) => {
+            if (!text || typeof text !== "string") return false;
+            const lowerText = text.toLowerCase();
+            return searchWords.every((word) => lowerText.includes(word));
+          };
 
-        // 1. Trip title/destination
-        const titleMatch = containsAllWords(trip.userSelection?.location);
-        
-        // 2. Trip summary
-        const summaryMatch = containsAnyWord(trip.tripData?.trip_summary);
-        
-        // 3. Hotels
-        const hotelMatch = trip.tripData?.tripData?.accommodations?.some(hotel => 
-          containsAnyWord(hotel?.name) ||
-          containsAnyWord(hotel?.address) ||
-          containsAnyWord(hotel?.description) ||
-          containsAnyWord(hotel?.type)
-        ) || false;
-        
-        // 4. Activities/Places
-        const placesMatch = trip.tripData?.tripData?.itinerary?.some(day => 
-          day?.activities?.some(activity => 
-            containsAnyWord(activity?.activity) ||
-            containsAnyWord(activity?.location) ||
-            containsAnyWord(activity?.description)
-          )
-        ) || false;
+          const containsAnyWord = (text) => {
+            if (!text || typeof text !== "string") return false;
+            const lowerText = text.toLowerCase();
+            return searchWords.some((word) => lowerText.includes(word));
+          };
 
-        return titleMatch || summaryMatch || hotelMatch || placesMatch;
-      })();
+          // 1. Trip title/destination
+          const titleMatch = containsAllWords(trip.userSelection?.location);
+
+          // 2. Trip summary
+          const summaryMatch = containsAnyWord(trip.tripData?.trip_summary);
+
+          // 3. Hotels
+          const hotelMatch =
+            trip.tripData?.tripData?.accommodations?.some(
+              (hotel) =>
+                containsAnyWord(hotel?.name) ||
+                containsAnyWord(hotel?.address) ||
+                containsAnyWord(hotel?.description) ||
+                containsAnyWord(hotel?.type)
+            ) || false;
+
+          // 4. Activities/Places
+          const placesMatch =
+            trip.tripData?.tripData?.itinerary?.some((day) =>
+              day?.activities?.some(
+                (activity) =>
+                  containsAnyWord(activity?.activity) ||
+                  containsAnyWord(activity?.location) ||
+                  containsAnyWord(activity?.description)
+              )
+            ) || false;
+
+          return titleMatch || summaryMatch || hotelMatch || placesMatch;
+        })();
 
       // Filter by attributes
-      const matchesBudget = !filters.budget || 
-        trip.userSelection?.budget?.toLowerCase() === filters.budget.toLowerCase();
+      const matchesBudget =
+        !filters.budget ||
+        trip.userSelection?.budget?.toLowerCase() ===
+          filters.budget.toLowerCase();
 
-      const matchesDuration = !filters.duration || (() => {
-        const tripDuration = parseInt(trip.userSelection?.duration);
-        switch (filters.duration) {
-          case "short": return tripDuration <= 3;
-          case "medium": return tripDuration >= 4 && tripDuration <= 7;
-          case "long": return tripDuration > 7;
-          default: return true;
-        }
-      })();
+      const matchesDuration =
+        !filters.duration ||
+        (() => {
+          const tripDuration = parseInt(trip.userSelection?.duration);
+          switch (filters.duration) {
+            case "short":
+              return tripDuration <= 3;
+            case "medium":
+              return tripDuration >= 4 && tripDuration <= 7;
+            case "long":
+              return tripDuration > 7;
+            default:
+              return true;
+          }
+        })();
 
-      const matchesTravelers = !filters.travelers || 
+      const matchesTravelers =
+        !filters.travelers ||
         trip.userSelection?.travelers === filters.travelers;
 
-      return matchesSearch && matchesBudget && matchesDuration && matchesTravelers;
+      return (
+        matchesSearch && matchesBudget && matchesDuration && matchesTravelers
+      );
     });
   }, [userTrips, searchTerm, filters]);
 
@@ -170,8 +192,11 @@ function MyTrips() {
         <div>
           <h1 className="text-3xl font-bold text-gray-800">My Trips</h1>
           <p className="text-gray-600 mt-1">
-            {filteredTrips.length} of {userTrips.length} {userTrips.length === 1 ? "trip" : "trips"}
-            {searchTerm || Object.values(filters).some(f => f) ? " (filtered)" : ""}
+            {filteredTrips.length} of {userTrips.length}{" "}
+            {userTrips.length === 1 ? "trip" : "trips"}
+            {searchTerm || Object.values(filters).some((f) => f)
+              ? " (filtered)"
+              : ""}
           </p>
         </div>
         <Button

@@ -17,8 +17,114 @@ import {
 } from "lucide-react";
 
 function FlightBooking({ trip }) {
-  const [selectedFlight, setSelectedFlight] = useState(null);
   const [sortBy, setSortBy] = useState("price"); // price, duration, departure
+
+  // Helper function to format flight duration consistently
+  const formatDuration = (duration) => {
+    if (!duration || duration === "N/A" || duration === "") {
+      return "Not specified";
+    }
+
+    // Handle numeric duration (minutes) directly
+    if (typeof duration === "number") {
+      const hours = Math.floor(duration / 60);
+      const minutes = duration % 60;
+      return hours > 0
+        ? minutes > 0
+          ? `${hours}h ${minutes}m`
+          : `${hours}h`
+        : `${minutes}m`;
+    }
+
+    const durationStr = String(duration).trim();
+
+    // Handle incorrectly formatted hours (like "105h" which should be "1h 45m")
+    const incorrectHourMatch = durationStr.match(/^(\d+)h$/);
+    if (incorrectHourMatch) {
+      const number = parseInt(incorrectHourMatch[1]);
+      // If it's a suspiciously large number of hours (13+), treat as minutes
+      if (number >= 13) {
+        const hours = Math.floor(number / 60);
+        const minutes = number % 60;
+        return hours > 0
+          ? minutes > 0
+            ? `${hours}h ${minutes}m`
+            : `${hours}h`
+          : `${minutes}m`;
+      }
+      // Otherwise, it's likely correct (1h-12h)
+      return durationStr;
+    }
+
+    // If already in correct format (like "2h 30m"), return as is
+    if (/^\d+h\s*(\d+m)?$/.test(durationStr)) {
+      return durationStr;
+    }
+
+    // Parse "2 hours 30 minutes" or "2 hours"
+    const longFormatMatch = durationStr.match(
+      /(\d+)\s*hours?\s*(\d+)?\s*minutes?/i
+    );
+    if (longFormatMatch) {
+      const hours = parseInt(longFormatMatch[1]);
+      const minutes = longFormatMatch[2] ? parseInt(longFormatMatch[2]) : 0;
+      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+    }
+
+    // Parse "2h 30m", "2h30m", or just "2h"
+    const shortFormatMatch = durationStr.match(/(\d+)h\s*(\d+)?m?/i);
+    if (shortFormatMatch) {
+      const hours = parseInt(shortFormatMatch[1]);
+      const minutes = shortFormatMatch[2] ? parseInt(shortFormatMatch[2]) : 0;
+      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+    }
+
+    // Parse total minutes (like "150 minutes" or "90 min")
+    const minutesMatch = durationStr.match(/(\d+)\s*(min|minutes)/i);
+    if (minutesMatch) {
+      const totalMinutes = parseInt(minutesMatch[1]);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      if (hours > 0) {
+        return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+      }
+      return `${minutes}m`;
+    }
+
+    // Parse decimal hours (like "2.5" or "1.75")
+    const decimalMatch = durationStr.match(/^(\d+\.?\d*)\s*(hours?)?$/i);
+    if (decimalMatch) {
+      const decimalHours = parseFloat(decimalMatch[1]);
+      if (decimalHours > 0) {
+        const hours = Math.floor(decimalHours);
+        const minutes = Math.round((decimalHours - hours) * 60);
+        if (hours > 0) {
+          return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+        }
+        return `${minutes}m`;
+      }
+    }
+
+    // Parse just numbers (flight API data usually provides duration in minutes)
+    const numberMatch = durationStr.match(/^(\d+)$/);
+    if (numberMatch) {
+      const number = parseInt(numberMatch[1]);
+
+      // Flight duration numbers from APIs are typically in minutes
+      // Convert all raw numbers to proper hour/minute format
+      const hours = Math.floor(number / 60);
+      const minutes = number % 60;
+
+      return hours > 0
+        ? minutes > 0
+          ? `${hours}h ${minutes}m`
+          : `${hours}h`
+        : `${minutes}m`;
+    }
+
+    // If nothing matches, return cleaned version
+    return durationStr || "Not specified";
+  };
 
   // Helper function to extract airport codes from location names
   const getAirportCode = (location) => {
@@ -235,25 +341,27 @@ function FlightBooking({ trip }) {
         price: String(flight.price || "₱0"),
         departure: String(flight.departure || "N/A"),
         arrival: String(flight.arrival || "N/A"),
-        duration: String(flight.duration || "N/A"),
+        duration: flight.duration || "N/A",
         stops: typeof flight.stops === "number" ? flight.stops : 0,
       }));
 
     if (!hasFlightData || validFlights.length === 0) {
       return (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center">
-          <div className="text-amber-600 text-2xl mb-2">✈️</div>
-          <h3 className="font-semibold text-amber-800 mb-2">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-12 text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+            <span className="text-2xl text-blue-600">✈️</span>
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">
             Flight Booking Available
           </h3>
-          <p className="text-sm text-amber-700 mb-4">
+          <p className="text-gray-600 text-sm max-w-md mx-auto font-medium mb-4">
             Contact our travel partners for the best flight deals to{" "}
             {trip?.userSelection?.location}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Button
               onClick={() => window.open(generateTripComURL(), "_blank")}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <ExternalLink className="h-4 w-4 mr-2" />
               Search on Trip.com
@@ -263,7 +371,7 @@ function FlightBooking({ trip }) {
                 window.open("https://www.agoda.com/flights", "_blank")
               }
               variant="outline"
-              className="border-amber-600 text-amber-600 hover:bg-amber-50"
+              className="border-blue-600 text-blue-600 hover:bg-blue-50"
             >
               <ExternalLink className="h-4 w-4 mr-2" />
               Book on Agoda
@@ -311,69 +419,108 @@ function FlightBooking({ trip }) {
 
     return (
       <div className="space-y-6">
-        {/* Header with Sort Options */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Plane className="h-5 w-5 text-blue-600" />
-              Available Flights
-            </h3>
-            <p className="text-sm text-gray-600">
-              {validFlights.length} options found • Real-time prices
-            </p>
+        <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
+          {/* Consistent Header Section */}
+          <div className="brand-gradient px-4 sm:px-6 py-4 relative overflow-hidden">
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
+            <div className="absolute bottom-0 left-0 w-16 h-16 bg-white opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
+
+            <div className="relative">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-lg border border-white/30">
+                    <Plane className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl font-bold text-white mb-1 break-words">
+                      Available Flights
+                    </h2>
+                    <p className="text-blue-100 text-xs flex items-center gap-2 flex-wrap">
+                      <span>✈️</span>
+                      <span>
+                        {validFlights.length} flights available for your journey
+                      </span>
+                      <span>•</span>
+                      <span>🎯 Real-time prices</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="hidden sm:flex items-center gap-3 text-white">
+                  <div className="text-center">
+                    <div className="text-base font-bold">
+                      {validFlights.length}
+                    </div>
+                    <div className="text-xs text-blue-100">Flights</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Sort Options */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Sort by:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="price">Price</option>
-              <option value="departure">Departure Time</option>
-              <option value="duration">Duration</option>
-            </select>
-          </div>
-        </div>
+          <div className="p-4 sm:p-6">
+            {/* Sort Options Section */}
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span>Sort by:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                  <option value="price">Price (Low to High)</option>
+                  <option value="departure">Departure Time</option>
+                  <option value="duration">Flight Duration</option>
+                </select>
+              </div>
+            </div>
 
-        {/* Flight Options */}
-        <div className="space-y-4">
-          {sortedFlights.map((flight, index) => (
-            <FlightCard
-              key={index}
-              flight={flight}
-              isSelected={selectedFlight === index}
-              onSelect={() => setSelectedFlight(index)}
-              onBook={() => handleBookFlight(flight)}
-              trip={trip}
-            />
-          ))}
-        </div>
+            <div className="grid gap-6">
+              {sortedFlights.map((flight, index) => (
+                <div key={index}>
+                  <FlightCard
+                    flight={flight}
+                    onBook={() => handleBookFlight(flight)}
+                    trip={trip}
+                    formatDuration={formatDuration}
+                  />
+                  {/* Add separator except for last item */}
+                  {index < sortedFlights.length - 1 && (
+                    <div className="mt-6 border-b border-gray-100"></div>
+                  )}
+                </div>
+              ))}
+            </div>
 
-        {/* Booking Information */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-blue-800">
-              <p className="font-medium mb-1">Booking Information</p>
-              <ul className="space-y-1 text-xs">
-                <li>• Prices shown are current estimates and may change</li>
-                <li>
-                  • You'll be redirected to the airline's official website
-                </li>
-                <li>• Book early for better deals and seat selection</li>
-                <li>
-                  • All flights are round-trip for your{" "}
-                  {trip?.userSelection?.duration} day trip
-                </li>
-              </ul>
+            {/* Compact Helpful tip */}
+            <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
+                  <span className="text-blue-600 text-xs">💡</span>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-blue-800 mb-1">
+                    Flight Booking Tips
+                  </h4>
+                  <div className="text-blue-700 text-sm space-y-2">
+                    <p>
+                      Prices shown are current estimates and may change. You'll
+                      be redirected to our trusted booking partners for secure
+                      transactions and the best available rates!
+                    </p>
+                    <p className="text-xs">
+                      <strong>Duration:</strong> Scheduled flight time from
+                      takeoff to landing, excluding ground time.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Price Alerts & Partner Links */}
+        {/* Price Alerts & Partner Links - Outside main container */}
         {trip?.realFlightData?.price_alerts && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <h4 className="font-medium text-green-900 mb-2 flex items-center gap-2">
@@ -439,10 +586,12 @@ function FlightBooking({ trip }) {
   } catch (error) {
     console.error("❌ FlightBooking component error:", error);
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <div className="text-red-600 text-2xl mb-2">⚠️</div>
-        <h3 className="font-semibold text-red-800 mb-2">Flight Data Error</h3>
-        <p className="text-sm text-red-700 mb-4">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 sm:p-6 text-center">
+        <div className="text-red-600 text-xl mb-2">⚠️</div>
+        <h3 className="font-semibold text-red-800 mb-2 text-base">
+          Flight Data Error
+        </h3>
+        <p className="text-sm text-red-700 mb-4 break-words">
           There was an issue loading flight information. Please try refreshing
           the page.
         </p>
@@ -451,7 +600,8 @@ function FlightBooking({ trip }) {
             onClick={() =>
               window.open(generateTripComURL({ destination: "CEB" }), "_blank")
             }
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-white text-sm"
+            size="sm"
           >
             <ExternalLink className="h-4 w-4 mr-2" />
             Search on Trip.com
@@ -461,7 +611,8 @@ function FlightBooking({ trip }) {
               window.open("https://www.agoda.com/flights", "_blank")
             }
             variant="outline"
-            className="border-red-600 text-red-600 hover:bg-red-50"
+            className="border-red-600 text-red-600 hover:bg-red-50 text-sm"
+            size="sm"
           >
             <ExternalLink className="h-4 w-4 mr-2" />
             Book on Agoda
@@ -473,17 +624,11 @@ function FlightBooking({ trip }) {
 }
 
 // Individual Flight Card Component
-function FlightCard({ flight, isSelected, onSelect, onBook, trip }) {
-  const [showDetails, setShowDetails] = useState(false);
-
+function FlightCard({ flight, onBook, trip, formatDuration }) {
   return (
-    <div
-      className={`border rounded-lg transition-all duration-200 hover:shadow-md ${
-        isSelected ? "border-blue-500 bg-blue-50" : "border-gray-200 bg-white"
-      }`}
-    >
+    <div className="border border-gray-200 bg-white rounded-lg transition-all duration-200 hover:shadow-lg hover:border-blue-300 hover:-translate-y-1 group">
       {/* Main Flight Info */}
-      <div className="p-4 cursor-pointer" onClick={onSelect}>
+      <div className="p-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           {/* Flight Details */}
           <div className="flex-1">
@@ -523,7 +668,10 @@ function FlightCard({ flight, isSelected, onSelect, onBook, trip }) {
               </div>
               <div>
                 <div className="text-gray-600 text-xs mb-1">Duration</div>
-                <div className="font-medium">{flight.duration}</div>
+                <div className="font-medium flex items-center gap-1">
+                  <Clock className="h-3 w-3 text-gray-400" />
+                  {formatDuration(flight.duration)}
+                </div>
               </div>
             </div>
 
@@ -541,27 +689,11 @@ function FlightCard({ flight, isSelected, onSelect, onBook, trip }) {
                 <span className="text-gray-500">{flight.aircraft_type}</span>
               )}
             </div>
-
-            {/* Toggle Details Button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowDetails(!showDetails);
-              }}
-              className="text-blue-600 text-xs mt-2 hover:text-blue-700 flex items-center gap-1"
-            >
-              {showDetails ? "Hide Details" : "Show Details"}
-              <ArrowRight
-                className={`h-3 w-3 transition-transform ${
-                  showDetails ? "rotate-90" : ""
-                }`}
-              />
-            </button>
           </div>
 
           {/* Price and Booking */}
-          <div className="flex flex-row lg:flex-col items-center lg:items-end gap-3 lg:gap-2">
-            <div className="text-right">
+          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-3 lg:gap-2">
+            <div className="text-center sm:text-right lg:text-right flex-1 sm:flex-initial">
               <div className="text-xs text-gray-600 mb-1">Total Price</div>
               <div className="text-2xl font-bold text-green-600">
                 {flight.price}
@@ -570,61 +702,17 @@ function FlightCard({ flight, isSelected, onSelect, onBook, trip }) {
             </div>
 
             <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                onBook();
-              }}
-              className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
+              onClick={onBook}
+              className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer group-hover:bg-blue-700 group-hover:scale-105 transition-all duration-200 w-full sm:w-auto lg:w-auto px-6 py-3 sm:px-4 sm:py-2 text-base sm:text-sm font-semibold"
             >
-              Book Now
-              <ExternalLink className="h-4 w-4 ml-2" />
+              <span className="flex items-center justify-center gap-2">
+                <span>Book Now</span>
+                <ExternalLink className="h-4 w-4" />
+              </span>
             </Button>
           </div>
         </div>
       </div>
-
-      {/* Expandable Details */}
-      {showDetails && (
-        <div className="border-t border-gray-200 p-4 bg-gray-50">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            {/* Baggage Info */}
-            {flight.baggage_allowance && (
-              <div>
-                <h4 className="font-medium text-gray-900 mb-1">
-                  Baggage Allowance
-                </h4>
-                <p className="text-gray-600">{flight.baggage_allowance}</p>
-              </div>
-            )}
-
-            {/* Cancellation Policy */}
-            {flight.cancellation_policy && (
-              <div>
-                <h4 className="font-medium text-gray-900 mb-1">
-                  Cancellation Policy
-                </h4>
-                <p className="text-gray-600">{flight.cancellation_policy}</p>
-              </div>
-            )}
-
-            {/* Amenities */}
-            {flight.amenities && flight.amenities.length > 0 && (
-              <div className="md:col-span-2">
-                <h4 className="font-medium text-gray-900 mb-2">
-                  Included Amenities
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {flight.amenities.map((amenity, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {amenity}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
