@@ -1,19 +1,24 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { query, collection, where, getDocs } from "firebase/firestore";
-import { db } from "@/config/FirebaseConfig";
+import { query, collection, where, getDocs, doc, deleteDoc } from "firebase/firestore";
+import { db } from "@/config/firebaseConfig"; // ✅ Fixed import path
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 // Component imports
 import TripCard from "./components/TripCard";
 import SearchAndFilter from "./components/SearchAndFilter";
 import EmptyState from "./components/EmptyState";
 import LoadingState from "./components/LoadingState";
+import DeleteConfirmDialog from "./components/DeleteConfirmDialog";
 
 function MyTrips() {
   const [userTrips, setUserTrips] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [tripToDelete, setTripToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
 
   // Search and Filter States
@@ -47,7 +52,7 @@ function MyTrips() {
         throw new Error("No email found in user data");
       }
 
-      console.log("Fetching trips for user:", user.email);
+      console.log("📋 Fetching trips for user:", user.email);
 
       const q = query(
         collection(db, "AITrips"),
@@ -58,17 +63,17 @@ function MyTrips() {
       const trips = [];
 
       querySnapshot.forEach((doc) => {
-        console.log("Trip found:", doc.id, doc.data());
+        console.log("🔍 Trip found:", doc.id, doc.data());
         trips.push({
           id: doc.id,
           ...doc.data(),
         });
       });
 
-      console.log("Total trips loaded:", trips.length);
+      console.log("✅ Total trips loaded:", trips.length);
       setUserTrips(trips);
     } catch (error) {
-      console.error("Error fetching user trips:", error);
+      console.error("❌ Error fetching user trips:", error);
 
       if (error.code === "permission-denied") {
         setError("Access denied. Please check your permissions.");
@@ -80,6 +85,109 @@ function MyTrips() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // ✅ Enhanced delete trip function with better validation
+  const handleDeleteTrip = async (trip) => {
+    console.log("🗑️ Delete trip requested:", {
+      tripId: trip.id,
+      location: trip.userSelection?.location,
+      userEmail: trip.userEmail
+    });
+    
+    // Validate trip object
+    if (!trip || !trip.id) {
+      toast.error("Invalid trip data");
+      return;
+    }
+    
+    // Validate user ownership
+    const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+    if (!currentUser?.email) {
+      toast.error("Please sign in to delete trips");
+      return;
+    }
+
+    if (trip.userEmail !== currentUser.email) {
+      console.warn("❌ User doesn't own this trip:", {
+        tripOwner: trip.userEmail,
+        currentUser: currentUser.email
+      });
+      toast.error("You can only delete your own trips");
+      return;
+    }
+
+    // Show confirmation dialog
+    setTripToDelete(trip);
+    setDeleteDialogOpen(true);
+  };
+
+  // ✅ Enhanced confirm delete with better error handling
+  const confirmDeleteTrip = async () => {
+    if (!tripToDelete) {
+      console.warn("❌ No trip to delete");
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      console.log(`🗑️ Deleting trip: ${tripToDelete.id}`);
+
+      // Verify trip exists before attempting delete
+      const docRef = doc(db, "AITrips", tripToDelete.id);
+      
+      // Delete from Firebase
+      await deleteDoc(docRef);
+
+      // Update local state immediately for better UX
+      setUserTrips(prev => {
+        const updatedTrips = prev.filter(trip => trip.id !== tripToDelete.id);
+        console.log(`✅ Local state updated: ${prev.length} → ${updatedTrips.length} trips`);
+        return updatedTrips;
+      });
+
+      // Show success message
+      toast.success(
+        `🎯 Trip to ${tripToDelete.userSelection?.location || 'destination'} deleted successfully`,
+        {
+          description: "Your trip has been permanently removed from your collection.",
+          duration: 3000,
+        }
+      );
+
+      console.log("✅ Trip deleted successfully:", tripToDelete.id);
+
+    } catch (error) {
+      console.error("❌ Error deleting trip:", {
+        tripId: tripToDelete.id,
+        error: error.message,
+        code: error.code
+      });
+
+      // Handle specific Firebase errors
+      if (error.code === "permission-denied") {
+        toast.error("Permission denied. You can only delete your own trips.");
+      } else if (error.code === "not-found") {
+        toast.error("Trip not found. It may have been already deleted.");
+        // Remove from local state anyway since it doesn't exist
+        setUserTrips(prev => prev.filter(trip => trip.id !== tripToDelete.id));
+      } else if (error.code === "unavailable") {
+        toast.error("Database unavailable. Please try again later.");
+      } else {
+        toast.error("Failed to delete trip: " + (error.message || "Unknown error"));
+      }
+    } finally {
+      // Always cleanup dialog state
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setTripToDelete(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setTripToDelete(null);
   };
 
   // Search and Filter Logic
@@ -216,10 +324,23 @@ function MyTrips() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTrips.map((trip) => (
-            <TripCard key={trip.id} trip={trip} />
+            <TripCard 
+              key={trip.id} 
+              trip={trip} 
+              onDelete={handleDeleteTrip}
+            />
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        isOpen={deleteDialogOpen}
+        onClose={cancelDelete}
+        onConfirm={confirmDeleteTrip}
+        tripData={tripToDelete}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

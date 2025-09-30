@@ -2,8 +2,17 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GetPlaceDetails, PHOTO_REF_URL } from "@/config/GlobalApi";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
+import { Button } from "@/components/ui/button";
+import { MoreVertical, Eye, Trash2, Edit } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-function TripCard({ trip }) {
+function TripCard({ trip, onDelete }) {
   const [photoUrl, setPhotoUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -93,40 +102,96 @@ function TripCard({ trip }) {
 
   const highlights = getTripHighlights();
 
+  const handleViewTrip = (e) => {
+    e.stopPropagation();
+    navigate(`/view-trip/${trip.id}`);
+  };
+
+  const handleEditTrip = (e) => {
+    e.stopPropagation();
+    // For now, redirect to create new trip
+    // In future versions, we could populate the form with existing data
+    navigate("/create-trip");
+  };
+
+  const handleDeleteTrip = (e) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(trip);
+    }
+  };
+
   return (
-    <div
-      className="group border rounded-lg overflow-hidden shadow hover:shadow-lg transition-all cursor-pointer hover:scale-105 bg-white"
-      onClick={() => navigate(`/view-trip/${trip.id}`)}
-    >
+    <div className="group border rounded-lg overflow-hidden shadow hover:shadow-lg transition-all bg-white relative">
+      {/* Action Menu */}
+      <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 bg-white/90 backdrop-blur-sm hover:bg-white shadow-sm border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={handleViewTrip} className="flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleEditTrip} className="flex items-center gap-2">
+              <Edit className="h-4 w-4" />
+              Edit Trip
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={handleDeleteTrip} 
+              className="flex items-center gap-2 text-red-600 focus:text-red-600"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Trip
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       {/* Trip Photo with loading state */}
-      {isLoading ? (
-        <div className="h-48 bg-gray-100 flex items-center justify-center">
-          <AiOutlineLoading3Quarters className="h-6 w-6 animate-spin text-blue-500" />
-        </div>
-      ) : (
-        <img
-          src={photoUrl || "/placeholder.png"}
-          alt={`${trip.userSelection?.location || "Trip"} photo`}
-          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-          onError={(e) => {
-            console.log("Trip image failed to load, using placeholder");
-            e.target.src = "/placeholder.png";
-          }}
-        />
-      )}
+      <div 
+        className="cursor-pointer"
+        onClick={handleViewTrip}
+      >
+        {isLoading ? (
+          <div className="h-48 bg-gray-100 flex items-center justify-center">
+            <AiOutlineLoading3Quarters className="h-6 w-6 animate-spin text-blue-500" />
+          </div>
+        ) : (
+          <img
+            src={photoUrl || "/placeholder.png"}
+            alt={`${trip.userSelection?.location || "Trip"} photo`}
+            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => {
+              console.log("Trip image failed to load, using placeholder");
+              e.target.src = "/placeholder.png";
+            }}
+          />
+        )}
+      </div>
 
       {/* Enhanced Trip Summary */}
       <div className="p-5">
         <h3 className="font-bold text-lg mb-2 text-gray-800 group-hover:text-blue-600 transition-colors duration-200 flex items-center gap-2 overflow-hidden">
           <span className="text-base flex-shrink-0">📍</span>
           <span 
-            className="truncate"
+            className="truncate cursor-pointer"
             style={{
               display: '-webkit-box',
               WebkitLineClamp: 1,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden'
             }}
+            onClick={handleViewTrip}
           >
             {trip.userSelection?.location || "Unknown Destination"}
           </span>
@@ -135,13 +200,14 @@ function TripCard({ trip }) {
         {/* Show AI-generated trip summary if available */}
         {trip.tripData?.trip_summary && (
           <p 
-            className="text-gray-600 text-sm mb-3 leading-relaxed"
+            className="text-gray-600 text-sm mb-3 leading-relaxed cursor-pointer"
             style={{
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden'
             }}
+            onClick={handleViewTrip}
           >
             {trip.tripData.trip_summary}
           </p>
@@ -182,25 +248,15 @@ function TripCard({ trip }) {
           </p>
         )}
 
-        {/* Clean View Details */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100 group-hover:border-gray-200 transition-colors">
-          <span className="text-blue-600 font-medium text-sm group-hover:text-blue-700 transition-colors duration-200 flex items-center gap-1.5">
-            <span className="text-xs">✈️</span>
-            View Trip Details
-          </span>
-          <svg
-            className="w-4 h-4 text-blue-600 group-hover:text-blue-700 group-hover:translate-x-1 transition-all duration-200"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {/* Action Buttons */}
+        <div className="flex gap-2 pt-3 border-t border-gray-100">
+          <Button
+            onClick={handleViewTrip}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
+            <Eye className="h-4 w-4 mr-1" />
+            View Details
+          </Button>
         </div>
       </div>
     </div>
