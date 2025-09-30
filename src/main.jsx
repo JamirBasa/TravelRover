@@ -11,6 +11,9 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import ViewTrip from "./view-trip/[tripId]/index.jsx";
 import MyTrips from "./my-trips/index.jsx";
 import Home from "./home/home.jsx";
+import Admin from "./admin/Admin.jsx";
+import AdminLogin from "./admin/AdminLogin.jsx";
+import AdminLayout from "./admin/AdminLayout.jsx";
 
 const router = createBrowserRouter([
   {
@@ -44,6 +47,22 @@ const router = createBrowserRouter([
       {
         path: "my-trips",
         element: <MyTrips />,
+      },
+    ],
+  },
+
+ // ADMIN ROUTES - Separate layout without header
+  {
+    path: "/admin",
+    element: <AdminLayout />, // Now properly imported
+    children: [
+      {
+        index: true,
+        element: <Admin />,
+      },
+      {
+        path: "login",
+        element: <AdminLogin />,
       },
     ],
   },

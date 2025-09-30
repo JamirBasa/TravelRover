@@ -16,7 +16,6 @@ from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -28,9 +27,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -42,12 +39,13 @@ INSTALLED_APPS = [
     'corsheaders',
     'flights',
     'langgraph_agents',
+    'admin_api',  # Add this line
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',  # ✅ Must be before Auth
-    'corsheaders.middleware.CorsMiddleware',  # ✅ Move CORS after Sessions
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -64,6 +62,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -74,7 +73,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'travelapi.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
@@ -84,7 +82,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -104,18 +101,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'Asia/Manila'
-
+TIME_ZONE = 'UTC'
 USE_I18N = True
-
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
@@ -127,42 +119,67 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-# CORS settings for React
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-]
-
-CORS_ALLOW_ALL_ORIGINS = True  # Only for development
-
-# REST Framework settings
+# REST Framework Configuration
 REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-    ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
-    ],
+    ]
 }
 
-# SerpAPI Configuration
-SERPAPI_KEY = config('SERPAPI_KEY', default='')
+# CORS Configuration
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # React dev server
+    "http://127.0.0.1:5173",
+]
 
-# Google Places API Configuration  
+CORS_ALLOW_CREDENTIALS = True
+
+# API Keys from environment variables
+SERPAPI_KEY = config('SERPAPI_KEY', default='')
 GOOGLE_PLACES_API_KEY = config('GOOGLE_PLACES_API_KEY', default='')
 
-# Logging
+# ✅ Add these for API monitoring (these should already exist)
+GOOGLE_GEMINI_AI_API_KEY = config('GOOGLE_GEMINI_AI_API_KEY', default='')
+
+# ✅ Add these if missing for API monitoring
+FIREBASE_API_KEY = config('FIREBASE_API_KEY', default='')
+FIREBASE_PROJECT_ID = config('FIREBASE_PROJECT_ID', default='')
+FIREBASE_AUTH_DOMAIN = config('FIREBASE_AUTH_DOMAIN', default='')
+FIREBASE_STORAGE_BUCKET = config('FIREBASE_STORAGE_BUCKET', default='')
+FIREBASE_MESSAGING_SENDER_ID = config('FIREBASE_MESSAGING_SENDER_ID', default='')
+FIREBASE_APP_ID = config('FIREBASE_APP_ID', default='')
+FIREBASE_MEASUREMENT_ID = config('FIREBASE_MEASUREMENT_ID', default='')
+
+# Logging Configuration
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'simple',
         },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
+    'loggers': {
+        'langgraph_agents': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'admin_api': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
     },
 }
