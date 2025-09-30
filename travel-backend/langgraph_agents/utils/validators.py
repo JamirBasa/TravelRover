@@ -9,6 +9,46 @@ import re
 from ..exceptions import DataValidationError
 
 
+def _extract_travelers_number(travelers_input) -> int:
+    """
+    Extract numeric value from travelers input, handling various formats
+    
+    Args:
+        travelers_input: Input in various formats (int, "2", "2 People", "3 to 5 People", etc.)
+        
+    Returns:
+        Integer number of travelers
+        
+    Raises:
+        ValueError: If no valid number can be extracted
+    """
+    if isinstance(travelers_input, int):
+        return travelers_input
+    
+    if isinstance(travelers_input, str):
+        # Handle formats like "1", "2 People", "3 to 5 People", "Solo Traveler"
+        
+        # First try direct conversion
+        travelers_input = travelers_input.strip()
+        if travelers_input.isdigit():
+            return int(travelers_input)
+        
+        # Extract first number from string
+        import re
+        match = re.search(r'(\d+)', travelers_input)
+        if match:
+            return int(match.group(1))
+        
+        # Handle special cases
+        lower_input = travelers_input.lower()
+        if any(keyword in lower_input for keyword in ['solo', 'single', 'one', 'myself']):
+            return 1
+        elif any(keyword in lower_input for keyword in ['couple', 'two', 'pair']):
+            return 2
+    
+    raise ValueError(f"Cannot extract number from travelers input: {travelers_input}")
+
+
 def validate_trip_params(params: Dict[str, Any]) -> Dict[str, Any]:
     """
     Validate and sanitize trip parameters
@@ -37,14 +77,14 @@ def validate_trip_params(params: Dict[str, Any]) -> Dict[str, Any]:
     
     validated_params['destination'] = params['destination'].strip()
     
-    # Validate travelers
+    # Validate travelers - use enhanced extraction
     try:
-        travelers_count = int(params['travelers']) if isinstance(params['travelers'], str) else params['travelers']
+        travelers_count = _extract_travelers_number(params['travelers'])
         if travelers_count < 1 or travelers_count > 20:
             raise DataValidationError("Travelers count must be between 1 and 20", field_name='travelers')
         validated_params['travelers'] = travelers_count
-    except (ValueError, TypeError):
-        raise DataValidationError("Travelers must be a valid number", field_name='travelers')
+    except (ValueError, TypeError) as e:
+        raise DataValidationError(f"Travelers must be a valid number (got: {params['travelers']})", field_name='travelers')
     
     # Validate dates if provided
     if 'startDate' in params and params['startDate']:

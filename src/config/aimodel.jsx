@@ -18,10 +18,10 @@ const genAI = new GoogleGenerativeAI(apiKey);
 
 // Ultra-strict generation config for maximum JSON reliability
 const generationConfig = {
-  temperature: 0.05, // Extremely low for consistency
+  temperature: 0.2, // Balanced for consistency and creativity
   topP: 0.9,
-  topK: 10,
-  maxOutputTokens: 16384, // Maximum possible tokens for complete responses
+  topK: 20,
+  maxOutputTokens: 32768, // Doubled token limit for complete responses
   responseMimeType: "application/json",
   responseSchema: {
     type: "object",
@@ -189,15 +189,17 @@ export const model = genAI.getGenerativeModel({
 const systemPrompt = `Generate ONLY valid JSON for travel itineraries. 
 
 CRITICAL REQUIREMENTS:
-1. Return ONLY JSON - no extra text
+1. Return ONLY JSON - no extra text, no markdown, no code blocks
 2. Use double quotes for all strings  
 3. Ensure complete JSON structure with all closing braces
-4. Include 3-5 hotels, daily itinerary, and places to visit
+4. Include 3-4 hotels, 2-4 activities per day, 5-8 places to visit
 5. Use realistic coordinates and pricing in PHP
-6. Keep descriptions concise (max 100 chars each)
+6. Keep descriptions under 80 characters
 7. Must be parseable by JSON.parse()
+8. NEVER truncate - complete the entire JSON structure
+9. Response must end with proper closing brace }
 
-Response must be complete and properly terminated JSON.`;
+Response must be complete, valid JSON that ends properly.`;
 
 export const chatSession = model.startChat({
   generationConfig,
