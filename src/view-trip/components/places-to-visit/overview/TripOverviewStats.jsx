@@ -1,4 +1,11 @@
 import React from "react";
+import {
+  COLORS,
+  SPACING,
+  TYPOGRAPHY,
+  PATTERNS,
+  COMPOSED_STYLES,
+} from "../constants/designSystem";
 
 function TripOverviewStats({
   currentItinerary,
@@ -29,70 +36,84 @@ function TripOverviewStats({
   }
 
   return (
-    <div className="relative overflow-hidden brand-gradient rounded-lg shadow-md">
+    <div className={`${COMPOSED_STYLES.primarySection}`}>
       {/* Subtle Background Pattern */}
-      <div className="absolute inset-0 opacity-5 pointer-events-none">
+      <div className={PATTERNS.sectionHeader.decoration}>
         <div className="absolute top-0 right-0 w-24 h-24 bg-white rounded-full -translate-y-4 translate-x-4"></div>
         <div className="absolute bottom-0 left-0 w-16 h-16 bg-white rounded-full translate-y-2 -translate-x-2"></div>
       </div>
 
-      <div className="relative z-10 p-4 sm:p-6">
+      <div
+        className={`${PATTERNS.sectionHeader.content} ${SPACING.padding.medium}`}
+      >
         <div className="text-center mb-4">
-          <h3 className="text-lg font-bold text-white mb-1">
+          <h3 className={`${TYPOGRAPHY.heading.h3} text-white mb-1`}>
             ✨ Your Adventure at a Glance
           </h3>
-          <p className="text-blue-100 text-sm">
+          <p className={`${TYPOGRAPHY.body.medium} text-blue-100`}>
             Everything you need to know about your amazing journey
           </p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div
+          className={`grid grid-cols-2 lg:grid-cols-4 ${SPACING.gap.medium}`}
+        >
           <div className="text-center group">
-            <div className="w-12 h-12 bg-white/25 backdrop-blur-md rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:bg-white/35 transition-all duration-300">
+            <div className={`${PATTERNS.iconContainer.large} mx-auto mb-2`}>
               <span className="text-lg">📅</span>
             </div>
-            <div className="text-xl font-bold text-white mb-1">
+            <div className={`${TYPOGRAPHY.heading.h4} text-white mb-1`}>
               {itineraryLength}
             </div>
-            <div className="text-white text-xs font-medium">
+            <div
+              className={`${TYPOGRAPHY.accent.badge} text-white font-medium`}
+            >
               Days of Adventure
             </div>
           </div>
 
           <div className="text-center group">
-            <div className="w-12 h-12 bg-white/25 backdrop-blur-md rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:bg-white/35 transition-all duration-300">
+            <div className={`${PATTERNS.iconContainer.large} mx-auto mb-2`}>
               <span className="text-lg">🎯</span>
             </div>
-            <div className="text-xl font-bold text-white mb-1">
+            <div className={`${TYPOGRAPHY.heading.h4} text-white mb-1`}>
               {placesToVisitLength}
             </div>
-            <div className="text-white text-xs font-medium">
+            <div
+              className={`${TYPOGRAPHY.accent.badge} text-white font-medium`}
+            >
               Must-See Places
             </div>
           </div>
 
           <div className="text-center group">
-            <div className="w-12 h-12 bg-white/25 backdrop-blur-md rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:bg-white/35 transition-all duration-300">
+            <div className={`${PATTERNS.iconContainer.large} mx-auto mb-2`}>
               <span className="text-lg">⚡</span>
             </div>
-            <div className="text-xl font-bold text-white mb-1">
+            <div className={`${TYPOGRAPHY.heading.h4} text-white mb-1`}>
               {activitiesCount}
             </div>
-            <div className="text-white text-xs font-medium">
+            <div
+              className={`${TYPOGRAPHY.accent.badge} text-white font-medium`}
+            >
               Exciting Activities
             </div>
           </div>
 
           <div className="text-center group">
-            <div className="w-12 h-12 bg-white/25 backdrop-blur-md rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:bg-white/35 transition-all duration-300">
+            <div className={`${PATTERNS.iconContainer.large} mx-auto mb-2`}>
               <span className="text-lg">⏱️</span>
             </div>
-            <div className="text-xl font-bold text-white mb-1">
+            <div className={`${TYPOGRAPHY.heading.h4} text-white mb-1`}>
               {trip?.userSelection?.duration ||
                 trip?.tripData?.duration ||
                 "N/A"}
             </div>
-            <div className="text-white text-xs font-medium">Days Total</div>
+            <div
+              className={`${TYPOGRAPHY.accent.badge} text-white font-medium`}
+            >
+              Days Total
+            </div>
           </div>
         </div>
 

@@ -1,6 +1,13 @@
 import React from "react";
-import PlaceCardItem from "../../shared/PlaceCardItem";
 import { Badge } from "@/components/ui/badge";
+import PlaceCardItem from "../../shared/PlaceCardItem";
+import {
+  COLORS,
+  SPACING,
+  TYPOGRAPHY,
+  PATTERNS,
+  COMPOSED_STYLES,
+} from "../constants/designSystem";
 
 function PlacesToVisitSection({ placesToVisit }) {
   if (placesToVisit.length === 0) {
@@ -8,23 +15,31 @@ function PlacesToVisitSection({ placesToVisit }) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
-      <div className="bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-4 sm:px-6 py-4 relative overflow-hidden">
+    <div className={PATTERNS.card.base}>
+      <div
+        className={`${COMPOSED_STYLES.secondarySection} ${SPACING.padding.medium}`}
+      >
         {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
-        <div className="absolute bottom-0 left-0 w-16 h-16 bg-white opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
+        <div className={PATTERNS.sectionHeader.decoration}>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
+        </div>
 
-        <div className="relative">
+        <div className={PATTERNS.sectionHeader.content}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+              <div className={PATTERNS.iconContainer.medium}>
                 <span className="text-white text-lg">🎯</span>
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-bold text-white mb-1 break-words">
+                <h2
+                  className={`${TYPOGRAPHY.heading.h2} text-white mb-1 break-words`}
+                >
                   Must-Visit Attractions
                 </h2>
-                <p className="text-emerald-100 text-xs flex items-center gap-2 flex-wrap">
+                <p
+                  className={`${TYPOGRAPHY.accent.caption} text-emerald-100 flex items-center gap-2 flex-wrap`}
+                >
                   <span>📍</span>
                   <span>
                     {placesToVisit.length} carefully curated destinations

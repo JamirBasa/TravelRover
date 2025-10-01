@@ -1,21 +1,33 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
+import {
+  COLORS,
+  SPACING,
+  TYPOGRAPHY,
+  PATTERNS,
+} from "../constants/designSystem";
 
 function TravelTipsSection() {
   return (
-    <div className="mt-8 space-y-4">
-      <div className="grid md:grid-cols-2 gap-4">
+    <div className={`${SPACING.margin.large} space-y-4`}>
+      <div className={`grid md:grid-cols-2 ${SPACING.gap.medium}`}>
         {/* Planning Tips */}
-        <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg p-4 sm:p-6 border border-emerald-100">
+        <div
+          className={`${COLORS.success.lightGradient} rounded-lg ${SPACING.padding.medium} ${COLORS.success.border} border`}
+        >
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <div
+              className={`${PATTERNS.iconContainer.small} bg-emerald-100 flex-shrink-0`}
+            >
               <span className="text-emerald-600">🎯</span>
             </div>
             <div>
-              <h4 className="font-bold text-emerald-800 mb-2">
+              <h4 className={`${TYPOGRAPHY.heading.h4} text-emerald-800 mb-2`}>
                 Smart Planning Tips
               </h4>
-              <ul className="text-emerald-700 text-sm space-y-1">
+              <ul
+                className={`${COLORS.success.text} ${TYPOGRAPHY.body.medium} space-y-1`}
+              >
                 <li>• Book popular attractions in advance</li>
                 <li>• Allow extra time for transportation</li>
                 <li>• Check weather forecasts daily</li>
@@ -26,16 +38,22 @@ function TravelTipsSection() {
         </div>
 
         {/* Budget Tips */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 sm:p-6 border border-blue-100">
+        <div
+          className={`${COLORS.info.lightGradient} rounded-lg ${SPACING.padding.medium} ${COLORS.info.border} border`}
+        >
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <div
+              className={`${PATTERNS.iconContainer.small} bg-blue-100 flex-shrink-0`}
+            >
               <span className="text-blue-600">💡</span>
             </div>
             <div>
-              <h4 className="font-bold text-blue-800 mb-2">
+              <h4 className={`${TYPOGRAPHY.heading.h4} text-blue-800 mb-2`}>
                 Money-Saving Tips
               </h4>
-              <ul className="text-blue-700 text-sm space-y-1">
+              <ul
+                className={`${COLORS.info.text} ${TYPOGRAPHY.body.medium} space-y-1`}
+              >
                 <li>• Look for combo tickets and discounts</li>
                 <li>• Visit free attractions during peak hours</li>
                 <li>• Use public transportation when possible</li>

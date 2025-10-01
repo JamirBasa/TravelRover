@@ -36,8 +36,6 @@ function PlacesToVisit({ trip }) {
   const [editingDay, setEditingDay] = useState(null); // null or dayIndex number
   const [editableItinerary, setEditableItinerary] = useState([]);
   const [expandedDays, setExpandedDays] = useState(new Set());
-  const [activityNotes, setActivityNotes] = useState({});
-  const [visitedActivities, setVisitedActivities] = useState(new Set());
 
   // Clean data parsing utility (removed console.log for production)
   const parseDataArray = (data, fieldName) => {
@@ -49,7 +47,7 @@ function PlacesToVisit({ trip }) {
       try {
         const parsed = JSON.parse(data);
         return Array.isArray(parsed) ? parsed : [parsed];
-      } catch (error) {
+      } catch {
         // Smart parsing for malformed JSON
         try {
           const cleanedData = data.trim();
@@ -104,7 +102,7 @@ function PlacesToVisit({ trip }) {
               .map((part) => {
                 try {
                   return JSON.parse(part);
-                } catch (e) {
+                } catch {
                   return null;
                 }
               })
@@ -119,7 +117,7 @@ function PlacesToVisit({ trip }) {
           return Array.isArray(fallbackParsed)
             ? fallbackParsed
             : [fallbackParsed];
-        } catch (fallbackError) {
+        } catch {
           return [
             {
               error: `Failed to parse ${fieldName}`,
@@ -195,7 +193,7 @@ function PlacesToVisit({ trip }) {
     setEditingDay(null);
   };
 
-  const saveEditedDay = (dayIndex) => {
+  const saveEditedDay = () => {
     // Here you could add API call to save changes
     setEditingDay(null);
   };
@@ -289,8 +287,12 @@ function PlacesToVisit({ trip }) {
                   dayIndex={dayIndex}
                   editingDay={editingDay}
                   editableItinerary={editableItinerary}
-                  onUpdateActivities={(activities) => updateActivities(dayIndex, activities)}
-                  onSaveChanges={(activities) => saveActivitiesChanges(dayIndex, activities)}
+                  onUpdateActivities={(activities) =>
+                    updateActivities(dayIndex, activities)
+                  }
+                  onSaveChanges={(activities) =>
+                    saveActivitiesChanges(dayIndex, activities)
+                  }
                 />
               )}
             </div>

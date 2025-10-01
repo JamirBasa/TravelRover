@@ -14,19 +14,9 @@
  */
 
 import React, { useState } from "react";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import InlineEditableText from "./InlineEditableText";
 import {
   Clock,
@@ -51,14 +41,11 @@ function ActivityEditor({
   onSaveChanges,
   isEditing = false,
   dayNumber,
-  dayActivitiesId,
 }) {
   const [localActivities, setLocalActivities] = useState(activities);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [editingActivity, setEditingActivity] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('');
-  
+  const [statusMessage, setStatusMessage] = useState("");
+
   // Generate IDs for accessibility
   const editorId = `day-${dayIndex}-activity-editor`;
   const statusId = `day-${dayIndex}-status`;
@@ -95,29 +82,30 @@ function ActivityEditor({
     const updatedActivities = [...localActivities, newActivity];
     setLocalActivities(updatedActivities);
     setHasChanges(true);
-    setStatusMessage('New activity added');
-    
+    setStatusMessage("New activity added");
+
     onUpdateActivities?.(updatedActivities);
-    setShowAddDialog(false);
-    
+
     // Clear status message after 2 seconds
-    setTimeout(() => setStatusMessage(''), 2000);
+    setTimeout(() => setStatusMessage(""), 2000);
   };
 
   const handleDeleteActivity = (activityIndex) => {
-    const activityName = localActivities[activityIndex]?.placeName || `Activity ${activityIndex + 1}`;
+    const activityName =
+      localActivities[activityIndex]?.placeName ||
+      `Activity ${activityIndex + 1}`;
     const updatedActivities = localActivities.filter(
       (_, index) => index !== activityIndex
     );
-    
+
     setLocalActivities(updatedActivities);
     setHasChanges(true);
     setStatusMessage(`Removed "${activityName}"`);
-    
+
     onUpdateActivities?.(updatedActivities);
-    
+
     // Clear status message after 2 seconds
-    setTimeout(() => setStatusMessage(''), 2000);
+    setTimeout(() => setStatusMessage(""), 2000);
   };
 
   const handleCopyActivity = (activityIndex) => {
@@ -134,11 +122,11 @@ function ActivityEditor({
     setLocalActivities(updatedActivities);
     setHasChanges(true);
     setStatusMessage(`Duplicated "${originalName}"`);
-    
+
     onUpdateActivities?.(updatedActivities);
-    
+
     // Clear status message after 2 seconds
-    setTimeout(() => setStatusMessage(''), 2000);
+    setTimeout(() => setStatusMessage(""), 2000);
   };
 
   const handleReorderActivity = (activityIndex, direction) => {
@@ -148,43 +136,44 @@ function ActivityEditor({
       const updatedActivities = [...localActivities];
       const [movedActivity] = updatedActivities.splice(activityIndex, 1);
       updatedActivities.splice(newIndex, 0, movedActivity);
-      
-      const activityName = movedActivity.placeName || `Activity ${activityIndex + 1}`;
+
+      const activityName =
+        movedActivity.placeName || `Activity ${activityIndex + 1}`;
       const directionText = direction === "up" ? "up" : "down";
 
       setLocalActivities(updatedActivities);
       setHasChanges(true);
       setStatusMessage(`Moved "${activityName}" ${directionText}`);
-      
+
       onUpdateActivities?.(updatedActivities);
-      
+
       // Clear status message after 2 seconds
-      setTimeout(() => setStatusMessage(''), 2000);
+      setTimeout(() => setStatusMessage(""), 2000);
     }
   };
 
   const handleSaveAll = async () => {
     try {
-      setStatusMessage('Saving all activities...');
+      setStatusMessage("Saving all activities...");
       await onSaveChanges?.(localActivities);
       setHasChanges(false);
-      setStatusMessage('All activities saved successfully');
-      
+      setStatusMessage("All activities saved successfully");
+
       // Clear success message after 2 seconds
-      setTimeout(() => setStatusMessage(''), 2000);
+      setTimeout(() => setStatusMessage(""), 2000);
     } catch (error) {
       console.error("Error saving activities:", error);
-      setStatusMessage('Error saving activities. Please try again.');
-      
+      setStatusMessage("Error saving activities. Please try again.");
+
       // Clear error message after 4 seconds
-      setTimeout(() => setStatusMessage(''), 4000);
+      setTimeout(() => setStatusMessage(""), 4000);
     }
   };
 
   // Display mode (read-only)
   if (!isEditing) {
     return (
-      <div 
+      <div
         className="space-y-4"
         id={editorId}
         role="region"
@@ -196,14 +185,16 @@ function ActivityEditor({
             className="group hover:shadow-md transition-all duration-200 focus-within:ring-2 focus-within:ring-primary/50"
             tabIndex="0"
             role="article"
-            aria-label={`Activity: ${activity.placeName || `Activity ${index + 1}`}`}
+            aria-label={`Activity: ${
+              activity.placeName || `Activity ${index + 1}`
+            }`}
           >
             <CardContent className="p-4 sm:p-5">
               <div className="relative flex gap-4">
                 {/* Activity indicator */}
                 <div className="flex-shrink-0 pt-1">
-                  <div 
-                    className="w-3 h-3 rounded-full bg-gradient-to-r from-primary to-primary/80 shadow-sm" 
+                  <div
+                    className="w-3 h-3 rounded-full bg-gradient-to-r from-primary to-primary/80 shadow-sm"
                     aria-hidden="true"
                   />
                 </div>
@@ -224,8 +215,8 @@ function ActivityEditor({
 
                   {/* Activity title */}
                   <div className="flex items-start gap-2">
-                    <MapPin 
-                      className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" 
+                    <MapPin
+                      className="h-4 w-4 text-primary mt-0.5 flex-shrink-0"
                       aria-hidden="true"
                     />
                     <h4 className="text-base font-semibold text-foreground">
@@ -239,7 +230,7 @@ function ActivityEditor({
                   </p>
 
                   {/* Badges */}
-                  <div 
+                  <div
                     className="flex flex-wrap gap-2"
                     aria-label="Activity details"
                   >
@@ -278,13 +269,13 @@ function ActivityEditor({
         ))}
 
         {localActivities.length === 0 && (
-          <div 
+          <div
             className="text-center py-8 text-muted-foreground"
             role="region"
             aria-label="No activities"
           >
-            <MapPin 
-              className="h-8 w-8 mx-auto mb-2 opacity-50" 
+            <MapPin
+              className="h-8 w-8 mx-auto mb-2 opacity-50"
               aria-hidden="true"
             />
             <p>No activities planned for this day</p>
@@ -293,37 +284,37 @@ function ActivityEditor({
       </div>
     );
   }
-  
+
   // Helper function to convert time to ISO 8601 format
   function convertToISO8601Time(timeString) {
-    if (!timeString) return '';
-    
+    if (!timeString) return "";
+
     try {
       // Expected format: "9:00 AM" or similar
-      const [time, period] = timeString.split(' ');
-      let [hours, minutes] = time.split(':').map(Number);
-      
+      const [time, period] = timeString.split(" ");
+      let [hours, minutes] = time.split(":").map(Number);
+
       // Convert to 24-hour format
-      if (period && period.toUpperCase() === 'PM' && hours < 12) {
+      if (period && period.toUpperCase() === "PM" && hours < 12) {
         hours += 12;
-      } else if (period && period.toUpperCase() === 'AM' && hours === 12) {
+      } else if (period && period.toUpperCase() === "AM" && hours === 12) {
         hours = 0;
       }
-      
+
       // Format with leading zeros
-      const formattedHours = hours.toString().padStart(2, '0');
-      const formattedMinutes = minutes.toString().padStart(2, '0');
-      
+      const formattedHours = hours.toString().padStart(2, "0");
+      const formattedMinutes = minutes.toString().padStart(2, "0");
+
       return `${formattedHours}:${formattedMinutes}:00`;
     } catch (error) {
-      console.error('Error parsing time string:', timeString, error);
-      return '';
+      console.error("Error parsing time string:", timeString, error);
+      return "";
     }
   }
 
   // Edit mode
   return (
-    <div 
+    <div
       className="space-y-4"
       id={editorId}
       aria-labelledby={`day-heading-${dayIndex}`}
@@ -332,7 +323,7 @@ function ActivityEditor({
     >
       {/* Status notification */}
       {statusMessage && (
-        <div 
+        <div
           className="p-3 bg-primary/5 border border-primary/20 rounded-md mb-4 flex items-center gap-2"
           role="status"
           aria-live="polite"
@@ -346,9 +337,9 @@ function ActivityEditor({
       {/* Save button if there are changes */}
       {hasChanges && (
         <div className="flex justify-end">
-          <Button 
-            onClick={handleSaveAll} 
-            className="gap-2" 
+          <Button
+            onClick={handleSaveAll}
+            className="gap-2"
             size="sm"
             aria-label="Save all activity changes"
           >
@@ -373,21 +364,21 @@ function ActivityEditor({
                     {/* Activity controls */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div 
+                        <div
                           className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-xs font-bold"
                           aria-hidden="true"
                         >
                           {index + 1}
                         </div>
-                        <h5 
+                        <h5
                           id={`activity-${dayIndex}-${index}-title`}
                           className="text-sm font-medium text-foreground"
                         >
                           Activity {index + 1}
                         </h5>
                       </div>
-    
-                      <div 
+
+                      <div
                         className="flex items-center gap-1"
                         role="toolbar"
                         aria-label={`Activity ${index + 1} controls`}
@@ -440,16 +431,16 @@ function ActivityEditor({
                         </Button>
                       </div>
                     </div>
-    
+
                     {/* Editable fields */}
-                    <div 
+                    <div
                       className="grid grid-cols-1 md:grid-cols-2 gap-4"
                       role="form"
                       aria-labelledby={`activity-${dayIndex}-${index}-title`}
                     >
                       {/* Time */}
                       <div>
-                        <label 
+                        <label
                           htmlFor={`time-${activityId}`}
                           className="text-xs font-medium text-muted-foreground mb-1 block"
                         >
@@ -458,16 +449,18 @@ function ActivityEditor({
                         <InlineEditableText
                           id={`time-${activityId}`}
                           value={activity.time}
-                          onSave={(value) => handleUpdateActivity(index, "time", value)}
+                          onSave={(value) =>
+                            handleUpdateActivity(index, "time", value)
+                          }
                           placeholder="09:00 AM"
                           className="w-full"
                           label="Activity time"
                         />
                       </div>
-    
+
                       {/* Place Name */}
                       <div>
-                        <label 
+                        <label
                           htmlFor={`name-${activityId}`}
                           className="text-xs font-medium text-muted-foreground mb-1 block"
                         >
@@ -484,10 +477,10 @@ function ActivityEditor({
                           label="Place name"
                         />
                       </div>
-    
+
                       {/* Ticket Pricing */}
                       <div>
-                        <label 
+                        <label
                           htmlFor={`price-${activityId}`}
                           className="text-xs font-medium text-muted-foreground mb-1 block"
                         >
@@ -504,10 +497,10 @@ function ActivityEditor({
                           label="Ticket price"
                         />
                       </div>
-    
+
                       {/* Time Travel */}
                       <div>
-                        <label 
+                        <label
                           htmlFor={`duration-${activityId}`}
                           className="text-xs font-medium text-muted-foreground mb-1 block"
                         >
@@ -524,10 +517,10 @@ function ActivityEditor({
                           label="Activity duration"
                         />
                       </div>
-    
+
                       {/* Rating */}
                       <div>
-                        <label 
+                        <label
                           htmlFor={`rating-${activityId}`}
                           className="text-xs font-medium text-muted-foreground mb-1 block"
                         >
@@ -545,10 +538,10 @@ function ActivityEditor({
                         />
                       </div>
                     </div>
-    
+
                     {/* Description - full width */}
                     <div>
-                      <label 
+                      <label
                         htmlFor={`description-${activityId}`}
                         className="text-xs font-medium text-muted-foreground mb-1 block"
                       >
@@ -574,12 +567,15 @@ function ActivityEditor({
           })}
         </ul>
       ) : (
-        <div 
+        <div
           className="text-center py-8 text-muted-foreground"
           role="region"
           aria-label="No activities added yet"
         >
-          <Edit3 className="h-8 w-8 mx-auto mb-2 opacity-50" aria-hidden="true" />
+          <Edit3
+            className="h-8 w-8 mx-auto mb-2 opacity-50"
+            aria-hidden="true"
+          />
           <p>Click "Add New Activity" to start planning this day</p>
         </div>
       )}

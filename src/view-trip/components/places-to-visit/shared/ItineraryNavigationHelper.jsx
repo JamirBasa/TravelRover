@@ -1,17 +1,29 @@
 import React from "react";
+import {
+  COLORS,
+  SPACING,
+  TYPOGRAPHY,
+  PATTERNS,
+} from "../constants/designSystem";
 
 function ItineraryNavigationHelper({ editingDay }) {
   return (
-    <div className="mb-6 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-4 sm:p-6 border border-indigo-100">
+    <div
+      className={`${SPACING.margin.large} ${COLORS.info.lightGradient} rounded-lg ${SPACING.padding.medium} ${COLORS.info.border} border`}
+    >
       <div className="flex items-start gap-4">
-        <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+        <div
+          className={`${PATTERNS.iconContainer.small} bg-indigo-100 flex-shrink-0`}
+        >
           <span className="text-indigo-600 text-lg">🗺️</span>
         </div>
         <div className="flex-1">
-          <h3 className="text-base font-bold text-indigo-900 mb-2">
+          <h3 className={`${TYPOGRAPHY.heading.h4} text-indigo-900 mb-2`}>
             How to Use This Itinerary
           </h3>
-          <div className="grid md:grid-cols-2 gap-4 text-sm text-indigo-800">
+          <div
+            className={`grid md:grid-cols-2 ${SPACING.gap.medium} ${TYPOGRAPHY.body.medium} text-indigo-800`}
+          >
             <div className="flex items-center gap-2">
               <span className="text-indigo-600">✅</span>
               <span>Times are suggestions - adjust to your pace</span>

@@ -15,11 +15,13 @@ export { default as DayActivities } from './itinerary/DayActivities';
 // Activities Components - Using inline editing only
 export { default as ActivitiesRenderer } from './activities/ActivitiesRenderer';
 export { default as RegularActivity } from './activities/RegularActivity';
-export { default as Activity } from './activities/Activity';
 export { default as ActivitiesContainer } from './activities/ActivitiesContainer';
+
+// Editing Components
+export { default as ActivityEditor } from './editing/ActivityEditor';
+export { default as InlineEditableText } from './editing/InlineEditableText';
 
 // Shared Components
 export { default as EmptyStateComponent } from './shared/EmptyStateComponent';
 export { default as ItineraryNavigationHelper } from './shared/ItineraryNavigationHelper';
 export { default as TravelTipsSection } from './shared/TravelTipsSection';
-export { default as PlaceCardItem } from '../shared/PlaceCardItem';
