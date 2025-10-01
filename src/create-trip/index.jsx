@@ -6,7 +6,7 @@ import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../config/firebaseConfig";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   AI_PROMPT,
   STEP_CONFIGS,
@@ -75,12 +75,76 @@ function CreateTrip() {
   const [profileLoading, setProfileLoading] = useState(true);
 
   const navigate = useNavigate();
+  const location = useLocation();
   const progress = calculateProgress(currentStep, STEPS.length);
 
   // Check user profile on component mount
   useEffect(() => {
     checkUserProfile();
   }, []);
+
+  // Handle searched location from home page
+  useEffect(() => {
+    if (location.state?.searchedLocation) {
+      const searchedLocation = location.state.searchedLocation;
+      console.log("🏠 Received searched location from home:", searchedLocation);
+      
+      // Set the location in form data
+      setFormData(prev => ({
+        ...prev,
+        location: searchedLocation
+      }));
+
+      // Create a place object for the location selector
+      setPlace({
+        label: searchedLocation,
+        value: {
+          description: searchedLocation,
+          place_id: `search_${Date.now()}`,
+          structured_formatting: {
+            main_text: searchedLocation,
+            secondary_text: ""
+          }
+        }
+      });
+
+      // Show success message
+      toast.success(`Great choice! Planning your trip to ${searchedLocation}`);
+      
+      // Clear the location state to prevent re-triggering
+      window.history.replaceState({}, document.title);
+    }
+
+    // Enhanced category handling from home page
+    if (location.state?.selectedCategory) {
+      const categoryData = {
+        type: location.state.selectedCategory,
+        name: location.state.categoryName,
+        activities: location.state.categoryActivities,
+        keywords: location.state.categoryKeywords,
+        focus: location.state.categoryFocus
+      };
+      
+      console.log("🏠 Received selected category from home:", categoryData);
+      
+      // Set comprehensive category data in form
+      setFormData(prev => ({
+        ...prev,
+        selectedCategory: categoryData.type,
+        categoryName: categoryData.name,
+        categoryActivities: categoryData.activities,
+        categoryKeywords: categoryData.keywords,
+        categoryFocus: categoryData.focus
+      }));
+
+      toast.success(`Perfect! Let's plan your ${categoryData.name} trip`, {
+        description: `We'll focus on ${categoryData.keywords?.split(',')[0] || 'relevant activities'}`
+      });
+      
+      // Clear the location state
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const checkUserProfile = async () => {
     setProfileLoading(true);
@@ -406,7 +470,7 @@ function CreateTrip() {
         );
       }
 
-      // Enhanced prompt with user profile data
+      // Enhanced prompt with user profile data and category focus
       let enhancedPrompt = AI_PROMPT.replace("{location}", formData?.location)
         .replace("{duration}", formData?.duration + " days")
         .replace("{travelers}", formData?.travelers)
@@ -419,6 +483,52 @@ function CreateTrip() {
           formData?.specificRequests ||
             "No specific requests - create a balanced itinerary"
         );
+
+      // Add category-specific focus if selected from home page
+      if (formData.categoryFocus && formData.categoryName) {
+        enhancedPrompt += `
+
+🎯 CATEGORY-FOCUSED TRIP PLANNING:
+This is a ${formData.categoryName?.toUpperCase()} focused trip!
+
+🔥 PRIMARY FOCUS: ${formData.categoryName} Trip
+Keywords: ${formData.categoryKeywords || 'relevant activities'}
+
+MANDATORY REQUIREMENTS:
+- At least 70% of activities must be ${formData.categoryName}-related
+- Include these specific activity types: ${formData.categoryActivities?.join(', ') || 'relevant activities'}
+- Prioritize destinations in ${formData.location} known for: ${formData.categoryKeywords || 'this category'}
+- Structure the entire itinerary around ${formData.categoryName} experiences
+
+CATEGORY-SPECIFIC INSTRUCTIONS:
+${formData.categoryName === 'Adventure' ? `
+- Focus on outdoor activities, mountain destinations, and adventure sports
+- Include hiking trails, adventure parks, extreme sports venues
+- Recommend gear rental shops and adventure tour operators
+- Suggest early morning starts for optimal adventure conditions
+- Prioritize destinations with natural landscapes and outdoor activities` : ''}
+${formData.categoryName === 'Beach' ? `
+- Prioritize coastal destinations, islands, and beach resorts
+- Include water sports, island hopping, and beach activities
+- Focus on beaches with different characteristics (white sand, diving spots, surfing)
+- Include beachfront accommodations and seafood restaurants
+- Suggest beach gear rentals and water activity operators` : ''}
+${formData.categoryName === 'Cultural' ? `
+- Focus on historical sites, museums, and cultural landmarks
+- Include local festivals, traditional performances, and heritage tours
+- Prioritize UNESCO sites, old churches, and historical districts
+- Include interactions with local artisans and cultural centers
+- Suggest cultural workshops and traditional craft experiences` : ''}
+${formData.categoryName === 'Food Trip' ? `
+- Focus on local restaurants, food markets, and culinary experiences
+- Include famous local dishes, street food areas, and specialty restaurants
+- Prioritize food tours, cooking classes, and local food festivals
+- Include visits to food production sites (farms, breweries, local markets)
+- Suggest food photography spots and Instagram-worthy dining locations` : ''}
+
+IMPORTANT: Every day should have a strong ${formData.categoryName} theme with relevant activities and destinations. Make sure the majority of recommendations align with the ${formData.categoryName} category.
+`;
+      }
 
       // Add user profile context to the prompt
       enhancedPrompt += `
@@ -634,48 +744,54 @@ Generate general accommodation recommendations without specific pricing or booki
 
   // Function to sanitize data for Firebase (no nested arrays)
   const sanitizeForFirebase = (obj) => {
-    if (obj === null || obj === undefined) return obj;
+    if (obj === null || obj === undefined) return null; // Convert undefined to null
 
     if (Array.isArray(obj)) {
       // Convert array to a serialized string representation for Firebase
-      return obj.map((item) => sanitizeForFirebase(item));
+      return obj.map((item) => sanitizeForFirebase(item)).filter(item => item !== null);
     }
 
     if (typeof obj === "object") {
       const sanitized = {};
       for (const [key, value] of Object.entries(obj)) {
-        if (Array.isArray(value)) {
-          // Handle specific known nested array structures
-          if (key === "plan" && value.length > 0) {
-            // Convert plan array to formatted text
-            sanitized[`${key}Text`] = value
-              .map(
-                (item) =>
-                  `${item.time || ""} - ${item.placeName || ""} - ${
-                    item.placeDetails || ""
-                  } (${item.ticketPricing || ""}, ${
-                    item.timeTravel || ""
-                  }, Rating: ${item.rating || "N/A"})`
-              )
-              .join(" | ");
-          } else if (key === "flights" && value.length > 0) {
-            // Keep flights array but sanitize each flight
-            sanitized[key] = value.map((flight) => sanitizeForFirebase(flight));
+        const sanitizedValue = sanitizeForFirebase(value);
+        
+        // Only add the field if it's not null (skip undefined/null values)
+        if (sanitizedValue !== null) {
+          if (Array.isArray(value)) {
+            // Handle specific known nested array structures
+            if (key === "plan" && value.length > 0) {
+              // Convert plan array to formatted text
+              sanitized[`${key}Text`] = value
+                .map(
+                  (item) =>
+                    `${item?.time || ""} - ${item?.placeName || ""} - ${
+                      item?.placeDetails || ""
+                    } (${item?.ticketPricing || ""}, ${
+                      item?.timeTravel || ""
+                    }, Rating: ${item?.rating || "N/A"})`
+                )
+                .join(" | ");
+            } else if (key === "flights" && value.length > 0) {
+              // Keep flights array but sanitize each flight
+              sanitized[key] = value.map((flight) => sanitizeForFirebase(flight)).filter(item => item !== null);
+            } else if (value.length > 0) {
+              // For other arrays, convert to comma-separated string
+              sanitized[key] = value
+                .map((item) =>
+                  typeof item === "object" && item !== null
+                    ? JSON.stringify(sanitizeForFirebase(item))
+                    : String(item || "")
+                )
+                .filter(item => item && item !== "undefined")
+                .join(", ");
+            }
           } else {
-            // For other arrays, convert to comma-separated string
-            sanitized[key] = value
-              .map((item) =>
-                typeof item === "object"
-                  ? JSON.stringify(sanitizeForFirebase(item))
-                  : String(item)
-              )
-              .join(", ");
+            sanitized[key] = sanitizedValue;
           }
-        } else {
-          sanitized[key] = sanitizeForFirebase(value);
         }
       }
-      return sanitized;
+      return Object.keys(sanitized).length > 0 ? sanitized : null;
     }
 
     return obj;
@@ -692,6 +808,24 @@ Generate general accommodation recommendations without specific pricing or booki
     try {
       const user = JSON.parse(localStorage.getItem("user"));
       const docId = Date.now().toString();
+
+      // Clean langGraphResults to remove undefined values
+      const cleanLangGraphResults = langGraphResults ? {
+        ...langGraphResults,
+        merged_data: langGraphResults.merged_data ? {
+          ...langGraphResults.merged_data,
+          // Remove any undefined fields
+          recommended_flight: langGraphResults.merged_data.recommended_flight || null,
+          recommended_hotel: langGraphResults.merged_data.recommended_hotel || null,
+          total_estimated_cost: langGraphResults.merged_data.total_estimated_cost || 0,
+        } : null,
+        optimized_plan: langGraphResults.optimized_plan ? {
+          ...langGraphResults.optimized_plan,
+          optimization_score: langGraphResults.optimized_plan.optimization_score || 0,
+          cost_efficiency: langGraphResults.optimized_plan.cost_efficiency || "Unknown",
+          final_recommendations: langGraphResults.optimized_plan.final_recommendations || [],
+        } : null
+      } : null;
 
       let parsedTripData;
       try {
@@ -870,7 +1004,7 @@ Generate general accommodation recommendations without specific pricing or booki
         },
         flightPreferences: flightData, // Include flight preferences
         hotelPreferences: hotelData, // Include hotel preferences
-        langGraphResults: langGraphResults, // Include LangGraph analysis
+        langGraphResults: cleanLangGraphResults, // Use cleaned LangGraph results
         userProfile: userProfile, // Will be sanitized below
         tripData: parsedTripData, // Will be sanitized below
         realFlightData: flightResults || null, // Will be sanitized below

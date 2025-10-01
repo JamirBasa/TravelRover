@@ -3,15 +3,21 @@ import GooglePlacesAutocomplete from "react-google-places-autocomplete";
 import { FaMapMarkerAlt, FaGlobe } from "react-icons/fa";
 
 function LocationSelector({ place, onPlaceChange, onLocationChange }) {
+  // Show different message if location is pre-filled
+  const isPreFilled = place?.label || place?.value?.description;
+
   return (
     <div className="max-w-2xl mx-auto">
       {/* Main Question */}
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold brand-gradient-text mb-3">
-          Where would you like to go?
+          {isPreFilled ? "Perfect! Let's plan your trip" : "Where would you like to go?"}
         </h2>
         <p className="text-gray-700 text-base font-medium">
-          Choose your dream destination to start planning ✈️
+          {isPreFilled 
+            ? `You've selected ${place?.label || place?.value?.description} ✈️` 
+            : "Choose your dream destination to start planning ✈️"
+          }
         </p>
       </div>
 
@@ -27,8 +33,10 @@ function LocationSelector({ place, onPlaceChange, onLocationChange }) {
                 Destination Search
               </h3>
               <p className="text-gray-700 text-sm leading-relaxed">
-                Start typing any city, landmark, or attraction within the
-                Philippines to see suggestions and detailed location options.
+                {isPreFilled 
+                  ? "You can change your destination or continue with your selection"
+                  : "Start typing any city, landmark, or attraction within the Philippines to see suggestions and detailed location options."
+                }
               </p>
             </div>
           </div>
@@ -53,7 +61,9 @@ function LocationSelector({ place, onPlaceChange, onLocationChange }) {
                   onPlaceChange(v);
                   onLocationChange(v?.label);
                 },
-                placeholder: "Search for cities, attractions, or landmarks...",
+                placeholder: isPreFilled 
+                  ? `${place?.label || place?.value?.description} (click to change)`
+                  : "Search for cities, attractions, or landmarks...",
                 className: "text-base",
                 styles: {
                   control: (provided) => ({
@@ -85,6 +95,24 @@ function LocationSelector({ place, onPlaceChange, onLocationChange }) {
             />
           </div>
         </div>
+
+        {/* Pre-filled Location Indicator */}
+        {isPreFilled && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <FaMapMarkerAlt className="text-green-600" />
+              <div>
+                <h4 className="font-medium text-green-800">
+                  Destination Selected
+                </h4>
+                <p className="text-green-700 text-sm">
+                  Ready to explore {place?.label || place?.value?.description}! 
+                  You can change this anytime or continue to the next step.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {place && (
           <div className="bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 rounded-lg p-4 shadow-sm">
