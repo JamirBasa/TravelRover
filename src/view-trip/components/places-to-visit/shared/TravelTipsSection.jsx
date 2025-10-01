@@ -10,25 +10,21 @@ import {
 
 function TravelTipsSection() {
   return (
-    <div className={`${SPACING.margin.large} space-y-4`}>
-      <div className={`grid md:grid-cols-2 ${SPACING.gap.medium}`}>
+    <div className="mt-6 space-y-3">
+      <div className="grid md:grid-cols-2 gap-3">
         {/* Planning Tips */}
         <div
-          className={`${COLORS.success.lightGradient} rounded-lg ${SPACING.padding.medium} ${COLORS.success.border} border`}
+          className={`${COLORS.success.lightGradient} rounded-lg p-4 ${COLORS.success.border} border`}
         >
           <div className="flex items-start gap-3">
-            <div
-              className={`${PATTERNS.iconContainer.small} bg-emerald-100 flex-shrink-0 w-14 h-14 flex items-center justify-center`}
-            >
-              <span className="text-emerald-600 text-2xl">🎯</span>
+            <div className="bg-emerald-100 flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center">
+              <span className="text-emerald-600 text-lg">🎯</span>
             </div>
             <div>
-              <h4 className={`text-lg font-bold text-emerald-800 mb-3`}>
+              <h4 className="text-base font-semibold text-emerald-800 mb-2">
                 Smart Planning Tips
               </h4>
-              <ul
-                className={`text-emerald-700 text-base font-medium space-y-2`}
-              >
+              <ul className="text-emerald-700 text-sm font-medium space-y-1">
                 <li>• Book popular attractions in advance</li>
                 <li>• Allow extra time for transportation</li>
                 <li>• Check weather forecasts daily</li>
@@ -40,19 +36,17 @@ function TravelTipsSection() {
 
         {/* Budget Tips */}
         <div
-          className={`${COLORS.info.lightGradient} rounded-lg ${SPACING.padding.medium} ${COLORS.info.border} border`}
+          className={`${COLORS.info.lightGradient} rounded-lg p-4 ${COLORS.info.border} border`}
         >
           <div className="flex items-start gap-3">
-            <div
-              className={`${PATTERNS.iconContainer.small} bg-blue-100 flex-shrink-0 w-14 h-14 flex items-center justify-center`}
-            >
-              <span className="text-blue-600 text-2xl">💡</span>
+            <div className="bg-blue-100 flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center">
+              <span className="text-blue-600 text-lg">💡</span>
             </div>
             <div>
-              <h4 className={`text-lg font-bold text-blue-800 mb-3`}>
+              <h4 className="text-base font-semibold text-blue-800 mb-2">
                 Money-Saving Tips
               </h4>
-              <ul className={`text-blue-700 text-base font-medium space-y-2`}>
+              <ul className="text-blue-700 text-sm font-medium space-y-1">
                 <li>• Look for combo tickets and discounts</li>
                 <li>• Visit free attractions during peak hours</li>
                 <li>• Use public transportation when possible</li>
@@ -65,18 +59,20 @@ function TravelTipsSection() {
 
       {/* Quick Actions */}
       <div
-        className={`${COLORS.secondary.lightGradient} rounded-lg ${SPACING.padding.medium} ${COLORS.secondary.border} border`}
+        className={`${COLORS.secondary.lightGradient} rounded-lg p-4 ${COLORS.secondary.border} border`}
       >
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className={`${PATTERNS.iconContainer.large} bg-emerald-100`}>
-              <span className="text-emerald-600 text-3xl">🚀</span>
+            <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+              <span className="text-emerald-600 text-lg">🚀</span>
             </div>
             <div>
-              <h4 className={`text-xl font-bold ${COLORS.secondary.text}`}>
+              <h4
+                className={`text-base font-semibold ${COLORS.secondary.text}`}
+              >
                 Ready to explore?
               </h4>
-              <p className={`${COLORS.secondary.text} text-base font-medium`}>
+              <p className={`${COLORS.secondary.text} text-sm`}>
                 Make the most of your adventure with these quick actions
               </p>
             </div>
@@ -84,15 +80,17 @@ function TravelTipsSection() {
           <div className="flex flex-wrap gap-2">
             <Button
               variant="default"
-              className={`${COLORS.secondary.gradient} hover:opacity-90 text-white gap-3 px-6 py-3 text-base font-semibold ${ANIMATIONS.transition.medium}`}
+              size="sm"
+              className={`${COLORS.secondary.gradient} hover:opacity-90 text-white gap-2 px-4 py-2 text-sm font-medium ${ANIMATIONS.transition.medium}`}
             >
-              <span className="text-xl">📥</span> Save Offline
+              <span className="text-sm">📥</span> Save Offline
             </Button>
             <Button
               variant="outline"
-              className={`${COLORS.secondary.border} ${COLORS.secondary.hover} ${COLORS.secondary.text} hover:bg-emerald-50 gap-3 px-6 py-3 text-base font-semibold ${ANIMATIONS.transition.medium}`}
+              size="sm"
+              className={`${COLORS.secondary.border} ${COLORS.secondary.hover} ${COLORS.secondary.text} hover:bg-emerald-50 gap-2 px-4 py-2 text-sm font-medium ${ANIMATIONS.transition.medium}`}
             >
-              <span className="text-xl">📤</span> Share Plan
+              <span className="text-sm">📤</span> Share Plan
             </Button>
           </div>
         </div>
