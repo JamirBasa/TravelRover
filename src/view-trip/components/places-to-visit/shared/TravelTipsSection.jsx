@@ -5,6 +5,7 @@ import {
   SPACING,
   TYPOGRAPHY,
   PATTERNS,
+  ANIMATIONS,
 } from "../constants/designSystem";
 
 function TravelTipsSection() {
@@ -17,16 +18,16 @@ function TravelTipsSection() {
         >
           <div className="flex items-start gap-3">
             <div
-              className={`${PATTERNS.iconContainer.small} bg-emerald-100 flex-shrink-0`}
+              className={`${PATTERNS.iconContainer.small} bg-emerald-100 flex-shrink-0 w-14 h-14 flex items-center justify-center`}
             >
-              <span className="text-emerald-600">🎯</span>
+              <span className="text-emerald-600 text-2xl">🎯</span>
             </div>
             <div>
-              <h4 className={`${TYPOGRAPHY.heading.h4} text-emerald-800 mb-2`}>
+              <h4 className={`text-lg font-bold text-emerald-800 mb-3`}>
                 Smart Planning Tips
               </h4>
               <ul
-                className={`${COLORS.success.text} ${TYPOGRAPHY.body.medium} space-y-1`}
+                className={`text-emerald-700 text-base font-medium space-y-2`}
               >
                 <li>• Book popular attractions in advance</li>
                 <li>• Allow extra time for transportation</li>
@@ -43,17 +44,15 @@ function TravelTipsSection() {
         >
           <div className="flex items-start gap-3">
             <div
-              className={`${PATTERNS.iconContainer.small} bg-blue-100 flex-shrink-0`}
+              className={`${PATTERNS.iconContainer.small} bg-blue-100 flex-shrink-0 w-14 h-14 flex items-center justify-center`}
             >
-              <span className="text-blue-600">💡</span>
+              <span className="text-blue-600 text-2xl">💡</span>
             </div>
             <div>
-              <h4 className={`${TYPOGRAPHY.heading.h4} text-blue-800 mb-2`}>
+              <h4 className={`text-lg font-bold text-blue-800 mb-3`}>
                 Money-Saving Tips
               </h4>
-              <ul
-                className={`${COLORS.info.text} ${TYPOGRAPHY.body.medium} space-y-1`}
-              >
+              <ul className={`text-blue-700 text-base font-medium space-y-2`}>
                 <li>• Look for combo tickets and discounts</li>
                 <li>• Visit free attractions during peak hours</li>
                 <li>• Use public transportation when possible</li>
@@ -65,28 +64,35 @@ function TravelTipsSection() {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 sm:p-6 border border-purple-100">
+      <div
+        className={`${COLORS.secondary.lightGradient} rounded-lg ${SPACING.padding.medium} ${COLORS.secondary.border} border`}
+      >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-              <span className="text-purple-600">🚀</span>
+            <div className={`${PATTERNS.iconContainer.large} bg-emerald-100`}>
+              <span className="text-emerald-600 text-3xl">🚀</span>
             </div>
             <div>
-              <h4 className="font-bold text-purple-800">Ready to explore?</h4>
-              <p className="text-purple-700 text-sm">
+              <h4 className={`text-xl font-bold ${COLORS.secondary.text}`}>
+                Ready to explore?
+              </h4>
+              <p className={`${COLORS.secondary.text} text-base font-medium`}>
                 Make the most of your adventure with these quick actions
               </p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button className="bg-purple-600 hover:bg-purple-700 text-white gap-2">
-              <span>📥</span> Save Offline
+            <Button
+              variant="default"
+              className={`${COLORS.secondary.gradient} hover:opacity-90 text-white gap-3 px-6 py-3 text-base font-semibold ${ANIMATIONS.transition.medium}`}
+            >
+              <span className="text-xl">📥</span> Save Offline
             </Button>
             <Button
               variant="outline"
-              className="border-purple-200 hover:border-purple-300 text-purple-700 hover:text-purple-800 gap-2"
+              className={`${COLORS.secondary.border} ${COLORS.secondary.hover} ${COLORS.secondary.text} hover:bg-emerald-50 gap-3 px-6 py-3 text-base font-semibold ${ANIMATIONS.transition.medium}`}
             >
-              <span>📤</span> Share Plan
+              <span className="text-xl">📤</span> Share Plan
             </Button>
           </div>
         </div>

@@ -133,7 +133,7 @@ function ViewTrip() {
       {/* Main Content with optimized spacing */}
       <main
         role="main"
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"
+        className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-4"
         aria-label={`Trip details for ${
           trip?.userSelection?.location || "destination"
         }`}
@@ -142,7 +142,7 @@ function ViewTrip() {
         <TabbedTripView trip={trip} />
 
         {/* Development Info (only in dev mode) */}
-        {process.env.NODE_ENV === "development" && (
+        {import.meta.env.DEV && (
           <aside
             className="mt-8 border-t border-gray-100 pt-6"
             aria-label="Development metadata"

@@ -2,7 +2,7 @@
 import { Badge } from "@/components/ui/badge";
 
 function DevMetadata({ trip }) {
-  if (process.env.NODE_ENV !== "development") {
+  if (!import.meta.env.DEV) {
     return null;
   }
 

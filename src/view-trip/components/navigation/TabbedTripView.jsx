@@ -124,10 +124,10 @@ function TabbedTripView({ trip }) {
   ];
 
   return (
-    <div className="brand-card shadow-lg border-0 overflow-hidden">
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-0">
+    <div className="brand-card shadow-lg border-0 overflow-hidden w-full">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-0 w-full">
         {/* Main Content with Enhanced Tabs */}
-        <section className="xl:col-span-3" aria-label="Trip content">
+        <section className="xl:col-span-3 w-full" aria-label="Trip content">
           {/* Compact Tab Navigation */}
           <nav
             className="bg-white border-b border-gray-200"
@@ -162,14 +162,14 @@ function TabbedTripView({ trip }) {
           </nav>
 
           {/* Optimized Tab Content */}
-          <div className="bg-white min-h-[500px]">
+          <div className="bg-white min-h-[500px] w-full">
             {tabs.map((tab) => (
               <div
                 key={tab.id}
                 id={`tabpanel-${tab.id}`}
                 role="tabpanel"
                 aria-labelledby={`tab-${tab.id}`}
-                className={`p-4 sm:p-6 ${
+                className={`p-3 sm:p-4 lg:p-6 w-full ${
                   activeTab === tab.id ? "block" : "hidden"
                 }`}
               >

@@ -24,6 +24,7 @@ import {
   TripOverviewStats,
   PlacesToVisitSection,
   ItineraryNavigationHelper,
+  ItineraryHeader,
   DayHeader,
   DayActivities,
   TravelTipsSection,
@@ -231,7 +232,7 @@ function PlacesToVisit({ trip }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       {/* Trip Overview Stats */}
       <TripOverviewStats
         trip={trip}
@@ -244,27 +245,19 @@ function PlacesToVisit({ trip }) {
       {/* Places to Visit Section */}
       <PlacesToVisitSection placesToVisit={parsedPlacesToVisit} />
 
+      {/* Daily Itinerary Header */}
+      <ItineraryHeader />
+
       {/* Usage Instructions */}
-      <ItineraryNavigationHelper />
+      <ItineraryNavigationHelper editingDay={editingDay} />
 
       {/* Main Itinerary Section */}
-      <div className="space-y-6">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">
-            🗓️ Daily Itinerary
-          </h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Explore your personalized day-by-day travel plan. Click on any day
-            to expand details, or use edit mode to customize your activities
-            with inline editing functionality.
-          </p>
-        </div>
-
-        <div className="space-y-4">
+      <div className="space-y-6 w-full">
+        <div className="space-y-4 w-full">
           {parsedItinerary.map((dayItem, dayIndex) => (
             <div
               key={dayIndex}
-              className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden"
+              className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden w-full"
             >
               {/* Day Header */}
               <DayHeader

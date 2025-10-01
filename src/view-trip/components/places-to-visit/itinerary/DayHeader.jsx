@@ -14,12 +14,12 @@ import {
   SPACING,
   TYPOGRAPHY,
   PATTERNS,
+  ANIMATIONS,
 } from "../constants/designSystem";
 
 function DayHeader({
   dayItem,
   dayIndex,
-  totalDays,
   isExpanded,
   isEditing,
   onToggleExpanded,
@@ -40,9 +40,9 @@ function DayHeader({
 
   return (
     <header
-      className={`${PATTERNS.card.base} ${SPACING.padding.medium} ${
-        SPACING.margin.medium
-      } shadow-md transition-all duration-300 ${
+      className={`${
+        PATTERNS.card.base
+      } p-4 sm:p-5 mb-3 shadow-md transition-all duration-300 ${
         isEditing
           ? `${COLORS.editing.border} ${COLORS.editing.ring}`
           : "border-gray-200"
@@ -59,15 +59,8 @@ function DayHeader({
             }`}
             aria-hidden="true"
           >
-            <Calendar className="h-6 w-6 text-white" aria-hidden="true" />
+            <Calendar className="h-8 w-8 text-white" aria-hidden="true" />
           </div>
-          {/* Day connector line */}
-          {dayIndex < (totalDays || 999) - 1 && (
-            <div
-              className="absolute top-full left-1/2 transform -translate-x-1/2 w-0.5 h-6 bg-gradient-to-b from-blue-300 to-transparent mt-2"
-              aria-hidden="true"
-            ></div>
-          )}
         </div>
 
         <div className="flex-1 pt-1">
@@ -84,15 +77,15 @@ function DayHeader({
                   variant="secondary"
                   className={
                     isEditing
-                      ? "bg-amber-100 text-amber-700 hover:bg-amber-200 text-xs"
-                      : "bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs"
+                      ? "bg-amber-100 text-amber-700 hover:bg-amber-200 text-base px-3 py-1.5 font-semibold"
+                      : "bg-blue-100 text-blue-700 hover:bg-blue-200 text-base px-3 py-1.5 font-semibold"
                   }
                 >
                   {activitiesCount}{" "}
                   {activitiesCount === 1 ? "activity" : "activities"}
                   {isEditing && (
-                    <span className="ml-1" aria-hidden="true">
-                      <Edit className="h-3 w-3 inline-block" />
+                    <span className="ml-2" aria-hidden="true">
+                      <Edit className="h-5 w-5 inline-block" />
                     </span>
                   )}
                 </Badge>
@@ -110,10 +103,10 @@ function DayHeader({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleToggleExpanded(dayIndex)}
-                className={`gap-2 transition-all duration-200 ${
+                className={`gap-2 ${ANIMATIONS.transition.medium} ${
                   isEditing && isExpanded
-                    ? "text-amber-600 hover:text-amber-800"
-                    : "text-gray-600 hover:text-gray-800"
+                    ? `${COLORS.editing.text} hover:text-amber-800 hover:bg-amber-50`
+                    : `${COLORS.primary.text} hover:text-blue-800 hover:bg-blue-50`
                 }`}
                 disabled={isEditing && isExpanded}
                 aria-expanded={isExpanded}
@@ -126,13 +119,15 @@ function DayHeader({
               >
                 {isExpanded ? (
                   <>
-                    <ChevronDown className="h-4 w-4" aria-hidden="true" />
-                    <span>{isEditing ? "Editing" : "Collapse"}</span>
+                    <ChevronDown className="h-6 w-6" aria-hidden="true" />
+                    <span className="text-base font-medium">
+                      {isEditing ? "Editing" : "Collapse"}
+                    </span>
                   </>
                 ) : (
                   <>
-                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
-                    <span>Expand</span>
+                    <ChevronRight className="h-6 w-6" aria-hidden="true" />
+                    <span className="text-base font-medium">Expand</span>
                   </>
                 )}
               </Button>
@@ -144,20 +139,21 @@ function DayHeader({
                     variant="outline"
                     size="sm"
                     onClick={() => handleStopEdit(dayIndex)}
-                    className="gap-2 border-gray-300 hover:border-gray-400 text-gray-600 hover:text-gray-800"
+                    className={`gap-2 ${COLORS.editing.border} hover:bg-amber-50 ${COLORS.editing.text} hover:text-amber-800 transition-colors`}
                     aria-label="Cancel editing day"
                   >
-                    <X className="h-4 w-4" aria-hidden="true" />
-                    <span>Cancel</span>
+                    <X className="h-6 w-6" aria-hidden="true" />
+                    <span className="text-base font-medium">Cancel</span>
                   </Button>
                   <Button
+                    variant="default"
                     size="sm"
                     onClick={() => handleSaveEdit(dayIndex)}
-                    className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                    className={`gap-2 ${COLORS.success.gradient} hover:opacity-90 text-white px-4 py-2 transition-opacity`}
                     aria-label="Save day changes"
                   >
-                    <Save className="h-4 w-4" aria-hidden="true" />
-                    <span>Save</span>
+                    <Save className="h-6 w-6" aria-hidden="true" />
+                    <span className="text-base font-medium">Save</span>
                   </Button>
                 </div>
               ) : (
@@ -165,11 +161,11 @@ function DayHeader({
                   variant="outline"
                   size="sm"
                   onClick={() => handleStartEdit(dayIndex)}
-                  className="gap-2 border-blue-300 hover:border-blue-400 text-blue-600 hover:text-blue-800"
+                  className={`gap-2 ${COLORS.primary.border} ${COLORS.primary.hover} ${COLORS.primary.text} hover:bg-blue-50 transition-colors`}
                   aria-label="Edit this day's activities"
                 >
-                  <Edit className="h-4 w-4" aria-hidden="true" />
-                  <span>Edit Day</span>
+                  <Edit className="h-6 w-6" aria-hidden="true" />
+                  <span className="text-base font-medium">Edit Day</span>
                 </Button>
               )}
             </div>
@@ -183,7 +179,7 @@ function DayHeader({
             >
               <div className="flex items-center gap-2 text-amber-700">
                 <span aria-hidden="true">🎯</span>
-                <span className="font-medium text-sm">
+                <span className="font-semibold text-base">
                   Editing Mode Active - Drag activities to reorder them within
                   this day
                 </span>
@@ -192,7 +188,7 @@ function DayHeader({
           )}
 
           <p
-            className={`font-semibold text-base mb-3 ${
+            className={`font-bold text-lg mb-3 ${
               isEditing ? "text-amber-700" : "text-blue-700"
             }`}
           >
@@ -202,7 +198,7 @@ function DayHeader({
 
           {/* Quick day stats */}
           <div
-            className="flex flex-wrap items-center gap-3 text-sm"
+            className="flex flex-wrap items-center gap-3 text-base font-medium"
             aria-label="Day overview"
           >
             {dayItem?.plan && Array.isArray(dayItem.plan) && (

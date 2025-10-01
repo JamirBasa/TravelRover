@@ -23,5 +23,5 @@ export { default as InlineEditableText } from './editing/InlineEditableText';
 
 // Shared Components
 export { default as EmptyStateComponent } from './shared/EmptyStateComponent';
-export { default as ItineraryNavigationHelper } from './shared/ItineraryNavigationHelper';
+export { default as ItineraryNavigationHelper, ItineraryHeader } from './shared/ItineraryNavigationHelper';
 export { default as TravelTipsSection } from './shared/TravelTipsSection';

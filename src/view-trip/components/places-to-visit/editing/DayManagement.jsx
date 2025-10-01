@@ -13,6 +13,7 @@ import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { COLORS, PATTERNS, ANIMATIONS } from "../constants/designSystem";
 import {
   Dialog,
   DialogContent,
@@ -184,10 +185,12 @@ function DayManagement({
       {/* Day Management Controls */}
       <div className="flex items-center justify-between bg-muted/20 rounded-lg p-4">
         <div className="flex items-center gap-3">
-          <Calendar className="h-5 w-5 text-primary" />
+          <Calendar className="h-7 w-7 text-primary" />
           <div>
-            <h3 className="font-semibold text-foreground">Day Management</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="text-lg font-bold text-foreground">
+              Day Management
+            </h3>
+            <p className="text-base font-medium text-muted-foreground">
               {itinerary.length} day{itinerary.length !== 1 ? "s" : ""} planned
             </p>
           </div>
@@ -195,9 +198,9 @@ function DayManagement({
 
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Day
+            <Button className="gap-3 px-6 py-3">
+              <Plus className="h-6 w-6" />
+              <span className="text-base font-semibold">Add Day</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
@@ -224,17 +227,20 @@ function DayManagement({
                     onClick={() => setSelectedTemplate(template)}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <Icon className="h-5 w-5 text-primary" />
+                      <div className="p-3 bg-primary/10 rounded-lg">
+                        <Icon className="h-7 w-7 text-primary" />
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-medium text-foreground mb-1">
+                        <h4 className="text-base font-bold text-foreground mb-2">
                           {template.name}
                         </h4>
-                        <p className="text-sm text-muted-foreground mb-2">
+                        <p className="text-base font-medium text-muted-foreground mb-3">
                           {template.theme}
                         </p>
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge
+                          variant="secondary"
+                          className="text-sm px-2 py-1 font-semibold"
+                        >
                           {template.activities.length} activities
                         </Badge>
                       </div>
@@ -273,17 +279,22 @@ function DayManagement({
           key={`day-${index}`}
           className="flex items-center justify-between bg-card border rounded-lg p-3"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-sm font-bold">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-lg font-bold">
               {day.day}
             </div>
             <div>
-              <h4 className="font-medium text-foreground">Day {day.day}</h4>
-              <p className="text-sm text-muted-foreground">
+              <h4 className="text-base font-bold text-foreground">
+                Day {day.day}
+              </h4>
+              <p className="text-base font-medium text-muted-foreground">
                 {getDateForDay(day.day) || "Date not set"}
               </p>
             </div>
-            <Badge variant="outline" className="text-xs">
+            <Badge
+              variant="outline"
+              className="text-sm px-3 py-1 font-semibold"
+            >
               {day.plan?.length || 0} activities
             </Badge>
           </div>
@@ -295,9 +306,9 @@ function DayManagement({
               size="sm"
               onClick={() => onCopyDay(index)}
               title="Copy day"
-              className="h-8 w-8 p-0"
+              className="h-10 w-10 p-0"
             >
-              <Copy className="h-3 w-3" />
+              <Copy className="h-5 w-5" />
             </Button>
 
             {/* Move Up */}
@@ -307,9 +318,9 @@ function DayManagement({
               onClick={() => handleMoveDay(index, "up")}
               disabled={index === 0}
               title="Move up"
-              className="h-8 w-8 p-0"
+              className="h-10 w-10 p-0"
             >
-              <ChevronUp className="h-3 w-3" />
+              <ChevronUp className="h-5 w-5" />
             </Button>
 
             {/* Move Down */}
@@ -319,9 +330,9 @@ function DayManagement({
               onClick={() => handleMoveDay(index, "down")}
               disabled={index === itinerary.length - 1}
               title="Move down"
-              className="h-8 w-8 p-0"
+              className="h-10 w-10 p-0"
             >
-              <ChevronDown className="h-3 w-3" />
+              <ChevronDown className="h-5 w-5" />
             </Button>
 
             {/* Delete Day */}
@@ -334,9 +345,9 @@ function DayManagement({
               }}
               disabled={itinerary.length <= 1}
               title="Delete day"
-              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              className="h-10 w-10 p-0 text-destructive hover:text-destructive"
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash2 className="h-5 w-5" />
             </Button>
           </div>
         </div>

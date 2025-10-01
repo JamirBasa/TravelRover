@@ -12,13 +12,13 @@ function EmptyStateComponent({
       role="region"
       aria-label="Empty state"
     >
-      <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-        <span className="text-2xl" aria-hidden="true">
+      <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
+        <span className="text-4xl" aria-hidden="true">
           {icon}
         </span>
       </div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-500 text-sm max-w-md mx-auto">
+      <h3 className="text-2xl font-bold text-gray-900 mb-3">{title}</h3>
+      <p className="text-gray-600 text-base font-medium max-w-md mx-auto">
         {message || description}
       </p>
     </div>

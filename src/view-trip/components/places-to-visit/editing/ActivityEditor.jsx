@@ -18,18 +18,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import InlineEditableText from "./InlineEditableText";
+import { COLORS, ANIMATIONS, PATTERNS } from "../constants/designSystem";
 import {
   Clock,
   MapPin,
-  Star,
-  DollarSign,
-  Timer,
   Plus,
   Trash2,
   ChevronUp,
   ChevronDown,
-  Copy,
-  Save,
   Edit3,
   AlertCircle,
 } from "lucide-react";
@@ -38,12 +34,10 @@ function ActivityEditor({
   activities = [],
   dayIndex,
   onUpdateActivities,
-  onSaveChanges,
   isEditing = false,
   dayNumber,
 }) {
   const [localActivities, setLocalActivities] = useState(activities);
-  const [hasChanges, setHasChanges] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
   // Generate IDs for accessibility
@@ -70,7 +64,6 @@ function ActivityEditor({
     };
 
     setLocalActivities(updatedActivities);
-    setHasChanges(true);
     setStatusMessage(`Updated ${field} for activity ${activityIndex + 1}`);
 
     // Auto-save after a brief delay
@@ -81,7 +74,6 @@ function ActivityEditor({
     const newActivity = createNewActivity();
     const updatedActivities = [...localActivities, newActivity];
     setLocalActivities(updatedActivities);
-    setHasChanges(true);
     setStatusMessage("New activity added");
 
     onUpdateActivities?.(updatedActivities);
@@ -99,29 +91,7 @@ function ActivityEditor({
     );
 
     setLocalActivities(updatedActivities);
-    setHasChanges(true);
     setStatusMessage(`Removed "${activityName}"`);
-
-    onUpdateActivities?.(updatedActivities);
-
-    // Clear status message after 2 seconds
-    setTimeout(() => setStatusMessage(""), 2000);
-  };
-
-  const handleCopyActivity = (activityIndex) => {
-    const activityToCopy = { ...localActivities[activityIndex] };
-    const originalName = activityToCopy.placeName;
-    activityToCopy.placeName = `${activityToCopy.placeName} (Copy)`;
-
-    const updatedActivities = [
-      ...localActivities.slice(0, activityIndex + 1),
-      activityToCopy,
-      ...localActivities.slice(activityIndex + 1),
-    ];
-
-    setLocalActivities(updatedActivities);
-    setHasChanges(true);
-    setStatusMessage(`Duplicated "${originalName}"`);
 
     onUpdateActivities?.(updatedActivities);
 
@@ -139,11 +109,14 @@ function ActivityEditor({
 
       const activityName =
         movedActivity.placeName || `Activity ${activityIndex + 1}`;
+      const truncatedName =
+        activityName.length > 50
+          ? `${activityName.substring(0, 50)}...`
+          : activityName;
       const directionText = direction === "up" ? "up" : "down";
 
       setLocalActivities(updatedActivities);
-      setHasChanges(true);
-      setStatusMessage(`Moved "${activityName}" ${directionText}`);
+      setStatusMessage(`Moved "${truncatedName}" ${directionText}`);
 
       onUpdateActivities?.(updatedActivities);
 
@@ -152,23 +125,23 @@ function ActivityEditor({
     }
   };
 
-  const handleSaveAll = async () => {
-    try {
-      setStatusMessage("Saving all activities...");
-      await onSaveChanges?.(localActivities);
-      setHasChanges(false);
-      setStatusMessage("All activities saved successfully");
+  // Save functionality for future use
+  // const handleSaveAll = async () => {
+  //   try {
+  //     setStatusMessage("Saving all activities...");
+  //     await onSaveChanges?.(localActivities);
+  //     setStatusMessage("All activities saved successfully");
 
-      // Clear success message after 2 seconds
-      setTimeout(() => setStatusMessage(""), 2000);
-    } catch (error) {
-      console.error("Error saving activities:", error);
-      setStatusMessage("Error saving activities. Please try again.");
+  //     // Clear success message after 2 seconds
+  //     setTimeout(() => setStatusMessage(""), 2000);
+  //   } catch (error) {
+  //     console.error("Error saving activities:", error);
+  //     setStatusMessage("Error saving activities. Please try again.");
 
-      // Clear error message after 4 seconds
-      setTimeout(() => setStatusMessage(""), 4000);
-    }
-  };
+  //     // Clear error message after 4 seconds
+  //     setTimeout(() => setStatusMessage(""), 4000);
+  //   }
+  // };
 
   // Display mode (read-only)
   if (!isEditing) {
@@ -194,19 +167,18 @@ function ActivityEditor({
                 {/* Activity indicator */}
                 <div className="flex-shrink-0 pt-1">
                   <div
-                    className="w-3 h-3 rounded-full bg-gradient-to-r from-primary to-primary/80 shadow-sm"
+                    className="w-5 h-5 rounded-full bg-gradient-to-r from-primary to-primary/80 shadow-sm"
                     aria-hidden="true"
                   />
-                </div>
-
+                </div>{" "}
                 <div className="flex-1 space-y-3">
                   {/* Time badge */}
                   {activity.time && (
                     <Badge
                       variant="secondary"
-                      className="gap-2 bg-primary/10 text-primary"
+                      className="gap-2 bg-primary/10 text-primary px-3 py-1.5 text-sm font-semibold"
                     >
-                      <Clock className="h-3 w-3" aria-hidden="true" />
+                      <Clock className="h-5 w-5" aria-hidden="true" />
                       <time dateTime={convertToISO8601Time(activity.time)}>
                         {activity.time}
                       </time>
@@ -214,53 +186,14 @@ function ActivityEditor({
                   )}
 
                   {/* Activity title */}
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-start gap-3">
                     <MapPin
-                      className="h-4 w-4 text-primary mt-0.5 flex-shrink-0"
+                      className="h-6 w-6 text-primary mt-0.5 flex-shrink-0"
                       aria-hidden="true"
                     />
-                    <h4 className="text-base font-semibold text-foreground">
+                    <h4 className="text-lg font-bold text-foreground">
                       {activity.placeName}
                     </h4>
-                  </div>
-
-                  {/* Description */}
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {activity.placeDetails}
-                  </p>
-
-                  {/* Badges */}
-                  <div
-                    className="flex flex-wrap gap-2"
-                    aria-label="Activity details"
-                  >
-                    {activity.ticketPricing && (
-                      <Badge
-                        variant="outline"
-                        className="gap-1.5 border-green-200 bg-green-50 text-green-700"
-                      >
-                        <DollarSign className="h-3 w-3" aria-hidden="true" />
-                        <span>{activity.ticketPricing}</span>
-                      </Badge>
-                    )}
-                    {activity.timeTravel && (
-                      <Badge
-                        variant="outline"
-                        className="gap-1.5 border-orange-200 bg-orange-50 text-orange-700"
-                      >
-                        <Timer className="h-3 w-3" aria-hidden="true" />
-                        <span>{activity.timeTravel}</span>
-                      </Badge>
-                    )}
-                    {activity.rating && (
-                      <Badge
-                        variant="outline"
-                        className="gap-1.5 border-yellow-200 bg-yellow-50 text-yellow-700"
-                      >
-                        <Star className="h-3 w-3" aria-hidden="true" />
-                        <span>{activity.rating}/5</span>
-                      </Badge>
-                    )}
                   </div>
                 </div>
               </div>
@@ -275,10 +208,12 @@ function ActivityEditor({
             aria-label="No activities"
           >
             <MapPin
-              className="h-8 w-8 mx-auto mb-2 opacity-50"
+              className="h-12 w-12 mx-auto mb-4 opacity-50"
               aria-hidden="true"
             />
-            <p>No activities planned for this day</p>
+            <p className="text-base font-medium">
+              No activities planned for this day
+            </p>
           </div>
         )}
       </div>
@@ -324,28 +259,15 @@ function ActivityEditor({
       {/* Status notification */}
       {statusMessage && (
         <div
-          className="p-3 bg-primary/5 border border-primary/20 rounded-md mb-4 flex items-center gap-2"
+          className="p-4 bg-orange-50 border border-orange-200 rounded-lg mb-4 flex items-center gap-3"
           role="status"
           aria-live="polite"
           id={statusId}
         >
-          <AlertCircle className="h-4 w-4 text-primary" aria-hidden="true" />
-          <span className="text-sm">{statusMessage}</span>
-        </div>
-      )}
-
-      {/* Save button if there are changes */}
-      {hasChanges && (
-        <div className="flex justify-end">
-          <Button
-            onClick={handleSaveAll}
-            className="gap-2"
-            size="sm"
-            aria-label="Save all activity changes"
-          >
-            <Save className="h-4 w-4" aria-hidden="true" />
-            <span>Save Changes</span>
-          </Button>
+          <AlertCircle className="h-5 w-5 text-orange-600" aria-hidden="true" />
+          <span className="text-base font-medium text-orange-800">
+            {statusMessage}
+          </span>
         </div>
       )}
 
@@ -357,7 +279,7 @@ function ActivityEditor({
             return (
               <li key={index}>
                 <Card
-                  className="border-2 border-dashed border-muted-foreground/20 bg-muted/20"
+                  className={`${PATTERNS.card.base} ${COLORS.editing.border} ${COLORS.editing.lightGradient} border-2 border-dashed`}
                   id={activityId}
                 >
                   <CardContent className="p-4 space-y-4">
@@ -383,17 +305,6 @@ function ActivityEditor({
                         role="toolbar"
                         aria-label={`Activity ${index + 1} controls`}
                       >
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCopyActivity(index)}
-                          aria-label="Duplicate this activity"
-                          title="Copy activity"
-                          className="h-8 w-8 p-0"
-                        >
-                          <Copy className="h-3 w-3" aria-hidden="true" />
-                          <span className="sr-only">Duplicate</span>
-                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -458,13 +369,13 @@ function ActivityEditor({
                         />
                       </div>
 
-                      {/* Place Name */}
+                      {/* Activity Name */}
                       <div>
                         <label
                           htmlFor={`name-${activityId}`}
                           className="text-xs font-medium text-muted-foreground mb-1 block"
                         >
-                          Place Name
+                          Activity Name
                         </label>
                         <InlineEditableText
                           id={`name-${activityId}`}
@@ -474,78 +385,18 @@ function ActivityEditor({
                           }
                           placeholder="Activity name"
                           className="w-full"
-                          label="Place name"
-                        />
-                      </div>
-
-                      {/* Ticket Pricing */}
-                      <div>
-                        <label
-                          htmlFor={`price-${activityId}`}
-                          className="text-xs font-medium text-muted-foreground mb-1 block"
-                        >
-                          Ticket Price
-                        </label>
-                        <InlineEditableText
-                          id={`price-${activityId}`}
-                          value={activity.ticketPricing}
-                          onSave={(value) =>
-                            handleUpdateActivity(index, "ticketPricing", value)
-                          }
-                          placeholder="₱0"
-                          className="w-full"
-                          label="Ticket price"
-                        />
-                      </div>
-
-                      {/* Time Travel */}
-                      <div>
-                        <label
-                          htmlFor={`duration-${activityId}`}
-                          className="text-xs font-medium text-muted-foreground mb-1 block"
-                        >
-                          Duration
-                        </label>
-                        <InlineEditableText
-                          id={`duration-${activityId}`}
-                          value={activity.timeTravel}
-                          onSave={(value) =>
-                            handleUpdateActivity(index, "timeTravel", value)
-                          }
-                          placeholder="1 hour"
-                          className="w-full"
-                          label="Activity duration"
-                        />
-                      </div>
-
-                      {/* Rating */}
-                      <div>
-                        <label
-                          htmlFor={`rating-${activityId}`}
-                          className="text-xs font-medium text-muted-foreground mb-1 block"
-                        >
-                          Rating
-                        </label>
-                        <InlineEditableText
-                          id={`rating-${activityId}`}
-                          value={activity.rating}
-                          onSave={(value) =>
-                            handleUpdateActivity(index, "rating", value)
-                          }
-                          placeholder="4.0"
-                          className="w-full"
-                          label="Activity rating"
+                          label="Activity name"
                         />
                       </div>
                     </div>
 
-                    {/* Description - full width */}
+                    {/* Activity Details - full width */}
                     <div>
                       <label
                         htmlFor={`description-${activityId}`}
                         className="text-xs font-medium text-muted-foreground mb-1 block"
                       >
-                        Description
+                        Activity Details
                       </label>
                       <InlineEditableText
                         id={`description-${activityId}`}
@@ -573,22 +424,24 @@ function ActivityEditor({
           aria-label="No activities added yet"
         >
           <Edit3
-            className="h-8 w-8 mx-auto mb-2 opacity-50"
+            className="h-12 w-12 mx-auto mb-4 opacity-50"
             aria-hidden="true"
           />
-          <p>Click "Add New Activity" to start planning this day</p>
+          <p className="text-base font-medium">
+            Click "Add New Activity" to start planning this day
+          </p>
         </div>
       )}
 
       {/* Add activity button */}
       <Button
         variant="outline"
-        className="w-full border-dashed gap-2 h-16 text-muted-foreground hover:text-foreground hover:border-primary focus:ring-2 focus:ring-primary/50"
+        className="w-full border-dashed gap-3 h-16 text-muted-foreground hover:text-foreground hover:border-primary focus:ring-2 focus:ring-primary/50"
         onClick={handleAddActivity}
         aria-label="Add a new activity"
       >
-        <Plus className="h-5 w-5" aria-hidden="true" />
-        <span>Add New Activity</span>
+        <Plus className="h-7 w-7" aria-hidden="true" />
+        <span className="text-base font-semibold">Add New Activity</span>
       </Button>
     </div>
   );

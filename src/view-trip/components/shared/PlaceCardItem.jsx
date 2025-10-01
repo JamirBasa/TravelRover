@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { GetPlaceDetails, PHOTO_REF_URL } from "@/config/GlobalApi";
 
@@ -7,15 +7,7 @@ function PlaceCardItem({ place }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    // Check for both possible property names
-    const placeName = place?.placeName || place?.activity;
-    if (placeName) {
-      GetPlacePhoto();
-    }
-  }, [place?.placeName, place?.activity]);
-
-  const GetPlacePhoto = async () => {
+  const GetPlacePhoto = useCallback(async () => {
     const placeName = place?.placeName || place?.activity;
     if (!placeName) {
       console.warn("No place name provided for photo search");
@@ -92,7 +84,15 @@ function PlaceCardItem({ place }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [place?.placeName, place?.activity, place?.imageUrl]);
+
+  useEffect(() => {
+    // Check for both possible property names
+    const placeName = place?.placeName || place?.activity;
+    if (placeName) {
+      GetPlacePhoto();
+    }
+  }, [GetPlacePhoto, place?.placeName, place?.activity]);
 
   // Get the correct property names from the data
   const placeName = place?.placeName || place?.activity || "Unknown Place";
@@ -167,28 +167,28 @@ function PlaceCardItem({ place }) {
             <div className="flex-1 min-w-0 space-y-2">
               <div>
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-bold text-gray-900 text-base mb-1 group-hover:text-blue-600 line-clamp-2 leading-tight transition-colors duration-300 flex-1">
+                  <h3 className="font-bold text-gray-900 text-lg mb-2 group-hover:text-blue-600 line-clamp-2 leading-tight transition-colors duration-300 flex-1">
                     {placeName}
                   </h3>
-                  <div className="ml-2 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors duration-300 flex-shrink-0">
-                    <span className="text-blue-600 text-xs">📍</span>
+                  <div className="ml-3 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors duration-300 flex-shrink-0">
+                    <span className="text-blue-600 text-base">📍</span>
                   </div>
                 </div>
                 {placeDetails && (
-                  <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed mb-1">
+                  <p className="text-base font-medium text-gray-600 line-clamp-3 leading-relaxed mb-2">
                     {placeDetails}
                   </p>
                 )}
 
                 {/* Location type indicator */}
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
-                    <span>🎯</span>
+                  <span className="inline-flex items-center gap-2 bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full text-sm font-semibold">
+                    <span className="text-base">🎯</span>
                     <span>Tourist Attraction</span>
                   </span>
                   {place?.category && (
-                    <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-600 px-2 py-1 rounded-full text-xs font-medium">
-                      <span>📂</span>
+                    <span className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full text-sm font-semibold">
+                      <span className="text-base">📂</span>
                       <span>{place.category}</span>
                     </span>
                   )}
@@ -198,22 +198,22 @@ function PlaceCardItem({ place }) {
               {/* Badges Container */}
               <div className="flex flex-wrap gap-2">
                 {place?.ticketPricing && (
-                  <div className="inline-flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded-full text-xs font-medium">
-                    <span className="text-green-600">💰</span>
+                  <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 border border-green-300 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-green-200 transition-colors">
+                    <span className="text-green-600 text-base">💰</span>
                     <span>{place.ticketPricing}</span>
                   </div>
                 )}
 
                 {place?.timeTravel && (
-                  <div className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs font-medium">
-                    <span className="text-blue-600">⏰</span>
+                  <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-800 border border-orange-300 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-orange-200 transition-colors">
+                    <span className="text-orange-600 text-base">⏰</span>
                     <span>{place.timeTravel}</span>
                   </div>
                 )}
 
                 {place?.rating && (
-                  <div className="inline-flex items-center gap-1 bg-yellow-50 text-yellow-700 px-2 py-1 rounded-full text-xs font-medium">
-                    <span className="text-yellow-600">⭐</span>
+                  <div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-800 border border-yellow-300 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-yellow-200 transition-colors">
+                    <span className="text-yellow-600 text-base">⭐</span>
                     <span>{place.rating}/5</span>
                   </div>
                 )}
@@ -221,14 +221,14 @@ function PlaceCardItem({ place }) {
 
               {/* Enhanced Action indicator */}
               <div className="flex items-center justify-between pt-2 mt-2 border-t border-gray-100">
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <span className="text-blue-500">🌐</span>
+                <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
+                  <span className="text-blue-500 text-base">🌐</span>
                   <span>Interactive map view</span>
                 </div>
-                <div className="flex items-center gap-1 text-blue-600 font-semibold text-xs group-hover:text-blue-700 transition-all duration-200">
+                <div className="flex items-center gap-2 text-blue-600 font-bold text-sm group-hover:text-blue-700 transition-all duration-200">
                   <span>Open Maps</span>
-                  <div className="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors duration-200">
-                    <span className="text-blue-600 text-xs transform group-hover:translate-x-0.5 transition-transform duration-200">
+                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors duration-200">
+                    <span className="text-blue-600 text-sm transform group-hover:translate-x-0.5 transition-transform duration-200">
                       →
                     </span>
                   </div>

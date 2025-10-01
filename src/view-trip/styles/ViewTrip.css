@@ -209,3 +209,39 @@
     transition: none !important;
   }
 }
+
+/* Container alignment fixes */
+.container-left-align {
+  margin-left: 0;
+  margin-right: auto;
+  width: 100%;
+  max-width: 100%;
+}
+
+.full-width-content {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Ensure proper content alignment */
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  align-items: stretch;
+}
+
+.no-right-margin {
+  margin-right: 0 !important;
+}
+
+.reset-container-spacing {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}

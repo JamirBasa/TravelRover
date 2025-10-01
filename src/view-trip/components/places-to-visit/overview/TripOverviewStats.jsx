@@ -60,58 +60,50 @@ function TripOverviewStats({
         >
           <div className="text-center group">
             <div className={`${PATTERNS.iconContainer.large} mx-auto mb-2`}>
-              <span className="text-lg">📅</span>
+              <span className="text-3xl">📅</span>
             </div>
-            <div className={`${TYPOGRAPHY.heading.h4} text-white mb-1`}>
+            <div className={`text-2xl font-bold text-white mb-1`}>
               {itineraryLength}
             </div>
-            <div
-              className={`${TYPOGRAPHY.accent.badge} text-white font-medium`}
-            >
+            <div className={`text-base text-white font-semibold`}>
               Days of Adventure
             </div>
           </div>
 
           <div className="text-center group">
             <div className={`${PATTERNS.iconContainer.large} mx-auto mb-2`}>
-              <span className="text-lg">🎯</span>
+              <span className="text-3xl">🎯</span>
             </div>
-            <div className={`${TYPOGRAPHY.heading.h4} text-white mb-1`}>
+            <div className={`text-2xl font-bold text-white mb-1`}>
               {placesToVisitLength}
             </div>
-            <div
-              className={`${TYPOGRAPHY.accent.badge} text-white font-medium`}
-            >
+            <div className={`text-base text-white font-semibold`}>
               Must-See Places
             </div>
           </div>
 
           <div className="text-center group">
             <div className={`${PATTERNS.iconContainer.large} mx-auto mb-2`}>
-              <span className="text-lg">⚡</span>
+              <span className="text-3xl">⚡</span>
             </div>
-            <div className={`${TYPOGRAPHY.heading.h4} text-white mb-1`}>
+            <div className={`text-2xl font-bold text-white mb-1`}>
               {activitiesCount}
             </div>
-            <div
-              className={`${TYPOGRAPHY.accent.badge} text-white font-medium`}
-            >
+            <div className={`text-base text-white font-semibold`}>
               Exciting Activities
             </div>
           </div>
 
           <div className="text-center group">
             <div className={`${PATTERNS.iconContainer.large} mx-auto mb-2`}>
-              <span className="text-lg">⏱️</span>
+              <span className="text-3xl">⏱️</span>
             </div>
-            <div className={`${TYPOGRAPHY.heading.h4} text-white mb-1`}>
+            <div className={`text-2xl font-bold text-white mb-1`}>
               {trip?.userSelection?.duration ||
                 trip?.tripData?.duration ||
                 "N/A"}
             </div>
-            <div
-              className={`${TYPOGRAPHY.accent.badge} text-white font-medium`}
-            >
+            <div className={`text-base text-white font-semibold`}>
               Days Total
             </div>
           </div>
@@ -120,21 +112,21 @@ function TripOverviewStats({
         {/* Compact Trip Highlights */}
         <div className="mt-4 pt-4 border-t border-white border-opacity-20">
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <div className="flex items-center gap-1 bg-white/90 text-gray-800 rounded-full px-3 py-1 text-xs font-medium">
-              <span>🌟</span>
+            <div className="flex items-center gap-2 bg-white/90 text-gray-800 rounded-full px-4 py-2 text-base font-semibold">
+              <span className="text-lg">🌟</span>
               <span>AI-Optimized</span>
             </div>
-            <div className="flex items-center gap-1 bg-white/90 text-gray-800 rounded-full px-3 py-1 text-xs font-medium">
-              <span>💰</span>
+            <div className="flex items-center gap-2 bg-white/90 text-gray-800 rounded-full px-4 py-2 text-base font-semibold">
+              <span className="text-lg">💰</span>
               <span>Budget-Friendly</span>
             </div>
-            <div className="flex items-center gap-1 bg-white/90 text-gray-800 rounded-full px-3 py-1 text-xs font-medium">
-              <span>📍</span>
+            <div className="flex items-center gap-2 bg-white/90 text-gray-800 rounded-full px-4 py-2 text-base font-semibold">
+              <span className="text-lg">📍</span>
               <span>Local Insights</span>
             </div>
             {trip?.hasRealFlights && (
-              <div className="flex items-center gap-1 bg-white/90 text-gray-800 rounded-full px-3 py-1 text-xs font-medium">
-                <span>✈️</span>
+              <div className="flex items-center gap-2 bg-white/90 text-gray-800 rounded-full px-4 py-2 text-base font-semibold">
+                <span className="text-lg">✈️</span>
                 <span>Live Flights</span>
               </div>
             )}

@@ -34,13 +34,13 @@ function InlineEditableText({
   const [editValue, setEditValue] = useState(value || "");
   const [isSaving, setIsSaving] = useState(false);
   const [hasError, setHasError] = useState(false);
-  
+
   // Generate unique IDs for accessibility
   const uniqueId = useId();
   const inputId = `inline-edit-${uniqueId}`;
   const labelId = `inline-edit-label-${uniqueId}`;
   const errorId = `inline-edit-error-${uniqueId}`;
-  
+
   const inputRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -134,7 +134,7 @@ function InlineEditableText({
     return (
       <div
         className={cn(
-          "group relative cursor-pointer rounded px-2 py-1 transition-all duration-200",
+          "group relative cursor-pointer rounded px-2 py-1 pr-8 transition-all duration-200",
           "hover:bg-muted/50 hover:shadow-sm focus-within:ring-2 focus-within:ring-primary/50",
           !value && "text-muted-foreground italic",
           displayClassName,
@@ -142,7 +142,7 @@ function InlineEditableText({
         )}
         onClick={handleStartEdit}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             handleStartEdit(e);
           }
@@ -152,7 +152,7 @@ function InlineEditableText({
         aria-label={`Edit ${label}`}
         aria-labelledby={labelId}
       >
-        <span 
+        <span
           id={labelId}
           className={cn("break-words", !value && "select-none")}
         >
@@ -160,8 +160,8 @@ function InlineEditableText({
         </span>
 
         {showEditIcon && (
-          <Edit3 
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity duration-200 text-muted-foreground" 
+          <Edit3
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 opacity-0 group-hover:opacity-70 transition-opacity duration-200 text-muted-foreground"
             aria-hidden="true"
           />
         )}
@@ -171,7 +171,7 @@ function InlineEditableText({
 
   // Edit mode
   return (
-    <div 
+    <div
       className={cn("relative", className)}
       role="form"
       aria-labelledby={labelId}
@@ -179,7 +179,7 @@ function InlineEditableText({
       <label id={labelId} htmlFor={inputId} className="sr-only">
         Edit {label}
       </label>
-      
+
       {multiline ? (
         <textarea
           id={inputId}
@@ -191,7 +191,7 @@ function InlineEditableText({
           placeholder={placeholder}
           maxLength={maxLength}
           className={cn(
-            "w-full resize-none rounded border px-2 py-1 text-sm",
+            "w-full resize-none rounded border px-2 py-1 pr-20 text-sm",
             "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary",
             "min-h-[3rem]",
             hasError && "border-destructive ring-2 ring-destructive/20",
@@ -216,7 +216,7 @@ function InlineEditableText({
           placeholder={placeholder}
           maxLength={maxLength}
           className={cn(
-            "w-full rounded border px-2 py-1 text-sm",
+            "w-full rounded border px-2 py-1 pr-20 text-sm",
             "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary",
             hasError && "border-destructive ring-2 ring-destructive/20",
             isSaving && "opacity-70 cursor-wait",
@@ -230,14 +230,14 @@ function InlineEditableText({
       )}
 
       {/* Action buttons for explicit save/cancel */}
-      <div 
-        className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1"
+      <div
+        className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2"
         role="toolbar"
         aria-label="Editing controls"
       >
         {isSaving ? (
-          <div 
-            className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" 
+          <div
+            className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"
             role="status"
             aria-label="Saving..."
           />
@@ -254,7 +254,7 @@ function InlineEditableText({
               title="Save (Enter)"
               disabled={isSaving}
             >
-              <Check className="h-3 w-3" aria-hidden="true" />
+              <Check className="h-4 w-4" aria-hidden="true" />
               <span className="sr-only">Save</span>
             </button>
             <button
@@ -268,7 +268,7 @@ function InlineEditableText({
               title="Cancel (Escape)"
               disabled={isSaving}
             >
-              <X className="h-3 w-3" aria-hidden="true" />
+              <X className="h-4 w-4" aria-hidden="true" />
               <span className="sr-only">Cancel</span>
             </button>
           </>
@@ -277,7 +277,7 @@ function InlineEditableText({
 
       {/* Character count for multiline */}
       {multiline && maxLength && (
-        <div 
+        <div
           id={`${inputId}-desc`}
           className="text-xs text-muted-foreground mt-1"
           aria-live="polite"
@@ -287,7 +287,7 @@ function InlineEditableText({
       )}
 
       {hasError && (
-        <div 
+        <div
           id={errorId}
           className="text-xs text-destructive mt-1"
           role="alert"

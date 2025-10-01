@@ -2,105 +2,124 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Clock, MapPin, Star, DollarSign, Timer, Award } from "lucide-react";
+import { Clock, MapPin, Star, DollarSign, Timer } from "lucide-react";
+import { COLORS, PATTERNS, ANIMATIONS } from "../constants/designSystem";
 
 function RegularActivity({ activity, activityIndex, dayIndex }) {
   // Generate consistent IDs for accessibility
   const activityId = `activity-${dayIndex}-${activityIndex}`;
   const titleId = `activity-title-${dayIndex}-${activityIndex}`;
   const detailsId = `activity-details-${dayIndex}-${activityIndex}`;
-  
+
   return (
     <Card
       id={activityId}
       className={cn(
-        "group transition-all duration-300 hover:shadow-lg hover:shadow-primary/5",
-        "border-border/40 hover:border-primary/30",
-        "bg-card hover:bg-card/80 backdrop-blur-sm",
-        "relative overflow-hidden focus-within:ring-2 focus-within:ring-primary/50"
+        PATTERNS.card.base,
+        PATTERNS.card.hover,
+        "group relative overflow-hidden"
       )}
       tabIndex="0"
       role="article"
       aria-labelledby={titleId}
       aria-describedby={detailsId}
     >
-      <CardContent className="p-4 sm:p-5">
-        {/* Enhanced gradient overlay */}
-        <div 
-          className="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/5 to-accent/0 group-hover:from-primary/10 group-hover:via-primary/5 group-hover:to-accent/5 transition-all duration-500 pointer-events-none rounded-lg" 
-          aria-hidden="true"
-        />
-
-        <div className="relative flex gap-4">
-          {/* Modern activity indicator */}
+      <CardContent className="p-3 sm:p-4">
+        <div className="relative flex gap-3">
+          {/* Enhanced activity indicator - Bigger and more visible */}
           <div className="flex-shrink-0 pt-1">
             <div
               className={cn(
-                "w-3 h-3 rounded-full shadow-sm transition-all duration-300",
-                "bg-gradient-to-r from-primary to-primary/80",
-                "group-hover:scale-125 group-hover:shadow-md group-hover:shadow-primary/30",
-                "ring-2 ring-background group-hover:ring-primary/20"
+                "w-5 h-5 rounded-full shadow-lg",
+                COLORS.primary.gradient
               )}
               aria-hidden="true"
             />
           </div>
 
-          <div className="flex-1 min-w-0 space-y-3">
-            {/* Enhanced time badge */}
+          <div className="flex-1 min-w-0 space-y-2">
+            {/* Enhanced time badge - Bigger icons and text */}
             {activity?.time && (
               <div className="flex items-center">
                 <Badge
                   variant="secondary"
                   className={cn(
-                    "gap-2 font-medium border-0",
-                    "bg-primary/10 text-primary hover:bg-primary/15",
-                    "transition-colors duration-200"
+                    "gap-2 font-semibold border-0 px-3 py-1.5 text-sm",
+                    "bg-primary/10 text-primary hover:bg-primary/20",
+                    ANIMATIONS.transition.medium
                   )}
                 >
-                  <Clock className="h-3 w-3" aria-hidden="true" />
-                  <time dateTime={convertToISO8601Time(activity.time)}>{activity.time}</time>
+                  <Clock className="h-4 w-4" aria-hidden="true" />
+                  <time dateTime={convertToISO8601Time(activity.time)}>
+                    {activity.time}
+                  </time>
                 </Badge>
               </div>
             )}
 
-            {/* Enhanced activity title */}
+            {/* Enhanced activity title - Bigger icon and more readable text */}
             <div className="flex items-start gap-2">
-              <MapPin 
-                className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" 
-                aria-hidden="true" 
-              />
-              <h4
-                id={titleId}
+              <MapPin
                 className={cn(
-                  "text-base font-semibold leading-tight",
-                  "text-foreground group-hover:text-primary",
-                  "transition-colors duration-200 break-words"
+                  "h-5 w-5 mt-0.5 flex-shrink-0",
+                  COLORS.primary.text
                 )}
-              >
-                {activity?.placeName || "Activity"}
-              </h4>
+                aria-hidden="true"
+              />
+              <div className="flex-1">
+                <h4
+                  id={titleId}
+                  className={cn(
+                    "text-base font-semibold leading-tight",
+                    "text-gray-900",
+                    "break-words"
+                  )}
+                >
+                  {activity?.placeName || "Activity"}
+                </h4>
+
+                {/* See Directions Link */}
+                {activity?.placeName && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                      activity.placeName
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-blue-600 font-medium transition-colors mt-1 cursor-pointer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MapPin className="h-3 w-3" />
+                    See Directions
+                  </a>
+                )}
+              </div>
             </div>
 
-            {/* Enhanced description */}
-            <p 
+            {/* Enhanced description - More readable text */}
+            <p
               id={detailsId}
-              className="text-sm text-muted-foreground leading-relaxed break-words"
+              className="text-sm text-gray-600 leading-relaxed break-words"
             >
               {activity?.placeDetails ||
                 "Discover this amazing location and create unforgettable memories during your visit."}
             </p>
 
             {/* Modern badge collection */}
-            <div 
-              className="flex flex-wrap items-center gap-2"
+            <div
+              className="flex flex-wrap items-center gap-1.5"
               aria-label="Activity details"
             >
               {activity?.ticketPricing && (
                 <Badge
                   variant="outline"
                   className={cn(
-                    "gap-1.5 border-green-200 bg-green-50 text-green-700",
-                    "hover:bg-green-100 transition-colors"
+                    "gap-1.5 px-2 py-1 text-xs font-medium",
+                    COLORS.badges.pricing.border,
+                    COLORS.badges.pricing.bg,
+                    COLORS.badges.pricing.text,
+                    COLORS.badges.pricing.hover,
+                    ANIMATIONS.transition.medium
                   )}
                 >
                   <DollarSign className="h-3 w-3" aria-hidden="true" />
@@ -112,8 +131,12 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                 <Badge
                   variant="outline"
                   className={cn(
-                    "gap-1.5 border-orange-200 bg-orange-50 text-orange-700",
-                    "hover:bg-orange-100 transition-colors"
+                    "gap-1.5 px-2 py-1 text-xs font-medium",
+                    COLORS.badges.time.border,
+                    COLORS.badges.time.bg,
+                    COLORS.badges.time.text,
+                    COLORS.badges.time.hover,
+                    ANIMATIONS.transition.medium
                   )}
                 >
                   <Timer className="h-3 w-3" aria-hidden="true" />
@@ -125,25 +148,18 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                 <Badge
                   variant="outline"
                   className={cn(
-                    "gap-1.5 border-yellow-200 bg-yellow-50 text-yellow-700",
-                    "hover:bg-yellow-100 transition-colors"
+                    "gap-1.5 px-2 py-1 text-xs font-medium",
+                    COLORS.badges.rating.border,
+                    COLORS.badges.rating.bg,
+                    COLORS.badges.rating.text,
+                    COLORS.badges.rating.hover,
+                    ANIMATIONS.transition.medium
                   )}
                 >
                   <Star className="h-3 w-3" aria-hidden="true" />
                   <span className="font-medium">{activity.rating}/5</span>
                 </Badge>
               )}
-
-              {/* Enhanced activity type indicator */}
-              <Badge
-                className={cn(
-                  "gap-1.5 bg-primary/10 text-primary border-primary/20",
-                  "hover:bg-primary/15 transition-colors"
-                )}
-              >
-                <Award className="h-3 w-3" aria-hidden="true" />
-                <span className="font-medium">Must-See</span>
-              </Badge>
             </div>
           </div>
         </div>
@@ -154,28 +170,28 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
 
 // Helper function to convert time to ISO 8601 format
 function convertToISO8601Time(timeString) {
-  if (!timeString) return '';
-  
+  if (!timeString) return "";
+
   try {
     // Expected format: "9:00 AM" or similar
-    const [time, period] = timeString.split(' ');
-    let [hours, minutes] = time.split(':').map(Number);
-    
+    const [time, period] = timeString.split(" ");
+    let [hours, minutes] = time.split(":").map(Number);
+
     // Convert to 24-hour format
-    if (period && period.toUpperCase() === 'PM' && hours < 12) {
+    if (period && period.toUpperCase() === "PM" && hours < 12) {
       hours += 12;
-    } else if (period && period.toUpperCase() === 'AM' && hours === 12) {
+    } else if (period && period.toUpperCase() === "AM" && hours === 12) {
       hours = 0;
     }
-    
+
     // Format with leading zeros
-    const formattedHours = hours.toString().padStart(2, '0');
-    const formattedMinutes = minutes.toString().padStart(2, '0');
-    
+    const formattedHours = hours.toString().padStart(2, "0");
+    const formattedMinutes = minutes.toString().padStart(2, "0");
+
     return `${formattedHours}:${formattedMinutes}:00`;
   } catch (error) {
-    console.error('Error parsing time string:', timeString, error);
-    return '';
+    console.error("Error parsing time string:", timeString, error);
+    return "";
   }
 }
 

@@ -29,16 +29,16 @@ function PlacesToVisitSection({ placesToVisit }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={PATTERNS.iconContainer.medium}>
-                <span className="text-white text-lg">🎯</span>
+                <span className="text-white text-2xl">🎯</span>
               </div>
               <div className="flex-1 min-w-0">
                 <h2
-                  className={`${TYPOGRAPHY.heading.h2} text-white mb-1 break-words`}
+                  className={`text-2xl font-bold text-white mb-2 break-words`}
                 >
                   Must-Visit Attractions
                 </h2>
                 <p
-                  className={`${TYPOGRAPHY.accent.caption} text-emerald-100 flex items-center gap-2 flex-wrap`}
+                  className={`text-base font-medium text-emerald-100 flex items-center gap-2 flex-wrap`}
                 >
                   <span>📍</span>
                   <span>
@@ -52,10 +52,10 @@ function PlacesToVisitSection({ placesToVisit }) {
 
             <div className="hidden sm:flex items-center gap-3 text-white">
               <div className="text-center">
-                <div className="text-base font-bold">
-                  {placesToVisit.length}
+                <div className="text-xl font-bold">{placesToVisit.length}</div>
+                <div className="text-sm text-emerald-100 font-medium">
+                  Places
                 </div>
-                <div className="text-xs text-emerald-100">Places</div>
               </div>
             </div>
           </div>
@@ -66,7 +66,7 @@ function PlacesToVisitSection({ placesToVisit }) {
         {/* Category breakdown if available */}
         <div className="mb-4 flex flex-wrap gap-2">
           {placesToVisit.some((p) => p.category) && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
+            <div className="flex items-center gap-2 text-base font-medium text-gray-600">
               <span>Categories:</span>
               {[
                 ...new Set(
@@ -76,7 +76,7 @@ function PlacesToVisitSection({ placesToVisit }) {
                 <Badge
                   key={category}
                   variant="secondary"
-                  className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                  className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-3 py-1.5 text-sm font-semibold"
                 >
                   {category}
                 </Badge>
@@ -94,14 +94,14 @@ function PlacesToVisitSection({ placesToVisit }) {
         {/* Compact helpful tip */}
         <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg border border-emerald-100">
           <div className="flex items-start gap-3">
-            <div className="w-6 h-6 bg-emerald-100 rounded flex items-center justify-center flex-shrink-0">
-              <span className="text-emerald-600 text-xs">💡</span>
+            <div className="w-12 h-12 bg-emerald-100 rounded flex items-center justify-center flex-shrink-0">
+              <span className="text-emerald-600 text-xl">💡</span>
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-emerald-800 mb-1 text-sm">
+              <h4 className="font-bold text-emerald-800 mb-2 text-base">
                 Pro Travel Tip
               </h4>
-              <p className="text-emerald-700 text-xs break-words">
+              <p className="text-emerald-700 text-base font-medium break-words">
                 Click on any attraction to view its exact location on Google
                 Maps. Consider visiting nearby places together to save time and
                 transportation costs!

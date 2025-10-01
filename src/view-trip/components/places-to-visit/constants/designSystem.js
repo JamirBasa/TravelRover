@@ -48,6 +48,34 @@ export const COLORS = {
     lightGradient: 'bg-gradient-to-r from-sky-50 to-blue-50',
     text: 'text-sky-700',
     border: 'border-sky-200',
+  },
+  
+  // Badge color system for consistent activity badges
+  badges: {
+    pricing: {
+      bg: 'bg-green-100',
+      text: 'text-green-800',
+      border: 'border-green-300',
+      hover: 'hover:bg-green-200',
+    },
+    time: {
+      bg: 'bg-orange-100', 
+      text: 'text-orange-800',
+      border: 'border-orange-300',
+      hover: 'hover:bg-orange-200',
+    },
+    rating: {
+      bg: 'bg-yellow-100',
+      text: 'text-yellow-800', 
+      border: 'border-yellow-300',
+      hover: 'hover:bg-yellow-200',
+    },
+    general: {
+      bg: 'bg-blue-100',
+      text: 'text-blue-800',
+      border: 'border-blue-300', 
+      hover: 'hover:bg-blue-200',
+    }
   }
 };
 
