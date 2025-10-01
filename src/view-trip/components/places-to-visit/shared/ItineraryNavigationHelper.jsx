@@ -49,31 +49,39 @@ export function ItineraryHeader() {
 function ItineraryNavigationHelper({ editingDay }) {
   return (
     <div
-      className={`mb-4 ${COLORS.info.lightGradient} rounded-lg p-4 ${COLORS.info.border} border`}
+      className={`mb-5 ${COLORS.info.lightGradient} rounded-lg p-5 ${COLORS.info.border} border`}
     >
-      <div className="flex items-start gap-3">
-        <div className="bg-indigo-100 flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center">
-          <span className="text-indigo-600 text-lg">🗺️</span>
+      <div className="flex items-start gap-4">
+        <div className="bg-indigo-100 flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center">
+          <span className="text-indigo-600 text-xl">🗺️</span>
         </div>
         <div className="flex-1">
-          <h3 className="text-base font-semibold text-indigo-900 mb-2">
+          <h3 className="text-lg font-semibold text-indigo-900 mb-3">
             How to Use This Itinerary
           </h3>
-          <div className="grid md:grid-cols-2 gap-2 text-sm font-medium text-indigo-800">
-            <div className="flex items-center gap-2">
-              <span className="text-indigo-600 text-sm">✅</span>
+          <div className="grid md:grid-cols-2 gap-3 text-base font-medium text-indigo-800">
+            <div className="flex items-start gap-3 py-1">
+              <span className="text-indigo-600 text-base flex-shrink-0 mt-0.5">
+                ✅
+              </span>
               <span>Times are suggestions - adjust to your pace</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-indigo-600 text-sm">📍</span>
+            <div className="flex items-start gap-3 py-1">
+              <span className="text-indigo-600 text-base flex-shrink-0 mt-0.5">
+                📍
+              </span>
               <span>Click place names for Google Maps directions</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-indigo-600 text-sm">💰</span>
+            <div className="flex items-start gap-3 py-1">
+              <span className="text-indigo-600 text-base flex-shrink-0 mt-0.5">
+                💰
+              </span>
               <span>Check current prices before visiting</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-indigo-600 text-sm">🖱️</span>
+            <div className="flex items-start gap-3 py-1">
+              <span className="text-indigo-600 text-base flex-shrink-0 mt-0.5">
+                🖱️
+              </span>
               <span>
                 {editingDay !== null
                   ? "Drag activities to reorder them within the day"
