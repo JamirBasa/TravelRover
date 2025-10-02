@@ -307,82 +307,19 @@ export const SelectBudgetOptions = [
   },
 ];
 
-export const AI_PROMPT = `Generate a comprehensive travel itinerary in valid JSON format for: {location}, {duration} days, {travelers}, {budget} budget.
-
-REQUIRED JSON STRUCTURE:
-{
-  "tripName": "Trip to [Location]",
-  "destination": "[Full destination name]",
-  "duration": "[X] days",
-  "budget": "[Budget level]",
-  "travelers": "[Traveler type]",
-  "startDate": "[Start date if provided]",
-  "endDate": "[End date if provided]",
-  "currency": "PHP",
-  "hotels": [
-    {
-      "hotelName": "Hotel Name",
-      "hotelAddress": "Complete address",
-      "pricePerNight": "₱X,XXX - ₱X,XXX",
-      "imageUrl": "https://images.unsplash.com/photo-xxx",
-      "geoCoordinates": {
-        "latitude": 0.000,
-        "longitude": 0.000
-      },
-      "rating": 4.5,
-      "description": "Hotel description"
-    }
-  ],
-  "itinerary": [
-    {
-      "day": 1,
-      "theme": "Day theme",
-      "plan": [
-        {
-          "time": "9:00 AM",
-          "placeName": "Place Name",
-          "placeDetails": "Description",
-          "imageUrl": "https://images.unsplash.com/photo-xxx",
-          "geoCoordinates": {
-            "latitude": 0.000,
-            "longitude": 0.000
-          },
-          "ticketPricing": "₱XXX or Free",
-          "timeTravel": "X hours",
-          "rating": 4.0
-        }
-      ]
-    }
-  ],
-  "placesToVisit": [
-    {
-      "placeName": "Attraction Name",
-      "placeDetails": "Description",
-      "imageUrl": "https://images.unsplash.com/photo-xxx",
-      "geoCoordinates": {
-        "latitude": 0.000,
-        "longitude": 0.000
-      },
-      "ticketPricing": "₱XXX",
-      "timeTravel": "X hours",
-      "rating": 4.0
-    }
-  ]
-}
+export const AI_PROMPT = `Create travel itinerary JSON for {location}, {duration} days, {travelers}, {budget}.
 
 REQUIREMENTS:
-1. Use real places and accurate coordinates for {location}
-2. Provide 3-5 hotel options with realistic Philippine peso pricing
-3. Create {duration} days of detailed itinerary
-4. Adjust recommendations for {budget} level (Budget: ₱2K-8K, Moderate: ₱8K-20K, Luxury: ₱20K+)
-5. Consider {travelers} type for activities and accommodations
-6. Use https://images.unsplash.com/ URLs for all images
-7. Include realistic pricing in Philippine pesos
-8. Ensure valid JSON format with proper commas and brackets
+- Use real coordinates and PHP pricing
+- 3-4 hotels, 2-4 activities/day, 5-8 attractions
+- Budget levels: Budget ₱2-8K, Moderate ₱8-20K, Luxury ₱20K+
+- Descriptions under 80 chars
+- Complete valid JSON only - no extra text
+- Include all required schema fields
 
-SPECIFIC REQUESTS: {specificRequests}
+REQUESTS: {specificRequests}
 
-Generate ONLY valid JSON, no additional text.`;
+Generate complete valid JSON matching the schema.`;
 
 export const HOTEL_CONFIG = {
   GOOGLE_PLACES_API_KEY: import.meta.env.VITE_GOOGLE_PLACES_API_KEY,

@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import Header from "./custom/Header";
+import Footer from "./custom/Footer";
 import { Toaster } from "sonner";
 
 const Layout = () => {
@@ -10,6 +11,7 @@ const Layout = () => {
       <main className="flex-1">
         <Outlet />
       </main>
+      <Footer />
     </div>
   );
 };

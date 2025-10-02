@@ -14,12 +14,6 @@ function TripHeader({ trip, onShare, onDownload, onEdit }) {
               <h1 className="text-3xl lg:text-4xl font-bold text-gray-900">
                 {trip?.userSelection?.location}
               </h1>
-              {trip?.hasRealFlights && (
-                <Badge className="bg-green-100 text-green-800 border-green-200">
-                  <Plane className="h-3 w-3 mr-1" />
-                  Live Flight Data
-                </Badge>
-              )}
             </div>
             <p className="text-gray-600 text-lg">
               {trip?.userSelection?.duration} day adventure • Created{" "}

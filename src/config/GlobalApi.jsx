@@ -11,7 +11,7 @@ const config = {
     "Content-Type": "application/json",
     "X-Goog-Api-Key": import.meta.env.VITE_GOOGLE_PLACES_API_KEY,
     "X-Goog-FieldMask":
-      "places.id,places.displayName,places.photos,places.formattedAddress", // ✅ Added more fields
+      "places.id,places.displayName,places.photos,places.formattedAddress",
   },
 };
 
@@ -95,7 +95,7 @@ export const GetPlaceDetails = async (data) => {
 
 export const PHOTO_REF_URL =
   "https://places.googleapis.com/v1/{NAME}/media?maxHeightPx=600&maxWidthPx=600&key=" +
-  import.meta.env.VITE_GOOGLE_PLACE_API_KEY;
+  import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
 
 // ✅ Helper function to validate photo URLs
 export const validatePhotoUrl = (photoRef) => {
