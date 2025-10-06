@@ -11,7 +11,8 @@ import {
   MESSAGES,
   calculateProgress,
 } from "../constants/options";
-import { FaArrowRight, FaArrowLeft, FaCheck, FaPlane, FaUser } from "react-icons/fa";
+import { FaArrowRight, FaArrowLeft, FaCheck } from "react-icons/fa";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 // Import step components
 import PersonalInfoStep from "./components/PersonalInfoStep";
@@ -25,6 +26,11 @@ const STEPS = STEP_CONFIGS.USER_PROFILE;
 
 const UserProfile = () => {
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Set dynamic page title based on current step
+  const currentStepTitle =
+    STEPS.find((step) => step.id === currentStep)?.title || "User Profile";
+  usePageTitle(`${currentStepTitle} - Profile Setup`);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profileData, setProfileData] = useState({

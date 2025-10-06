@@ -111,25 +111,27 @@ const FlightPreferences = ({ flightData, onFlightDataChange, userProfile }) => {
   return (
     <div className="max-w-2xl mx-auto">
       {/* Main Question */}
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           Flight Preferences
         </h2>
-        <p className="text-gray-600 text-sm">
-          Would you like us to include flight options in your itinerary?
+        <p className="text-gray-700 text-base font-medium">
+          Would you like us to include flight options in your itinerary? ✈️
         </p>
       </div>
 
       {/* Flight Toggle */}
       <div className="space-y-6">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <FaInfoCircle className="text-blue-600 mt-1 flex-shrink-0" />
+        <div className="brand-card p-5 shadow-lg border-sky-200">
+          <div className="flex items-start gap-4">
+            <div className="brand-gradient p-2.5 rounded-full">
+              <FaInfoCircle className="text-white text-lg" />
+            </div>
             <div>
-              <h3 className="font-medium text-blue-800 mb-1">
+              <h3 className="font-semibold brand-gradient-text text-base mb-2">
                 Flight Search Feature
               </h3>
-              <p className="text-blue-700 text-sm">
+              <p className="text-gray-700 text-sm leading-relaxed">
                 Enable this to get real-time flight prices and recommendations
                 included in your travel itinerary. This helps with budget
                 planning and booking convenience.
@@ -262,32 +264,39 @@ const FlightPreferences = ({ flightData, onFlightDataChange, userProfile }) => {
         </div>
 
         {/* Flight Benefits */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h4 className="font-medium text-green-800 mb-2">
-            Benefits of including flights:
-          </h4>
-          <ul className="text-green-700 text-sm space-y-1">
-            <li>• Real-time flight prices and availability</li>
-            <li>• Multiple airline options and recommendations</li>
-            <li>• Integrated into your total trip budget</li>
-            <li>• Direct booking links for convenience</li>
-            <li>• Price level indicators (Low, Fair, High)</li>
-            {userProfile?.address?.city && (
-              <li>
-                • 🏠 Using your home location:{" "}
-                <strong>
-                  {userProfile.address.city},{" "}
-                  {getRegionName(
-                    "PH",
-                    userProfile.address?.regionCode ||
-                      userProfile.address?.region
-                  ) ||
-                    userProfile.address?.region ||
-                    "Unknown Region"}
-                </strong>
-              </li>
-            )}
-          </ul>
+        <div className="brand-card p-5 shadow-lg border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50">
+          <div className="flex items-start gap-4">
+            <div className="bg-gradient-to-br from-emerald-500 to-green-600 p-2.5 rounded-full">
+              <FaPlane className="text-white text-lg" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-emerald-900 text-base mb-2">
+                Benefits of including flights
+              </h3>
+              <ul className="text-emerald-800 text-sm space-y-1 leading-relaxed">
+                <li>• Real-time flight prices and availability</li>
+                <li>• Multiple airline options and recommendations</li>
+                <li>• Integrated into your total trip budget</li>
+                <li>• Direct booking links for convenience</li>
+                <li>• Price level indicators (Low, Fair, High)</li>
+                {userProfile?.address?.city && (
+                  <li>
+                    • 🏠 Using your home location:{" "}
+                    <strong>
+                      {userProfile.address.city},{" "}
+                      {getRegionName(
+                        "PH",
+                        userProfile.address?.regionCode ||
+                          userProfile.address?.region
+                      ) ||
+                        userProfile.address?.region ||
+                        "Unknown Region"}
+                    </strong>
+                  </li>
+                )}
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </div>

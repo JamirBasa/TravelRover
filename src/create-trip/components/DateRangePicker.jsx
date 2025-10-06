@@ -42,12 +42,12 @@ function DateRangePicker({
   return (
     <div className={`max-w-2xl mx-auto ${className}`}>
       {/* Main Question */}
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           When are you traveling?
         </h2>
-        <p className="text-gray-600 text-sm">
-          Select your travel dates to plan the perfect itinerary
+        <p className="text-gray-700 text-base font-medium">
+          Select your travel dates to plan the perfect itinerary 📅
         </p>
       </div>
 
@@ -112,16 +112,25 @@ function DateRangePicker({
         )}
 
         {/* Date Selection Tips */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-medium text-blue-800 mb-2">Travel Tips:</h4>
-          <ul className="text-blue-700 text-sm space-y-1">
-            <li>• Book at least 2-3 weeks in advance for better deals</li>
-            <li>• Consider weekday travel for lower costs</li>
-            <li>• Check local holidays and events at your destination</li>
-            <li>
-              • Allow buffer days for relaxation and spontaneous activities
-            </li>
-          </ul>
+        <div className="brand-card p-5 shadow-lg border-sky-200">
+          <div className="flex items-start gap-4">
+            <div className="brand-gradient p-2.5 rounded-full">
+              <FaClock className="text-white text-lg" />
+            </div>
+            <div>
+              <h3 className="font-semibold brand-gradient-text text-base mb-2">
+                Travel Tips
+              </h3>
+              <ul className="text-gray-700 text-sm space-y-1 leading-relaxed">
+                <li>• Book at least 2-3 weeks in advance for better deals</li>
+                <li>• Consider weekday travel for lower costs</li>
+                <li>• Check local holidays and events at your destination</li>
+                <li>
+                  • Allow buffer days for relaxation and spontaneous activities
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </div>

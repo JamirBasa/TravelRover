@@ -46,12 +46,13 @@ const ReviewTripStep = ({
   return (
     <div className="max-w-2xl mx-auto">
       {/* Main Question */}
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           Review Your Trip Details
         </h2>
-        <p className="text-gray-600 text-sm">
+        <p className="text-gray-700 text-base font-medium">
           Please review your travel preferences before generating your itinerary
+          ✅
         </p>
       </div>
 

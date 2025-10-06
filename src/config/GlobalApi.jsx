@@ -6,10 +6,20 @@ const BASE_URL = "https://places.googleapis.com/v1/places:searchText";
 const cache = new Map();
 const pendingRequests = new Map();
 
+// Debug API key availability
+const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
+console.log("🔑 Google Places API Key status:", {
+  hasKey: !!apiKey,
+  keyLength: apiKey?.length || 0,
+  keyPreview: apiKey
+    ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}`
+    : "MISSING",
+});
+
 const config = {
   headers: {
     "Content-Type": "application/json",
-    "X-Goog-Api-Key": import.meta.env.VITE_GOOGLE_PLACES_API_KEY,
+    "X-Goog-Api-Key": apiKey,
     "X-Goog-FieldMask":
       "places.id,places.displayName,places.photos,places.formattedAddress",
   },
