@@ -78,7 +78,7 @@ function ErrorState({ error, onRetry, onCreateNew }) {
                 Need help? Contact our{" "}
                 <a
                   href="#"
-                  className="text-blue-600 hover:text-blue-800 font-medium underline"
+                  className="text-sky-600 hover:text-sky-800 font-medium underline"
                   aria-label="Contact support team"
                 >
                   support team
