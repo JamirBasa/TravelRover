@@ -1,14 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { GetPlaceDetails, PHOTO_REF_URL } from "@/config/GlobalApi";
 import { Badge } from "@/components/ui/badge";
-import {
-  Calendar,
-  Users,
-  DollarSign,
-  MapPin,
-  Clock,
-  Plane,
-} from "lucide-react";
+import { Calendar, Users, DollarSign, Clock, Plane } from "lucide-react";
 
 function InfoSection({ trip }) {
   const [photoUrl, setPhotoUrl] = useState("");
@@ -73,7 +66,13 @@ function InfoSection({ trip }) {
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-              <MapPin className="h-5 w-5 text-white" />
+              <span
+                className="text-white text-lg"
+                role="img"
+                aria-label="Location"
+              >
+                📍
+              </span>
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-2xl font-bold mb-1 text-white drop-shadow-lg break-words">
@@ -174,7 +173,13 @@ function InfoSection({ trip }) {
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent">
                 <div className="absolute bottom-4 left-4 text-white">
                   <h3 className="text-xl font-bold mb-1 flex items-center gap-2 drop-shadow-lg break-words">
-                    <MapPin className="h-5 w-5 flex-shrink-0" />
+                    <span
+                      className="text-lg flex-shrink-0"
+                      role="img"
+                      aria-label="Location"
+                    >
+                      📍
+                    </span>
                     <span className="break-words">
                       {trip?.userSelection?.location}
                     </span>
