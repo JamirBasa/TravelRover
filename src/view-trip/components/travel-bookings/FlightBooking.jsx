@@ -348,8 +348,8 @@ function FlightBooking({ trip }) {
     if (!hasFlightData || validFlights.length === 0) {
       return (
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-12 text-center">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-            <span className="text-2xl text-blue-600">✈️</span>
+          <div className="w-16 h-16 brand-gradient rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+            <span className="text-2xl text-white">✈️</span>
           </div>
           <h3 className="text-lg font-bold text-gray-900 mb-2">
             Flight Booking Available
@@ -361,7 +361,7 @@ function FlightBooking({ trip }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Button
               onClick={() => window.open(generateTripComURL(), "_blank")}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="brand-button"
             >
               <ExternalLink className="h-4 w-4 mr-2" />
               Search on Trip.com
@@ -371,7 +371,7 @@ function FlightBooking({ trip }) {
                 window.open("https://www.agoda.com/flights", "_blank")
               }
               variant="outline"
-              className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              className="border-sky-500 text-sky-600 hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50"
             >
               <ExternalLink className="h-4 w-4 mr-2" />
               Book on Agoda
@@ -430,13 +430,13 @@ function FlightBooking({ trip }) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-lg border border-white/30">
-                    <Plane className="h-5 w-5 text-blue-600" />
+                    <Plane className="h-5 w-5 text-sky-600" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h2 className="text-xl font-bold text-white mb-1 break-words">
                       Available Flights
                     </h2>
-                    <p className="text-blue-100 text-xs flex items-center gap-2 flex-wrap">
+                    <p className="text-sky-100 text-xs flex items-center gap-2 flex-wrap">
                       <span>✈️</span>
                       <span>
                         {validFlights.length} flights available for your journey
@@ -452,7 +452,7 @@ function FlightBooking({ trip }) {
                     <div className="text-base font-bold">
                       {validFlights.length}
                     </div>
-                    <div className="text-xs text-blue-100">Flights</div>
+                    <div className="text-xs text-sky-100">Flights</div>
                   </div>
                 </div>
               </div>
@@ -494,16 +494,16 @@ function FlightBooking({ trip }) {
             </div>
 
             {/* Compact Helpful tip */}
-            <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+            <div className="mt-4 p-4 bg-gradient-to-r from-sky-50 to-blue-50 rounded-lg border border-sky-200">
               <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
-                  <span className="text-blue-600 text-xs">💡</span>
+                <div className="w-6 h-6 brand-gradient rounded flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-xs">💡</span>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-blue-800 mb-1">
+                  <h4 className="font-semibold brand-gradient-text mb-1">
                     Flight Booking Tips
                   </h4>
-                  <div className="text-blue-700 text-sm space-y-2">
+                  <div className="text-sky-700 text-sm space-y-2">
                     <p>
                       Prices shown are current estimates and may change. You'll
                       be redirected to our trusted booking partners for secure
@@ -626,7 +626,7 @@ function FlightBooking({ trip }) {
 // Individual Flight Card Component
 function FlightCard({ flight, onBook, trip, formatDuration }) {
   return (
-    <div className="border border-gray-200 bg-white rounded-lg transition-all duration-200 hover:shadow-lg hover:border-blue-300 hover:-translate-y-1 group">
+    <div className="border border-gray-200 bg-white rounded-lg transition-all duration-200 hover:shadow-lg hover:border-sky-300 hover:-translate-y-1 group">
       {/* Main Flight Info */}
       <div className="p-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -703,7 +703,7 @@ function FlightCard({ flight, onBook, trip, formatDuration }) {
 
             <Button
               onClick={onBook}
-              className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer group-hover:bg-blue-700 group-hover:scale-105 transition-all duration-200 w-full sm:w-auto lg:w-auto px-6 py-3 sm:px-4 sm:py-2 text-base sm:text-sm font-semibold"
+              className="brand-button cursor-pointer group-hover:scale-105 transition-all duration-200 w-full sm:w-auto lg:w-auto px-6 py-3 sm:px-4 sm:py-2 text-base sm:text-sm font-semibold"
             >
               <span className="flex items-center justify-center gap-2">
                 <span>Book Now</span>

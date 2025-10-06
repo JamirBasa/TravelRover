@@ -125,7 +125,7 @@ function Header() {
             alt="Logo"
             className="h-12 w-auto transition-transform duration-200 group-hover:scale-105"
           />
-          <span className="ml-3 text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <span className="ml-3 text-2xl font-black brand-gradient-text">
             Travel Rover
           </span>
         </div>
@@ -134,14 +134,14 @@ function Header() {
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
-                className="rounded-full cursor-pointer font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                className="rounded-full cursor-pointer font-medium text-gray-600 hover:text-sky-600 hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 transition-all duration-200"
                 onClick={() => navigate("/home")}
               >
                 Home
               </Button>
               <Button
                 variant="ghost"
-                className="rounded-full cursor-pointer font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                className="rounded-full cursor-pointer font-medium text-gray-600 hover:text-sky-600 hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 transition-all duration-200"
                 onClick={() => navigate("/my-trips")}
               >
                 My Trips
@@ -176,7 +176,7 @@ function Header() {
                   <div className="flex flex-col gap-2 mt-4">
                     <Button
                       variant="ghost"
-                      className="w-full text-left cursor-pointer hover:bg-sky-50 hover:text-sky-600 transition-all duration-200 rounded-lg"
+                      className="w-full text-left cursor-pointer hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 hover:text-sky-600 transition-all duration-200 rounded-lg"
                       onClick={() => navigate("/settings")}
                     >
                       ⚙️ Settings
@@ -209,7 +209,7 @@ function Header() {
           <DialogHeader>
             <DialogTitle className="flex items-center justify-center">
               <img src="/logo.svg" alt="Logo" className="h-12 w-auto" />
-              <span className="ml-3 text-xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="ml-3 text-xl font-black brand-gradient-text">
                 Travel Rover
               </span>
             </DialogTitle>
@@ -223,7 +223,7 @@ function Header() {
                 Start Your Journey
               </h2>
               <Button
-                className="w-full mt-4 flex gap-3 items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+                className="w-full mt-4 flex gap-3 items-center justify-center brand-button py-3"
                 onClick={() => googleLogin()}
                 disabled={isLoggingIn}
               >

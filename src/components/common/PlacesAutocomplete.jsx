@@ -24,12 +24,27 @@ export function PlacesAutocomplete({
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [error, setError] = useState(null);
+  const [justSelected, setJustSelected] = useState(false);
+  const lastSelectedValue = useRef(null);
 
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
   const autocompleteService = useRef(null);
   const placesService = useRef(null);
   const sessionToken = useRef(null);
+
+  // Sync input value with external value prop
+  useEffect(() => {
+    const newValue = value?.label || "";
+    if (newValue !== inputValue) {
+      setInputValue(newValue);
+      // If we have a value, clear suggestions and dropdown
+      if (newValue) {
+        setSuggestions([]);
+        setShowDropdown(false);
+      }
+    }
+  }, [value]);
 
   // Initialize Google Maps services
   useEffect(() => {
@@ -165,7 +180,12 @@ export function PlacesAutocomplete({
   // Debounced search function
   const searchPlaces = useCallback(
     async (searchText) => {
-      if (!searchText || searchText.length < 3) {
+      if (
+        !searchText ||
+        searchText.length < 3 ||
+        justSelected ||
+        searchText === lastSelectedValue.current
+      ) {
         setSuggestions([]);
         setShowDropdown(false);
         return;
@@ -224,17 +244,21 @@ export function PlacesAutocomplete({
         setIsLoading(false);
       }
     },
-    [countryRestriction]
+    [countryRestriction, justSelected]
   );
 
-  // Debounce timer
+  // Debounce timer - only search if not just selected
   useEffect(() => {
+    if (justSelected) {
+      return; // Don't search if we just made a selection
+    }
+
     const timer = setTimeout(() => {
       searchPlaces(inputValue);
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [inputValue, searchPlaces]);
+  }, [inputValue, searchPlaces, justSelected]);
 
   // Handle place selection
   const handleSelectPlace = (suggestion) => {
@@ -243,9 +267,18 @@ export function PlacesAutocomplete({
       return;
     }
 
+    // Immediately set flags to prevent any re-opening
+    setJustSelected(true);
+    lastSelectedValue.current = suggestion.description;
     setInputValue(suggestion.description);
     setShowDropdown(false);
     setSuggestions([]);
+    setSelectedIndex(-1);
+
+    // Reset the flag after a short delay
+    setTimeout(() => {
+      setJustSelected(false);
+    }, 1000);
 
     // Get detailed place information
     const request = {
@@ -334,6 +367,8 @@ export function PlacesAutocomplete({
     setInputValue("");
     setSuggestions([]);
     setShowDropdown(false);
+    setJustSelected(false);
+    lastSelectedValue.current = null;
     onChange(null);
     if (onPlaceSelect) {
       onPlaceSelect(null);
@@ -342,16 +377,25 @@ export function PlacesAutocomplete({
   };
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative z-50 ${className}`}>
       <div className="relative">
         <input
           ref={inputRef}
           type="text"
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          onChange={(e) => {
+            const newValue = e.target.value;
+            setInputValue(newValue);
+            // If user types something different from what was selected, allow new searches
+            if (newValue !== lastSelectedValue.current) {
+              lastSelectedValue.current = null;
+            }
+          }}
           onKeyDown={handleKeyDown}
           onFocus={() => {
-            if (suggestions.length > 0) setShowDropdown(true);
+            if (suggestions.length > 0 && !justSelected) {
+              setShowDropdown(true);
+            }
           }}
           placeholder={placeholder}
           disabled={disabled}
@@ -381,13 +425,17 @@ export function PlacesAutocomplete({
       {showDropdown && suggestions.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl max-h-80 overflow-y-auto"
+          className="absolute z-[9999] w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl max-h-80 overflow-y-auto"
         >
           {suggestions.map((suggestion, index) => (
             <button
               key={suggestion.placeId}
               type="button"
-              onClick={() => handleSelectPlace(suggestion)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSelectPlace(suggestion);
+              }}
               className={`w-full px-4 py-3 text-left hover:bg-sky-50 transition-colors border-b border-gray-100 last:border-b-0 ${
                 index === selectedIndex ? "bg-sky-100" : ""
               }`}

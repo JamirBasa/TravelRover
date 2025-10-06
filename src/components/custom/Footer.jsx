@@ -15,14 +15,14 @@ function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 text-white">
+    <footer className="bg-gradient-to-r from-slate-900 via-sky-900 to-blue-900 text-white">
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand Section */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 brand-gradient rounded-xl flex items-center justify-center">
                 <Plane className="h-6 w-6 text-white" />
               </div>
               <div>
