@@ -1,8 +1,17 @@
 // src/create-trip/components/LocationSelector.jsx
-import GooglePlacesAutocomplete from "react-google-places-autocomplete";
+import { PlacesAutocomplete } from "../../components/common/PlacesAutocomplete";
 import { FaMapMarkerAlt, FaGlobe } from "react-icons/fa";
 
 function LocationSelector({ place, onPlaceChange, onLocationChange }) {
+  const handlePlaceChange = (selectedPlace) => {
+    onPlaceChange(selectedPlace);
+    if (selectedPlace) {
+      onLocationChange(selectedPlace.label);
+    } else {
+      onLocationChange("");
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
       {/* Main Question */}
@@ -39,51 +48,12 @@ function LocationSelector({ place, onPlaceChange, onLocationChange }) {
             <FaMapMarkerAlt className="inline mr-2 text-sky-500" />
             Destination *
           </label>
-          <div className="relative">
-            <GooglePlacesAutocomplete
-              apiKey={import.meta.env.VITE_GOOGLE_PLACES_API_KEY}
-              autocompletionRequest={{
-                componentRestrictions: {
-                  country: ["ph"],
-                },
-              }}
-              selectProps={{
-                value: place,
-                onChange: (v) => {
-                  onPlaceChange(v);
-                  onLocationChange(v?.label);
-                },
-                placeholder: "Search for cities, attractions, or landmarks...",
-                className: "text-base",
-                styles: {
-                  control: (provided) => ({
-                    ...provided,
-                    border: "2px solid #e5e7eb",
-                    borderRadius: "0.5rem",
-                    padding: "0.25rem 0.75rem",
-                    minHeight: "48px",
-                    "&:hover": {
-                      borderColor: "#9ca3af",
-                    },
-                    "&:focus-within": {
-                      borderColor: "#0ea5e9",
-                      boxShadow: "0 0 0 3px rgba(14, 165, 233, 0.1)",
-                    },
-                  }),
-                  placeholder: (provided) => ({
-                    ...provided,
-                    color: "#9ca3af",
-                    fontSize: "16px",
-                  }),
-                  singleValue: (provided) => ({
-                    ...provided,
-                    fontSize: "16px",
-                    color: "#374151",
-                  }),
-                },
-              }}
-            />
-          </div>
+          <PlacesAutocomplete
+            value={place}
+            onChange={handlePlaceChange}
+            placeholder="Search for cities, attractions, or landmarks..."
+            countryRestriction={["ph"]}
+          />
         </div>
 
         {place && (

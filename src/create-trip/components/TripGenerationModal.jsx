@@ -194,12 +194,12 @@ function TripGenerationModal({
 
   return (
     <div className="fixed inset-0 z-[9999] bg-white">
-      {/* Background Animation */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 overflow-hidden">
-        {/* Floating Animation Elements */}
-        <div className="absolute top-20 left-10 w-20 h-20 bg-blue-200 rounded-full opacity-20 animate-pulse"></div>
+      {/* Background Animation - Updated to match brand gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100 overflow-hidden">
+        {/* Floating Animation Elements - Sky/Blue theme */}
+        <div className="absolute top-20 left-10 w-20 h-20 bg-sky-200 rounded-full opacity-20 animate-pulse"></div>
         <div
-          className="absolute top-40 right-20 w-16 h-16 bg-purple-200 rounded-full opacity-20 animate-pulse"
+          className="absolute top-40 right-20 w-16 h-16 bg-blue-200 rounded-full opacity-20 animate-pulse"
           style={{ animationDelay: "1s" }}
         ></div>
         <div
@@ -207,35 +207,35 @@ function TripGenerationModal({
           style={{ animationDelay: "2s" }}
         ></div>
         <div
-          className="absolute bottom-20 right-10 w-12 h-12 bg-pink-200 rounded-full opacity-20 animate-pulse"
+          className="absolute bottom-20 right-10 w-12 h-12 bg-sky-300 rounded-full opacity-20 animate-pulse"
           style={{ animationDelay: "0.5s" }}
         ></div>
 
-        {/* Additional floating elements */}
+        {/* Additional floating elements - Sky/Blue theme */}
         <div
-          className="absolute top-1/4 left-1/4 w-32 h-32 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full opacity-10 animate-pulse"
+          className="absolute top-1/4 left-1/4 w-32 h-32 bg-gradient-to-br from-sky-100 to-blue-100 rounded-full opacity-10 animate-pulse"
           style={{ animationDelay: "3s" }}
         ></div>
         <div
-          className="absolute top-3/4 right-1/4 w-28 h-28 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full opacity-10 animate-pulse"
+          className="absolute top-3/4 right-1/4 w-28 h-28 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full opacity-10 animate-pulse"
           style={{ animationDelay: "1.5s" }}
         ></div>
 
-        {/* Travel Icons Floating */}
+        {/* Travel Icons Floating - Sky/Blue theme */}
         <div
-          className="absolute top-16 right-16 text-blue-200 opacity-30 animate-bounce"
+          className="absolute top-16 right-16 text-sky-300 opacity-30 animate-bounce"
           style={{ animationDelay: "0.5s", animationDuration: "2s" }}
         >
           <FaPlane className="text-4xl transform rotate-12" />
         </div>
         <div
-          className="absolute bottom-32 left-16 text-purple-200 opacity-30 animate-bounce"
+          className="absolute bottom-32 left-16 text-blue-300 opacity-30 animate-bounce"
           style={{ animationDelay: "1.5s", animationDuration: "2.5s" }}
         >
           <FaHotel className="text-3xl transform -rotate-12" />
         </div>
         <div
-          className="absolute top-1/2 left-8 text-indigo-200 opacity-30 animate-bounce"
+          className="absolute top-1/2 left-8 text-indigo-300 opacity-30 animate-bounce"
           style={{ animationDelay: "2.5s", animationDuration: "3s" }}
         >
           <FaMapMarkerAlt className="text-2xl" />
@@ -247,24 +247,24 @@ function TripGenerationModal({
         <div className="max-w-xl w-full space-y-3 my-auto">
           {/* Header Section */}
           <div className="text-center space-y-3">
-            {/* Logo/Icon */}
+            {/* Logo/Icon - Brand gradient */}
             <div className="relative">
-              <div className="w-20 h-20 mx-auto bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center shadow-2xl">
-                <FaRocket className="text-white text-3xl animate-bounce" />
+              <div className="w-24 h-24 mx-auto brand-gradient rounded-full flex items-center justify-center shadow-2xl">
+                <FaRocket className="text-white text-4xl animate-bounce" />
               </div>
-              {/* Spinning Ring */}
-              <div className="absolute inset-0 w-20 h-20 mx-auto border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+              {/* Spinning Ring - Sky theme */}
+              <div className="absolute inset-0 w-24 h-24 mx-auto border-4 border-sky-200 border-t-sky-600 rounded-full animate-spin"></div>
             </div>
 
-            {/* Title */}
-            <div className="space-y-1">
-              <h1 className="text-3xl font-bold text-gray-800">
+            {/* Title - Brand gradient text */}
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold brand-gradient-text">
                 Creating Your Perfect Trip
               </h1>
               {destination && (
-                <p className="text-lg text-gray-600">
+                <p className="text-lg text-gray-700 font-medium">
                   to{" "}
-                  <span className="font-semibold text-blue-600">
+                  <span className="font-bold bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">
                     {destination}
                   </span>
                 </p>
@@ -272,33 +272,33 @@ function TripGenerationModal({
             </div>
           </div>
 
-          {/* Progress Section */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+          {/* Progress Section - Enhanced with brand styling */}
+          <div className="brand-card p-6 shadow-xl border-sky-200">
             {/* Progress Bar */}
             <div className="mb-6">
               <div className="flex justify-between items-center mb-3">
-                <span className="text-base font-semibold text-gray-800">
+                <span className="text-base font-semibold brand-gradient-text">
                   Progress
                 </span>
-                <span className="text-base font-bold text-blue-600">
+                <span className="text-base font-bold bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">
                   {Math.round(progress)}%
                 </span>
               </div>
-              <Progress value={progress} className="w-full h-3 mb-3" />
+              <Progress value={progress} className="w-full h-4 mb-3" />
 
               {/* Current Step Description */}
               <div className="text-center space-y-1">
-                <p className="text-base font-medium text-gray-800">
+                <p className="text-base font-semibold text-gray-800">
                   {currentStep}
                 </p>
-                <p className="text-xs text-gray-600">
-                  Estimated time: {getEstimatedTime()}
+                <p className="text-sm text-gray-600 font-medium">
+                  ⏱️ Estimated time: {getEstimatedTime()}
                 </p>
               </div>
             </div>
 
-            {/* Steps Visualization - Show only key steps */}
-            <div className="space-y-2">
+            {/* Steps Visualization - Brand styled */}
+            <div className="space-y-3">
               {steps.slice(0, 4).map((step) => {
                 const isCompleted = completedSteps.includes(step.id);
                 const isCurrent = currentStep
@@ -309,32 +309,32 @@ function TripGenerationModal({
                 return (
                   <div
                     key={step.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-300 ${
+                    className={`flex items-center gap-3 p-4 rounded-xl transition-all duration-300 ${
                       isCompleted
-                        ? "bg-green-100 text-green-800 border border-green-200"
+                        ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border-2 border-green-300 shadow-sm"
                         : isCurrent
-                        ? "bg-blue-100 text-blue-800 shadow-md border border-blue-200"
-                        : "bg-gray-50 text-gray-500 border border-gray-200"
+                        ? "bg-gradient-to-r from-sky-50 to-blue-50 text-sky-800 shadow-lg border-2 border-sky-300"
+                        : "bg-gray-50 text-gray-500 border-2 border-gray-200"
                     }`}
                   >
                     <div
-                      className={`p-2 rounded-full ${
+                      className={`p-2.5 rounded-lg ${
                         isCompleted
                           ? "bg-green-200"
                           : isCurrent
-                          ? "bg-blue-200"
+                          ? "brand-gradient"
                           : "bg-gray-200"
                       }`}
                     >
                       {isCompleted ? (
-                        <FaCheck className="text-sm" />
+                        <FaCheck className="text-base text-green-800" />
                       ) : isCurrent ? (
-                        <FaSpinner className="text-sm animate-spin" />
+                        <FaSpinner className="text-base text-white animate-spin" />
                       ) : (
-                        <Icon className="text-sm" />
+                        <Icon className="text-base" />
                       )}
                     </div>
-                    <span className="text-sm font-medium flex-1">
+                    <span className="text-sm font-semibold flex-1">
                       {step.label}
                     </span>
                     {isCurrent && (
@@ -342,7 +342,7 @@ function TripGenerationModal({
                         {[0, 1, 2].map((i) => (
                           <div
                             key={i}
-                            className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce"
+                            className="w-2 h-2 bg-sky-600 rounded-full animate-bounce"
                             style={{
                               animationDelay: `${i * 0.2}s`,
                               animationDuration: "1s",
@@ -357,40 +357,40 @@ function TripGenerationModal({
             </div>
           </div>
 
-          {/* Inspiring Quote Section */}
-          <div className="bg-gradient-to-r from-purple-100/80 to-blue-100/80 backdrop-blur-sm border border-purple-200 rounded-xl p-4 text-center shadow-lg transition-all duration-500">
+          {/* Inspiring Quote Section - Brand styled */}
+          <div className="bg-gradient-to-r from-sky-50 to-blue-50 backdrop-blur-sm border-2 border-sky-200 rounded-xl p-5 text-center shadow-lg transition-all duration-500">
             <div className="flex items-center justify-center gap-2 mb-3">
-              <FaQuoteLeft className="text-purple-600 text-base animate-pulse" />
-              <span className="text-sm font-semibold text-purple-800">
+              <FaQuoteLeft className="text-sky-600 text-base animate-pulse" />
+              <span className="text-sm font-semibold brand-gradient-text">
                 Travel Inspiration
               </span>
             </div>
             <div className="space-y-2 min-h-[80px] flex flex-col justify-center">
               <p
                 key={currentQuote}
-                className="text-sm italic text-gray-700 leading-relaxed transition-all duration-500 ease-in-out opacity-100 transform translate-y-0"
+                className="text-sm italic text-gray-800 font-medium leading-relaxed transition-all duration-500 ease-in-out opacity-100 transform translate-y-0"
               >
                 "{inspiringQuotes[currentQuote].text}"
               </p>
               <p
                 key={`author-${currentQuote}`}
-                className="text-xs font-medium text-purple-600 transition-all duration-500 ease-in-out opacity-100 transform translate-y-0"
+                className="text-sm font-semibold bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent transition-all duration-500 ease-in-out opacity-100 transform translate-y-0"
               >
                 — {inspiringQuotes[currentQuote].author}
               </p>
             </div>
-            {/* Quote indicator dots */}
-            <div className="flex justify-center gap-1 mt-3">
+            {/* Quote indicator dots - Brand colors */}
+            <div className="flex justify-center gap-1.5 mt-4">
               {inspiringQuotes
                 .slice(0, Math.min(6, inspiringQuotes.length))
                 .map((_, index) => (
                   <div
                     key={index}
-                    className={`h-1.5 rounded-full transition-all duration-500 cursor-pointer ${
+                    className={`h-2 rounded-full transition-all duration-500 cursor-pointer ${
                       index ===
                       currentQuote % Math.min(6, inspiringQuotes.length)
-                        ? "bg-purple-600 w-6 shadow-lg"
-                        : "bg-purple-300 w-1.5 hover:bg-purple-400"
+                        ? "bg-gradient-to-r from-sky-600 to-blue-600 w-8 shadow-lg"
+                        : "bg-sky-300 w-2 hover:bg-sky-400"
                     }`}
                     onClick={() => setCurrentQuote(index)}
                   />
@@ -398,15 +398,17 @@ function TripGenerationModal({
             </div>
           </div>
 
-          {/* Important Notice */}
-          <div className="bg-amber-100/80 backdrop-blur-sm border border-amber-300 rounded-xl p-4 text-center shadow-lg">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <FaExclamationTriangle className="text-amber-600 text-lg animate-pulse" />
-              <span className="text-base font-bold text-amber-800">
+          {/* Important Notice - Enhanced styling */}
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 backdrop-blur-sm border-2 border-amber-300 rounded-xl p-5 text-center shadow-xl">
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <div className="bg-amber-200 p-2 rounded-full">
+                <FaExclamationTriangle className="text-amber-700 text-lg animate-pulse" />
+              </div>
+              <span className="text-lg font-bold text-amber-900">
                 Please Don't Close This Page
               </span>
             </div>
-            <p className="text-amber-700 text-sm">
+            <p className="text-amber-800 text-sm font-medium leading-relaxed">
               We're generating your personalized itinerary. This may take up to
               60 seconds.
             </p>

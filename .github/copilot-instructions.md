@@ -1,12 +1,21 @@
 # AI Agent Instructions for TravelRover
 
+> **IMPORTANT**: Do NOT generate conversation summaries, document overviews, or meta-documentation. Respond directly to user requests with actionable information and code changes only.
+
 ## Project Overview
 
-TravelRover is a sophisticated travel planning application that combines AI-powered itinerary generation with real-time data from multiple sources. The system features a React + Vite frontend with a Django REST API backend, implementing a **multi-agent LangGraph architecture** for intelligent travel planning.
+TravelRover is a sophisticated travel planning application that combines AI-powered itinerary generation with real-time data from multiple sources. The system features a **React 19 + Vite** frontend with a **Django REST API** backend, implementing a **multi-agent LangGraph architecture** for intelligent travel planning.
 
 **Core Purpose**: Generate personalized travel itineraries by orchestrating multiple AI agents (flight search, hotel search, optimization) while maintaining user profiles, preferences, and trip history through Firebase integration.
 
 **Key Innovation**: The LangGraph multi-agent system coordinates parallel API calls to external services (Google Places, SerpAPI) and uses Google Gemini AI to generate comprehensive, culturally-aware travel itineraries in JSON format.
+
+**Tech Stack**:
+
+- **Frontend**: React 19, Vite 7, TailwindCSS 4, shadcn/ui, React Router 7
+- **Backend**: Django REST Framework, LangGraph (multi-agent AI)
+- **APIs**: Google Gemini AI, Google Places API, SerpAPI, Firebase Auth & Firestore
+- **UI Library**: React Icons, Lucide React, Sonner (toast notifications)
 
 ## Architecture at a Glance
 
@@ -105,21 +114,65 @@ import { BUDGET_OPTIONS, TRAVELER_OPTIONS } from "../constants/options";
 
 **1. Trip Creation Flow** (`src/create-trip/index.jsx`):
 
-- 5-step wizard: Location → Preferences → Flights → Hotels → Review
-- Profile auto-population for user preferences
-- LangGraph orchestration for real-time data
+- **5-step wizard**: Location & Dates → Budget & Travelers → Flight Options → Hotel Options → Review & Generate
+- **Components**: LocationSelector, DateRangePicker, BudgetSelector, TravelerSelector, FlightPreferences, HotelPreferences, ReviewTripStep
+- Profile auto-population from Firebase for user preferences (departure city, region)
+- LangGraph orchestration via Django API for real-time flight/hotel data
 - Firebase persistence with trip metadata
+- Dynamic page titles using `usePageTitle` hook
+- Toast notifications via Sonner for user feedback
 
 **2. LangGraph Orchestration** (`travel-backend/langgraph_agents/`):
 
-- Session creation → Agent execution → Result optimization
-- Parallel API calls with error handling
-- Database logging of all agent activities
+- **Client Adapter**: `src/config/langGraphAgent.jsx` - Django API client
+- **Django Endpoint**: `/api/langgraph/execute/` - POST request
+- **Agents**: FlightAgent (SerpAPI), HotelAgent (Google Places), CoordinatorAgent (orchestration)
+- Session creation → Parallel agent execution → Result merging → Optimization
+- Async/await with timeout handling (30s default)
+- Database logging of all agent activities via `TravelPlanningSession` model
 
-**3. User Authentication** (Firebase + Google OAuth):
+**3. User Authentication & Profile** (Firebase + Google OAuth):
 
-- Google Sign-In → Profile creation → Personalized experiences
-- Trip ownership and sharing permissions
+- Google Sign-In via `@react-oauth/google`
+- Profile required before trip creation (redirect to `/user-profile`)
+- Profile storage: Firebase Firestore `UserProfiles` collection
+- Auto-population: Departure city/region extracted from user address
+- Trip ownership: Email-based document IDs for security
+
+## Design System
+
+### Brand Identity & CSS Variables (`src/index.css`)
+
+**Color Palette**:
+
+```css
+--brand-sky: #0ea5e9     /* Primary sky blue */
+--brand-blue: #0284c7    /* Primary blue */
+--brand-sky-hover: #0284c7
+--brand-blue-hover: #0369a1
+```
+
+**Core Brand Classes**:
+
+- `.brand-gradient` - Sky to blue gradient background
+- `.brand-gradient-text` - Gradient text effect (sky to blue)
+- `.brand-card` - Glassmorphic card with backdrop blur
+- `.brand-button` - Styled button with gradient and shadow
+
+**Design Patterns**:
+
+- **Headers**: `text-2xl font-bold brand-gradient-text mb-8` (or mb-3 for compact)
+- **Info Cards**: `brand-card p-5 shadow-lg border-sky-200`
+- **Selection States**: `border-sky-500 bg-gradient-to-r from-sky-50 to-blue-50`
+- **Icons**: `brand-gradient p-2.5 rounded-full` with white icons inside
+- **Selection Indicators**: `brand-gradient w-6 h-6 rounded-full` with white dot
+
+**Consistency Rules**:
+
+- Always use `brand-gradient` instead of custom purple/pink/arbitrary gradients
+- Selection states use sky-500 borders, not blue-500 or other colors
+- Text gradients use `brand-gradient-text` class for consistency
+- Info boxes use `from-sky-50 to-blue-50` background gradients
 
 ## Component Guide
 
@@ -136,14 +189,18 @@ import { BUDGET_OPTIONS, TRAVELER_OPTIONS } from "../constants/options";
 
 - `config/langGraphAgent.jsx` - Django API adapter for LangGraph
 - `config/aimodel.jsx` - Google Gemini integration
+- `config/userProfile.js` - User profile utilities and auto-population
 - `constants/options.jsx` - Centralized constants and validation rules
 
 **Key Patterns**:
 
-- **State Management**: React hooks with centralized validation
-- **Form Handling**: Multi-step forms with persistent state
-- **API Integration**: Axios with error boundaries and loading states
-- **Responsive Design**: Mobile-first Tailwind CSS
+- **State Management**: React hooks with centralized validation in `constants/options.jsx`
+- **Form Handling**: Multi-step forms with persistent state and progress tracking
+- **API Integration**: Fetch API for LangGraph, error boundaries with loading states
+- **Responsive Design**: Mobile-first Tailwind CSS with brand gradient system
+- **Notifications**: Sonner toast library for success/error feedback
+- **Page Titles**: Custom `usePageTitle` hook for dynamic document titles
+- **Design System**: Centralized brand classes (`brand-gradient`, `brand-card`, `brand-gradient-text`)
 
 ### Backend Architecture (`travel-backend/`)
 
@@ -163,17 +220,27 @@ agents/
 ├── flight_agent.py          # SerpAPI flight search
 └── hotel_agent.py           # Google Places hotel search
 
+# Django Models
+models.py                    # TravelPlanningSession, AgentExecution
+
+# API Endpoints
+urls.py                      # /api/langgraph/execute/, /health/
+views.py                     # DRF viewsets for LangGraph execution
+
 # Utilities
 utils/
 ├── logger.py                # Structured logging
 ├── validators.py            # Data validation
 └── formatters.py            # Response formatting
+
+# Exception Handling
+exceptions/                  # Custom exception classes
 ```
 
 **Django Apps**:
 
-- `langgraph_agents/` - AI orchestration system
-- `flights/` - Flight search endpoints (legacy)
+- `langgraph_agents/` - AI orchestration system (primary)
+- `flights/` - Flight search endpoints (legacy/fallback)
 - `travelapi/` - Main Django project configuration
 
 ## Integration Points
@@ -257,9 +324,18 @@ class OrchestrationService:
 ### Adding UI Components
 
 ```jsx
-// 1. Create in src/components/
+// 1. Create in src/components/ with brand styling
 export const NewComponent = ({ data, onChange }) => {
-  return <div className="space-y-4">{/* Implementation */}</div>;
+  return (
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold brand-gradient-text mb-3">
+        Component Title
+      </h2>
+      <div className="brand-card p-5 shadow-lg border-sky-200">
+        {/* Implementation */}
+      </div>
+    </div>
+  );
 };
 
 // 2. Add to step configuration in constants/options.jsx
@@ -269,7 +345,8 @@ export const STEP_CONFIGS = {
     {
       id: 6,
       title: "New Step",
-      component: "NewComponent",
+      description: "Step description",
+      icon: FaIcon, // From react-icons
     },
   ],
 };
@@ -279,9 +356,9 @@ export const STEP_CONFIGS = {
 
 ```jsx
 // 1. Add fields to user-profile components
-// 2. Update validation in utils/validators.js
+// 2. Update validation in constants/options.jsx (VALIDATION_RULES)
 // 3. Add to Firebase document structure
-// 4. Update auto-population logic in config/userProfile.js
+// 4. Update auto-population logic in config/userProfile.js (extractDepartureInfo)
 ```
 
 ## Debugging & Troubleshooting
@@ -510,4 +587,6 @@ class CustomAgent(BaseAgent):
 - Optimized image loading for mobile networks
 - Progressive Web App (PWA) capabilities planned
 
-This documentation transforms any AI agent into a TravelRover expert, providing the context needed to understand the codebase architecture, make meaningful contributions, and avoid common pitfalls.
+---
+
+**Usage Guidelines**: Use this documentation as reference context for understanding TravelRover's architecture and making code contributions. Always respond with direct, actionable solutions rather than summaries or overviews.
