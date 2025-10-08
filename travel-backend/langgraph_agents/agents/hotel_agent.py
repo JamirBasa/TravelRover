@@ -122,16 +122,18 @@ class HotelAgent(BaseAgent):
             return []
     
     def _parse_hotel_data(self, hotel_data: Dict[str, Any], center_coords: Dict[str, float], api_key: str) -> Dict[str, Any]:
-        """Parse individual hotel data from Google Places API"""
+        """Parse individual hotel data from Google Places API with enhanced photo handling"""
         
         try:
             # Basic hotel info
             hotel = {
                 'id': hotel_data.get('place_id'),
                 'name': hotel_data.get('name'),
+                'hotelName': hotel_data.get('name'),  # Add hotelName field for frontend compatibility
                 'rating': hotel_data.get('rating', 4.0),
                 'price_level': hotel_data.get('price_level', 2),
                 'address': hotel_data.get('vicinity'),
+                'hotelAddress': hotel_data.get('vicinity'),  # Add hotelAddress for frontend compatibility
                 'amenities': self._generate_amenities(hotel_data.get('price_level', 2)),
             }
             
@@ -143,17 +145,21 @@ class HotelAgent(BaseAgent):
                 4: 'Luxury (₱10,000+)'
             }
             hotel['price_range'] = price_levels.get(hotel['price_level'], 'Mid-range (₱2,500-5,000)')
+            hotel['priceRange'] = hotel['price_range']  # Alternative field name for frontend
             
-            # Photo
-            if hotel_data.get('photos'):
-                photo_ref = hotel_data['photos'][0]['photo_reference']
-                hotel['photo'] = f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo_ref}&key={api_key}"
-            else:
-                hotel['photo'] = None
+            # Enhanced Photo Handling
+            photos_data = self._get_hotel_photos(hotel_data, api_key)
+            hotel.update(photos_data)
             
-            # Distance calculation
+            # Distance calculation and coordinates
             hotel_location = hotel_data.get('geometry', {}).get('location', {})
             if hotel_location:
+                # Add coordinates for Google Maps integration
+                hotel['geoCoordinates'] = {
+                    'latitude': hotel_location.get('lat'),
+                    'longitude': hotel_location.get('lng')
+                }
+                
                 distance = self._calculate_distance(
                     center_coords, 
                     {'lat': hotel_location['lat'], 'lng': hotel_location['lng']}
@@ -161,6 +167,12 @@ class HotelAgent(BaseAgent):
                 hotel['distance'] = f"{distance:.1f} km from center"
             else:
                 hotel['distance'] = 'Distance unknown'
+                hotel['geoCoordinates'] = None
+            
+            # Additional details from Google Places
+            hotel['place_id'] = hotel_data.get('place_id')
+            hotel['types'] = hotel_data.get('types', [])
+            hotel['business_status'] = hotel_data.get('business_status', 'OPERATIONAL')
             
             # Recommendation flag
             hotel['is_recommended'] = hotel['rating'] >= 4.0 and hotel['price_level'] <= 3
@@ -196,6 +208,135 @@ class HotelAgent(BaseAgent):
         }
         
         return base_amenities + level_amenities.get(price_level, [])
+    
+    def _get_hotel_photos(self, hotel_data: Dict[str, Any], api_key: str) -> Dict[str, Any]:
+        """Enhanced photo handling for hotels with multiple image sources and fallbacks"""
+        
+        photos = hotel_data.get('photos', [])
+        
+        # Initialize photo data structure
+        photo_data = {
+            'photo': None,
+            'imageUrl': None,
+            'photoUrl': None,
+            'photos': [],
+            'hasPhotos': False,
+            'photoCount': 0
+        }
+        
+        try:
+            if photos and len(photos) > 0:
+                # Primary photo (highest quality)
+                primary_photo = photos[0]
+                photo_ref = primary_photo.get('photo_reference')
+                
+                if photo_ref:
+                    # Generate multiple photo URLs with different sizes
+                    photo_urls = {
+                        'thumbnail': f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=200&photoreference={photo_ref}&key={api_key}",
+                        'medium': f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo_ref}&key={api_key}",
+                        'large': f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference={photo_ref}&key={api_key}"
+                    }
+                    
+                    # Set primary photo fields (for backward compatibility)
+                    photo_data['photo'] = photo_urls['medium']
+                    photo_data['imageUrl'] = photo_urls['medium']
+                    photo_data['photoUrl'] = photo_urls['medium']
+                    photo_data['hasPhotos'] = True
+                    photo_data['photoCount'] = len(photos)
+                    
+                    # Add photo size variants
+                    photo_data['photoSizes'] = photo_urls
+                    
+                    # Process additional photos (up to 5 total)
+                    all_photos = []
+                    for i, photo in enumerate(photos[:5]):
+                        if photo.get('photo_reference'):
+                            photo_ref = photo['photo_reference']
+                            photo_info = {
+                                'index': i,
+                                'photo_reference': photo_ref,
+                                'thumbnail': f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=200&photoreference={photo_ref}&key={api_key}",
+                                'medium': f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo_ref}&key={api_key}",
+                                'large': f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference={photo_ref}&key={api_key}",
+                                'width': photo.get('width', 400),
+                                'height': photo.get('height', 300)
+                            }
+                            all_photos.append(photo_info)
+                    
+                    photo_data['photos'] = all_photos
+                    
+                    logger.info(f"🏨 Generated {len(all_photos)} photo URLs for hotel: {hotel_data.get('name')}")
+                
+                else:
+                    logger.warning(f"🏨 No photo reference found for hotel: {hotel_data.get('name')}")
+                    
+            else:
+                logger.warning(f"🏨 No photos available for hotel: {hotel_data.get('name')}")
+                
+        except Exception as e:
+            logger.error(f"🏨 Error processing hotel photos: {e}")
+            
+        # Add fallback images if no Google Photos available
+        if not photo_data['hasPhotos']:
+            photo_data.update(self._get_fallback_hotel_images(hotel_data))
+            
+        return photo_data
+    
+    def _get_fallback_hotel_images(self, hotel_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate fallback images for hotels without Google Photos"""
+        
+        hotel_name = hotel_data.get('name', 'Hotel')
+        price_level = hotel_data.get('price_level', 2)
+        
+        # High-quality hotel stock images based on price level
+        fallback_images = {
+            1: [  # Budget hotels
+                'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+                'https://images.unsplash.com/photo-1590490360182-c33d57733427?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+            ],
+            2: [  # Mid-range hotels
+                'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+                'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+            ],
+            3: [  # Upscale hotels
+                'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+                'https://images.unsplash.com/photo-1571896349842-33c89424de2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+            ],
+            4: [  # Luxury hotels
+                'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+                'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+            ]
+        }
+        
+        # Select appropriate fallback image
+        images_for_level = fallback_images.get(price_level, fallback_images[2])
+        # Use hotel name hash to consistently select same image for same hotel
+        image_index = hash(hotel_name) % len(images_for_level)
+        selected_image = images_for_level[image_index]
+        
+        logger.info(f"🏨 Using fallback image for {hotel_name}: {selected_image}")
+        
+        return {
+            'photo': selected_image,
+            'imageUrl': selected_image, 
+            'photoUrl': selected_image,
+            'hasPhotos': True,
+            'photoCount': 1,
+            'isFallback': True,
+            'photoSizes': {
+                'thumbnail': selected_image.replace('w=800', 'w=200'),
+                'medium': selected_image.replace('w=800', 'w=400'), 
+                'large': selected_image
+            },
+            'photos': [{
+                'index': 0,
+                'thumbnail': selected_image.replace('w=800', 'w=200'),
+                'medium': selected_image.replace('w=800', 'w=400'),
+                'large': selected_image,
+                'isFallback': True
+            }]
+        }
     
     def _analyze_hotel_options(self, hotels: list, params: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze hotel options and add LangGraph intelligence"""
@@ -340,13 +481,30 @@ class HotelAgent(BaseAgent):
             {
                 'id': 'hotel_1',
                 'name': 'Paradise Beach Resort',
+                'hotelName': 'Paradise Beach Resort',
                 'rating': 4.5,
                 'price_level': 3,
                 'price_range': 'Upscale (₱5,000-10,000)',
+                'priceRange': 'Upscale (₱5,000-10,000)',
                 'address': f'{destination} Beach Area',
-                'photo': 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400',
+                'hotelAddress': f'{destination} Beach Area',
+                'photo': 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+                'imageUrl': 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+                'photoUrl': 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+                'hasPhotos': True,
+                'photoCount': 3,
+                'isFallback': True,
+                'photoSizes': {
+                    'thumbnail': 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80',
+                    'medium': 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+                    'large': 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+                },
                 'amenities': ['Free WiFi', 'Pool', 'Beach Access', 'Restaurant'],
                 'distance': '2.1 km from center',
+                'geoCoordinates': {'latitude': 14.5995, 'longitude': 120.9842},
+                'place_id': 'ChIJi_mByhCjQjIRwC-F-KQw_so',
+                'types': ['lodging', 'establishment'],
+                'business_status': 'OPERATIONAL',
                 'is_recommended': True,
                 'langgraph_score': 85,
                 'recommendation_reason': 'Highly recommended - excellent rating, central location'
@@ -354,13 +512,30 @@ class HotelAgent(BaseAgent):
             {
                 'id': 'hotel_2', 
                 'name': 'City Center Hotel',
+                'hotelName': 'City Center Hotel',
                 'rating': 4.2,
                 'price_level': 2,
                 'price_range': 'Mid-range (₱2,500-5,000)',
+                'priceRange': 'Mid-range (₱2,500-5,000)',
                 'address': f'{destination} City Center',
-                'photo': 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400',
+                'hotelAddress': f'{destination} City Center',
+                'photo': 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+                'imageUrl': 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+                'photoUrl': 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+                'hasPhotos': True,
+                'photoCount': 2,
+                'isFallback': True,
+                'photoSizes': {
+                    'thumbnail': 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80',
+                    'medium': 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+                    'large': 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+                },
                 'amenities': ['Free WiFi', 'Restaurant', 'Gym', 'Business Center'],
                 'distance': '0.5 km from center',
+                'geoCoordinates': {'latitude': 14.5547, 'longitude': 121.0244},
+                'place_id': 'ChIJATaCTJCjQjIRwC-F-KQw_so',
+                'types': ['lodging', 'establishment'],
+                'business_status': 'OPERATIONAL',
                 'is_recommended': True,
                 'langgraph_score': 78,
                 'recommendation_reason': 'Good choice - good rating, central location'
@@ -368,13 +543,30 @@ class HotelAgent(BaseAgent):
             {
                 'id': 'hotel_3',
                 'name': 'Budget Inn',
+                'hotelName': 'Budget Inn',
                 'rating': 3.8,
                 'price_level': 1,
                 'price_range': 'Budget (₱1,000-2,500)',
+                'priceRange': 'Budget (₱1,000-2,500)',
                 'address': f'{destination} Downtown',
-                'photo': 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400',
+                'hotelAddress': f'{destination} Downtown',
+                'photo': 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+                'imageUrl': 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+                'photoUrl': 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+                'hasPhotos': True,
+                'photoCount': 1,
+                'isFallback': True,
+                'photoSizes': {
+                    'thumbnail': 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80',
+                    'medium': 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+                    'large': 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+                },
                 'amenities': ['Free WiFi', 'Air Conditioning', '24h Reception'],
                 'distance': '1.2 km from center',
+                'geoCoordinates': {'latitude': 14.5701, 'longitude': 120.9930},
+                'place_id': 'ChIJBTaCTJCjQjIRwC-F-KQw_so',
+                'types': ['lodging', 'establishment'],
+                'business_status': 'OPERATIONAL',
                 'is_recommended': False,
                 'langgraph_score': 65,
                 'recommendation_reason': 'Good choice - good value'

@@ -41,9 +41,11 @@ import HotelPreferences from "./components/HotelPreferences";
 import ReviewTripStep from "./components/ReviewTripStep";
 import GenerateTripButton from "./components/GenerateTripButton";
 import LoginDialog from "./components/LoginDialog";
+import TripGenerationModal from "./components/TripGenerationModal";
 import { UserProfileConfig } from "../config/userProfile";
 import { ProfileLoading, ErrorState } from "../components/common/LoadingStates";
 import { LangGraphTravelAgent } from "../config/langGraphAgent";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 // Use centralized step configuration
 const STEPS = STEP_CONFIGS.CREATE_TRIP;
@@ -51,6 +53,11 @@ const STEPS = STEP_CONFIGS.CREATE_TRIP;
 function CreateTrip() {
   // State management
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Set dynamic page title based on current step
+  const currentStepTitle =
+    STEPS.find((step) => step.id === currentStep)?.title || "Create Trip";
+  usePageTitle(`${currentStepTitle} - Create Trip`);
   const [place, setPlace] = useState(null);
   const [formData, setFormData] = useState({});
   const [customBudget, setCustomBudget] = useState("");
@@ -88,11 +95,11 @@ function CreateTrip() {
     if (location.state?.searchedLocation) {
       const searchedLocation = location.state.searchedLocation;
       console.log("🏠 Received searched location from home:", searchedLocation);
-      
+
       // Set the location in form data
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        location: searchedLocation
+        location: searchedLocation,
       }));
 
       // Create a place object for the location selector
@@ -103,14 +110,14 @@ function CreateTrip() {
           place_id: `search_${Date.now()}`,
           structured_formatting: {
             main_text: searchedLocation,
-            secondary_text: ""
-          }
-        }
+            secondary_text: "",
+          },
+        },
       });
 
       // Show success message
       toast.success(`Great choice! Planning your trip to ${searchedLocation}`);
-      
+
       // Clear the location state to prevent re-triggering
       window.history.replaceState({}, document.title);
     }
@@ -122,25 +129,27 @@ function CreateTrip() {
         name: location.state.categoryName,
         activities: location.state.categoryActivities,
         keywords: location.state.categoryKeywords,
-        focus: location.state.categoryFocus
+        focus: location.state.categoryFocus,
       };
-      
+
       console.log("🏠 Received selected category from home:", categoryData);
-      
+
       // Set comprehensive category data in form
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         selectedCategory: categoryData.type,
         categoryName: categoryData.name,
         categoryActivities: categoryData.activities,
         categoryKeywords: categoryData.keywords,
-        categoryFocus: categoryData.focus
+        categoryFocus: categoryData.focus,
       }));
 
       toast.success(`Perfect! Let's plan your ${categoryData.name} trip`, {
-        description: `We'll focus on ${categoryData.keywords?.split(',')[0] || 'relevant activities'}`
+        description: `We'll focus on ${
+          categoryData.keywords?.split(",")[0] || "relevant activities"
+        }`,
       });
-      
+
       // Clear the location state
       window.history.replaceState({}, document.title);
     }
@@ -186,7 +195,10 @@ function CreateTrip() {
       }
     } catch (error) {
       console.error("❌ Error checking profile:", error);
-      toast.error("Failed to load your profile. Please try again.");
+      toast.error("Profile loading issue", {
+        description:
+          "We couldn't load your profile information. Please refresh the page or try again.",
+      });
     } finally {
       setProfileLoading(false);
     }
@@ -271,11 +283,16 @@ function CreateTrip() {
     switch (currentStep) {
       case 1: // Destination & Dates
         if (!formData?.location) {
-          toast.error("Please select your destination");
+          toast.error("Destination required", {
+            description: "Please choose where you'd like to go for your trip.",
+          });
           return false;
         }
         if (!formData?.startDate || !formData?.endDate) {
-          toast.error("Please select your travel dates");
+          toast.error("Travel dates needed", {
+            description:
+              "Please select when you want to start and end your trip.",
+          });
           return false;
         }
         const startDate = new Date(formData.startDate);
@@ -284,36 +301,54 @@ function CreateTrip() {
         today.setHours(0, 0, 0, 0);
 
         if (startDate < today) {
-          toast.error("Start date cannot be in the past");
+          toast.error("Invalid start date", {
+            description:
+              "Your trip cannot start in the past. Please choose a future date.",
+          });
           return false;
         }
         if (endDate <= startDate) {
-          toast.error("End date must be after start date");
+          toast.error("Invalid end date", {
+            description:
+              "Your return date should be after your departure date.",
+          });
           return false;
         }
         break;
 
       case 2: // Travel Preferences
         if (!formData?.travelers) {
-          toast.error("Please select your group size");
+          toast.error("Group size needed", {
+            description:
+              "Please let us know how many people will be traveling.",
+          });
           return false;
         }
         if (!formData?.budget && !customBudget) {
-          toast.error("Please select or enter your budget");
+          toast.error("Budget information needed", {
+            description:
+              "Please select a budget range or enter a custom amount to help plan your trip.",
+          });
           return false;
         }
         break;
 
       case 3: // Flight Options
         if (flightData.includeFlights && !flightData.departureCity) {
-          toast.error("Please specify your departure city for flight search");
+          toast.error("Departure city needed", {
+            description:
+              "Please specify which city you'll be flying from to find the best flight options.",
+          });
           return false;
         }
         break;
 
       case 4: // Hotel Options
         if (hotelData.includeHotels && !hotelData.preferredType) {
-          toast.error("Please select your preferred accommodation type");
+          toast.error("Accommodation type needed", {
+            description:
+              "Please select what type of accommodation you prefer for your stay.",
+          });
           return false;
         }
         break;
@@ -348,7 +383,10 @@ function CreateTrip() {
       !formData?.endDate ||
       !formData?.travelers
     ) {
-      toast("Please fill all the details including travel dates.");
+      toast.error("Missing required information", {
+        description:
+          "Please complete all fields including destination, dates, and number of travelers.",
+      });
       return false;
     }
 
@@ -358,17 +396,25 @@ function CreateTrip() {
     today.setHours(0, 0, 0, 0);
 
     if (startDate < today) {
-      toast("Start date cannot be in the past.");
+      toast.error("Invalid travel date", {
+        description:
+          "Your trip start date cannot be in the past. Please choose a future date.",
+      });
       return false;
     }
 
     if (endDate <= startDate) {
-      toast("End date must be after start date.");
+      toast.error("Invalid date range", {
+        description: "Your return date must be after your departure date.",
+      });
       return false;
     }
 
     if (!formData?.budget && !customBudget) {
-      toast("Please select or enter your budget.");
+      toast.error("Budget information needed", {
+        description:
+          "Please select a budget range or enter a custom amount to help us plan your trip.",
+      });
       return false;
     }
 
@@ -385,7 +431,10 @@ function CreateTrip() {
     }
 
     if (!userProfile) {
-      toast("Please complete your profile first");
+      toast.info("Profile setup needed", {
+        description:
+          "We need to know your preferences to create the perfect trip for you.",
+      });
       navigate("/user-profile");
       return;
     }
@@ -427,39 +476,25 @@ function CreateTrip() {
         flightResults = langGraphResults.flights;
         hotelResults = langGraphResults.hotels;
 
-        // Show notifications based on results
+        // Log results for debugging (no toasts needed - info shown in loading modal)
         if (flightResults?.success) {
-          if (
-            flightResults?.message?.includes("Mock") ||
-            flightResults?.fallback
-          ) {
-            toast("🎭 Using mock flight data - Backend server not connected", {
-              description:
-                "Flight prices are simulated. Connect backend for real-time data.",
-            });
-          } else {
-            toast("✈️ Real flight data loaded successfully!");
-          }
+          console.log(
+            "✈️ Flight search completed:",
+            flightResults.fallback ? "recommendations" : "live data"
+          );
         }
 
         if (hotelResults?.success) {
-          if (hotelResults?.fallback) {
-            toast("🏨 Using sample hotel data - API unavailable", {
-              description:
-                "Hotel recommendations are examples. Enable API for real data.",
-            });
-          } else {
-            toast("🏨 Real hotel data loaded successfully!");
-          }
+          console.log(
+            "🏨 Hotel search completed:",
+            hotelResults.fallback ? "recommendations" : "live data"
+          );
         }
 
-        // Show LangGraph optimization results
         if (langGraphResults.optimized_plan) {
-          toast(
-            `🤖 Smart optimization completed! Score: ${langGraphResults.optimized_plan.optimization_score}`,
-            {
-              description: `Cost efficiency: ${langGraphResults.optimized_plan.cost_efficiency}`,
-            }
+          console.log(
+            "🤖 LangGraph optimization completed with score:",
+            langGraphResults.optimized_plan.optimization_score
           );
         }
 
@@ -492,41 +527,65 @@ function CreateTrip() {
 This is a ${formData.categoryName?.toUpperCase()} focused trip!
 
 🔥 PRIMARY FOCUS: ${formData.categoryName} Trip
-Keywords: ${formData.categoryKeywords || 'relevant activities'}
+Keywords: ${formData.categoryKeywords || "relevant activities"}
 
 MANDATORY REQUIREMENTS:
 - At least 70% of activities must be ${formData.categoryName}-related
-- Include these specific activity types: ${formData.categoryActivities?.join(', ') || 'relevant activities'}
-- Prioritize destinations in ${formData.location} known for: ${formData.categoryKeywords || 'this category'}
+- Include these specific activity types: ${
+          formData.categoryActivities?.join(", ") || "relevant activities"
+        }
+- Prioritize destinations in ${formData.location} known for: ${
+          formData.categoryKeywords || "this category"
+        }
 - Structure the entire itinerary around ${formData.categoryName} experiences
 
 CATEGORY-SPECIFIC INSTRUCTIONS:
-${formData.categoryName === 'Adventure' ? `
+${
+  formData.categoryName === "Adventure"
+    ? `
 - Focus on outdoor activities, mountain destinations, and adventure sports
 - Include hiking trails, adventure parks, extreme sports venues
 - Recommend gear rental shops and adventure tour operators
 - Suggest early morning starts for optimal adventure conditions
-- Prioritize destinations with natural landscapes and outdoor activities` : ''}
-${formData.categoryName === 'Beach' ? `
+- Prioritize destinations with natural landscapes and outdoor activities`
+    : ""
+}
+${
+  formData.categoryName === "Beach"
+    ? `
 - Prioritize coastal destinations, islands, and beach resorts
 - Include water sports, island hopping, and beach activities
 - Focus on beaches with different characteristics (white sand, diving spots, surfing)
 - Include beachfront accommodations and seafood restaurants
-- Suggest beach gear rentals and water activity operators` : ''}
-${formData.categoryName === 'Cultural' ? `
+- Suggest beach gear rentals and water activity operators`
+    : ""
+}
+${
+  formData.categoryName === "Cultural"
+    ? `
 - Focus on historical sites, museums, and cultural landmarks
 - Include local festivals, traditional performances, and heritage tours
 - Prioritize UNESCO sites, old churches, and historical districts
 - Include interactions with local artisans and cultural centers
-- Suggest cultural workshops and traditional craft experiences` : ''}
-${formData.categoryName === 'Food Trip' ? `
+- Suggest cultural workshops and traditional craft experiences`
+    : ""
+}
+${
+  formData.categoryName === "Food Trip"
+    ? `
 - Focus on local restaurants, food markets, and culinary experiences
 - Include famous local dishes, street food areas, and specialty restaurants
 - Prioritize food tours, cooking classes, and local food festivals
 - Include visits to food production sites (farms, breweries, local markets)
-- Suggest food photography spots and Instagram-worthy dining locations` : ''}
+- Suggest food photography spots and Instagram-worthy dining locations`
+    : ""
+}
 
-IMPORTANT: Every day should have a strong ${formData.categoryName} theme with relevant activities and destinations. Make sure the majority of recommendations align with the ${formData.categoryName} category.
+IMPORTANT: Every day should have a strong ${
+          formData.categoryName
+        } theme with relevant activities and destinations. Make sure the majority of recommendations align with the ${
+          formData.categoryName
+        } category.
 `;
       }
 
@@ -736,9 +795,14 @@ Generate general accommodation recommendations without specific pricing or booki
       SaveAiTrip(aiResponseText, flightResults, hotelResults, langGraphResults);
     } catch (error) {
       console.error("❌ Trip generation error:", error);
-      toast("Error generating trip: " + error.message);
+      toast.error("Unable to create your trip", {
+        description:
+          "Something went wrong while generating your itinerary. Please try again or contact support if the issue persists.",
+      });
       setLoading(false);
       setFlightLoading(false);
+      setHotelLoading(false);
+      setLangGraphLoading(false);
     }
   };
 
@@ -748,14 +812,16 @@ Generate general accommodation recommendations without specific pricing or booki
 
     if (Array.isArray(obj)) {
       // Convert array to a serialized string representation for Firebase
-      return obj.map((item) => sanitizeForFirebase(item)).filter(item => item !== null);
+      return obj
+        .map((item) => sanitizeForFirebase(item))
+        .filter((item) => item !== null);
     }
 
     if (typeof obj === "object") {
       const sanitized = {};
       for (const [key, value] of Object.entries(obj)) {
         const sanitizedValue = sanitizeForFirebase(value);
-        
+
         // Only add the field if it's not null (skip undefined/null values)
         if (sanitizedValue !== null) {
           if (Array.isArray(value)) {
@@ -774,7 +840,9 @@ Generate general accommodation recommendations without specific pricing or booki
                 .join(" | ");
             } else if (key === "flights" && value.length > 0) {
               // Keep flights array but sanitize each flight
-              sanitized[key] = value.map((flight) => sanitizeForFirebase(flight)).filter(item => item !== null);
+              sanitized[key] = value
+                .map((flight) => sanitizeForFirebase(flight))
+                .filter((item) => item !== null);
             } else if (value.length > 0) {
               // For other arrays, convert to comma-separated string
               sanitized[key] = value
@@ -783,7 +851,7 @@ Generate general accommodation recommendations without specific pricing or booki
                     ? JSON.stringify(sanitizeForFirebase(item))
                     : String(item || "")
                 )
-                .filter(item => item && item !== "undefined")
+                .filter((item) => item && item !== "undefined")
                 .join(", ");
             }
           } else {
@@ -810,22 +878,35 @@ Generate general accommodation recommendations without specific pricing or booki
       const docId = Date.now().toString();
 
       // Clean langGraphResults to remove undefined values
-      const cleanLangGraphResults = langGraphResults ? {
-        ...langGraphResults,
-        merged_data: langGraphResults.merged_data ? {
-          ...langGraphResults.merged_data,
-          // Remove any undefined fields
-          recommended_flight: langGraphResults.merged_data.recommended_flight || null,
-          recommended_hotel: langGraphResults.merged_data.recommended_hotel || null,
-          total_estimated_cost: langGraphResults.merged_data.total_estimated_cost || 0,
-        } : null,
-        optimized_plan: langGraphResults.optimized_plan ? {
-          ...langGraphResults.optimized_plan,
-          optimization_score: langGraphResults.optimized_plan.optimization_score || 0,
-          cost_efficiency: langGraphResults.optimized_plan.cost_efficiency || "Unknown",
-          final_recommendations: langGraphResults.optimized_plan.final_recommendations || [],
-        } : null
-      } : null;
+      const cleanLangGraphResults = langGraphResults
+        ? {
+            ...langGraphResults,
+            merged_data: langGraphResults.merged_data
+              ? {
+                  ...langGraphResults.merged_data,
+                  // Remove any undefined fields
+                  recommended_flight:
+                    langGraphResults.merged_data.recommended_flight || null,
+                  recommended_hotel:
+                    langGraphResults.merged_data.recommended_hotel || null,
+                  total_estimated_cost:
+                    langGraphResults.merged_data.total_estimated_cost || 0,
+                }
+              : null,
+            optimized_plan: langGraphResults.optimized_plan
+              ? {
+                  ...langGraphResults.optimized_plan,
+                  optimization_score:
+                    langGraphResults.optimized_plan.optimization_score || 0,
+                  cost_efficiency:
+                    langGraphResults.optimized_plan.cost_efficiency ||
+                    "Unknown",
+                  final_recommendations:
+                    langGraphResults.optimized_plan.final_recommendations || [],
+                }
+              : null,
+          }
+        : null;
 
       let parsedTripData;
       try {
@@ -1033,33 +1114,18 @@ Generate general accommodation recommendations without specific pricing or booki
         !flightResults?.message?.includes("Mock");
       const hasRealHotels = hotelResults?.success && !hotelResults?.fallback;
 
-      let successMessage = "🎉 Trip saved successfully";
-
-      if (langGraphResults?.success) {
-        successMessage += " with LangGraph AI optimization";
-
-        const features = [];
-        if (hasRealFlights) features.push("real flight data");
-        if (hasRealHotels) features.push("real hotel data");
-        if (flightData.includeFlights && !hasRealFlights)
-          features.push("flight recommendations");
-        if (hotelData.includeHotels && !hasRealHotels)
-          features.push("hotel recommendations");
-
-        if (features.length > 0) {
-          successMessage += ` and ${features.join(", ")}`;
-        }
-      } else if (hasRealFlights) {
-        successMessage += " with flight recommendations";
-      }
-
-      successMessage += "!";
-
-      toast(successMessage);
+      // Single celebratory success message - main notification user sees
+      toast.success("🎉 Your Amazing Trip is Ready!", {
+        description: `Your personalized itinerary for ${formData.location} has been created and saved. Get ready for an incredible adventure!`,
+        duration: 6000,
+      });
       navigate("/view-trip/" + docId);
     } catch (error) {
       console.error("Error saving trip: ", error);
-      toast("Failed to save trip: " + (error.message || "Permission denied"));
+      toast.error("Oops! Something went wrong", {
+        description:
+          "We couldn't save your trip right now. Please try again in a moment.",
+      });
     }
     setLoading(false);
   };
@@ -1083,7 +1149,9 @@ Generate general accommodation recommendations without specific pricing or booki
       })
       .catch((error) => {
         console.error("Error fetching user profile:", error);
-        toast("Failed to get user profile");
+        toast.error("Sign-in issue", {
+          description: "We couldn't complete your sign-in. Please try again.",
+        });
       });
   };
 
@@ -1100,7 +1168,7 @@ Generate general accommodation recommendations without specific pricing or booki
             <LocationSelector
               place={place}
               onPlaceChange={setPlace}
-              onLocationChange={handleLocationChange}
+              isPreFilled={!!place}
             />
             <DateRangePicker
               startDate={formData.startDate}
@@ -1164,7 +1232,7 @@ Generate general accommodation recommendations without specific pricing or booki
           <LocationSelector
             place={place}
             onPlaceChange={setPlace}
-            onLocationChange={handleLocationChange}
+            isPreFilled={!!place}
           />
         );
     }
@@ -1354,6 +1422,17 @@ Generate general accommodation recommendations without specific pricing or booki
       </div>
 
       <LoginDialog open={openDialog} onGoogleLogin={() => googleLogin()} />
+
+      {/* Trip Generation Modal */}
+      <TripGenerationModal
+        isOpen={loading || flightLoading || hotelLoading || langGraphLoading}
+        loading={loading}
+        flightLoading={flightLoading}
+        hotelLoading={hotelLoading}
+        langGraphLoading={langGraphLoading}
+        destination={formData?.location}
+        duration={formData?.duration}
+      />
     </div>
   );
 }

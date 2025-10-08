@@ -285,7 +285,7 @@ export const SelectBudgetOptions = [
     id: 1,
     title: "Budget",
     desc: "A budget-friendly option for travelers looking to save money.",
-    icon: <FaCoins style={{ color: "#f1c40f" }} />,
+    icon: "💰",
     range: "₱2,000 - ₱8,000",
     value: "Budget",
   },
@@ -293,15 +293,15 @@ export const SelectBudgetOptions = [
     id: 2,
     title: "Moderate",
     desc: "A comfortable option for travelers who want a balance of cost and quality.",
-    icon: <FaMoneyBillWave style={{ color: "#2ecc71" }} />,
-    range: "₱8,000 - ₱20,000", // ✅ Added price range
-    value: "Moderate", // ✅ Added value
+    icon: "💳",
+    range: "₱8,000 - ₱20,000",
+    value: "Moderate",
   },
   {
     id: 3,
     title: "Luxury",
     desc: "A high-end option for travelers seeking the best experiences.",
-    icon: <FaGem style={{ color: "#9b59b6" }} />,
+    icon: "💎",
     range: "₱20,000+",
     value: "Luxury",
   },

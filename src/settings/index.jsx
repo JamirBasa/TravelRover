@@ -18,9 +18,13 @@ import {
   FaEdit,
   FaTimes,
 } from "react-icons/fa";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 const Settings = () => {
   const [loading, setLoading] = useState(true);
+
+  // Set page title for settings
+  usePageTitle("Settings");
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("travel");

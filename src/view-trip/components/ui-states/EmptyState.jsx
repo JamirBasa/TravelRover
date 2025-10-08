@@ -5,7 +5,7 @@ function EmptyState({ onCreateNew }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center bg-white p-8 rounded-2xl shadow-lg">
+        <div className="text-center bg-white p-6 sm:p-8 rounded-lg shadow-md">
           <div className="text-6xl mb-4">🧳</div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             No trip data found
