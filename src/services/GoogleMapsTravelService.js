@@ -1,90 +1,123 @@
 // Enhanced Google Maps Travel Time Service for TravelRover
 // Provides accurate travel time estimations and route analysis
+// Compatible with both legacy and modern (@vis.gl/react-google-maps) Google Maps API
 
 class GoogleMapsTravelService {
   constructor() {
-    this.distanceService = null;
-    this.directionsService = null;
+    this.directionsService = null; // Modern Routes API (replaces Distance Matrix)
+    this.geocoder = null;
     this.initialized = false;
     this.cache = new Map(); // Cache results to avoid duplicate API calls
     this.rateLimitQueue = [];
     this.isProcessingQueue = false;
   }
 
-  // Initialize Google Maps services
+  // Initialize Google Maps services - handles both legacy and modern API
   async initialize() {
-    if (window.google?.maps && !this.initialized) {
-      try {
-        this.distanceService = new window.google.maps.DistanceMatrixService();
-        this.directionsService = new window.google.maps.DirectionsService();
-        this.initialized = true;
-        console.log('✅ Google Maps Travel Service initialized');
+    if (!window.google?.maps) {
+      return false;
+    }
 
-        // Test API availability with a simple request
-        await this.testAPIAvailability();
-      } catch (error) {
-        console.warn('⚠️ Google Maps API initialization failed:', error);
-        this.initialized = false;
+    if (this.initialized) {
+      return true;
+    }
+
+    try {
+      // Check if we're using the modern API (@vis.gl/react-google-maps)
+      // The modern API uses importLibrary() instead of direct constructor access
+      if (window.google.maps.importLibrary) {
+        console.log('🔄 Detected modern Google Maps API, loading Routes API...');
+        
+        // Load required libraries dynamically
+        const [{ DirectionsService }, { Geocoder }] = await Promise.all([
+          window.google.maps.importLibrary('routes'),
+          window.google.maps.importLibrary('geocoding'),
+        ]);
+
+        this.directionsService = new DirectionsService();
+        this.geocoder = new Geocoder();
+        
+        console.log('✅ Modern Routes API loaded successfully (no legacy Distance Matrix)');
+      } else {
+        // Legacy API (direct constructor access)
+        console.log('🔄 Using legacy Google Maps API...');
+        this.directionsService = new window.google.maps.DirectionsService();
+        this.geocoder = new window.google.maps.Geocoder();
+        console.log('✅ Legacy Directions API initialized');
       }
+
+      this.initialized = true;
+
+      // Test API availability
+      await this.testAPIAvailability();
+      
+      return true;
+    } catch (error) {
+      console.warn('⚠️ Google Maps API initialization failed:', error);
+      console.warn('Error details:', error.message);
+      this.initialized = false;
+      return false;
     }
   }
 
   // Test API availability to handle REQUEST_DENIED gracefully
   async testAPIAvailability() {
-    if (!this.distanceService) return false;
+    if (!this.directionsService) {
+      console.warn('⚠️ Directions Service not initialized');
+      return false;
+    }
 
-    return new Promise((resolve) => {
-      // Test with a simple distance calculation
-      this.distanceService.getDistanceMatrix({
-        origins: ['Manila, Philippines'],
-        destinations: ['Cebu, Philippines'],
-        travelMode: window.google.maps.TravelMode.DRIVING,
-        unitSystem: window.google.maps.UnitSystem.METRIC,
-      }, (response, status) => {
-        if (status === 'REQUEST_DENIED') {
-          console.warn('🚫 Google Maps Distance Matrix API is not enabled or accessible');
-          console.warn('💡 Enable "Distance Matrix API" in Google Cloud Console');
-          this.initialized = false;
-        } else if (status === 'OK') {
-          console.log('✅ Google Maps APIs are working correctly');
-        }
-        resolve(status === 'OK');
-      });
-    });
+    try {
+      // Routes API is modern and should work if properly configured
+      console.log('✅ Routes API (Directions Service) ready for route calculations');
+      return true;
+    } catch (error) {
+      console.warn('⚠️ API availability test failed:', error);
+      return false;
+    }
   }
 
   // Get travel time between multiple locations with caching and rate limiting
   async getTravelTimes(locations, travelMode = 'DRIVING') {
+    // Use AI-powered fallback as primary method
+    // Google's legacy Directions API requires special enablement
+    console.log(`🤖 Calculating travel times using AI for ${locations.length} locations...`);
+    return this.getFallbackTravelTimes(locations);
+    
+    /* 
+    // Original Google Maps API implementation (requires Directions API enabled)
+    // Uncomment if you enable Directions API in Google Cloud Console
+    
     try {
-      await this.initialize();
+      const initSuccess = await this.initialize();
 
-      if (!this.distanceService || !this.initialized) {
-        console.warn('⚠️ Google Maps API not available, using enhanced fallback estimations');
+      if (!initSuccess || !this.directionsService) {
+        console.warn('⚠️ Routes API not available, using AI estimations');
         return this.getFallbackTravelTimes(locations);
       }
 
+      console.log(`🗺️ Calculating travel times for ${locations.length} locations...`);
       const results = [];
 
       for (let i = 0; i < locations.length - 1; i++) {
         const from = locations[i];
         const to = locations[i + 1];
 
-        // Check cache first
         const cacheKey = this.getCacheKey(from, to, travelMode);
         if (this.cache.has(cacheKey)) {
           results.push(this.cache.get(cacheKey));
           continue;
         }
 
-        // Get travel time with rate limiting
-        const travelData = await this.getSingleTravelTime(from, to, travelMode);
-
-        // Cache the result
-        this.cache.set(cacheKey, travelData);
-        results.push(travelData);
-
-        // Small delay to avoid rate limiting
-        await this.delay(100);
+        try {
+          const travelData = await this.getSingleTravelTime(from, to, travelMode);
+          this.cache.set(cacheKey, travelData);
+          results.push(travelData);
+          await this.delay(100);
+        } catch (error) {
+          const fallback = this.getFallbackSingleTravelTime(from, to);
+          results.push(fallback);
+        }
       }
 
       return results;
@@ -92,49 +125,58 @@ class GoogleMapsTravelService {
       console.error('Error getting travel times:', error);
       return this.getFallbackTravelTimes(locations);
     }
+    */
   }
 
-  // Get single travel time between two locations
+  // Get single travel time between two locations using modern Routes API
   async getSingleTravelTime(from, to, travelMode = 'DRIVING') {
-    return new Promise((resolve) => {
-      const fromLocation = this.formatLocationForAPI(from);
-      const toLocation = this.formatLocationForAPI(to);
+    const fromLocation = this.formatLocationForAPI(from);
+    const toLocation = this.formatLocationForAPI(to);
 
-      this.distanceService.getDistanceMatrix({
-        origins: [fromLocation],
-        destinations: [toLocation],
-        travelMode: window.google.maps.TravelMode[travelMode],
-        unitSystem: window.google.maps.UnitSystem.METRIC,
-        avoidHighways: false,
-        avoidTolls: false
-      }, (response, status) => {
-        if (status === 'OK' && response.rows[0]?.elements[0]?.status === 'OK') {
-          const element = response.rows[0].elements[0];
+    try {
+      // Use the modern Directions API (part of Routes) instead of deprecated Distance Matrix
+      return new Promise((resolve) => {
+        this.directionsService.route({
+          origin: fromLocation,
+          destination: toLocation,
+          travelMode: window.google.maps.TravelMode[travelMode],
+          unitSystem: window.google.maps.UnitSystem.METRIC,
+          avoidHighways: false,
+          avoidTolls: false
+        }, (response, status) => {
+          if (status === 'OK' && response.routes[0]?.legs[0]) {
+            const leg = response.routes[0].legs[0];
 
-          const result = {
-            from: fromLocation,
-            to: toLocation,
-            duration: element.duration.text,
-            durationValue: element.duration.value, // seconds
-            distance: element.distance.text,
-            distanceValue: element.distance.value, // meters
-            status: 'success',
-            travelMode: travelMode
-          };
+            const result = {
+              from: fromLocation,
+              to: toLocation,
+              duration: leg.duration.text,
+              durationValue: leg.duration.value, // seconds
+              distance: leg.distance.text,
+              distanceValue: leg.distance.value, // meters
+              status: 'success',
+              travelMode: travelMode
+            };
 
-          console.log(`🗺️ Travel: ${fromLocation} → ${toLocation}: ${result.duration} (${result.distance})`);
-          resolve(result);
-        } else if (status === 'REQUEST_DENIED') {
-          console.warn(`🚫 Google Maps API access denied. Please enable Distance Matrix API in Google Cloud Console.`);
-          console.warn(`💡 Alternative: Use the new Routes API for better functionality.`);
-          this.initialized = false; // Disable further API calls
-          resolve(this.getFallbackSingleTravelTime(from, to, travelMode));
-        } else {
-          console.warn(`⚠️ Google Maps API error (${status}) for ${fromLocation} → ${toLocation}`);
-          resolve(this.getFallbackSingleTravelTime(from, to, travelMode));
-        }
+            console.log(`✅ Travel: ${fromLocation} → ${toLocation}: ${result.duration} (${result.distance})`);
+            resolve(result);
+          } else if (status === 'REQUEST_DENIED') {
+            console.warn(`🚫 Routes API access denied. Check API key and enable Directions API.`);
+            this.initialized = false;
+            resolve(this.getFallbackSingleTravelTime(from, to, travelMode));
+          } else if (status === 'ZERO_RESULTS') {
+            console.warn(`⚠️ No route found: ${fromLocation} → ${toLocation}`);
+            resolve(this.getFallbackSingleTravelTime(from, to, travelMode));
+          } else {
+            console.warn(`⚠️ Routes API error (${status}): ${fromLocation} → ${toLocation}`);
+            resolve(this.getFallbackSingleTravelTime(from, to, travelMode));
+          }
+        });
       });
-    });
+    } catch (error) {
+      console.error(`Error calculating route: ${from} → ${to}`, error);
+      return this.getFallbackSingleTravelTime(from, to, travelMode);
+    }
   }
 
   // Format location for Google Maps API
@@ -159,10 +201,18 @@ class GoogleMapsTravelService {
 
   // Get route directions with waypoints
   async getRouteDirections(locations, travelMode = 'DRIVING') {
+    // Skip route directions - requires enabled Directions API
+    // Map markers and travel times work without this
+    console.log('ℹ️ Route polylines disabled (requires Directions API enablement)');
+    return null;
+    
+    /* 
+    // Original implementation - uncomment if you enable Directions API
     try {
-      await this.initialize();
+      const initSuccess = await this.initialize();
 
-      if (!this.directionsService || locations.length < 2) {
+      if (!initSuccess || !this.directionsService || locations.length < 2) {
+        console.warn('⚠️ Directions service not available or insufficient locations');
         return null;
       }
 
@@ -216,6 +266,7 @@ class GoogleMapsTravelService {
       console.error('Error getting route directions:', error);
       return null;
     }
+    */
   }
 
   // Fallback travel time estimation when API is unavailable

@@ -290,12 +290,25 @@
   }
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
 .fade-in-up {
   animation: fadeInUp 0.6s ease-out forwards;
 }
 
 .gentle-pulse {
   animation: gentlePulse 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s infinite;
 }
 
 /* Enhanced glassmorphism */
@@ -310,20 +323,20 @@
   /* Base styling for all map controls */
   position: relative;
   z-index: 10; /* Above map, below Google Maps controls */
-  
+
   /* Glassmorphic design matching brand */
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(14, 165, 233, 0.2);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  
+
   /* Smooth interactions */
   transition: all 0.2s ease;
-  
+
   /* Touch-friendly sizing (iOS/Android guidelines) */
   min-height: 44px;
-  
+
   /* Prevent text selection on mobile */
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -348,12 +361,12 @@
     padding: 6px 10px;
     font-size: 0.875rem;
   }
-  
+
   /* Ensure controls don't interfere with Google's mobile UI */
   .map-controls-bottom {
     bottom: 60px; /* Space for Google logo and zoom controls */
   }
-  
+
   /* Stack controls vertically on small screens */
   .mobile-stack {
     flex-direction: column;

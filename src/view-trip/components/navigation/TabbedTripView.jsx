@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { Calendar, MapPin, Hotel, Plane, Info, Lightbulb } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Hotel,
+  Plane,
+  Info,
+  Lightbulb,
+  Map,
+} from "lucide-react";
 
 // Import existing components from organized folders
 import { InfoSection } from "../shared";
@@ -7,6 +15,7 @@ import { Hotels } from "../accommodations";
 import { PlacesToVisit } from "../places-to-visit";
 import { FlightBooking } from "../travel-bookings";
 import { RouteOptimizationStatus } from "../optimization";
+import { OptimizedRouteMap } from "../maps";
 
 function TabbedTripView({ trip, onTripUpdate }) {
   const [activeTab, setActiveTab] = useState("overview");
@@ -33,6 +42,20 @@ function TabbedTripView({ trip, onTripUpdate }) {
       label: "Itinerary",
       icon: <Calendar className="h-4 w-4" />,
       component: <PlacesToVisit trip={trip} onTripUpdate={onTripUpdate} />,
+    },
+    {
+      id: "map",
+      label: "Interactive Map",
+      icon: <Map className="h-4 w-4" />,
+      component: (
+        <OptimizedRouteMap
+          itinerary={trip?.tripData?.itinerary}
+          destination={
+            trip?.userSelection?.location || trip?.tripData?.destination
+          }
+          tripData={trip?.tripData}
+        />
+      ),
     },
     {
       id: "hotels",
@@ -146,10 +169,7 @@ function TabbedTripView({ trip, onTripUpdate }) {
             aria-label="Trip sections"
           >
             <div className="flex overflow-x-auto scrollbar-hide">
-              {tabs.map((tab
-
-                
-              ) => (
+              {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   role="tab"
