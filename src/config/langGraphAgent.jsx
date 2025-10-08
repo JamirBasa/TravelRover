@@ -158,6 +158,19 @@ export class LangGraphTravelAgent {
         final_recommendations: results.recommendations || [],
       },
 
+      // Extract route optimization results
+      route_optimization: results.route_optimization ? {
+        applied: results.route_optimization.applied || false,
+        efficiency_score: results.route_optimization.efficiency_score || 0,
+        total_travel_time_minutes: results.route_optimization.total_travel_time_minutes || 0,
+        optimization_summary: results.route_optimization.optimization_summary || {},
+        recommendations: results.route_optimization.recommendations || [],
+        error: results.route_optimization.error
+      } : null,
+
+      // Extract optimized itinerary (enhanced with route data)
+      optimized_itinerary: results.optimized_itinerary || results.itinerary_data,
+
       // Error handling
       errors: results.agent_errors || [],
     };

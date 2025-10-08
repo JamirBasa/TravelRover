@@ -377,7 +377,7 @@ export function PlacesAutocomplete({
   };
 
   return (
-    <div className={`relative z-50 ${className}`}>
+    <div className={`relative ${className}`}>
       <div className="relative">
         <input
           ref={inputRef}
@@ -425,7 +425,7 @@ export function PlacesAutocomplete({
       {showDropdown && suggestions.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute z-[9999] w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl max-h-80 overflow-y-auto"
+          className="absolute z-[100] w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl max-h-80 overflow-y-auto"
         >
           {suggestions.map((suggestion, index) => (
             <button
@@ -469,7 +469,7 @@ export function PlacesAutocomplete({
         !isLoading &&
         suggestions.length === 0 &&
         inputValue.length >= 3 && (
-          <div className="absolute z-50 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl p-4 text-center text-gray-500">
+          <div className="absolute z-[100] w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl p-4 text-center text-gray-500">
             No locations found. Try a different search term.
           </div>
         )}

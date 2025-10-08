@@ -25,8 +25,17 @@ function ActivitiesRenderer({
     // Use editable data when actively editing and has activities
     activitiesData = editableItinerary[dayIndex].plan;
     dataSource = "editable";
+  } else if (
+    dayItem?.plan &&
+    Array.isArray(dayItem.plan) &&
+    dayItem.plan.length > 0
+  ) {
+    // PRIORITY 1: Use plan array if it exists (edited data from database)
+    activitiesData = dayItem.plan;
+    dataSource = "plan";
+    console.log("✅ Using plan array data for day", dayIndex, activitiesData);
   } else {
-    // Check for planText or similar fields (your actual data format)
+    // PRIORITY 2: Fall back to planText (original AI-generated data)
     const possibleTextFields = [
       dayItem?.planText,
       dayItem?.plan_text,
@@ -61,14 +70,7 @@ function ActivitiesRenderer({
         };
       });
       dataSource = "planText";
-    } else if (
-      dayItem?.plan &&
-      Array.isArray(dayItem.plan) &&
-      dayItem.plan.length > 0
-    ) {
-      // Fallback to plan array format
-      activitiesData = dayItem.plan;
-      dataSource = "plan";
+      console.log("⚠️ Using planText fallback for day", dayIndex);
     } else {
       activitiesData = [];
       dataSource = "empty";

@@ -7,14 +7,37 @@ function LoadingState() {
       <div className="text-center">
         {/* Enhanced Loading Card */}
         <div className="brand-card p-6 sm:p-8 max-w-md mx-auto">
-          {/* Loading Animation */}
-          <div className="relative mb-6">
-            <div className="w-20 h-20 mx-auto brand-gradient rounded-full flex items-center justify-center shadow-xl">
-              <AiOutlineLoading3Quarters className="h-10 w-10 animate-spin text-white" />
+          {/* Loading Animation - CONTINUOUS SPINNING */}
+          <div
+            className="relative mb-6 flex items-center justify-center"
+            key="loading-spinner"
+          >
+            {/* Pulse rings - Fixed positioning */}
+            <div
+              className="absolute w-20 h-20 border-4 border-sky-200 rounded-full opacity-20"
+              style={{
+                animation: "ping 1s cubic-bezier(0, 0, 0.2, 1) infinite",
+              }}
+            ></div>
+            <div
+              className="absolute w-20 h-20 border-4 border-sky-300 rounded-full opacity-30"
+              style={{
+                animation: "ping 1s cubic-bezier(0, 0, 0.2, 1) infinite",
+                animationDelay: "0.5s",
+              }}
+            ></div>
+
+            {/* Main spinning circle - CONTINUOUS SPIN */}
+            <div className="relative w-20 h-20 brand-gradient rounded-full flex items-center justify-center shadow-xl z-10">
+              <AiOutlineLoading3Quarters
+                className="h-10 w-10 text-white"
+                style={{
+                  animation: "spin 1s linear infinite",
+                  transformOrigin: "center center",
+                  willChange: "transform",
+                }}
+              />
             </div>
-            {/* Pulse rings */}
-            <div className="absolute inset-0 w-20 h-20 mx-auto border-4 border-sky-200 rounded-full animate-ping opacity-20"></div>
-            <div className="absolute inset-0 w-20 h-20 mx-auto border-4 border-sky-300 rounded-full animate-ping opacity-30 animation-delay-2000"></div>
           </div>
 
           {/* Loading Text */}

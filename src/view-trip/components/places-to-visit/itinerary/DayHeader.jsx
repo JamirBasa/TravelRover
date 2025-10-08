@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +8,7 @@ import {
   Save,
   Edit,
   X,
+  MapPin,
 } from "lucide-react";
 import {
   COLORS,
@@ -26,7 +27,9 @@ function DayHeader({
   onStartEdit,
   onStopEdit,
   onSaveEdit,
+  trip, // Add trip prop for map functionality
 }) {
+  const [showDayMap, setShowDayMap] = useState(false);
   const dayNumber = dayItem?.day || dayIndex + 1;
   const headerId = `day-header-${dayIndex}`;
   const controlsId = `day-controls-${dayIndex}`;
@@ -72,29 +75,27 @@ function DayHeader({
               >
                 Day {dayNumber}
               </h3>
-              {dayItem?.plan && Array.isArray(dayItem.plan) && (
-                <Badge
-                  variant="secondary"
-                  className={
-                    isEditing
-                      ? "bg-amber-100 text-amber-700 hover:bg-amber-200 text-base px-3 py-1.5 font-semibold"
-                      : "bg-blue-100 text-blue-700 hover:bg-blue-200 text-base px-3 py-1.5 font-semibold"
-                  }
-                >
-                  {activitiesCount}{" "}
-                  {activitiesCount === 1 ? "activity" : "activities"}
-                  {isEditing && (
-                    <span className="ml-2" aria-hidden="true">
-                      <Edit className="h-5 w-5 inline-block" />
-                    </span>
-                  )}
-                </Badge>
-              )}
+              <Badge
+                variant="secondary"
+                className={
+                  isEditing
+                    ? "bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 hover:from-amber-200 hover:to-orange-200 text-base px-3 py-1.5 font-semibold border border-amber-200"
+                    : "bg-gradient-to-r from-sky-100 to-blue-100 text-sky-700 hover:from-sky-200 hover:to-blue-200 text-base px-3 py-1.5 font-semibold border border-sky-200"
+                }
+              >
+                {activitiesCount}{" "}
+                {activitiesCount === 1 ? "activity" : "activities"}
+                {isEditing && (
+                  <span className="ml-2" aria-hidden="true">
+                    <Edit className="h-5 w-5 inline-block" />
+                  </span>
+                )}
+              </Badge>
             </div>
 
             {/* Day Controls */}
             <div
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 flex-wrap"
               id={controlsId}
               aria-label={`Day ${dayNumber} controls`}
             >
@@ -105,8 +106,8 @@ function DayHeader({
                 onClick={() => handleToggleExpanded(dayIndex)}
                 className={`gap-2 ${ANIMATIONS.transition.medium} ${
                   isEditing && isExpanded
-                    ? `${COLORS.editing.text} hover:text-amber-800 hover:bg-amber-50`
-                    : `${COLORS.primary.text} hover:text-blue-800 hover:bg-blue-50`
+                    ? `text-amber-700 hover:text-amber-800 hover:bg-amber-50`
+                    : `text-sky-700 hover:text-sky-800 hover:bg-sky-50`
                 }`}
                 disabled={isEditing && isExpanded}
                 aria-expanded={isExpanded}
@@ -161,7 +162,7 @@ function DayHeader({
                   variant="outline"
                   size="sm"
                   onClick={() => handleStartEdit(dayIndex)}
-                  className={`gap-2 ${COLORS.primary.border} ${COLORS.primary.hover} ${COLORS.primary.text} hover:bg-blue-50 transition-colors`}
+                  className="gap-2 border-sky-300 text-sky-700 hover:bg-sky-50 hover:text-sky-800 transition-colors"
                   aria-label="Edit this day's activities"
                 >
                   <Edit className="h-6 w-6" aria-hidden="true" />
@@ -187,43 +188,28 @@ function DayHeader({
             </div>
           )}
 
-          <p
-            className={`font-bold text-lg mb-3 ${
-              isEditing ? "text-amber-700" : "text-blue-700"
-            }`}
-          >
-            <span aria-hidden="true">🎯</span>{" "}
-            {dayItem?.theme || "Explore & Discover"}
-          </p>
-
-          {/* Quick day stats */}
-          <div
-            className="flex flex-wrap items-center gap-3 text-base font-medium"
-            aria-label="Day overview"
-          >
-            {dayItem?.plan && Array.isArray(dayItem.plan) && (
-              <>
-                <div className="flex items-center gap-1 text-gray-600">
-                  <span aria-hidden="true">⏱️</span>
-                  <span>Full Day Adventure</span>
-                </div>
-                <div className="flex items-center gap-1 text-gray-600">
-                  <span aria-hidden="true">📍</span>
-                  <span>
-                    {activitiesCount} {activitiesCount === 1 ? "Stop" : "Stops"}
-                  </span>
-                </div>
-                {dayItem.plan.some((activity) => activity.ticketPricing) && (
-                  <div className="flex items-center gap-1 text-gray-600">
-                    <span aria-hidden="true">💰</span>
-                    <span>Tickets Required</span>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          {dayItem?.theme && (
+            <p
+              className={`font-bold text-lg ${
+                isEditing ? "text-amber-700" : "text-sky-700"
+              }`}
+            >
+              <span aria-hidden="true">🎯</span> {dayItem.theme}
+            </p>
+          )}
         </div>
       </div>
+
+      {/* Day-specific Map */}
+      {showDayMap && activitiesCount > 0 && (
+        <div className="mt-4 border-t border-gray-200 pt-4">
+          <DayItineraryMap
+            trip={trip}
+            day={dayNumber}
+            activities={dayItem?.plan || []}
+          />
+        </div>
+      )}
     </header>
   );
 }

@@ -14,6 +14,7 @@ import { LoadingState, ErrorState, EmptyState } from "../components/ui-states";
 import { TripHeader } from "../components/trip-management";
 import { DevMetaData } from "../components/shared";
 import { TabbedTripView } from "../components/navigation";
+import TripViewErrorBoundary from "../../components/common/TripViewErrorBoundary";
 
 function ViewTrip() {
   const { tripId } = useParams();
@@ -68,6 +69,24 @@ function ViewTrip() {
       toast.error("Failed to load trip data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Silent refresh function for updates (doesn't show loading screen)
+  const refreshTripData = async () => {
+    try {
+      const docRef = doc(db, "AITrips", tripId);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const tripData = docSnap.data();
+        console.log("🔄 Refreshing trip data after edit:", tripData);
+        setTrip(tripData);
+        return tripData;
+      }
+    } catch (err) {
+      console.error("Error refreshing trip data:", err);
+      // Don't show error toast for silent refresh
     }
   };
 
@@ -139,7 +158,9 @@ function ViewTrip() {
         }`}
       >
         {/* Enhanced Tabbed Content Interface */}
-        <TabbedTripView trip={trip} />
+        <TripViewErrorBoundary onRetry={refreshTripData}>
+          <TabbedTripView trip={trip} onTripUpdate={refreshTripData} />
+        </TripViewErrorBoundary>
 
         {/* Development Info (only in dev mode) */}
         {import.meta.env.DEV && (

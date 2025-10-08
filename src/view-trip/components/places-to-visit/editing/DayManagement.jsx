@@ -183,14 +183,14 @@ function DayManagement({
   return (
     <div className="space-y-4">
       {/* Day Management Controls */}
-      <div className="flex items-center justify-between bg-muted/20 rounded-lg p-4">
+      <div className="flex items-center justify-between bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 rounded-lg p-4 shadow-sm">
         <div className="flex items-center gap-3">
-          <Calendar className="h-7 w-7 text-primary" />
+          <div className="bg-gradient-to-r from-sky-500 to-blue-500 p-2 rounded-lg">
+            <Calendar className="h-5 w-5 text-white" />
+          </div>
           <div>
-            <h3 className="text-lg font-bold text-foreground">
-              Day Management
-            </h3>
-            <p className="text-base font-medium text-muted-foreground">
+            <h3 className="text-lg font-bold text-gray-900">Day Management</h3>
+            <p className="text-base font-medium text-sky-700">
               {itinerary.length} day{itinerary.length !== 1 ? "s" : ""} planned
             </p>
           </div>
@@ -198,7 +198,7 @@ function DayManagement({
 
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogTrigger asChild>
-            <Button className="gap-3 px-6 py-3">
+            <Button className="gap-3 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 text-white shadow-md hover:shadow-lg transition-all duration-300">
               <Plus className="h-6 w-6" />
               <span className="text-base font-semibold">Add Day</span>
             </Button>
@@ -219,27 +219,27 @@ function DayManagement({
                   <div
                     key={template.id}
                     className={cn(
-                      "p-4 border rounded-lg cursor-pointer transition-all duration-200",
-                      "hover:border-primary hover:shadow-md",
+                      "p-4 border-2 rounded-lg cursor-pointer transition-all duration-300",
+                      "hover:border-sky-400 hover:shadow-md hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50",
                       selectedTemplate?.id === template.id &&
-                        "border-primary bg-primary/5 shadow-md"
+                        "border-sky-500 bg-gradient-to-r from-sky-50 to-blue-50 shadow-lg"
                     )}
                     onClick={() => setSelectedTemplate(template)}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="p-3 bg-primary/10 rounded-lg">
-                        <Icon className="h-7 w-7 text-primary" />
+                      <div className="p-3 bg-gradient-to-r from-sky-100 to-blue-100 rounded-lg">
+                        <Icon className="h-7 w-7 text-sky-600" />
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-base font-bold text-foreground mb-2">
+                        <h4 className="text-base font-bold text-gray-900 mb-2">
                           {template.name}
                         </h4>
-                        <p className="text-base font-medium text-muted-foreground mb-3">
+                        <p className="text-base font-medium text-gray-600 mb-3">
                           {template.theme}
                         </p>
                         <Badge
                           variant="secondary"
-                          className="text-sm px-2 py-1 font-semibold"
+                          className="text-sm px-2 py-1 font-semibold bg-sky-100 text-sky-700 border-sky-200"
                         >
                           {template.activities.length} activities
                         </Badge>
@@ -280,20 +280,20 @@ function DayManagement({
           className="flex items-center justify-between bg-card border rounded-lg p-3"
         >
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-lg font-bold">
+            <div className="w-12 h-12 bg-gradient-to-r from-sky-500 to-blue-500 rounded-full flex items-center justify-center text-white text-lg font-bold shadow-md">
               {day.day}
             </div>
             <div>
-              <h4 className="text-base font-bold text-foreground">
+              <h4 className="text-base font-bold text-gray-900">
                 Day {day.day}
               </h4>
-              <p className="text-base font-medium text-muted-foreground">
+              <p className="text-base font-medium text-gray-600">
                 {getDateForDay(day.day) || "Date not set"}
               </p>
             </div>
             <Badge
               variant="outline"
-              className="text-sm px-3 py-1 font-semibold"
+              className="text-sm px-3 py-1 font-semibold bg-sky-50 text-sky-700 border-sky-200"
             >
               {day.plan?.length || 0} activities
             </Badge>
