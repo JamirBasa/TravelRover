@@ -185,19 +185,37 @@ export const model = genAI.getGenerativeModel({
   safetySettings,
 });
 
-// Extremely focused system prompt for JSON reliability
+// Ultra-strict system prompt for JSON reliability with specific error prevention
 const systemPrompt = `Generate ONLY valid JSON for travel itineraries. 
 
 CRITICAL REQUIREMENTS:
 1. Return ONLY JSON - no extra text, no markdown, no code blocks
 2. Use double quotes for all strings  
-3. Ensure complete JSON structure with all closing braces
-4. Include 3-4 hotels, 2-4 activities per day, 5-8 places to visit
-5. Use realistic coordinates and pricing in PHP
-6. Keep descriptions under 80 characters
-7. Must be parseable by JSON.parse()
-8. NEVER truncate - complete the entire JSON structure
-9. Response must end with proper closing brace }
+3. NO TRAILING COMMAS - remove all commas before } or ]
+4. Complete every object and array properly
+5. Include 3-4 hotels, 2-4 activities per day, 5-8 places to visit
+6. Use realistic coordinates and pricing in PHP
+7. Keep descriptions under 80 characters
+8. Must be parseable by JSON.parse()
+9. NEVER truncate - complete the entire JSON structure
+10. Response must end with proper closing brace }
+
+FORBIDDEN:
+- NO trailing commas like "property": "value",}
+- NO incomplete objects like {"name": "place",...
+- NO extra characters after final }
+- NO missing closing braces or brackets
+
+EXAMPLE of CORRECT format:
+{
+  "tripName": "Sample Trip",
+  "placesToVisit": [
+    {
+      "placeName": "Sample Place",
+      "rating": 4.5
+    }
+  ]
+}
 
 Response must be complete, valid JSON that ends properly.`;
 

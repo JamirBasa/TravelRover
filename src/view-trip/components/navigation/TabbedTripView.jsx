@@ -6,8 +6,10 @@ import { InfoSection } from "../shared";
 import { Hotels } from "../accommodations";
 import { PlacesToVisit } from "../places-to-visit";
 import { FlightBooking } from "../travel-bookings";
+import { TripMap } from "../maps";
+import { RouteOptimizationStatus } from "../optimization";
 
-function TabbedTripView({ trip }) {
+function TabbedTripView({ trip, onTripUpdate }) {
   const [activeTab, setActiveTab] = useState("overview");
 
   const tabs = [
@@ -15,13 +17,29 @@ function TabbedTripView({ trip }) {
       id: "overview",
       label: "Overview",
       icon: <Info className="h-4 w-4" />,
-      component: <InfoSection trip={trip} />,
+      component: (
+        <div className="space-y-6">
+          <InfoSection trip={trip} />
+          {trip?.routeOptimization && (
+            <RouteOptimizationStatus 
+              routeOptimization={trip.routeOptimization}
+              className="animate-fadeIn"
+            />
+          )}
+        </div>
+      ),
     },
     {
       id: "itinerary",
       label: "Itinerary",
       icon: <Calendar className="h-4 w-4" />,
-      component: <PlacesToVisit trip={trip} />,
+      component: <PlacesToVisit trip={trip} onTripUpdate={onTripUpdate} />,
+    },
+    {
+      id: "map",
+      label: "Map View",
+      icon: <MapPin className="h-4 w-4" />,
+      component: <TripMap trip={trip} />,
     },
     {
       id: "hotels",
@@ -29,7 +47,7 @@ function TabbedTripView({ trip }) {
       icon: <Hotel className="h-4 w-4" />,
       component: <Hotels trip={trip} />,
     },
-    ...(trip?.hasRealFlights
+    ...(trip?.hasRealFlights && trip?.flightResults?.success
       ? [
           {
             id: "flights",

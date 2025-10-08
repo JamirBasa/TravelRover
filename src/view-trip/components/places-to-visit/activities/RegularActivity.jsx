@@ -4,12 +4,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Clock, MapPin, Star, DollarSign, Timer } from "lucide-react";
 import { COLORS, PATTERNS, ANIMATIONS } from "../constants/designSystem";
+import {
+  parseTimeString,
+  extractActivityTime,
+  extractActivityPlaceName,
+} from "../../../../utils";
 
 function RegularActivity({ activity, activityIndex, dayIndex }) {
   // Generate consistent IDs for accessibility
   const activityId = `activity-${dayIndex}-${activityIndex}`;
   const titleId = `activity-title-${dayIndex}-${activityIndex}`;
   const detailsId = `activity-details-${dayIndex}-${activityIndex}`;
+
+  // Extract enhanced time and place name
+  const displayTime = extractActivityTime(activity);
+  const cleanPlaceName = extractActivityPlaceName(activity);
 
   return (
     <Card
@@ -38,8 +47,8 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
           </div>
 
           <div className="flex-1 min-w-0 space-y-2">
-            {/* Enhanced time badge - Bigger icons and text */}
-            {activity?.time && (
+            {/* Enhanced time badge - Show actual extracted time */}
+            {displayTime && displayTime !== "All Day" && (
               <div className="flex items-center">
                 <Badge
                   variant="secondary"
@@ -50,8 +59,8 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                   )}
                 >
                   <Clock className="h-4 w-4" aria-hidden="true" />
-                  <time dateTime={convertToISO8601Time(activity.time)}>
-                    {activity.time}
+                  <time dateTime={parseTimeString(displayTime)}>
+                    {displayTime}
                   </time>
                 </Badge>
               </div>
@@ -75,14 +84,14 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                     "break-words"
                   )}
                 >
-                  {activity?.placeName || "Activity"}
+                  {cleanPlaceName || "Activity"}
                 </h4>
 
                 {/* See Directions Link */}
-                {activity?.placeName && (
+                {cleanPlaceName && cleanPlaceName !== "Activity" && (
                   <a
                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                      activity.placeName
+                      cleanPlaceName
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -105,29 +114,33 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                 "Discover this amazing location and create unforgettable memories during your visit."}
             </p>
 
-            {/* Modern badge collection */}
+            {/* Modern badge collection - Only show meaningful data, not defaults */}
             <div
               className="flex flex-wrap items-center gap-1.5"
               aria-label="Activity details"
             >
-              {activity?.ticketPricing && (
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "gap-1.5 px-2 py-1 text-xs font-medium",
-                    COLORS.badges.pricing.border,
-                    COLORS.badges.pricing.bg,
-                    COLORS.badges.pricing.text,
-                    COLORS.badges.pricing.hover,
-                    ANIMATIONS.transition.medium
-                  )}
-                >
-                  <DollarSign className="h-3 w-3" aria-hidden="true" />
-                  <span className="font-medium">{activity.ticketPricing}</span>
-                </Badge>
-              )}
+              {activity?.ticketPricing &&
+                activity.ticketPricing !== "₱0" &&
+                activity.ticketPricing !== "0" && (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "gap-1.5 px-2 py-1 text-xs font-medium",
+                      COLORS.badges.pricing.border,
+                      COLORS.badges.pricing.bg,
+                      COLORS.badges.pricing.text,
+                      COLORS.badges.pricing.hover,
+                      ANIMATIONS.transition.medium
+                    )}
+                  >
+                    <DollarSign className="h-3 w-3" aria-hidden="true" />
+                    <span className="font-medium">
+                      {activity.ticketPricing}
+                    </span>
+                  </Badge>
+                )}
 
-              {activity?.timeTravel && (
+              {activity?.timeTravel && activity.timeTravel !== "Varies" && (
                 <Badge
                   variant="outline"
                   className={cn(
@@ -144,22 +157,24 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                 </Badge>
               )}
 
-              {activity?.rating && (
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "gap-1.5 px-2 py-1 text-xs font-medium",
-                    COLORS.badges.rating.border,
-                    COLORS.badges.rating.bg,
-                    COLORS.badges.rating.text,
-                    COLORS.badges.rating.hover,
-                    ANIMATIONS.transition.medium
-                  )}
-                >
-                  <Star className="h-3 w-3" aria-hidden="true" />
-                  <span className="font-medium">{activity.rating}/5</span>
-                </Badge>
-              )}
+              {activity?.rating &&
+                activity.rating !== "4.0" &&
+                activity.rating !== "4.0/5" && (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "gap-1.5 px-2 py-1 text-xs font-medium",
+                      COLORS.badges.rating.border,
+                      COLORS.badges.rating.bg,
+                      COLORS.badges.rating.text,
+                      COLORS.badges.rating.hover,
+                      ANIMATIONS.transition.medium
+                    )}
+                  >
+                    <Star className="h-3 w-3" aria-hidden="true" />
+                    <span className="font-medium">{activity.rating}/5</span>
+                  </Badge>
+                )}
             </div>
           </div>
         </div>
@@ -168,31 +183,6 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
   );
 }
 
-// Helper function to convert time to ISO 8601 format
-function convertToISO8601Time(timeString) {
-  if (!timeString) return "";
-
-  try {
-    // Expected format: "9:00 AM" or similar
-    const [time, period] = timeString.split(" ");
-    let [hours, minutes] = time.split(":").map(Number);
-
-    // Convert to 24-hour format
-    if (period && period.toUpperCase() === "PM" && hours < 12) {
-      hours += 12;
-    } else if (period && period.toUpperCase() === "AM" && hours === 12) {
-      hours = 0;
-    }
-
-    // Format with leading zeros
-    const formattedHours = hours.toString().padStart(2, "0");
-    const formattedMinutes = minutes.toString().padStart(2, "0");
-
-    return `${formattedHours}:${formattedMinutes}:00`;
-  } catch (error) {
-    console.error("Error parsing time string:", timeString, error);
-    return "";
-  }
-}
+// Note: Time parsing utility moved to shared utils/jsonParsers.js
 
 export default RegularActivity;

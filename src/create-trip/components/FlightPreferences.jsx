@@ -5,69 +5,25 @@ import { FaPlane, FaMapMarkerAlt, FaInfoCircle, FaCheck } from "react-icons/fa";
 import {
   getRegionsByCountry,
   getCitiesByRegion,
-  getRegionName,
 } from "../../data/locationData";
 import { useMemo } from "react";
+import { UserProfileService } from "../../services/userProfileService";
 
 const FlightPreferences = ({ flightData, onFlightDataChange, userProfile }) => {
-  // Debug log to see what we're receiving
-  React.useEffect(() => {
-    if (userProfile) {
-      const profileRegionCode =
-        userProfile.address?.regionCode || userProfile.address?.region;
-      const regionName = getRegionName("PH", profileRegionCode);
-
-      console.log("🔍 FlightPreferences received userProfile:", {
-        address: userProfile.address,
-        city: userProfile.address?.city,
-        region: userProfile.address?.region,
-        regionCode: userProfile.address?.regionCode,
-        "🔧 FIXED - profileRegionCode": profileRegionCode,
-        "🔧 FIXED - regionName": regionName,
-        "✅ Will auto-populate":
-          !!profileRegionCode && !!userProfile.address?.city,
-      });
-    }
-  }, [userProfile]);
-
-  // Set default departure location from user profile
-  // Fix: Handle both possible data structures (regionCode vs region containing the code)
-  const defaultDepartureCity = userProfile?.address?.city || "";
-  const defaultDepartureRegionCode =
-    userProfile?.address?.regionCode || userProfile?.address?.region || "";
-
-  // Get the region name from the code
-  const defaultDepartureRegionName = defaultDepartureRegionCode
-    ? getRegionName("PH", defaultDepartureRegionCode)
-    : "";
+  // Get profile summary for consistent display
+  const profileSummary =
+    UserProfileService.getProfileDisplaySummary(userProfile);
 
   // Auto-populate when flights are enabled and we have profile data
   React.useEffect(() => {
-    const profileRegionCode =
-      userProfile?.address?.regionCode || userProfile?.address?.region;
+    if (UserProfileService.shouldAutoPopulateFlights(userProfile, flightData)) {
+      const autoPopulatedData = UserProfileService.autoPopulateFlightData(
+        userProfile,
+        flightData
+      );
 
-    if (
-      flightData.includeFlights &&
-      userProfile?.address?.city &&
-      profileRegionCode &&
-      !flightData.departureCity &&
-      !flightData.departureRegionCode
-    ) {
-      const regionName = getRegionName("PH", profileRegionCode);
-
-      console.log("✈️ Auto-populating flight data on enable:", {
-        city: userProfile.address.city,
-        regionCode: profileRegionCode,
-        regionName: regionName,
-        originalData: userProfile.address,
-      });
-
-      onFlightDataChange({
-        ...flightData,
-        departureCity: userProfile.address.city,
-        departureRegionCode: profileRegionCode,
-        departureRegion: regionName,
-      });
+      console.log("✈️ Auto-populating flight data from centralized service");
+      onFlightDataChange(autoPopulatedData);
     }
   }, [flightData.includeFlights, userProfile]);
 
@@ -152,25 +108,12 @@ const FlightPreferences = ({ flightData, onFlightDataChange, userProfile }) => {
                 onFlightDataChange({
                   ...flightData,
                   includeFlights: isEnabled,
-                  // Auto-populate when enabling flights
-                  ...(isEnabled &&
-                  userProfile?.address?.city &&
-                  !flightData.departureCity
-                    ? (() => {
-                        const profileRegionCode =
-                          userProfile.address.regionCode ||
-                          userProfile.address.region;
-                        const regionName = getRegionName(
-                          "PH",
-                          profileRegionCode
-                        );
-
-                        return {
-                          departureCity: userProfile.address.city,
-                          departureRegionCode: profileRegionCode,
-                          departureRegion: regionName,
-                        };
-                      })()
+                  // Auto-populate when enabling flights using centralized service
+                  ...(isEnabled
+                    ? UserProfileService.autoPopulateFlightData(userProfile, {
+                        ...flightData,
+                        includeFlights: isEnabled,
+                      })
                     : {}),
                 });
               }}
@@ -189,11 +132,14 @@ const FlightPreferences = ({ flightData, onFlightDataChange, userProfile }) => {
               <div className="bg-gray-50 p-4 rounded-lg">
                 {/* Auto-populated indicator */}
                 {flightData.departureCity &&
-                  userProfile?.address?.city === flightData.departureCity && (
+                  profileSummary?.hasLocationData && (
                     <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg">
                       <div className="flex items-center gap-2 text-green-700 text-sm">
                         <FaCheck className="text-xs" />
-                        <span>Auto-populated from your profile</span>
+                        <span>
+                          Auto-populated from your profile:{" "}
+                          {profileSummary.location}
+                        </span>
                       </div>
                     </div>
                   )}
@@ -279,19 +225,10 @@ const FlightPreferences = ({ flightData, onFlightDataChange, userProfile }) => {
                 <li>• Integrated into your total trip budget</li>
                 <li>• Direct booking links for convenience</li>
                 <li>• Price level indicators (Low, Fair, High)</li>
-                {userProfile?.address?.city && (
+                {profileSummary?.hasLocationData && (
                   <li>
                     • 🏠 Using your home location:{" "}
-                    <strong>
-                      {userProfile.address.city},{" "}
-                      {getRegionName(
-                        "PH",
-                        userProfile.address?.regionCode ||
-                          userProfile.address?.region
-                      ) ||
-                        userProfile.address?.region ||
-                        "Unknown Region"}
-                    </strong>
+                    <strong>{profileSummary.location}</strong>
                   </li>
                 )}
               </ul>

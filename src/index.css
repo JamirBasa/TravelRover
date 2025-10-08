@@ -1,3 +1,6 @@
+/* Tailwind CSS v4 - Modern Import Syntax */
+/* Note: @import and @custom-variant are valid Tailwind v4 directives */
+/* If you see linting warnings, they can be safely ignored or suppressed in .vscode/settings.json */
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -121,10 +124,18 @@
 
 /* Hero Animation Styles */
 @keyframes blob {
-  0% { transform: translate(0px, 0px) scale(1); }
-  33% { transform: translate(30px, -50px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.9); }
-  100% { transform: translate(0px, 0px) scale(1); }
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
 }
 
 .animate-blob {
@@ -139,10 +150,41 @@
   animation-delay: 4s;
 }
 
+/* Standard spin animation - ensure it's available */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Ping animation for pulse rings */
+@keyframes ping {
+  75%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.animate-ping {
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
 /* Slow spin animation for sparkles */
 @keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .animate-spin-slow {
@@ -162,11 +204,19 @@
 
 /* Brand Gradient Classes */
 .brand-gradient {
-  background: linear-gradient(135deg, var(--brand-sky) 0%, var(--brand-blue) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--brand-sky) 0%,
+    var(--brand-blue) 100%
+  );
 }
 
 .brand-gradient-text {
-  background: linear-gradient(135deg, var(--brand-sky) 0%, var(--brand-blue) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--brand-sky) 0%,
+    var(--brand-blue) 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -174,17 +224,27 @@
 }
 
 .brand-button {
-  background: linear-gradient(135deg, var(--brand-sky) 0%, var(--brand-blue) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--brand-sky) 0%,
+    var(--brand-blue) 100%
+  );
   color: white;
   font-weight: 600;
   border-radius: 9999px;
-  box-shadow: 0 10px 15px -3px rgb(14 165 233 / 0.3), 0 4px 6px -4px rgb(14 165 233 / 0.2);
+  box-shadow: 0 10px 15px -3px rgb(14 165 233 / 0.3),
+    0 4px 6px -4px rgb(14 165 233 / 0.2);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .brand-button:hover {
-  background: linear-gradient(135deg, var(--brand-sky-hover) 0%, var(--brand-blue-hover) 100%);
-  box-shadow: 0 20px 25px -5px rgb(14 165 233 / 0.4), 0 8px 10px -6px rgb(14 165 233 / 0.3);
+  background: linear-gradient(
+    135deg,
+    var(--brand-sky-hover) 0%,
+    var(--brand-blue-hover) 100%
+  );
+  box-shadow: 0 20px 25px -5px rgb(14 165 233 / 0.4),
+    0 8px 10px -6px rgb(14 165 233 / 0.3);
   transform: scale(1.05);
 }
 
@@ -221,8 +281,13 @@
 }
 
 @keyframes gentlePulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 .fade-in-up {
@@ -238,4 +303,60 @@
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Google Maps UI-Safe Control Styles */
+.travelrover-map-control {
+  /* Base styling for all map controls */
+  position: relative;
+  z-index: 10; /* Above map, below Google Maps controls */
+  
+  /* Glassmorphic design matching brand */
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  
+  /* Smooth interactions */
+  transition: all 0.2s ease;
+  
+  /* Touch-friendly sizing (iOS/Android guidelines) */
+  min-height: 44px;
+  
+  /* Prevent text selection on mobile */
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.travelrover-map-control:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(14, 165, 233, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.travelrover-map-control:focus-within {
+  outline: none;
+  border-color: rgba(14, 165, 233, 0.6);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .travelrover-map-control {
+    padding: 6px 10px;
+    font-size: 0.875rem;
+  }
+  
+  /* Ensure controls don't interfere with Google's mobile UI */
+  .map-controls-bottom {
+    bottom: 60px; /* Space for Google logo and zoom controls */
+  }
+  
+  /* Stack controls vertically on small screens */
+  .mobile-stack {
+    flex-direction: column;
+    gap: 4px;
+  }
 }
