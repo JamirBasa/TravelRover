@@ -10,7 +10,6 @@ import {
   X,
   MapPin,
 } from "lucide-react";
-import { DayItineraryMap } from "../../maps";
 import {
   COLORS,
   SPACING,
@@ -100,26 +99,6 @@ function DayHeader({
               id={controlsId}
               aria-label={`Day ${dayNumber} controls`}
             >
-              {/* Map Toggle Button */}
-              {activitiesCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowDayMap(!showDayMap)}
-                  className={`gap-2 ${ANIMATIONS.transition.medium} ${
-                    showDayMap
-                      ? `text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100`
-                      : `text-gray-600 hover:text-gray-800 hover:bg-gray-50`
-                  }`}
-                  aria-label={showDayMap ? "Hide day map" : "Show day map"}
-                >
-                  <MapPin className="h-5 w-5" aria-hidden="true" />
-                  <span className="text-sm font-medium">
-                    {showDayMap ? "Hide Map" : "Show Map"}
-                  </span>
-                </Button>
-              )}
-
               {/* Expand/Collapse Button */}
               <Button
                 variant="ghost"

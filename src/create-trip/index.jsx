@@ -871,60 +871,77 @@ Generate general accommodation recommendations without specific pricing or booki
       // AI Generation with Retry Logic
       let aiResponseText = null;
       let lastError = null;
-      
-      for (let attempt = 1; attempt <= VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS; attempt++) {
+
+      for (
+        let attempt = 1;
+        attempt <= VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS;
+        attempt++
+      ) {
         try {
-          console.log(`🔄 AI Generation Attempt ${attempt}/${VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS}`);
-          
+          console.log(
+            `🔄 AI Generation Attempt ${attempt}/${VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS}`
+          );
+
           const result = await chatSession.sendMessage(enhancedPrompt);
           const rawResponse = result?.response.text();
-          
-          console.log(`🎉 AI Raw Response (Attempt ${attempt}):`, rawResponse?.substring(0, 200) + "...");
+
+          console.log(
+            `🎉 AI Raw Response (Attempt ${attempt}):`,
+            rawResponse?.substring(0, 200) + "..."
+          );
 
           // Pre-clean and validate the response
           const cleanedResponse = sanitizeJSONString(rawResponse);
-          
+
           if (!cleanedResponse) {
             throw new Error("Failed to extract valid JSON from AI response");
           }
-          
+
           // Test parse to ensure it's valid
           const testParse = safeJsonParse(cleanedResponse);
           const validationError = validateAIResponse(testParse);
-          
+
           if (validationError) {
             throw new Error(validationError);
           }
-          
+
           // Success! Use this response
           aiResponseText = cleanedResponse;
           console.log(`✅ AI Generation successful on attempt ${attempt}`);
           break;
-          
         } catch (error) {
           console.warn(`⚠️ Attempt ${attempt} failed:`, error.message);
           lastError = error;
-          
+
           if (attempt < VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS) {
             console.log("🔄 Retrying with enhanced prompt...");
             // Add stricter instructions for retry
-            enhancedPrompt += "\n\nIMPORTANT: Previous attempt failed. Generate ONLY valid JSON with no extra text or formatting.";
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Brief delay
+            enhancedPrompt +=
+              "\n\nIMPORTANT: Previous attempt failed. Generate ONLY valid JSON with no extra text or formatting.";
+            await new Promise((resolve) => setTimeout(resolve, 1000)); // Brief delay
           }
         }
       }
-      
+
       if (!aiResponseText) {
-        throw new Error(`AI generation failed after ${VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS} attempts: ${lastError?.message}`);
+        throw new Error(
+          `AI generation failed after ${VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS} attempts: ${lastError?.message}`
+        );
       }
 
-      console.log("🧹 Final cleaned Response:", aiResponseText?.substring(0, 200) + "...");
+      console.log(
+        "🧹 Final cleaned Response:",
+        aiResponseText?.substring(0, 200) + "..."
+      );
 
       console.log("📊 Final AI Response Analysis:", {
         length: aiResponseText?.length || 0,
         startsWithBrace: aiResponseText?.trim().startsWith("{") || false,
         endsWithBrace: aiResponseText?.trim().endsWith("}") || false,
-        hasRequiredFields: aiResponseText?.includes('"placesToVisit"') && aiResponseText?.includes('"tripName"') || false,
+        hasRequiredFields:
+          (aiResponseText?.includes('"placesToVisit"') &&
+            aiResponseText?.includes('"tripName"')) ||
+          false,
       });
 
       console.log("✅ All validations passed - proceeding with trip creation");

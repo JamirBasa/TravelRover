@@ -26,7 +26,6 @@ import { toast } from "sonner";
 // Component imports - Clean imports using index file
 import {
   TripOverviewStats,
-  PlacesToVisitSection,
   ItineraryNavigationHelper,
   ItineraryHeader,
   DayHeader,
@@ -384,8 +383,7 @@ function PlacesToVisit({ trip, onTripUpdate }) {
         placesToVisit={parsedPlacesToVisit}
       />
 
-      {/* Places to Visit Section */}
-      <PlacesToVisitSection placesToVisit={parsedPlacesToVisit} />
+      {/* Removed redundant PlacesToVisitSection - places are already shown in daily itinerary below */}
 
       {/* Daily Itinerary Header */}
       <ItineraryHeader />

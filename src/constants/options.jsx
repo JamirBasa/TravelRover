@@ -70,7 +70,13 @@ export const VALIDATION_RULES = {
     TRIP: ["location", "startDate", "endDate", "travelers", "budget"],
     PROFILE: ["firstName", "lastName", "email"],
     FLIGHT: ["departureCity", "departureRegionCode"],
-    AI_RESPONSE: ["tripName", "destination", "hotels", "itinerary", "placesToVisit"],
+    AI_RESPONSE: [
+      "tripName",
+      "destination",
+      "hotels",
+      "itinerary",
+      "placesToVisit",
+    ],
   },
   JSON_PARSING: {
     MIN_RESPONSE_LENGTH: 100,
@@ -95,7 +101,8 @@ export const MESSAGES = {
     TRIP_NOT_FOUND: "Trip not found.",
     UNAUTHORIZED: "You don't have permission to access this trip.",
     GENERIC_ERROR: "Something went wrong. Please try again.",
-    JSON_PARSE_ERROR: "Unable to process AI response. Please try generating again.",
+    JSON_PARSE_ERROR:
+      "Unable to process AI response. Please try generating again.",
     AI_RESPONSE_ERROR: "AI generated incomplete data. Please try again.",
     COORDINATE_ERROR: "Invalid location coordinates received.",
     VALIDATION_ERROR: "Trip data validation failed. Please check your inputs.",
@@ -262,57 +269,61 @@ export const validateBudget = (budget) => {
 
 // JSON Validation Helpers
 export const validateAIResponse = (response) => {
-  if (!response || typeof response !== 'object') {
+  if (!response || typeof response !== "object") {
     return MESSAGES.ERROR.AI_RESPONSE_ERROR;
   }
 
   const missing = VALIDATION_RULES.REQUIRED_FIELDS.AI_RESPONSE.filter(
-    field => !response[field]
+    (field) => !response[field]
   );
 
   if (missing.length > 0) {
-    return `Missing required fields: ${missing.join(', ')}`;
+    return `Missing required fields: ${missing.join(", ")}`;
   }
 
   return null;
 };
 
 export const validateCoordinates = (lat, lng) => {
-  const { MIN_LAT, MAX_LAT, MIN_LNG, MAX_LNG } = VALIDATION_RULES.JSON_PARSING.COORDINATE_BOUNDS;
-  
-  if (typeof lat !== 'number' || typeof lng !== 'number') {
+  const { MIN_LAT, MAX_LAT, MIN_LNG, MAX_LNG } =
+    VALIDATION_RULES.JSON_PARSING.COORDINATE_BOUNDS;
+
+  if (typeof lat !== "number" || typeof lng !== "number") {
     return "Coordinates must be numbers";
   }
-  
+
   if (lat < MIN_LAT || lat > MAX_LAT) {
     return `Latitude must be between ${MIN_LAT} and ${MAX_LAT}`;
   }
-  
+
   if (lng < MIN_LNG || lng > MAX_LNG) {
     return `Longitude must be between ${MIN_LNG} and ${MAX_LNG}`;
   }
-  
+
   return null;
 };
 
 export const sanitizeJSONString = (jsonString) => {
   if (!jsonString) return null;
-  
+
   try {
     // Remove markdown code blocks
-    let cleaned = jsonString.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
-    
+    let cleaned = jsonString
+      .replace(/```json\s*/g, "")
+      .replace(/```\s*$/g, "")
+      .trim();
+
     // Find JSON boundaries
-    const startIndex = cleaned.indexOf('{');
-    const endIndex = cleaned.lastIndexOf('}');
-    
+    const startIndex = cleaned.indexOf("{");
+    const endIndex = cleaned.lastIndexOf("}");
+
     if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
       cleaned = cleaned.substring(startIndex, endIndex + 1);
     }
-    
+
     return cleaned;
   } catch (error) {
-    console.error('JSON sanitization error:', error);
+    console.error("JSON sanitization error:", error);
     return null;
   }
 };
