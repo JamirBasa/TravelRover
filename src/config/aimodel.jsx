@@ -21,7 +21,7 @@ const generationConfig = {
   temperature: 0.2, // Balanced for consistency and creativity
   topP: 0.9,
   topK: 20,
-  maxOutputTokens: 32768, // Doubled token limit for complete responses
+  maxOutputTokens: 8192,
   responseMimeType: "application/json",
   responseSchema: {
     type: "object",
@@ -44,25 +44,12 @@ const generationConfig = {
             hotelName: { type: "string" },
             hotelAddress: { type: "string" },
             pricePerNight: { type: "string" },
-            imageUrl: { type: "string" },
-            geoCoordinates: {
-              type: "object",
-              properties: {
-                latitude: { type: "number" },
-                longitude: { type: "number" },
-              },
-              required: ["latitude", "longitude"],
-            },
-            rating: { type: "number", minimum: 1, maximum: 5 },
             description: { type: "string" },
           },
           required: [
             "hotelName",
             "hotelAddress",
             "pricePerNight",
-            "imageUrl",
-            "geoCoordinates",
-            "rating",
             "description",
           ],
         },
@@ -84,28 +71,15 @@ const generationConfig = {
                   time: { type: "string" },
                   placeName: { type: "string" },
                   placeDetails: { type: "string" },
-                  imageUrl: { type: "string" },
-                  geoCoordinates: {
-                    type: "object",
-                    properties: {
-                      latitude: { type: "number" },
-                      longitude: { type: "number" },
-                    },
-                    required: ["latitude", "longitude"],
-                  },
                   ticketPricing: { type: "string" },
                   timeTravel: { type: "string" },
-                  rating: { type: "number", minimum: 1, maximum: 5 },
                 },
                 required: [
                   "time",
                   "placeName",
                   "placeDetails",
-                  "imageUrl",
-                  "geoCoordinates",
                   "ticketPricing",
                   "timeTravel",
-                  "rating",
                 ],
               },
             },
@@ -122,27 +96,14 @@ const generationConfig = {
           properties: {
             placeName: { type: "string" },
             placeDetails: { type: "string" },
-            imageUrl: { type: "string" },
-            geoCoordinates: {
-              type: "object",
-              properties: {
-                latitude: { type: "number" },
-                longitude: { type: "number" },
-              },
-              required: ["latitude", "longitude"],
-            },
             ticketPricing: { type: "string" },
             timeTravel: { type: "string" },
-            rating: { type: "number", minimum: 1, maximum: 5 },
           },
           required: [
             "placeName",
             "placeDetails",
-            "imageUrl",
-            "geoCoordinates",
             "ticketPricing",
             "timeTravel",
-            "rating",
           ],
         },
       },
@@ -185,7 +146,6 @@ export const model = genAI.getGenerativeModel({
   safetySettings,
 });
 
-// Ultra-strict system prompt for JSON reliability with specific error prevention
 const systemPrompt = `Generate ONLY valid JSON for travel itineraries. 
 
 CRITICAL REQUIREMENTS:
@@ -194,7 +154,7 @@ CRITICAL REQUIREMENTS:
 3. NO TRAILING COMMAS - remove all commas before } or ]
 4. Complete every object and array properly
 5. Include 3-4 hotels, 2-4 activities per day, 5-8 places to visit
-6. Use realistic coordinates and pricing in PHP
+6. Use realistic pricing in PHP
 7. Keep descriptions under 80 characters
 8. Must be parseable by JSON.parse()
 9. NEVER truncate - complete the entire JSON structure
@@ -208,11 +168,41 @@ FORBIDDEN:
 
 EXAMPLE of CORRECT format:
 {
-  "tripName": "Sample Trip",
+  "tripName": "Manila Adventure",
+  "destination": "Manila, Philippines",
+  "duration": "3",
+  "budget": "Moderate",
+  "travelers": "A Couple",
+  "currency": "PHP",
+  "hotels": [
+    {
+      "hotelName": "Sample Hotel",
+      "hotelAddress": "123 Street, Manila",
+      "pricePerNight": "₱3,500",
+      "description": "Modern hotel with great amenities"
+    }
+  ],
+  "itinerary": [
+    {
+      "day": 1,
+      "theme": "Cultural Exploration",
+      "plan": [
+        {
+          "time": "9:00 AM",
+          "placeName": "Rizal Park",
+          "placeDetails": "Historic park in the heart of Manila",
+          "ticketPricing": "Free",
+          "timeTravel": "30 minutes"
+        }
+      ]
+    }
+  ],
   "placesToVisit": [
     {
-      "placeName": "Sample Place",
-      "rating": 4.5
+      "placeName": "Intramuros",
+      "placeDetails": "Historic walled city",
+      "ticketPricing": "₱75",
+      "timeTravel": "45 minutes"
     }
   ]
 }
