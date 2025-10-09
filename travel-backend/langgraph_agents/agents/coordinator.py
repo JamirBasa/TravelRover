@@ -7,6 +7,7 @@ from django.utils import timezone
 from .base_agent import BaseAgent
 from .flight_agent import FlightAgent
 from .hotel_agent import HotelAgent
+from .route_optimizer_agent import RouteOptimizerAgent
 from ..models import TravelPlanningSession
 import logging
 from asgiref.sync import sync_to_async
@@ -16,10 +17,13 @@ logger = logging.getLogger(__name__)
 class CoordinatorAgent(BaseAgent):
     """LangGraph Coordinator Agent - Orchestrates all other agents"""
     
-    def __init__(self, session_id: str):
+    def __init__(self, session_id: str, use_genetic_algorithm: bool = True, use_ga_first: bool = True):
         super().__init__(session_id, 'coordinator')
         self.flight_agent = FlightAgent(session_id)
         self.hotel_agent = HotelAgent(session_id)
+        # Initialize route optimizer with genetic algorithm enabled by default
+        self.route_optimizer = RouteOptimizerAgent(session_id, use_genetic_algorithm=use_genetic_algorithm)
+        self.use_ga_first = use_ga_first  # NEW: Enable GA-first itinerary generation
     
     def execute_sync(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Synchronous wrapper for the async execute method"""
@@ -59,6 +63,14 @@ class CoordinatorAgent(BaseAgent):
             # Create/update session
             await self._update_session(trip_params)
             
+            # NEW: Check if we should use GA-first approach
+            if self.use_ga_first:
+                logger.info("🧬 Using GA-First approach for itinerary generation")
+                return await self._execute_ga_first_workflow(trip_params)
+            
+            # ORIGINAL: Traditional workflow (flights/hotels → AI → optimize)
+            logger.info("🔄 Using traditional workflow")
+            
             # Create execution plan
             execution_plan = await self._create_execution_plan(trip_params)
             
@@ -68,6 +80,11 @@ class CoordinatorAgent(BaseAgent):
             # Merge and optimize results
             merged_results = await self._merge_agent_results(agent_results, trip_params)
             optimized_results = await self._optimize_results(merged_results, trip_params)
+            
+            # Apply route optimization to itinerary if present
+            if 'itinerary_data' in optimized_results:
+                route_optimization_result = await self._apply_route_optimization(optimized_results, trip_params)
+                optimized_results.update(route_optimization_result)
             
             # Update session with final results
             await self._finalize_session(optimized_results)
@@ -509,6 +526,237 @@ class CoordinatorAgent(BaseAgent):
                 logger.error(f"Failed to finalize session: {e}")
         
         await finalize_session_data()
+    
+    async def _apply_route_optimization(self, merged_results: Dict[str, Any], trip_params: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply route optimization to the generated itinerary"""
+        
+        try:
+            logger.info("🚗 Applying route optimization to itinerary")
+            
+            # Check if itinerary data exists
+            itinerary_data = merged_results.get('itinerary_data')
+            if not itinerary_data:
+                logger.warning("No itinerary data found for route optimization")
+                return {'route_optimization_applied': False, 'route_optimization_error': 'No itinerary data'}
+            
+            # Prepare input for route optimizer
+            optimizer_input = {
+                'itinerary_data': itinerary_data,
+                'trip_params': trip_params,
+                'session_id': self.session_id
+            }
+            
+            # Execute route optimization
+            optimization_result = await self.route_optimizer.execute(optimizer_input)
+            
+            if optimization_result.get('success') and 'data' in optimization_result:
+                route_data = optimization_result['data']
+                
+                logger.info(f"✅ Route optimization completed with efficiency score: {route_data.get('route_efficiency_score', 'N/A')}")
+                
+                return {
+                    'optimized_itinerary': route_data.get('optimized_itinerary', itinerary_data),
+                    'route_optimization': {
+                        'applied': True,
+                        'efficiency_score': route_data.get('route_efficiency_score', 0),
+                        'total_travel_time_minutes': route_data.get('total_travel_time_minutes', 0),
+                        'optimization_summary': route_data.get('optimization_summary', {}),
+                        'recommendations': route_data.get('recommendations', [])
+                    },
+                    # Replace original itinerary with optimized version
+                    'itinerary_data': route_data.get('optimized_itinerary', itinerary_data)
+                }
+            else:
+                logger.warning(f"Route optimization failed: {optimization_result.get('error', 'Unknown error')}")
+                return {
+                    'route_optimization': {
+                        'applied': False,
+                        'error': optimization_result.get('error', 'Unknown error')
+                    }
+                }
+                
+        except Exception as e:
+            logger.error(f"❌ Route optimization error: {str(e)}")
+            return {
+                'route_optimization': {
+                    'applied': False,
+                    'error': str(e)
+                }
+            }
+    
+    async def _execute_ga_first_workflow(self, trip_params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        NEW: GA-First Workflow
+        Step 1: Fetch activity pool
+        Step 2: GA generates optimal itinerary
+        Step 3: (Optional) Gemini enhances descriptions
+        Step 4: Parallel flights & hotels search
+        """
+        
+        logger.info("🧬 Starting GA-First Workflow")
+        import time
+        start_time = time.time()
+        
+        try:
+            # Step 1: Fetch comprehensive activity pool
+            step_start = time.time()
+            logger.info("📍 Step 1: Fetching activity pool...")
+            from ..services.activity_fetcher import ActivityPoolFetcher
+            
+            activity_fetcher = ActivityPoolFetcher()
+            activities = await activity_fetcher.fetch_activity_pool(
+                destination=trip_params['destination'],
+                user_preferences=trip_params.get('user_profile', {}),
+                radius=15000,  # 15km (reduced from 20km for faster search)
+                max_activities=50  # Reduced from 100 (still provides good variety)
+            )
+            
+            if not activities:
+                logger.warning("⚠️  No activities fetched, falling back to traditional workflow")
+                return await self._execute_traditional_workflow(trip_params)
+            
+            step_duration = time.time() - step_start
+            logger.info(f"✅ Fetched {len(activities)} activities in {step_duration:.2f}s")
+            
+            # Step 2: Generate optimal itinerary using Genetic Algorithm
+            step_start = time.time()
+            logger.info("🧬 Step 2: GA optimization...")
+            from ..agents.genetic_optimizer import GeneticItineraryOptimizer
+            
+            # Optimized parameters for faster execution while maintaining quality
+            ga_optimizer = GeneticItineraryOptimizer(
+                population_size=30,      # Reduced from 50 (still good diversity)
+                generations=50,          # Reduced from 100 (usually converges earlier)
+                mutation_rate=0.15,
+                crossover_rate=0.7,
+                elite_size=3             # Reduced from 5 (keeps best solutions)
+            )
+            
+            ga_result = ga_optimizer.optimize(
+                activities=activities,
+                trip_params=trip_params
+            )
+            
+            step_duration = time.time() - step_start
+            logger.info(f"✅ GA optimization complete in {step_duration:.2f}s. Score: {ga_result.get('optimization_score', 0):.2f}")
+            
+            # Step 3: Parallel execution of flights & hotels
+            step_start = time.time()
+            logger.info("✈️ Step 3: Fetching flights & hotels in parallel...")
+            execution_plan = await self._create_execution_plan(trip_params)
+            agent_results = await self._execute_agents_parallel(execution_plan)
+            
+            step_duration = time.time() - step_start
+            logger.info(f"✅ Flights & hotels fetched in {step_duration:.2f}s")
+            
+            # Step 4: Merge results
+            logger.info("🔄 Step 4: Merging results...")
+            
+            # 🔧 FIX: Properly handle disabled flights/hotels
+            include_flights = trip_params.get('flight_data', {}).get('includeFlights', False)
+            include_hotels = trip_params.get('hotel_data', {}).get('includeHotels', False)
+            
+            # Build flight response
+            if include_flights:
+                flights_data = agent_results.get('flight', {})
+                if isinstance(flights_data, dict) and 'data' in flights_data:
+                    flight_response = flights_data.get('data', {})
+                else:
+                    flight_response = flights_data
+            else:
+                # When flights not requested, return null (not success: false)
+                flight_response = None
+                logger.info("✈️  Flights not requested - setting to null")
+            
+            # Build hotel response
+            if include_hotels:
+                hotels_data = agent_results.get('hotel', {})
+                if isinstance(hotels_data, dict) and 'data' in hotels_data:
+                    hotel_response = hotels_data.get('data', {})
+                else:
+                    hotel_response = hotels_data
+            else:
+                # When hotels not requested, return null (not success: false)
+                hotel_response = None
+                logger.info("🏨 Hotels not requested - setting to null")
+            
+            final_results = {
+                # GA-generated itinerary
+                'itinerary_data': ga_result.get('itinerary_data', []),
+                'optimization_score': ga_result.get('optimization_score', 0),
+                'total_cost': ga_result.get('total_cost', 0),
+                'total_activities': ga_result.get('total_activities', 0),
+                
+                # Flight results (null if not requested)
+                'flights': flight_response,
+                
+                # Hotel results (null if not requested)
+                'hotels': hotel_response,
+                
+                # Trip parameters
+                'trip_params': trip_params,
+                
+                # Metadata
+                'workflow_type': 'ga_first',
+                'genetic_algorithm_used': True,
+                'optimization_method': 'genetic_algorithm',
+                'flights_requested': include_flights,
+                'hotels_requested': include_hotels
+            }
+            
+            # Step 5: (Optional) Enhance with Gemini descriptions
+            # This could be added as a future enhancement
+            if trip_params.get('enhance_with_gemini', False):
+                logger.info("✨ Step 5: Enhancing with Gemini descriptions...")
+                final_results = await self._enhance_with_gemini(final_results, trip_params)
+            
+            # Update session with final results
+            await self._finalize_session(final_results)
+            
+            total_duration = time.time() - start_time
+            logger.info(f"✅ GA-First workflow completed successfully in {total_duration:.2f}s")
+            return final_results
+            
+        except Exception as e:
+            logger.error(f"❌ GA-First workflow failed: {str(e)}")
+            logger.info("🔄 Falling back to traditional workflow")
+            return await self._execute_traditional_workflow(trip_params)
+    
+    async def _execute_traditional_workflow(self, trip_params: Dict[str, Any]) -> Dict[str, Any]:
+        """Traditional workflow as fallback"""
+        
+        # Create execution plan
+        execution_plan = await self._create_execution_plan(trip_params)
+        
+        # Execute agents in parallel
+        agent_results = await self._execute_agents_parallel(execution_plan)
+        
+        # Merge and optimize results
+        merged_results = await self._merge_agent_results(agent_results, trip_params)
+        optimized_results = await self._optimize_results(merged_results, trip_params)
+        
+        # Apply route optimization to itinerary if present
+        if 'itinerary_data' in optimized_results:
+            route_optimization_result = await self._apply_route_optimization(optimized_results, trip_params)
+            optimized_results.update(route_optimization_result)
+        
+        # Update session with final results
+        await self._finalize_session(optimized_results)
+        
+        return optimized_results
+    
+    async def _enhance_with_gemini(self, ga_results: Dict[str, Any], trip_params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Enhance GA-generated itinerary with Gemini descriptions
+        (Future enhancement)
+        """
+        # TODO: Implement Gemini enhancement
+        # - Take GA-optimized itinerary
+        # - Ask Gemini to add descriptions, tips, and context
+        # - Merge enhanced descriptions back into itinerary
+        
+        logger.info("ℹ️  Gemini enhancement not yet implemented")
+        return ga_results
     
     async def _handle_failure(self, error_message: str) -> None:
         """Handle coordinator failure"""

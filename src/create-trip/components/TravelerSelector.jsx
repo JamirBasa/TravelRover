@@ -6,12 +6,12 @@ function TravelerSelector({ selectedTravelers, onTravelersChange }) {
   return (
     <div className="max-w-2xl mx-auto">
       {/* Main Question */}
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           Who's joining your adventure?
         </h2>
-        <p className="text-gray-600 text-sm">
-          Let us know your group size to tailor recommendations
+        <p className="text-gray-700 text-base font-medium">
+          Let us know your group size to tailor recommendations 👥
         </p>
       </div>
 
@@ -22,26 +22,26 @@ function TravelerSelector({ selectedTravelers, onTravelersChange }) {
             <div
               key={index}
               onClick={() => onTravelersChange(item.people)}
-              className={`p-4 cursor-pointer border-2 rounded-lg hover:shadow-lg transition-all duration-200 ${
+              className={`p-5 cursor-pointer border-2 rounded-xl hover:shadow-xl transition-all duration-300 ${
                 selectedTravelers === item.people
-                  ? "shadow-lg border-black bg-gray-50"
-                  : "border-gray-200 hover:border-gray-300"
+                  ? "shadow-xl border-sky-500 bg-gradient-to-r from-sky-50 to-blue-50"
+                  : "border-gray-200 hover:border-sky-300 hover:shadow-lg"
               }`}
             >
               <div className="flex items-center gap-4">
                 <div className="text-3xl">{item.icon}</div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-lg text-gray-800">
+                  <h3 className="font-semibold text-lg text-gray-800">
                     {item.title}
                   </h3>
                   <p className="text-sm text-gray-600">{item.desc}</p>
-                  <div className="text-xs text-blue-600 font-medium mt-1">
+                  <div className="text-xs text-sky-600 font-semibold mt-1">
                     {item.people}
                   </div>
                 </div>
                 {selectedTravelers === item.people && (
-                  <div className="w-5 h-5 bg-black rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <div className="brand-gradient w-6 h-6 rounded-full flex items-center justify-center shadow-lg">
+                    <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
                   </div>
                 )}
               </div>
@@ -50,14 +50,16 @@ function TravelerSelector({ selectedTravelers, onTravelersChange }) {
         </div>
 
         {/* Additional Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <FaUsers className="text-blue-600 mt-1 flex-shrink-0" />
+        <div className="brand-card p-5 shadow-lg border-sky-200">
+          <div className="flex items-start gap-4">
+            <div className="brand-gradient p-2.5 rounded-full">
+              <FaUsers className="text-white text-lg" />
+            </div>
             <div>
-              <h4 className="font-medium text-blue-800 mb-1">
+              <h3 className="font-semibold brand-gradient-text text-base mb-2">
                 Why we ask about group size
-              </h4>
-              <p className="text-blue-700 text-sm">
+              </h3>
+              <p className="text-gray-700 text-sm leading-relaxed">
                 Group size helps us recommend appropriate accommodations,
                 activities, transportation options, and dining experiences that
                 work best for your travel party.

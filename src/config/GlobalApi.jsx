@@ -6,10 +6,20 @@ const BASE_URL = "https://places.googleapis.com/v1/places:searchText";
 const cache = new Map();
 const pendingRequests = new Map();
 
+// Debug API key availability
+const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
+console.log("🔑 Google Places API Key status:", {
+  hasKey: !!apiKey,
+  keyLength: apiKey?.length || 0,
+  keyPreview: apiKey
+    ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}`
+    : "MISSING",
+});
+
 const config = {
   headers: {
     "Content-Type": "application/json",
-    "X-Goog-Api-Key": import.meta.env.VITE_GOOGLE_PLACES_API_KEY,
+    "X-Goog-Api-Key": apiKey,
     "X-Goog-FieldMask":
       "places.id,places.displayName,places.photos,places.formattedAddress",
   },
@@ -105,4 +115,37 @@ export const validatePhotoUrl = (photoRef) => {
   console.log("🔗 Generated photo URL:", url);
 
   return url;
+};
+
+// ✅ Function to fetch place photo through backend proxy (CORS-free!)
+export const fetchPlacePhoto = async (photoReference) => {
+  if (!photoReference) {
+    throw new Error("Photo reference is required");
+  }
+
+  try {
+    // Use backend proxy to bypass CORS restrictions
+    const proxyUrl = `http://localhost:8000/api/langgraph/photo-proxy/?photo_ref=${encodeURIComponent(photoReference)}&maxHeightPx=600&maxWidthPx=600`;
+    
+    console.log("📸 Fetching photo via backend proxy:", photoReference.substring(0, 50) + "...");
+
+    // Fetch through Django proxy (no CORS issues!)
+    const response = await fetch(proxyUrl, {
+      method: "GET",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch photo: ${response.status} ${response.statusText}`);
+    }
+
+    // Convert to blob and create object URL
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    
+    console.log("✅ Photo fetched successfully via proxy");
+    return blobUrl;
+  } catch (error) {
+    console.error("❌ Error fetching place photo:", error);
+    throw error;
+  }
 };

@@ -1,11 +1,11 @@
 import { Outlet } from "react-router-dom";
-import { Toaster } from "sonner";
+import CustomToaster from "../components/common/CustomToaster";
 
 const AdminLayout = () => {
   return (
     <div className="min-h-screen flex flex-col">
       {/* No Header component for admin pages */}
-      <Toaster />
+      <CustomToaster />
       <main className="flex-1">
         <Outlet />
       </main>

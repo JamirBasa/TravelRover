@@ -11,6 +11,7 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import { HOTEL_CONFIG } from "../../constants/options";
+import { UserProfileService } from "../../services/userProfileService";
 
 const HotelPreferences = ({
   hotelData,
@@ -18,40 +19,24 @@ const HotelPreferences = ({
   formData,
   userProfile,
 }) => {
-  // Debug log to see what we're receiving
-  useEffect(() => {
-    console.log("🏨 HotelPreferences received:", {
-      hotelData,
-      formData,
-      userProfile: userProfile?.accommodationPreference,
-    });
-  }, [hotelData, formData, userProfile]);
+  // Get profile summary for consistent display
+  const profileSummary =
+    UserProfileService.getProfileDisplaySummary(userProfile);
 
-  // Auto-populate hotel preferences when enabled
+  // Auto-populate hotel preferences when enabled using centralized service
   useEffect(() => {
-    if (
-      hotelData.includeHotels &&
-      userProfile?.accommodationPreference &&
-      !hotelData.preferredType
-    ) {
-      console.log("🏨 Auto-populating hotel preferences from profile");
-      onHotelDataChange({
-        ...hotelData,
-        preferredType: userProfile.accommodationPreference,
-        budgetLevel: getBudgetLevelFromProfile(userProfile.budgetRange),
-      });
+    if (UserProfileService.shouldAutoPopulateHotels(userProfile, hotelData)) {
+      const autoPopulatedData = UserProfileService.autoPopulateHotelData(
+        userProfile,
+        hotelData
+      );
+
+      console.log(
+        "🏨 Auto-populating hotel preferences from centralized service"
+      );
+      onHotelDataChange(autoPopulatedData);
     }
   }, [hotelData.includeHotels, userProfile]);
-
-  // Helper function to map user budget to hotel price level
-  const getBudgetLevelFromProfile = (budgetRange) => {
-    const budgetMapping = {
-      budget: 1,
-      moderate: 2,
-      luxury: 3,
-    };
-    return budgetMapping[budgetRange?.toLowerCase()] || 2;
-  };
 
   const handlePriceRangeChange = (e) => {
     const level = parseInt(e.target.value);
@@ -81,25 +66,28 @@ const HotelPreferences = ({
   return (
     <div className="max-w-2xl mx-auto">
       {/* Main Question */}
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           Hotel Preferences
         </h2>
-        <p className="text-gray-600 text-sm">
+        <p className="text-gray-700 text-base font-medium">
           Would you like us to include hotel recommendations in your itinerary?
+          🏨
         </p>
       </div>
 
       {/* Hotel Toggle */}
       <div className="space-y-6">
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <FaInfoCircle className="text-orange-600 mt-1 flex-shrink-0" />
+        <div className="brand-card p-5 shadow-lg border-sky-200">
+          <div className="flex items-start gap-4">
+            <div className="brand-gradient p-2.5 rounded-full">
+              <FaInfoCircle className="text-white text-lg" />
+            </div>
             <div>
-              <h3 className="font-medium text-orange-800 mb-1">
+              <h3 className="font-semibold brand-gradient-text text-base mb-2">
                 Hotel Search Feature
               </h3>
-              <p className="text-orange-700 text-sm">
+              <p className="text-gray-700 text-sm leading-relaxed">
                 Enable this to get real hotel recommendations with pricing,
                 ratings, and availability for your destination. Helps with
                 accommodation planning and booking.
@@ -120,20 +108,12 @@ const HotelPreferences = ({
                 onHotelDataChange({
                   ...hotelData,
                   includeHotels: isEnabled,
-                  // Auto-populate when enabling hotels
-                  ...(isEnabled &&
-                  userProfile?.accommodationPreference &&
-                  !hotelData.preferredType
-                    ? {
-                        preferredType: userProfile.accommodationPreference,
-                        budgetLevel: getBudgetLevelFromProfile(
-                          userProfile.budgetRange
-                        ),
-                        priceRange:
-                          HOTEL_CONFIG.PRICE_LEVELS[
-                            getBudgetLevelFromProfile(userProfile.budgetRange)
-                          ],
-                      }
+                  // Auto-populate when enabling hotels using centralized service
+                  ...(isEnabled
+                    ? UserProfileService.autoPopulateHotelData(userProfile, {
+                        ...hotelData,
+                        includeHotels: isEnabled,
+                      })
                     : {}),
                 });
               }}
@@ -152,13 +132,14 @@ const HotelPreferences = ({
               <div className="bg-gray-50 p-4 rounded-lg">
                 {/* Auto-populated indicator */}
                 {hotelData.preferredType &&
-                  userProfile?.accommodationPreference ===
+                  profileSummary?.accommodationPreference ===
                     hotelData.preferredType && (
                     <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg">
                       <div className="flex items-center gap-2 text-green-700 text-sm">
                         <FaCheck className="text-xs" />
                         <span>
-                          Auto-populated from your profile preferences
+                          Auto-populated from your profile:{" "}
+                          {profileSummary.accommodationPreference}
                         </span>
                       </div>
                     </div>
@@ -236,23 +217,30 @@ const HotelPreferences = ({
         </div>
 
         {/* Hotel Benefits */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h4 className="font-medium text-green-800 mb-2">
-            Benefits of including hotels:
-          </h4>
-          <ul className="text-green-700 text-sm space-y-1">
-            <li>• Real hotel prices and availability</li>
-            <li>• Multiple accommodation options and reviews</li>
-            <li>• Integrated into your total trip budget</li>
-            <li>• Location-based recommendations near attractions</li>
-            <li>• Amenity filtering (WiFi, pool, etc.)</li>
-            {userProfile?.accommodationPreference && (
-              <li>
-                • 🏠 Based on your preference:{" "}
-                <strong>{userProfile.accommodationPreference}</strong>
-              </li>
-            )}
-          </ul>
+        <div className="brand-card p-5 shadow-lg border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+          <div className="flex items-start gap-4">
+            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-2.5 rounded-full">
+              <FaHotel className="text-white text-lg" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-purple-900 text-base mb-2">
+                Benefits of including hotels
+              </h3>
+              <ul className="text-purple-800 text-sm space-y-1 leading-relaxed">
+                <li>• Real hotel prices and availability</li>
+                <li>• Multiple accommodation options and reviews</li>
+                <li>• Integrated into your total trip budget</li>
+                <li>• Location-based recommendations near attractions</li>
+                <li>• Amenity filtering (WiFi, pool, etc.)</li>
+                {profileSummary?.accommodationPreference && (
+                  <li>
+                    • 🏠 Based on your preference:{" "}
+                    <strong>{profileSummary.accommodationPreference}</strong>
+                  </li>
+                )}
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </div>
