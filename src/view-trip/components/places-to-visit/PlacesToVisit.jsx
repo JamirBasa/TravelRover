@@ -15,9 +15,13 @@
  * ✅ Proper data source management (original vs editable)
  * ✅ Error handling and safe defaults
  * ✅ Accessibility-focused interactions
+ * ✅ Firebase database persistence for all changes
  */
 
 import React, { useState, useEffect, useMemo } from "react";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/config/firebaseConfig";
+import { toast } from "sonner";
 
 // Component imports - Clean imports using index file
 import {
@@ -32,7 +36,7 @@ import {
 } from "./index";
 
 // Main Component
-function PlacesToVisit({ trip }) {
+function PlacesToVisit({ trip, onTripUpdate }) {
   // Enhanced state management for per-day editing functionality
   const [editingDay, setEditingDay] = useState(null); // null or dayIndex number
   const [editableItinerary, setEditableItinerary] = useState([]);
@@ -133,9 +137,11 @@ function PlacesToVisit({ trip }) {
   };
 
   // Parse itinerary data with enhanced error handling (memoized to prevent infinite loops)
+  // Include trip.id in dependencies to ensure re-parse when trip data is refreshed
   const parsedItinerary = useMemo(() => {
+    console.log("🔄 Parsing itinerary data...", trip?.tripData?.itinerary);
     return parseDataArray(trip?.tripData?.itinerary, "itinerary");
-  }, [trip?.tripData?.itinerary]);
+  }, [trip?.tripData?.itinerary, trip?.id]);
 
   // Calculate trip statistics (memoized)
   const { totalDays, totalActivities } = useMemo(() => {
@@ -159,14 +165,61 @@ function PlacesToVisit({ trip }) {
   // Initialize editable itinerary on mount or when trip changes
   useEffect(() => {
     if (parsedItinerary && Array.isArray(parsedItinerary)) {
-      setEditableItinerary(
-        parsedItinerary.map((day) => ({
-          ...day,
-          plan: day?.plan || [],
-        }))
+      console.log(
+        "🔄 Updating editableItinerary with fresh data:",
+        parsedItinerary
       );
+
+      // Map each day and ensure plan array exists and has priority
+      const updatedEditableItinerary = parsedItinerary.map((day, index) => {
+        let planArray = [];
+
+        // Priority 1: Use existing plan array if it has data
+        if (day?.plan && Array.isArray(day.plan) && day.plan.length > 0) {
+          planArray = day.plan;
+          console.log(
+            `✅ Day ${index + 1} has plan array with ${
+              planArray.length
+            } activities`
+          );
+        }
+        // Priority 2: Parse from planText if plan is empty
+        else if (day?.planText && typeof day.planText === "string") {
+          planArray = day.planText.split(" | ").map((activity, actIndex) => {
+            const timeMatch = activity.match(/^(\d{1,2}:\d{2} [AP]M)/);
+            const time = timeMatch ? timeMatch[1] : "";
+            const content = time
+              ? activity.replace(time + " - ", "")
+              : activity;
+
+            return {
+              time: time || "All Day",
+              placeName: content.split(" - ")[0] || "Activity",
+              placeDetails: content,
+              imageUrl: "",
+              geoCoordinates: { latitude: 0, longitude: 0 },
+              ticketPricing: "₱0",
+              timeTravel: "Varies",
+              rating: "4.0",
+              id: `${index}-${actIndex}`,
+            };
+          });
+          console.log(
+            `⚠️ Day ${index + 1} parsed from planText: ${
+              planArray.length
+            } activities`
+          );
+        }
+
+        return {
+          ...day,
+          plan: planArray,
+        };
+      });
+
+      setEditableItinerary(updatedEditableItinerary);
     }
-  }, [trip?.id, parsedItinerary]);
+  }, [parsedItinerary]);
 
   // Expand/collapse functionality
   const toggleDayExpanded = (dayIndex) => {
@@ -194,9 +247,56 @@ function PlacesToVisit({ trip }) {
     setEditingDay(null);
   };
 
-  const saveEditedDay = () => {
-    // Here you could add API call to save changes
-    setEditingDay(null);
+  const saveEditedDay = async (dayIndex) => {
+    try {
+      // Get the trip ID from the trip object
+      const tripId = trip?.id;
+
+      if (!tripId) {
+        toast.error("Cannot save changes", {
+          description: "Trip ID not found. Please refresh the page.",
+        });
+        return;
+      }
+
+      // Show saving toast
+      const savingToast = toast.loading("Saving changes to database...");
+
+      // Update the parsedItinerary with editableItinerary changes
+      const updatedItinerary = [...parsedItinerary];
+      updatedItinerary[dayIndex] = {
+        ...updatedItinerary[dayIndex],
+        ...editableItinerary[dayIndex],
+      };
+
+      // Save to Firebase
+      const docRef = doc(db, "AITrips", tripId);
+      await updateDoc(docRef, {
+        "tripData.itinerary": updatedItinerary,
+      });
+
+      // Dismiss loading toast and show success
+      toast.dismiss(savingToast);
+      toast.success("Changes saved successfully!", {
+        description: `Day ${dayIndex + 1} has been updated in the database.`,
+      });
+
+      // Stop editing mode
+      setEditingDay(null);
+
+      // Refresh trip data from database to reflect the saved changes
+      if (onTripUpdate) {
+        await onTripUpdate();
+        console.log("✅ Day saved and trip data refreshed from database");
+      } else {
+        console.log("✅ Day saved to database");
+      }
+    } catch (error) {
+      console.error("Error saving edited day:", error);
+      toast.error("Failed to save changes", {
+        description: "Please try again or check your internet connection.",
+      });
+    }
   };
 
   // Activity management functions
@@ -210,10 +310,52 @@ function PlacesToVisit({ trip }) {
   };
 
   const saveActivitiesChanges = async (dayIndex, activities) => {
-    // Here you would typically save to your backend API
-    updateActivities(dayIndex, activities);
-    // For demo purposes, just update the state
-    return Promise.resolve({ success: true });
+    try {
+      // Get the trip ID from the trip object
+      const tripId = trip?.id;
+
+      if (!tripId) {
+        toast.error("Cannot save activities", {
+          description: "Trip ID not found. Please refresh the page.",
+        });
+        return { success: false };
+      }
+
+      // Update local state first for immediate UI feedback
+      updateActivities(dayIndex, activities);
+
+      // Prepare updated itinerary
+      const updatedItinerary = [...parsedItinerary];
+      updatedItinerary[dayIndex] = {
+        ...updatedItinerary[dayIndex],
+        plan: activities,
+      };
+
+      // Save to Firebase
+      const docRef = doc(db, "AITrips", tripId);
+      await updateDoc(docRef, {
+        "tripData.itinerary": updatedItinerary,
+      });
+
+      console.log("✅ Activities saved to database for Day", dayIndex + 1);
+
+      // Refresh trip data from database to reflect the saved changes
+      // Note: We do this silently without blocking the UI since updateActivities already updated local state
+      if (onTripUpdate) {
+        onTripUpdate().then(() => {
+          console.log("✅ Trip data refreshed from database");
+        });
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error saving activities:", error);
+      toast.error("Failed to save activities", {
+        description:
+          "Your changes are temporarily saved locally. Please try saving again.",
+      });
+      return { success: false };
+    }
   };
 
   // Early return for loading or empty states
@@ -242,8 +384,10 @@ function PlacesToVisit({ trip }) {
         placesToVisit={parsedPlacesToVisit}
       />
 
-      {/* Places to Visit Section */}
-      <PlacesToVisitSection placesToVisit={parsedPlacesToVisit} />
+      {/* Must-Visit Places Section with Images */}
+      {parsedPlacesToVisit && parsedPlacesToVisit.length > 0 && (
+        <PlacesToVisitSection placesToVisit={parsedPlacesToVisit} />
+      )}
 
       {/* Daily Itinerary Header */}
       <ItineraryHeader />
@@ -254,42 +398,48 @@ function PlacesToVisit({ trip }) {
       {/* Main Itinerary Section */}
       <div className="space-y-6 w-full">
         <div className="space-y-4 w-full">
-          {parsedItinerary.map((dayItem, dayIndex) => (
-            <div
-              key={dayIndex}
-              className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden w-full"
-            >
-              {/* Day Header */}
-              <DayHeader
-                dayItem={dayItem}
-                dayIndex={dayIndex}
-                isExpanded={expandedDays.has(dayIndex)}
-                isEditing={editingDay === dayIndex}
-                onToggleExpanded={() => toggleDayExpanded(dayIndex)}
-                onStartEdit={() => startEditingDay(dayIndex)}
-                onStopEdit={stopEditingDay}
-                onSaveEdit={() => saveEditedDay(dayIndex)}
-                totalDays={totalDays}
-                currentItinerary={parsedItinerary}
-              />
+          {parsedItinerary.map((dayItem, dayIndex) => {
+            // Use editableItinerary if available (has parsed plan array), otherwise use parsedItinerary
+            const displayDayItem = editableItinerary[dayIndex] || dayItem;
 
-              {/* Day Activities */}
-              {expandedDays.has(dayIndex) && (
-                <DayActivities
-                  dayItem={dayItem}
+            return (
+              <div
+                key={dayIndex}
+                className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden w-full"
+              >
+                {/* Day Header */}
+                <DayHeader
+                  dayItem={displayDayItem}
                   dayIndex={dayIndex}
-                  editingDay={editingDay}
-                  editableItinerary={editableItinerary}
-                  onUpdateActivities={(activities) =>
-                    updateActivities(dayIndex, activities)
-                  }
-                  onSaveChanges={(activities) =>
-                    saveActivitiesChanges(dayIndex, activities)
-                  }
+                  isExpanded={expandedDays.has(dayIndex)}
+                  isEditing={editingDay === dayIndex}
+                  onToggleExpanded={() => toggleDayExpanded(dayIndex)}
+                  onStartEdit={() => startEditingDay(dayIndex)}
+                  onStopEdit={stopEditingDay}
+                  onSaveEdit={() => saveEditedDay(dayIndex)}
+                  totalDays={totalDays}
+                  currentItinerary={parsedItinerary}
+                  trip={trip}
                 />
-              )}
-            </div>
-          ))}
+
+                {/* Day Activities */}
+                {expandedDays.has(dayIndex) && (
+                  <DayActivities
+                    dayItem={displayDayItem}
+                    dayIndex={dayIndex}
+                    editingDay={editingDay}
+                    editableItinerary={editableItinerary}
+                    onUpdateActivities={(activities) =>
+                      updateActivities(dayIndex, activities)
+                    }
+                    onSaveChanges={(activities) =>
+                      saveActivitiesChanges(dayIndex, activities)
+                    }
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

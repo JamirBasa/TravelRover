@@ -1,11 +1,10 @@
+import { MdFlight } from "react-icons/md";
+
 import {
   FaUser,
   FaUsers,
   FaUserFriends,
   FaHeart,
-  FaCoins,
-  FaMoneyBillWave,
-  FaGem,
   FaMapMarkerAlt,
   FaCog,
   FaPlane,
@@ -71,6 +70,24 @@ export const VALIDATION_RULES = {
     TRIP: ["location", "startDate", "endDate", "travelers", "budget"],
     PROFILE: ["firstName", "lastName", "email"],
     FLIGHT: ["departureCity", "departureRegionCode"],
+    AI_RESPONSE: [
+      "tripName",
+      "destination",
+      "hotels",
+      "itinerary",
+      "placesToVisit",
+    ],
+  },
+  JSON_PARSING: {
+    MIN_RESPONSE_LENGTH: 100,
+    MAX_RETRY_ATTEMPTS: 3,
+    REQUIRED_PROPERTIES: ["tripName", "destination"],
+    COORDINATE_BOUNDS: {
+      MIN_LAT: -90,
+      MAX_LAT: 90,
+      MIN_LNG: -180,
+      MAX_LNG: 180,
+    },
   },
 };
 
@@ -84,6 +101,11 @@ export const MESSAGES = {
     TRIP_NOT_FOUND: "Trip not found.",
     UNAUTHORIZED: "You don't have permission to access this trip.",
     GENERIC_ERROR: "Something went wrong. Please try again.",
+    JSON_PARSE_ERROR:
+      "Unable to process AI response. Please try generating again.",
+    AI_RESPONSE_ERROR: "AI generated incomplete data. Please try again.",
+    COORDINATE_ERROR: "Invalid location coordinates received.",
+    VALIDATION_ERROR: "Trip data validation failed. Please check your inputs.",
   },
   SUCCESS: {
     TRIP_CREATED: "Trip created successfully!",
@@ -245,6 +267,67 @@ export const validateBudget = (budget) => {
   return null;
 };
 
+// JSON Validation Helpers
+export const validateAIResponse = (response) => {
+  if (!response || typeof response !== "object") {
+    return MESSAGES.ERROR.AI_RESPONSE_ERROR;
+  }
+
+  const missing = VALIDATION_RULES.REQUIRED_FIELDS.AI_RESPONSE.filter(
+    (field) => !response[field]
+  );
+
+  if (missing.length > 0) {
+    return `Missing required fields: ${missing.join(", ")}`;
+  }
+
+  return null;
+};
+
+export const validateCoordinates = (lat, lng) => {
+  const { MIN_LAT, MAX_LAT, MIN_LNG, MAX_LNG } =
+    VALIDATION_RULES.JSON_PARSING.COORDINATE_BOUNDS;
+
+  if (typeof lat !== "number" || typeof lng !== "number") {
+    return "Coordinates must be numbers";
+  }
+
+  if (lat < MIN_LAT || lat > MAX_LAT) {
+    return `Latitude must be between ${MIN_LAT} and ${MAX_LAT}`;
+  }
+
+  if (lng < MIN_LNG || lng > MAX_LNG) {
+    return `Longitude must be between ${MIN_LNG} and ${MAX_LNG}`;
+  }
+
+  return null;
+};
+
+export const sanitizeJSONString = (jsonString) => {
+  if (!jsonString) return null;
+
+  try {
+    // Remove markdown code blocks
+    let cleaned = jsonString
+      .replace(/```json\s*/g, "")
+      .replace(/```\s*$/g, "")
+      .trim();
+
+    // Find JSON boundaries
+    const startIndex = cleaned.indexOf("{");
+    const endIndex = cleaned.lastIndexOf("}");
+
+    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+      cleaned = cleaned.substring(startIndex, endIndex + 1);
+    }
+
+    return cleaned;
+  } catch (error) {
+    console.error("JSON sanitization error:", error);
+    return null;
+  }
+};
+
 // ===============================
 // EXISTING OPTIONS DATA
 // ===============================
@@ -309,17 +392,27 @@ export const SelectBudgetOptions = [
 
 export const AI_PROMPT = `Create travel itinerary JSON for {location}, {duration} days, {travelers}, {budget}.
 
-REQUIREMENTS:
+CRITICAL JSON REQUIREMENTS:
+- Return ONLY valid JSON - no markdown, no extra text, no code blocks
+- NO trailing commas before } or ]
+- Complete all objects and arrays properly
 - Use real coordinates and PHP pricing
 - 3-4 hotels, 2-4 activities/day, 5-8 attractions
 - Budget levels: Budget ₱2-8K, Moderate ₱8-20K, Luxury ₱20K+
 - Descriptions under 80 chars
-- Complete valid JSON only - no extra text
-- Include all required schema fields
+- Must include: tripName, destination, hotels, itinerary, placesToVisit
+- Response must be parseable by JSON.parse()
+- End with proper closing brace }
+
+FORBIDDEN:
+- Trailing commas like "value",}
+- Incomplete objects like {...
+- Extra text after JSON
+- Missing closing braces
 
 REQUESTS: {specificRequests}
 
-Generate complete valid JSON matching the schema.`;
+Generate complete, valid JSON that passes JSON.parse() validation.`;
 
 export const HOTEL_CONFIG = {
   GOOGLE_PLACES_API_KEY: import.meta.env.VITE_GOOGLE_PLACES_API_KEY,

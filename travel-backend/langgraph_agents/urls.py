@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .views_health import HealthCheckView, QuickHealthView
 
 app_name = 'langgraph_agents'
 
@@ -12,6 +13,8 @@ urlpatterns = [
     
     # Health and monitoring
     path('health/', views.LangGraphHealthCheckView.as_view(), name='health'),
+    path('health/detailed/', HealthCheckView.as_view(), name='health_detailed'),
+    path('health/ping/', QuickHealthView.as_view(), name='health_ping'),
     
     # Legacy endpoint for backwards compatibility
     path('orchestrate/', views.LangGraphTravelPlannerView.as_view(), name='orchestrate'),

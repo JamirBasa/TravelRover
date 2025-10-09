@@ -20,7 +20,10 @@ export const LoadingSpinner = ({
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <div
-          className={`border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4 ${sizeClasses[size]}`}
+          className={`border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4 ${sizeClasses[size]}`}
+          style={{
+            animation: "spin 1s linear infinite",
+          }}
         ></div>
         <p className="text-gray-600 mb-2">{message}</p>
         <p className="text-sm text-gray-500">Please wait a moment</p>

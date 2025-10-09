@@ -13,7 +13,7 @@
  * ✅ Semantic HTML structure
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,7 +28,14 @@ import {
   ChevronDown,
   Edit3,
   AlertCircle,
+  AlertTriangle,
+  XCircle,
 } from "lucide-react";
+import {
+  validateDaySchedule,
+  getSeverityColor,
+  getSeverityIcon,
+} from "../utils/timeValidator";
 
 function ActivityEditor({
   activities = [],
@@ -39,10 +46,21 @@ function ActivityEditor({
 }) {
   const [localActivities, setLocalActivities] = useState(activities);
   const [statusMessage, setStatusMessage] = useState("");
+  const [validationResult, setValidationResult] = useState(null);
 
   // Generate IDs for accessibility
   const editorId = `day-${dayIndex}-activity-editor`;
   const statusId = `day-${dayIndex}-status`;
+
+  // Validate schedule whenever activities change
+  useEffect(() => {
+    if (isEditing && localActivities.length > 0) {
+      const result = validateDaySchedule(localActivities);
+      setValidationResult(result);
+    } else {
+      setValidationResult(null);
+    }
+  }, [localActivities, isEditing]);
 
   // New activity template
   const createNewActivity = () => ({
@@ -167,7 +185,7 @@ function ActivityEditor({
                 {/* Activity indicator */}
                 <div className="flex-shrink-0 pt-1">
                   <div
-                    className="w-5 h-5 rounded-full bg-gradient-to-r from-primary to-primary/80 shadow-sm"
+                    className="w-5 h-5 rounded-full bg-gradient-to-r from-sky-500 to-blue-500 shadow-sm"
                     aria-hidden="true"
                   />
                 </div>{" "}
@@ -176,7 +194,7 @@ function ActivityEditor({
                   {activity.time && (
                     <Badge
                       variant="secondary"
-                      className="gap-2 bg-primary/10 text-primary px-3 py-1.5 text-sm font-semibold"
+                      className="gap-2 bg-gradient-to-r from-sky-100 to-blue-100 text-sky-700 border border-sky-200 px-3 py-1.5 text-sm font-semibold"
                     >
                       <Clock className="h-5 w-5" aria-hidden="true" />
                       <time dateTime={convertToISO8601Time(activity.time)}>
@@ -188,10 +206,10 @@ function ActivityEditor({
                   {/* Activity title */}
                   <div className="flex items-start gap-3">
                     <MapPin
-                      className="h-6 w-6 text-primary mt-0.5 flex-shrink-0"
+                      className="h-6 w-6 text-sky-600 mt-0.5 flex-shrink-0"
                       aria-hidden="true"
                     />
-                    <h4 className="text-lg font-bold text-foreground">
+                    <h4 className="text-lg font-bold text-gray-900">
                       {activity.placeName}
                     </h4>
                   </div>
@@ -259,15 +277,80 @@ function ActivityEditor({
       {/* Status notification */}
       {statusMessage && (
         <div
-          className="p-4 bg-orange-50 border border-orange-200 rounded-lg mb-4 flex items-center gap-3"
+          className="p-4 bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 rounded-lg mb-4 flex items-center gap-3 shadow-sm"
           role="status"
           aria-live="polite"
           id={statusId}
         >
-          <AlertCircle className="h-5 w-5 text-orange-600" aria-hidden="true" />
-          <span className="text-base font-medium text-orange-800">
+          <AlertCircle className="h-5 w-5 text-sky-600" aria-hidden="true" />
+          <span className="text-base font-medium text-sky-800">
             {statusMessage}
           </span>
+        </div>
+      )}
+
+      {/* Time Validation Warnings */}
+      {validationResult && validationResult.warnings.length > 0 && (
+        <div className="space-y-3 mb-4" role="alert" aria-live="assertive">
+          {/* Overall schedule summary */}
+          {validationResult.totalTime > 0 && (
+            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Clock
+                  className="h-5 w-5 text-blue-600 mt-0.5"
+                  aria-hidden="true"
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-blue-900 mb-1">
+                    Schedule Overview
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    Total time needed: ~
+                    {Math.round(validationResult.totalTime / 60)} hours (
+                    {validationResult.utilizationPercent}% of day)
+                  </p>
+                  {!validationResult.isValid && (
+                    <p className="text-sm text-red-600 font-medium mt-2">
+                      ⚠️ This schedule may not be realistic
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Individual warnings */}
+          {validationResult.warnings
+            .filter((w) => w.severity === "critical" || w.severity === "high")
+            .slice(0, 5)
+            .map((warning, idx) => (
+              <div
+                key={idx}
+                className={`p-4 border rounded-lg ${getSeverityColor(
+                  warning.severity
+                )}`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-xl" aria-hidden="true">
+                    {getSeverityIcon(warning.severity)}
+                  </span>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-semibold">{warning.message}</p>
+                    {warning.suggestion && (
+                      <p className="text-xs opacity-90">
+                        💡 {warning.suggestion}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+          {validationResult.warnings.length > 5 && (
+            <p className="text-xs text-gray-600 text-center">
+              +{validationResult.warnings.length - 5} more suggestions
+            </p>
+          )}
         </div>
       )}
 
@@ -279,7 +362,7 @@ function ActivityEditor({
             return (
               <li key={index}>
                 <Card
-                  className={`${PATTERNS.card.base} ${COLORS.editing.border} ${COLORS.editing.lightGradient} border-2 border-dashed`}
+                  className="bg-white rounded-lg border-2 border-dashed border-sky-200 shadow-md hover:border-sky-300 hover:shadow-lg transition-all duration-300"
                   id={activityId}
                 >
                   <CardContent className="p-4 space-y-4">
@@ -287,7 +370,7 @@ function ActivityEditor({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div
-                          className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-xs font-bold"
+                          className="w-6 h-6 bg-gradient-to-r from-sky-500 to-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm"
                           aria-hidden="true"
                         >
                           {index + 1}
@@ -436,7 +519,7 @@ function ActivityEditor({
       {/* Add activity button */}
       <Button
         variant="outline"
-        className="w-full border-dashed gap-3 h-16 text-muted-foreground hover:text-foreground hover:border-primary focus:ring-2 focus:ring-primary/50"
+        className="w-full border-2 border-dashed border-sky-200 gap-3 h-16 text-sky-600 hover:text-sky-700 hover:border-sky-400 hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 focus:ring-2 focus:ring-sky-500/50 transition-all duration-300"
         onClick={handleAddActivity}
         aria-label="Add a new activity"
       >

@@ -7,6 +7,7 @@ from django.utils import timezone
 from .base_agent import BaseAgent
 from .flight_agent import FlightAgent
 from .hotel_agent import HotelAgent
+from .route_optimizer_agent import RouteOptimizerAgent
 from ..models import TravelPlanningSession
 import logging
 from asgiref.sync import sync_to_async
@@ -20,6 +21,7 @@ class CoordinatorAgent(BaseAgent):
         super().__init__(session_id, 'coordinator')
         self.flight_agent = FlightAgent(session_id)
         self.hotel_agent = HotelAgent(session_id)
+        self.route_optimizer = RouteOptimizerAgent(session_id)
     
     def execute_sync(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Synchronous wrapper for the async execute method"""
@@ -68,6 +70,11 @@ class CoordinatorAgent(BaseAgent):
             # Merge and optimize results
             merged_results = await self._merge_agent_results(agent_results, trip_params)
             optimized_results = await self._optimize_results(merged_results, trip_params)
+            
+            # Apply route optimization to itinerary if present
+            if 'itinerary_data' in optimized_results:
+                route_optimization_result = await self._apply_route_optimization(optimized_results, trip_params)
+                optimized_results.update(route_optimization_result)
             
             # Update session with final results
             await self._finalize_session(optimized_results)
@@ -509,6 +516,63 @@ class CoordinatorAgent(BaseAgent):
                 logger.error(f"Failed to finalize session: {e}")
         
         await finalize_session_data()
+    
+    async def _apply_route_optimization(self, merged_results: Dict[str, Any], trip_params: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply route optimization to the generated itinerary"""
+        
+        try:
+            logger.info("🚗 Applying route optimization to itinerary")
+            
+            # Check if itinerary data exists
+            itinerary_data = merged_results.get('itinerary_data')
+            if not itinerary_data:
+                logger.warning("No itinerary data found for route optimization")
+                return {'route_optimization_applied': False, 'route_optimization_error': 'No itinerary data'}
+            
+            # Prepare input for route optimizer
+            optimizer_input = {
+                'itinerary_data': itinerary_data,
+                'trip_params': trip_params,
+                'session_id': self.session_id
+            }
+            
+            # Execute route optimization
+            optimization_result = await self.route_optimizer.execute(optimizer_input)
+            
+            if optimization_result.get('success') and 'data' in optimization_result:
+                route_data = optimization_result['data']
+                
+                logger.info(f"✅ Route optimization completed with efficiency score: {route_data.get('route_efficiency_score', 'N/A')}")
+                
+                return {
+                    'optimized_itinerary': route_data.get('optimized_itinerary', itinerary_data),
+                    'route_optimization': {
+                        'applied': True,
+                        'efficiency_score': route_data.get('route_efficiency_score', 0),
+                        'total_travel_time_minutes': route_data.get('total_travel_time_minutes', 0),
+                        'optimization_summary': route_data.get('optimization_summary', {}),
+                        'recommendations': route_data.get('recommendations', [])
+                    },
+                    # Replace original itinerary with optimized version
+                    'itinerary_data': route_data.get('optimized_itinerary', itinerary_data)
+                }
+            else:
+                logger.warning(f"Route optimization failed: {optimization_result.get('error', 'Unknown error')}")
+                return {
+                    'route_optimization': {
+                        'applied': False,
+                        'error': optimization_result.get('error', 'Unknown error')
+                    }
+                }
+                
+        except Exception as e:
+            logger.error(f"❌ Route optimization error: {str(e)}")
+            return {
+                'route_optimization': {
+                    'applied': False,
+                    'error': str(e)
+                }
+            }
     
     async def _handle_failure(self, error_message: str) -> None:
         """Handle coordinator failure"""
