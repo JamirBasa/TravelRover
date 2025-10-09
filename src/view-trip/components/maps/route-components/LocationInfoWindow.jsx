@@ -2,6 +2,11 @@ import React, { useState, useEffect } from "react";
 import { InfoWindow } from "@vis.gl/react-google-maps";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Navigation, ImageIcon } from "lucide-react";
+import {
+  isValidDuration,
+  isValidPricing,
+  isValidRating,
+} from "./locationDataValidator";
 
 /**
  * LocationInfoWindow Component
@@ -114,22 +119,46 @@ export function LocationInfoWindow({ selectedLocation, onClose }) {
             <Badge variant="outline" className="text-xs">
               Day {selectedLocation.day} - {selectedLocation.dayTheme}
             </Badge>
-            {selectedLocation.time && (
+            {selectedLocation.time && selectedLocation.time !== "All Day" && (
               <p className="text-gray-600 flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 {selectedLocation.time}
               </p>
             )}
-            {selectedLocation.details && (
-              <p className="text-gray-700 text-xs leading-relaxed">
-                {selectedLocation.details}
-              </p>
-            )}
-            {selectedLocation.pricing && selectedLocation.pricing !== "₱0" && (
-              <p className="text-green-700 font-semibold text-xs">
-                💰 {selectedLocation.pricing}
-              </p>
-            )}
+            {selectedLocation.details &&
+              selectedLocation.details.length > 0 && (
+                <p className="text-gray-700 text-xs leading-relaxed">
+                  {selectedLocation.details}
+                </p>
+              )}
+
+            {/* Duration, Price, and Rating in a row */}
+            <div className="flex flex-wrap items-center gap-3">
+              {isValidDuration(selectedLocation.duration) && (
+                <div className="flex items-center gap-1 text-xs text-gray-600">
+                  <span>⏱️</span>
+                  <span className="font-medium">
+                    {selectedLocation.duration}
+                  </span>
+                </div>
+              )}
+
+              {isValidPricing(selectedLocation.pricing) && (
+                <div className="flex items-center gap-1 text-xs text-green-700">
+                  <span>💰</span>
+                  <span className="font-semibold">
+                    {selectedLocation.pricing}
+                  </span>
+                </div>
+              )}
+
+              {isValidRating(selectedLocation.rating) && (
+                <div className="flex items-center gap-1 text-xs text-yellow-600">
+                  <span>⭐</span>
+                  <span className="font-medium">{selectedLocation.rating}</span>
+                </div>
+              )}
+            </div>
             <a
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
                 selectedLocation.name

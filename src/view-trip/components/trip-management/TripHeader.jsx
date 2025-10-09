@@ -2,6 +2,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Users, DollarSign, Clock, MapPin } from "lucide-react";
 import TripActions from "./TripActions";
+import { calculateTotalBudget, formatCurrency } from "@/utils/budgetCalculator";
 
 function TripHeader({ trip, onShare, onDownload, onEdit }) {
   const formatDate = (dateString) => {
@@ -12,6 +13,9 @@ function TripHeader({ trip, onShare, onDownload, onEdit }) {
       year: "numeric",
     });
   };
+
+  // Calculate total estimated budget from generated itinerary
+  const budgetInfo = calculateTotalBudget(trip);
 
   return (
     <div className="bg-white/95 backdrop-blur-sm border-b border-gray-100">
@@ -55,13 +59,14 @@ function TripHeader({ trip, onShare, onDownload, onEdit }) {
                 <Users className="h-3 w-3 mr-1" />
                 {trip?.userSelection?.travelers || "Multiple"}
               </Badge>
-              {trip?.userSelection?.customBudget && (
+              {budgetInfo.total > 0 && (
                 <Badge
                   variant="secondary"
                   className="bg-purple-50 text-purple-700 border-purple-200 px-2 py-1 text-xs font-medium"
+                  title={`Breakdown - Activities: ${formatCurrency(budgetInfo.breakdown.activities)} | Hotels: ${formatCurrency(budgetInfo.breakdown.hotels)} | Flights: ${formatCurrency(budgetInfo.breakdown.flights)}`}
                 >
-                  <DollarSign className="h-3 w-3 mr-1" />₱
-                  {trip.userSelection.customBudget.toLocaleString()}
+                  <DollarSign className="h-3 w-3 mr-1" />
+                  Total: {formatCurrency(budgetInfo.total)}
                 </Badge>
               )}
               <Badge

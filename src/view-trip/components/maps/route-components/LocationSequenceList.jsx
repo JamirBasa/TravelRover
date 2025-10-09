@@ -1,6 +1,7 @@
 import React from "react";
 import { MapPin, Clock, Navigation, ArrowDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { isValidDuration, isValidPricing } from "./locationDataValidator";
 
 /**
  * LocationSequenceList Component
@@ -79,13 +80,13 @@ export function LocationSequenceList({
                     </div>
                   )}
 
-                  {location.duration && location.duration !== "Varies" && (
+                  {isValidDuration(location.duration) && (
                     <div className="flex items-center gap-1 text-xs text-gray-600">
                       <span>⏱️ {location.duration}</span>
                     </div>
                   )}
 
-                  {location.pricing && location.pricing !== "N/A" && (
+                  {isValidPricing(location.pricing) && (
                     <div className="flex items-center gap-1 text-xs text-gray-600">
                       <span>💰 {location.pricing}</span>
                     </div>

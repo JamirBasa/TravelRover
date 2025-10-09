@@ -7,6 +7,7 @@ export { default as PlacesToVisit } from './PlacesToVisit';
 // Overview Components
 export { default as TripOverviewStats } from './overview/TripOverviewStats';
 export { default as PlacesToVisitSection } from './overview/PlacesToVisitSection';
+export { default as BudgetBreakdown } from './overview/BudgetBreakdown';
 
 // Itinerary Components  
 export { default as DayHeader } from './itinerary/DayHeader';

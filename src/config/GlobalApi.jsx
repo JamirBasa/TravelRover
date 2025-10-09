@@ -116,3 +116,36 @@ export const validatePhotoUrl = (photoRef) => {
 
   return url;
 };
+
+// ✅ Function to fetch place photo through backend proxy (CORS-free!)
+export const fetchPlacePhoto = async (photoReference) => {
+  if (!photoReference) {
+    throw new Error("Photo reference is required");
+  }
+
+  try {
+    // Use backend proxy to bypass CORS restrictions
+    const proxyUrl = `http://localhost:8000/api/langgraph/photo-proxy/?photo_ref=${encodeURIComponent(photoReference)}&maxHeightPx=600&maxWidthPx=600`;
+    
+    console.log("📸 Fetching photo via backend proxy:", photoReference.substring(0, 50) + "...");
+
+    // Fetch through Django proxy (no CORS issues!)
+    const response = await fetch(proxyUrl, {
+      method: "GET",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch photo: ${response.status} ${response.statusText}`);
+    }
+
+    // Convert to blob and create object URL
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    
+    console.log("✅ Photo fetched successfully via proxy");
+    return blobUrl;
+  } catch (error) {
+    console.error("❌ Error fetching place photo:", error);
+    throw error;
+  }
+};

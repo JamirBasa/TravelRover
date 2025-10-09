@@ -528,26 +528,31 @@ function CreateTrip() {
         return;
       }
 
-      // Use LangGraph Multi-Agent System if either flights or hotels are requested
+      // ✅ ALWAYS use LangGraph for GA-First itinerary generation
+      // Even if flights/hotels are not requested, GA-First will optimize the itinerary
+      setLangGraphLoading(true);
+      
       if (activeServices.hasAnyAgent) {
-        setLangGraphLoading(true);
-        console.log("🤖 Starting LangGraph Multi-Agent orchestration...");
+        console.log("🤖 Starting LangGraph with flights/hotels search...");
+      } else {
+        console.log("� Starting LangGraph GA-First itinerary generation (no flights/hotels)...");
+      }
 
-        const langGraphAgent = new LangGraphTravelAgent();
+      const langGraphAgent = new LangGraphTravelAgent();
 
-        const tripParams = {
-          destination: formData.location,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-          duration: formData.duration,
-          travelers: formData.travelers,
-          budget: customBudget ? `Custom: ₱${customBudget}` : formData.budget,
-          flightData: flightData,
-          hotelData: hotelData,
-          userProfile: userProfile,
-        };
+      const tripParams = {
+        destination: formData.location,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        duration: formData.duration,
+        travelers: formData.travelers,
+        budget: customBudget ? `Custom: ₱${customBudget}` : formData.budget,
+        flightData: flightData,
+        hotelData: hotelData,
+        userProfile: userProfile,
+      };
 
-        langGraphResults = await langGraphAgent.orchestrateTrip(tripParams);
+      langGraphResults = await langGraphAgent.orchestrateTrip(tripParams);
 
         // Extract individual results for compatibility
         flightResults = langGraphResults.flights;
@@ -575,17 +580,7 @@ function CreateTrip() {
           );
         }
 
-        setLangGraphLoading(false);
-      } else {
-        const serviceDescriptions = getServiceDescriptions(
-          flightData,
-          hotelData
-        );
-        console.log(
-          "🚫 Skipping agent search - generating basic itinerary:",
-          serviceDescriptions
-        );
-      }
+      setLangGraphLoading(false);
 
       // Enhanced prompt with user profile data and category focus
       let enhancedPrompt = AI_PROMPT.replace("{location}", formData?.location)
