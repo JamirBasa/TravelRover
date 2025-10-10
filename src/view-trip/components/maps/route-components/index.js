@@ -5,3 +5,15 @@ export { MapMarkers } from "./MapMarkers";
 export { LocationInfoWindow } from "./LocationInfoWindow";
 export { DayFilterDropdown } from "./DayFilterDropdown";
 export { LocationSequenceList } from "./LocationSequenceList";
+
+// Export validation utilities
+export {
+  isValidDuration,
+  isValidPricing,
+  isValidRating,
+  cleanDuration,
+  cleanPricing,
+  cleanRating,
+  validateLocationData,
+  hasValidMetadata,
+} from "./locationDataValidator";

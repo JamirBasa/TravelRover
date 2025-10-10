@@ -6,6 +6,7 @@ import {
   PATTERNS,
   COMPOSED_STYLES,
 } from "../constants/designSystem";
+import { calculateTotalBudget, formatCurrency } from "@/utils/budgetCalculator";
 
 function TripOverviewStats({
   currentItinerary,
@@ -14,6 +15,8 @@ function TripOverviewStats({
   totalDays,
   trip,
 }) {
+  // Calculate total estimated budget
+  const budgetInfo = calculateTotalBudget(trip);
   // Safe defaults for undefined/null values with comprehensive checks
   const itineraryLength =
     (Array.isArray(currentItinerary) ? currentItinerary.length : 0) ||
@@ -56,7 +59,7 @@ function TripOverviewStats({
         </div>
 
         <div
-          className={`grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8`}
+          className={`grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8`}
         >
           <div className="text-center group">
             <div
@@ -123,6 +126,25 @@ function TripOverviewStats({
               Days Total
             </div>
           </div>
+
+          {budgetInfo.total > 0 && (
+            <div className="text-center group">
+              <div
+                className={`w-14 h-14 sm:w-16 sm:h-16 bg-white/25 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-white/35 transition-all duration-300`}
+                title={`Activities: ${formatCurrency(budgetInfo.breakdown.activities)} | Hotels: ${formatCurrency(budgetInfo.breakdown.hotels)} | Flights: ${formatCurrency(budgetInfo.breakdown.flights)}`}
+              >
+                <span className="text-3xl sm:text-4xl">💰</span>
+              </div>
+              <div className={`text-xl sm:text-2xl font-bold text-white mb-2`}>
+                {formatCurrency(budgetInfo.total)}
+              </div>
+              <div
+                className={`text-base sm:text-lg text-white font-semibold leading-tight`}
+              >
+                Total Cost
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Trip Highlights */}
@@ -132,10 +154,15 @@ function TripOverviewStats({
               <span className="text-lg sm:text-xl">🌟</span>
               <span>AI-Optimized</span>
             </div>
-            <div className="flex items-center gap-2.5 bg-white/95 text-gray-800 rounded-full px-5 py-2.5 text-sm sm:text-base font-semibold shadow-sm hover:shadow-md transition-all duration-300 hover:bg-white">
-              <span className="text-lg sm:text-xl">💰</span>
-              <span>Budget-Friendly</span>
-            </div>
+            {budgetInfo.total > 0 && (
+              <div 
+                className="flex items-center gap-2.5 bg-white/95 text-gray-800 rounded-full px-5 py-2.5 text-sm sm:text-base font-semibold shadow-sm hover:shadow-md transition-all duration-300 hover:bg-white"
+                title={`Activities: ${formatCurrency(budgetInfo.breakdown.activities)} | Hotels: ${formatCurrency(budgetInfo.breakdown.hotels)} | Flights: ${formatCurrency(budgetInfo.breakdown.flights)}`}
+              >
+                <span className="text-lg sm:text-xl">💰</span>
+                <span>Estimated Cost</span>
+              </div>
+            )}
             <div className="flex items-center gap-2.5 bg-white/95 text-gray-800 rounded-full px-5 py-2.5 text-sm sm:text-base font-semibold shadow-sm hover:shadow-md transition-all duration-300 hover:bg-white">
               <span className="text-lg sm:text-xl">📍</span>
               <span>Local Insights</span>

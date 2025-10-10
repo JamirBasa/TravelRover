@@ -75,32 +75,95 @@ function OptimizedRouteMap({ itinerary, destination }) {
     const activities = planText.split("|").map((activity) => activity.trim());
     return activities
       .map((activityText, index) => {
-        // Parse format: "TIME - PLACE NAME - DESCRIPTION (PRICE, DURATION, RATING)"
-        const match = activityText.match(
-          /^(.+?)\s*-\s*(.+?)\s*-\s*(.+?)\s*\((.+?),\s*(.+?),\s*Rating:\s*(.+?)\)$/
-        );
+        // Enhanced parsing with better regex to handle complex data
+        // Format: "TIME - PLACE NAME - DESCRIPTION (PRICE, DURATION, Rating: X)"
 
-        if (match) {
-          const [, time, placeName, description, price, duration] = match;
-          return {
-            time: time.trim(),
-            placeName: placeName.trim(),
-            placeDetails: description.trim(),
-            ticketPricing: price.trim(),
-            timeTravel: duration.trim(),
-          };
+        // First, try to extract the content in parentheses
+        const parenthesesMatch = activityText.match(/\(([^)]+)\)$/);
+        let price = "N/A";
+        let duration = "Varies";
+        let rating = null;
+
+        if (parenthesesMatch) {
+          const innerContent = parenthesesMatch[1];
+
+          // Smart split: Don't split commas inside price ranges
+          // Match patterns: "₱800 - ₱1,500" should stay together
+          const parts = [];
+          let currentPart = "";
+          let inPriceRange = false;
+
+          for (let i = 0; i < innerContent.length; i++) {
+            const char = innerContent[i];
+            const prevChars = innerContent.substring(Math.max(0, i - 3), i);
+            const nextChars = innerContent.substring(
+              i + 1,
+              Math.min(innerContent.length, i + 5)
+            );
+
+            // Detect if we're in a price range (has ₱ or dash before/after)
+            if (
+              char === "," &&
+              (prevChars.includes("₱") ||
+                nextChars.includes("₱") ||
+                prevChars.includes("-") ||
+                /^\d/.test(nextChars))
+            ) {
+              // Keep comma if it's part of a number (₱1,500) or price range
+              currentPart += char;
+            } else if (char === ",") {
+              // This comma is a separator
+              parts.push(currentPart.trim());
+              currentPart = "";
+            } else {
+              currentPart += char;
+            }
+          }
+          if (currentPart) parts.push(currentPart.trim());
+
+          // Extract based on patterns
+          parts.forEach((part) => {
+            if (part.toLowerCase().includes("rating:")) {
+              rating = part.replace(/rating:\s*/i, "").trim();
+            } else if (
+              part.match(/^\d+(\.\d+)?\s*(minutes?|hours?|min|mins|hr|hrs|h)/i)
+            ) {
+              // Duration pattern: "30 minutes", "2 hours", "2.5 hours"
+              duration = part;
+            } else if (part.match(/^(₱|PHP|free|varies)/i)) {
+              // Price pattern: "₱500", "₱1,500", "₱800 - ₱1,500", "Free", "Varies"
+              price = part;
+            }
+          });
+
+          // Debug logging for validation
+          if (index === 0) {
+            console.log("📊 Parsed activity example:", {
+              price,
+              duration,
+              rating,
+              parts,
+            });
+          }
+
+          // Remove the parentheses part from the activity text
+          activityText = activityText.replace(/\s*\([^)]+\)$/, "").trim();
         }
 
-        // Fallback: try simpler parsing
-        const parts = activityText.split("-").map((p) => p.trim());
-        if (parts.length >= 2) {
-          return {
-            time: parts[0] || "All Day",
-            placeName: parts[1] || "Activity",
-            placeDetails: parts.slice(2).join(" - "),
-            ticketPricing: "N/A",
-            timeTravel: "Varies",
+        // Now parse the main parts: TIME - PLACE - DESCRIPTION
+        const mainParts = activityText.split("-").map((p) => p.trim());
+
+        if (mainParts.length >= 2) {
+          const parsed = {
+            time: mainParts[0] || "All Day",
+            placeName: mainParts[1] || "Activity",
+            placeDetails: mainParts.slice(2).join(" - ") || "",
+            ticketPricing: price,
+            timeTravel: duration,
+            rating: rating,
           };
+
+          return parsed;
         }
 
         return null;

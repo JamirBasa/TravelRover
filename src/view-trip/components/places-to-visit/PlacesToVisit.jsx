@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import {
   TripOverviewStats,
   PlacesToVisitSection,
+  BudgetBreakdown,
   ItineraryNavigationHelper,
   ItineraryHeader,
   DayHeader,
@@ -388,6 +389,9 @@ function PlacesToVisit({ trip, onTripUpdate }) {
       {parsedPlacesToVisit && parsedPlacesToVisit.length > 0 && (
         <PlacesToVisitSection placesToVisit={parsedPlacesToVisit} />
       )}
+
+      {/* Budget Breakdown Section */}
+      <BudgetBreakdown trip={trip} className="mb-8" />
 
       {/* Daily Itinerary Header */}
       <ItineraryHeader />

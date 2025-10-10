@@ -6,14 +6,25 @@ from datetime import datetime, timedelta
 import json
 import logging
 from .base_agent import BaseAgent
+from .genetic_optimizer import GeneticItineraryOptimizer
 
 logger = logging.getLogger(__name__)
 
 class RouteOptimizerAgent(BaseAgent):
     """LangGraph Route Optimization Agent - Optimizes daily itineraries for travel efficiency"""
     
-    def __init__(self, session_id: str):
+    def __init__(self, session_id: str, use_genetic_algorithm: bool = True):
         super().__init__(session_id, 'route_optimizer')
+        
+        # Genetic Algorithm optimizer
+        self.use_genetic_algorithm = use_genetic_algorithm
+        self.genetic_optimizer = GeneticItineraryOptimizer(
+            population_size=50,
+            generations=100,
+            mutation_rate=0.15,
+            crossover_rate=0.7,
+            elite_size=5
+        )
         
         # Activity type mappings for intelligent routing
         self.activity_types = {
@@ -53,6 +64,14 @@ class RouteOptimizerAgent(BaseAgent):
             itinerary_data = input_data.get('itinerary_data', {})
             trip_params = input_data.get('trip_params', {})
             
+            # Check if we should use genetic algorithm
+            if self.use_genetic_algorithm and self._can_use_genetic_algorithm(itinerary_data):
+                logger.info("🧬 Using Genetic Algorithm for itinerary optimization")
+                return await self._optimize_with_genetic_algorithm(itinerary_data, trip_params)
+            
+            # Fallback to traditional optimization
+            logger.info("🔄 Using traditional route optimization")
+            
             # Process daily itineraries
             optimized_days = []
             
@@ -83,6 +102,156 @@ class RouteOptimizerAgent(BaseAgent):
                 'fallback_itinerary': input_data.get('itinerary_data', {}),
                 'optimization_applied': False
             }
+    
+    def _can_use_genetic_algorithm(self, itinerary_data: Dict) -> bool:
+        """Check if genetic algorithm can be used for this itinerary"""
+        
+        # Count total activities
+        total_activities = 0
+        for day_num, day_data in itinerary_data.items():
+            if isinstance(day_data, dict) and 'activities' in day_data:
+                total_activities += len(day_data['activities'])
+        
+        # Use GA only if we have enough activities (>= 5)
+        return total_activities >= 5
+    
+    async def _optimize_with_genetic_algorithm(
+        self,
+        itinerary_data: Dict[str, Any],
+        trip_params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Optimize itinerary using genetic algorithm
+        """
+        try:
+            logger.info("🧬 Starting genetic algorithm optimization")
+            
+            # Extract all activities from itinerary
+            all_activities = []
+            for day_num, day_data in itinerary_data.items():
+                if isinstance(day_data, dict) and 'activities' in day_data:
+                    activities = day_data['activities']
+                    # Enhance activities with metadata
+                    for activity in activities:
+                        enhanced_activity = self._prepare_activity_for_ga(activity)
+                        all_activities.append(enhanced_activity)
+            
+            logger.info(f"📊 Total activities for GA optimization: {len(all_activities)}")
+            
+            # Run genetic algorithm
+            optimized_result = self.genetic_optimizer.optimize(
+                activities=all_activities,
+                trip_params=trip_params
+            )
+            
+            logger.info(f"✅ GA optimization complete. Score: {optimized_result.get('optimization_score', 0):.2f}")
+            
+            # Convert GA result to our standard format
+            optimized_itinerary = self._convert_ga_result_to_standard_format(
+                optimized_result,
+                trip_params
+            )
+            
+            return {
+                'optimized_itinerary': optimized_itinerary,
+                'optimization_summary': {
+                    'total_days_optimized': len(optimized_result.get('itinerary_data', [])),
+                    'total_travel_time': 0,  # Calculate if needed
+                    'average_efficiency_score': int(optimized_result.get('optimization_score', 0)),
+                    'total_cost': optimized_result.get('total_cost', 0),
+                    'total_activities': optimized_result.get('total_activities', 0),
+                    'recommendations': [
+                        {
+                            'type': 'genetic_optimization',
+                            'message': f'Itinerary optimized using genetic algorithm. Optimization score: {optimized_result.get("optimization_score", 0):.2f}/100',
+                            'priority': 'high'
+                        }
+                    ],
+                    'optimization_applied': True,
+                    'optimization_method': 'genetic_algorithm'
+                },
+                'route_efficiency_score': int(optimized_result.get('optimization_score', 0)),
+                'total_travel_time_minutes': 0,
+                'recommendations': []
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Genetic algorithm optimization failed: {str(e)}")
+            logger.info("🔄 Falling back to traditional optimization")
+            
+            # Fallback to traditional method
+            return await self._execute_logic_traditional(itinerary_data, trip_params)
+    
+    def _prepare_activity_for_ga(self, activity: Dict) -> Dict:
+        """Prepare activity data for genetic algorithm"""
+        
+        # Enhance with metadata
+        activity_type = self._detect_activity_type(activity)
+        coords = self._extract_coordinates(activity)
+        duration = self._estimate_activity_duration(activity, activity_type)
+        
+        return {
+            **activity,
+            'activity_type': activity_type,
+            'coordinates': coords,
+            'estimated_duration': duration,
+            'time': activity.get('time', '9:00 AM')
+        }
+    
+    def _convert_ga_result_to_standard_format(
+        self,
+        ga_result: Dict[str, Any],
+        trip_params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Convert GA result to standard itinerary format"""
+        
+        itinerary_data = ga_result.get('itinerary_data', [])
+        
+        optimized_itinerary = {}
+        
+        for day_entry in itinerary_data:
+            day_num = day_entry.get('day', 1)
+            
+            optimized_itinerary[f"day_{day_num}"] = {
+                'day': f"Day {day_num}",
+                'theme': day_entry.get('theme', f"Day {day_num}"),
+                'activities': [],
+                'planText': day_entry.get('planText', ''),
+                'route_segments': [],
+                'total_travel_time': 0,
+                'optimization_score': 100,
+                'optimization_method': 'genetic_algorithm'
+            }
+        
+        return optimized_itinerary
+    
+    async def _execute_logic_traditional(
+        self,
+        itinerary_data: Dict[str, Any],
+        trip_params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Traditional optimization method (fallback)"""
+        
+        optimized_days = []
+        
+        for day_num, day_data in itinerary_data.items():
+            if isinstance(day_data, dict) and 'activities' in day_data:
+                optimized_day = await self._optimize_daily_route(
+                    day_num, 
+                    day_data['activities'],
+                    trip_params
+                )
+                optimized_days.append(optimized_day)
+        
+        summary = self._generate_optimization_summary(optimized_days)
+        
+        return {
+            'optimized_itinerary': {day['day']: day for day in optimized_days},
+            'optimization_summary': summary,
+            'route_efficiency_score': summary['average_efficiency_score'],
+            'total_travel_time_minutes': summary['total_travel_time'],
+            'recommendations': summary['recommendations']
+        }
     
     async def _optimize_daily_route(self, day_num: str, activities: List[Dict], trip_params: Dict) -> Dict[str, Any]:
         """Optimize route for a single day's activities"""
