@@ -34,7 +34,7 @@ import {
 // Import components
 import LocationSelector from "./components/LocationSelector";
 import DateRangePicker from "./components/DateRangePicker";
-import BudgetSelector from "./components/BugetSelector";
+import BudgetSelector from "./components/BudgetSelector";
 import TravelerSelector from "./components/TravelerSelector";
 import SpecificRequests from "./components/SpecificRequests";
 import FlightPreferences from "./components/FlightPreferences";
@@ -56,6 +56,12 @@ import {
   sanitizeTripPreferences,
 } from "../utils/tripPreferences";
 import { UserProfileService } from "../services/userProfileService";
+import {
+  calculateTravelDates,
+  getDateExplanation,
+  getActivityGuidance,
+  validateTravelDates,
+} from "../utils/travelDateManager";
 
 // Use centralized step configuration
 const STEPS = STEP_CONFIGS.CREATE_TRIP;
@@ -351,24 +357,31 @@ function CreateTrip() {
           });
           return false;
         }
-        const startDate = new Date(formData.startDate);
-        const endDate = new Date(formData.endDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
 
-        if (startDate < today) {
-          toast.error("Invalid start date", {
-            description:
-              "Your trip cannot start in the past. Please choose a future date.",
+        // Smart date validation
+        const dateValidation = validateTravelDates({
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          includeFlights: flightData.includeFlights,
+          departureCity: flightData.departureCity,
+          destination: formData.location,
+        });
+
+        if (!dateValidation.isValid) {
+          toast.error("Date validation failed", {
+            description: dateValidation.errors[0],
           });
           return false;
         }
-        if (endDate <= startDate) {
-          toast.error("Invalid end date", {
-            description:
-              "Your return date should be after your departure date.",
+
+        // Show warnings but allow to continue
+        if (dateValidation.warnings.length > 0) {
+          dateValidation.warnings.forEach((warning) => {
+            toast.warning("Travel planning tip", {
+              description: warning,
+              duration: 6000,
+            });
           });
-          return false;
         }
         break;
 
@@ -386,6 +399,23 @@ function CreateTrip() {
               "Please select a budget range or enter a custom amount to help plan your trip.",
           });
           return false;
+        }
+        // Validate custom budget if entered
+        if (customBudget) {
+          const amount = parseInt(customBudget);
+          if (isNaN(amount) || amount < 1000) {
+            toast.error("Invalid budget amount", {
+              description:
+                "Please enter a budget of at least ₱1,000 for your trip.",
+            });
+            return false;
+          }
+          if (amount > 1000000) {
+            toast.error("Budget too high", {
+              description: "Please enter a reasonable budget amount.",
+            });
+            return false;
+          }
         }
         break;
 
@@ -474,6 +504,24 @@ function CreateTrip() {
       return false;
     }
 
+    // Validate custom budget if entered
+    if (customBudget) {
+      const amount = parseInt(customBudget);
+      if (isNaN(amount) || amount < 1000) {
+        toast.error("Invalid budget amount", {
+          description:
+            "Please enter a budget of at least ₱1,000 for your trip.",
+        });
+        return false;
+      }
+      if (amount > 1000000) {
+        toast.error("Budget too high", {
+          description: "Please enter a reasonable budget amount.",
+        });
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -531,12 +579,27 @@ function CreateTrip() {
       // ✅ ALWAYS use LangGraph for GA-First itinerary generation
       // Even if flights/hotels are not requested, GA-First will optimize the itinerary
       setLangGraphLoading(true);
-      
+
       if (activeServices.hasAnyAgent) {
         console.log("🤖 Starting LangGraph with flights/hotels search...");
       } else {
-        console.log("� Starting LangGraph GA-First itinerary generation (no flights/hotels)...");
+        console.log(
+          "� Starting LangGraph GA-First itinerary generation (no flights/hotels)..."
+        );
       }
+
+      // Calculate smart travel dates with buffer logic
+      const travelDates = calculateTravelDates({
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        includeFlights: flightData.includeFlights,
+        departureCity: flightData.departureCity,
+        destination: formData.location,
+        travelers: formData.travelers,
+      });
+
+      console.log("📅 Smart travel dates calculated:", travelDates);
+      console.log("💡 Date explanation:", getDateExplanation(travelDates));
 
       const langGraphAgent = new LangGraphTravelAgent();
 
@@ -547,38 +610,49 @@ function CreateTrip() {
         duration: formData.duration,
         travelers: formData.travelers,
         budget: customBudget ? `Custom: ₱${customBudget}` : formData.budget,
-        flightData: flightData,
-        hotelData: hotelData,
+        flightData: {
+          ...flightData,
+          // Use smart flight dates if flights are included
+          searchDepartureDate: travelDates.flightDepartureDate,
+          searchReturnDate: travelDates.flightReturnDate,
+        },
+        hotelData: {
+          ...hotelData,
+          // Use smart hotel dates
+          checkInDate: travelDates.hotelCheckInDate,
+          checkOutDate: travelDates.hotelCheckOutDate,
+        },
+        travelDates: travelDates, // Include full date calculation
         userProfile: userProfile,
       };
 
       langGraphResults = await langGraphAgent.orchestrateTrip(tripParams);
 
-        // Extract individual results for compatibility
-        flightResults = langGraphResults.flights;
-        hotelResults = langGraphResults.hotels;
+      // Extract individual results for compatibility
+      flightResults = langGraphResults.flights;
+      hotelResults = langGraphResults.hotels;
 
-        // Log results for debugging (no toasts needed - info shown in loading modal)
-        if (flightResults?.success) {
-          console.log(
-            "✈️ Flight search completed:",
-            flightResults.fallback ? "recommendations" : "live data"
-          );
-        }
+      // Log results for debugging (no toasts needed - info shown in loading modal)
+      if (flightResults?.success) {
+        console.log(
+          "✈️ Flight search completed:",
+          flightResults.fallback ? "recommendations" : "live data"
+        );
+      }
 
-        if (hotelResults?.success) {
-          console.log(
-            "🏨 Hotel search completed:",
-            hotelResults.fallback ? "recommendations" : "live data"
-          );
-        }
+      if (hotelResults?.success) {
+        console.log(
+          "🏨 Hotel search completed:",
+          hotelResults.fallback ? "recommendations" : "live data"
+        );
+      }
 
-        if (langGraphResults.optimized_plan) {
-          console.log(
-            "🤖 LangGraph optimization completed with score:",
-            langGraphResults.optimized_plan.optimization_score
-          );
-        }
+      if (langGraphResults.optimized_plan) {
+        console.log(
+          "🤖 LangGraph optimization completed with score:",
+          langGraphResults.optimized_plan.optimization_score
+        );
+      }
 
       setLangGraphLoading(false);
 
@@ -674,15 +748,25 @@ IMPORTANT: Every day should have a strong ${
           .join(" ") ||
         "User";
 
+      // Extract user's home region for geographic awareness
+      const userHomeCity = userProfile.address?.city || "Manila";
+      const userHomeRegion =
+        userProfile.address?.province ||
+        userProfile.address?.region ||
+        "Philippines";
+      const tripDestination = formData?.location || "Unknown";
+
+      // Check if user is traveling to a different region
+      const isDifferentRegion =
+        !tripDestination.toLowerCase().includes(userHomeCity.toLowerCase()) &&
+        !tripDestination.toLowerCase().includes(userHomeRegion.toLowerCase());
+
       enhancedPrompt += `
 
 👤 USER PROFILE INFORMATION:
 - Full Name: ${userFullName}
-- Location: ${userProfile.address?.city || "Manila"}, ${
-        userProfile.address?.province ||
-        userProfile.address?.region ||
-        "Philippines"
-      }
+- Home Location: ${userHomeCity}, ${userHomeRegion}
+- Trip Destination: ${tripDestination}
 - Preferred Trip Types: ${
         userProfile.preferredTripTypes?.join(", ") || "General travel"
       }
@@ -691,6 +775,37 @@ IMPORTANT: Every day should have a strong ${
 - Accommodation Preference: ${
         userProfile.accommodationPreference || "Not specified"
       }
+
+${
+  isDifferentRegion
+    ? `
+🗺️ GEOGRAPHIC AWARENESS - CRITICAL INSTRUCTIONS:
+⚠️ The user is traveling FROM ${userHomeRegion} TO ${tripDestination}
+
+STRICT REQUIREMENTS:
+❌ DO NOT recommend places in or near ${userHomeCity}, ${userHomeRegion}
+❌ DO NOT suggest "visiting ${userHomeCity}" or nearby cities in ${userHomeRegion}
+❌ DO NOT include day trips back to the user's home region
+❌ DO NOT recommend attractions near the user's origin area
+
+✅ ONLY recommend places within ${tripDestination} and its immediate surroundings
+✅ Focus ALL activities in the destination area: ${tripDestination}
+✅ Suggest attractions, restaurants, and activities EXCLUSIVE to ${tripDestination}
+✅ This is a DESTINATION-FOCUSED trip - user is exploring ${tripDestination}, not their home area
+
+EXAMPLE OF WHAT NOT TO DO:
+- If user is from Davao traveling to Manila → DON'T recommend "Visit Davao City" or "Eden Nature Park"
+- If user is from Cebu traveling to Palawan → DON'T recommend "Visit Cebu" or "Magellan's Cross"
+- If user is from Manila traveling to Baguio → DON'T recommend "Visit Manila" or "Intramuros"
+
+The user wants to EXPLORE ${tripDestination}, not revisit their hometown!
+`
+    : `
+🗺️ GEOGRAPHIC CONTEXT:
+- User is exploring their local area: ${tripDestination}
+- Include diverse attractions within ${tripDestination} and nearby areas
+`
+}
 
 🍽️ DIETARY & CULTURAL REQUIREMENTS:
 - Dietary Restrictions: ${userProfile.dietaryRestrictions?.join(", ") || "None"}
@@ -711,10 +826,60 @@ ${
     : ""
 }
 
-📅 TRAVEL DATES:
-Start Date: ${formData.startDate}
-End Date: ${formData.endDate}
+📅 TRAVEL DATES & TIMING:
+Trip Dates (at destination): ${formData.startDate} to ${formData.endDate}
 Duration: ${formData.duration} days
+
+${
+  travelDates.includesArrivalDay
+    ? `
+🛫 FLIGHT TIMING CONTEXT:
+- Flight Departure: ${travelDates.flightDepartureDate} (${
+        travelDates.travelInfo.recommendation
+      })
+- Flight Return: ${travelDates.flightReturnDate}
+- User will arrive at destination on ${travelDates.tripStartDate}
+- ${
+        travelDates.travelInfo.isInternational
+          ? "IMPORTANT: Day 1 activities should be FULL DAY (user arrives day before)"
+          : "IMPORTANT: Day 1 activities should be AFTERNOON/EVENING only (morning arrival)"
+      }
+`
+    : `
+🏨 TRAVEL CONTEXT:
+- User is handling their own transport (no flights booked through us)
+- Plan full days of activities from ${travelDates.activitiesStartDate}
+`
+}
+
+🏨 HOTEL BOOKING DATES:
+- Check-in: ${travelDates.hotelCheckInDate}
+- Check-out: ${travelDates.hotelCheckOutDate}
+- Total nights: ${travelDates.totalNights}
+
+📋 ACTIVITY PLANNING GUIDANCE:
+${getActivityGuidance(travelDates)
+  .map(
+    (guide) =>
+      `Day ${guide.day}: ${guide.timing} - ${guide.note} (Pace: ${guide.recommendedPace})`
+  )
+  .join("\n")}
+
+CRITICAL ITINERARY INSTRUCTIONS:
+- Last day activities must end by NOON for ${
+        travelDates.flightReturnDate
+      } departure
+${
+  travelDates.travelInfo.isDomesticShort
+    ? "- First day should have 2-3 activities starting AFTER 1PM (arrival time)"
+    : ""
+}
+${
+  travelDates.includesArrivalDay
+    ? "- First day is a FULL day (user arrives evening before)"
+    : ""
+}
+- Respect the activity timing guidance above for realistic planning
 
 PERSONALIZATION INSTRUCTIONS:
 - Tailor recommendations based on user's preferred trip types: ${userProfile.preferredTripTypes?.join(
@@ -1329,6 +1494,8 @@ Generate general accommodation recommendations without specific pricing or booki
               onStartDateChange={handleStartDateChange}
               onEndDateChange={handleEndDateChange}
               onDurationChange={handleDurationChange}
+              flightData={flightData}
+              destination={formData.location}
             />
             <SpecificRequests
               value={formData?.specificRequests}
@@ -1345,6 +1512,8 @@ Generate general accommodation recommendations without specific pricing or booki
               onBudgetChange={handleBudgetChange}
               onCustomBudgetChange={setCustomBudget}
               error={null}
+              formData={formData} // Pass trip details for smart estimation
+              flightData={flightData} // Pass flight info for cost calculation
             />
             <TravelerSelector
               selectedTravelers={formData?.travelers}

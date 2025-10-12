@@ -5,6 +5,7 @@ import { FaPlane, FaMapMarkerAlt, FaInfoCircle, FaCheck } from "react-icons/fa";
 import {
   getRegionsByCountry,
   getCitiesByRegion,
+  getRegionName,
 } from "../../data/locationData";
 import { useMemo } from "react";
 import { UserProfileService } from "../../services/userProfileService";
