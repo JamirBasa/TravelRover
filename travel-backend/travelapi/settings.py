@@ -138,8 +138,9 @@ CORS_ALLOW_CREDENTIALS = True
 SERPAPI_KEY = config('SERPAPI_KEY', default='')
 GOOGLE_PLACES_API_KEY = config('GOOGLE_PLACES_API_KEY', default='')
 
-# ✅ Add these for API monitoring (these should already exist)
+# Gemini AI API Key (used by proxy endpoint)
 GOOGLE_GEMINI_AI_API_KEY = config('GOOGLE_GEMINI_AI_API_KEY', default='')
+GEMINI_API_KEY = GOOGLE_GEMINI_AI_API_KEY  # Alias for proxy endpoint
 
 # ✅ Add these if missing for API monitoring
 FIREBASE_API_KEY = config('FIREBASE_API_KEY', default='')

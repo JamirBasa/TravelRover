@@ -367,25 +367,22 @@ export const SelectBudgetOptions = [
   {
     id: 1,
     title: "Budget",
-    desc: "A budget-friendly option for travelers looking to save money.",
+    desc: "Hostels, local food, basic activities - Perfect for backpackers",
     icon: "💰",
-    range: "₱2,000 - ₱8,000",
     value: "Budget",
   },
   {
     id: 2,
     title: "Moderate",
-    desc: "A comfortable option for travelers who want a balance of cost and quality.",
+    desc: "Mid-range hotels, mix of dining options, popular attractions",
     icon: "💳",
-    range: "₱8,000 - ₱20,000",
     value: "Moderate",
   },
   {
     id: 3,
     title: "Luxury",
-    desc: "A high-end option for travelers seeking the best experiences.",
+    desc: "High-end resorts, fine dining, premium experiences",
     icon: "💎",
-    range: "₱20,000+",
     value: "Luxury",
   },
 ];

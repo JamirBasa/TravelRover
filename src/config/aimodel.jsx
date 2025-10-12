@@ -3,18 +3,26 @@ import {
   HarmCategory,
   HarmBlockThreshold,
 } from "@google/generative-ai";
+import { GeminiProxyChatSession } from "./geminiProxyService";
+
+// Configuration: Use proxy or direct API
+const USE_PROXY = import.meta.env.VITE_USE_GEMINI_PROXY === "true" || true; // Default to proxy for security
 
 const apiKey = import.meta.env.VITE_GOOGLE_GEMINI_AI_API_KEY;
 
-if (!apiKey) {
+if (!USE_PROXY && !apiKey) {
   throw new Error(
     "VITE_GOOGLE_GEMINI_AI_API_KEY is not defined in environment variables"
   );
 }
 
 console.log("API KEY configured:", apiKey ? "✓" : "✗");
+console.log(
+  "Gemini Proxy Mode:",
+  USE_PROXY ? "ENABLED (secure)" : "DISABLED (direct)"
+);
 
-const genAI = new GoogleGenerativeAI(apiKey);
+const genAI = USE_PROXY ? null : new GoogleGenerativeAI(apiKey);
 
 // Ultra-strict generation config for maximum JSON reliability
 const generationConfig = {
@@ -141,10 +149,12 @@ const safetySettings = [
   },
 ];
 
-export const model = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash",
-  safetySettings,
-});
+export const model = USE_PROXY
+  ? null // Model not needed in proxy mode
+  : genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      safetySettings,
+    });
 
 const systemPrompt = `Generate ONLY valid JSON for travel itineraries. 
 
@@ -209,20 +219,23 @@ EXAMPLE of CORRECT format:
 
 Response must be complete, valid JSON that ends properly.`;
 
-export const chatSession = model.startChat({
-  generationConfig,
-  history: [
-    {
-      role: "user",
-      parts: [{ text: systemPrompt }],
-    },
-    {
-      role: "model",
-      parts: [
+export const chatSession = USE_PROXY
+  ? new GeminiProxyChatSession(generationConfig) // Use proxy
+  : model.startChat({
+      // Use direct API
+      generationConfig,
+      history: [
         {
-          text: "Understood. I will generate only valid JSON that exactly matches the schema with no additional formatting or text.",
+          role: "user",
+          parts: [{ text: systemPrompt }],
+        },
+        {
+          role: "model",
+          parts: [
+            {
+              text: "Understood. I will generate only valid JSON that exactly matches the schema with no additional formatting or text.",
+            },
+          ],
         },
       ],
-    },
-  ],
-});
+    });
