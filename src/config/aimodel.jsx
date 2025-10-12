@@ -44,8 +44,6 @@ const generationConfig = {
       currency: { type: "string" },
       hotels: {
         type: "array",
-        minItems: 3,
-        maxItems: 5,
         items: {
           type: "object",
           properties: {
@@ -64,15 +62,13 @@ const generationConfig = {
       },
       itinerary: {
         type: "array",
-        minItems: 1,
         items: {
           type: "object",
           properties: {
-            day: { type: "integer", minimum: 1 },
+            day: { type: "integer" },
             theme: { type: "string" },
             plan: {
               type: "array",
-              minItems: 1,
               items: {
                 type: "object",
                 properties: {
@@ -97,8 +93,6 @@ const generationConfig = {
       },
       placesToVisit: {
         type: "array",
-        minItems: 3,
-        maxItems: 8,
         items: {
           type: "object",
           properties: {

@@ -847,7 +847,7 @@ ${
 `
     : `
 🏨 TRAVEL CONTEXT:
-- User is handling their own transport (no flights booked through us)
+- Flight options provided below are recommendations for your convenience
 - Plan full days of activities from ${travelDates.activitiesStartDate}
 `
 }
@@ -866,9 +866,13 @@ ${getActivityGuidance(travelDates)
   .join("\n")}
 
 CRITICAL ITINERARY INSTRUCTIONS:
-- Last day activities must end by NOON for ${
-        travelDates.flightReturnDate
-      } departure
+- Last day (${travelDates.flightReturnDate}) activities can run until evening
+- Hotel checkout is ${travelDates.hotelCheckOutDate} morning - plan departure accordingly
+${
+  flightData.includeFlights
+    ? `- Return flight departs on ${travelDates.flightReturnDate} - ensure activities end by afternoon/evening for travel`
+    : ""
+}
 ${
   travelDates.travelInfo.isDomesticShort
     ? "- First day should have 2-3 activities starting AFTER 1PM (arrival time)"

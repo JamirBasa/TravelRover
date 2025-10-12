@@ -387,7 +387,7 @@ export const SelectBudgetOptions = [
   },
 ];
 
-export const AI_PROMPT = `Create travel itinerary JSON for {location}, {duration} days, {travelers}, {budget}.
+export const AI_PROMPT = `Create travel itinerary JSON for {location}, {duration}, {travelers}, {budget}.
 
 CRITICAL JSON REQUIREMENTS:
 - Return ONLY valid JSON - no markdown, no extra text, no code blocks
@@ -417,10 +417,10 @@ export const HOTEL_CONFIG = {
   HOTEL_TYPES: ["lodging", "hotel", "resort"],
   MAX_RESULTS: 20,
   PRICE_LEVELS: {
-    1: "Budget (₱1,000-2,500)",
-    2: "Mid-range (₱2,500-5,000)",
-    3: "Upscale (₱5,000-10,000)",
-    4: "Luxury (₱10,000+)",
+    1: "Budget (₱2,000-8,000)",
+    2: "Moderate (₱8,000-20,000)",
+    3: "Luxury (₱20,000-40,000)",
+    4: "Ultra-Luxury (₱40,000+)",
   },
   DEFAULT_CHECKIN_DAYS: 7, // Days from now
   DEFAULT_CHECKOUT_DAYS: 10, // Days from now
