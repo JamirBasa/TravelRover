@@ -389,6 +389,40 @@ export const SelectBudgetOptions = [
 
 export const AI_PROMPT = `Create travel itinerary JSON for {location}, {duration}, {travelers}, {budget}.
 
+🗺️ GEOGRAPHIC VALIDATION - ABSOLUTELY CRITICAL:
+⚠️ DESTINATION: {location} (Philippines)
+
+STRICT LOCATION REQUIREMENTS:
+✅ ALL places MUST be physically located IN {location}
+✅ Verify each place name includes the correct city/province identifier
+✅ Only suggest attractions that are WITHIN or IMMEDIATELY ADJACENT to {location}
+✅ Hotel addresses MUST explicitly mention {location} or its districts
+
+❌ FORBIDDEN - DO NOT INCLUDE:
+- Places with the same name in different Philippine regions
+- Hotels/attractions that are in OTHER cities/provinces
+- Places that require leaving {location} to visit
+- Generic Philippine attractions not in {location}
+
+VALIDATION EXAMPLES:
+- If destination is "Manila": 
+  ✅ CORRECT: "Intramuros, Manila", "Manila Ocean Park", "SM Mall of Asia, Pasay"
+  ❌ WRONG: "Chocolate Hills" (Bohol), "Mayon Volcano" (Albay), "White Beach" (Boracay)
+  
+- If destination is "Cebu":
+  ✅ CORRECT: "Magellan's Cross, Cebu City", "Kawasan Falls, Badian", "Oslob Whale Sharks"
+  ❌ WRONG: "Rizal Park" (Manila), "Taal Volcano" (Batangas), "Burnham Park" (Baguio)
+  
+- If destination is "Palawan":
+  ✅ CORRECT: "El Nido Lagoons", "Puerto Princesa Underground River", "Coron Island"
+  ❌ WRONG: "Boracay Beach" (Aklan), "Panglao Island" (Bohol), "Siargao Cloud 9"
+
+NAMING FORMAT FOR PLACES:
+- Always include location qualifier: "Place Name, City/District"
+- Example: "Fort Santiago, Intramuros, Manila" NOT just "Fort Santiago"
+- Example: "Tops Lookout, Busay, Cebu" NOT just "Tops Lookout"
+- This prevents confusion with places of the same name elsewhere
+
 CRITICAL JSON REQUIREMENTS:
 - Return ONLY valid JSON - no markdown, no extra text, no code blocks
 - NO trailing commas before } or ]

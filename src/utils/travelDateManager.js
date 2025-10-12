@@ -275,12 +275,13 @@ export const getDateExplanation = (dateInfo) => {
  */
 export const getActivityGuidance = (dateInfo) => {
   const guidance = [];
-  const { activitiesStartDate, activitiesEndDate, travelInfo } = dateInfo;
+  const { activitiesStartDate, activitiesEndDate, totalNights, travelInfo } = dateInfo;
 
   const startDate = new Date(activitiesStartDate);
   const endDate = new Date(activitiesEndDate);
-  const dayCount =
-    Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+  
+  // Calculate actual activity days (not including checkout day)
+  const activityDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
   // Day 1 guidance
   if (travelInfo.isDomesticShort) {
@@ -307,7 +308,7 @@ export const getActivityGuidance = (dateInfo) => {
   }
 
   // Middle days - full activities
-  for (let i = 2; i < dayCount; i++) {
+  for (let i = 2; i < activityDays; i++) {
     guidance.push({
       day: i,
       timing: "Full Day",
@@ -316,13 +317,15 @@ export const getActivityGuidance = (dateInfo) => {
     });
   }
 
-  // Last day guidance
-  guidance.push({
-    day: dayCount,
-    timing: "Morning/Afternoon",
-    note: "Check out and depart - plan morning activities only",
-    recommendedPace: "relaxed",
-  });
+  // Last day guidance (final activity day, not checkout day)
+  if (activityDays > 1) {
+    guidance.push({
+      day: activityDays,
+      timing: "Full Day",
+      note: "Final day of activities - hotel checkout is tomorrow morning",
+      recommendedPace: "active",
+    });
+  }
 
   return guidance;
 };
