@@ -272,6 +272,11 @@ class AdminUsersView(APIView):
                     **trip_stats
                 })
             
+            # Add debug logging
+            logger.info(f"✅ Found {len(users_data)} users in database")
+            for user in users_data:
+                logger.info(f"  👤 User: {user['email']} (ID: {user['id']}, Active: {user['is_active']})")
+            
             return Response({
                 'success': True,
                 'users': users_data,
@@ -285,6 +290,61 @@ class AdminUsersView(APIView):
             
         except Exception as e:
             logger.error(f"❌ Error fetching users: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e),
+                'users': [],  # Return empty array on error
+                'metadata': {
+                    'total_count': 0,
+                    'active_count': 0,
+                    'staff_count': 0,
+                    'langgraph_integrated': LANGGRAPH_AVAILABLE
+                }
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def delete(self, request, user_id):
+        """Delete a user (admin only)"""
+        try:
+            logger.info(f"🗑️ Admin: Attempting to delete user ID: {user_id}")
+            
+            user = User.objects.get(id=user_id)
+            
+            # Prevent deletion of superusers
+            if user.is_superuser:
+                logger.warning(f"⚠️ Attempted to delete superuser: {user.email}")
+                return Response({
+                    'success': False,
+                    'error': 'Cannot delete superuser accounts'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # Store user info for logging
+            user_email = user.email
+            
+            # Delete associated LangGraph sessions if available
+            if LANGGRAPH_AVAILABLE and TravelPlanningSession:
+                sessions = TravelPlanningSession.objects.filter(user_email=user_email)
+                session_count = sessions.count()
+                sessions.delete()
+                logger.info(f"🗑️ Deleted {session_count} associated trip sessions")
+            
+            # Delete the user
+            user.delete()
+            
+            logger.info(f"✅ Successfully deleted user: {user_email}")
+            return Response({
+                'success': True,
+                'message': f'User {user_email} deleted successfully'
+            })
+            
+        except User.DoesNotExist:
+            logger.error(f"❌ User with ID {user_id} not found")
+            return Response({
+                'success': False,
+                'error': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+            
+        except Exception as e:
+            logger.error(f"❌ Error deleting user {user_id}: {str(e)}")
             return Response({
                 'success': False,
                 'error': str(e)
