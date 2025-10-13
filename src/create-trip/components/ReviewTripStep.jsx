@@ -6,12 +6,17 @@ import {
   FaPlane,
   FaHotel,
   FaListAlt,
+  FaInfoCircle,
 } from "react-icons/fa";
 import {
   calculateDuration,
   formatCurrency,
   DATE_CONFIG,
 } from "../../constants/options";
+import {
+  calculateTravelDates,
+  getDateExplanation,
+} from "../../utils/travelDateManager";
 
 const ReviewTripStep = ({
   formData,
@@ -42,6 +47,19 @@ const ReviewTripStep = ({
     if (customBudget) return `${formatCurrency(customBudget)} (Custom)`;
     return formData.budget || "Not selected";
   };
+
+  // Calculate smart travel dates
+  const travelDates =
+    formData.startDate && formData.endDate
+      ? calculateTravelDates({
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          includeFlights: flightData?.includeFlights,
+          departureCity: flightData?.departureCity,
+          destination: formData.location,
+          travelers: formData.travelers,
+        })
+      : null;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -75,7 +93,7 @@ const ReviewTripStep = ({
         <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <FaCalendarAlt className="text-green-600 mt-1 flex-shrink-0" />
-            <div>
+            <div className="flex-1">
               <h3 className="font-medium text-gray-800 mb-1">Travel Dates</h3>
               <p className="text-gray-600 text-sm">
                 <strong>Start:</strong> {formatDate(formData.startDate)}
@@ -86,6 +104,31 @@ const ReviewTripStep = ({
               <p className="text-blue-600 text-sm font-medium mt-1">
                 Duration: {getDuration()}
               </p>
+
+              {/* Smart Date Explanation */}
+              {travelDates && (
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <FaInfoCircle className="text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-blue-700">
+                      <p className="font-semibold mb-1">Travel Timing:</p>
+                      <p>{getDateExplanation(travelDates)}</p>
+                      {travelDates.includesArrivalDay && (
+                        <p className="mt-2 font-semibold">
+                          ✈️ Flying out on {travelDates.flightDepartureDate}
+                        </p>
+                      )}
+                      {travelDates.totalNights !== travelDates.totalDays && (
+                        <p className="mt-1">
+                          🏨 Hotel: {travelDates.totalNights} nights (
+                          {travelDates.hotelCheckInDate} to{" "}
+                          {travelDates.hotelCheckOutDate})
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

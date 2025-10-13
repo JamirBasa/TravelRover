@@ -131,7 +131,11 @@ function TripOverviewStats({
             <div className="text-center group">
               <div
                 className={`w-14 h-14 sm:w-16 sm:h-16 bg-white/25 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-white/35 transition-all duration-300`}
-                title={`Activities: ${formatCurrency(budgetInfo.breakdown.activities)} | Hotels: ${formatCurrency(budgetInfo.breakdown.hotels)} | Flights: ${formatCurrency(budgetInfo.breakdown.flights)}`}
+                title={`Activities: ${formatCurrency(
+                  budgetInfo.breakdown.activities
+                )} | Hotels: ${formatCurrency(
+                  budgetInfo.breakdown.hotels
+                )} | Flights: ${formatCurrency(budgetInfo.breakdown.flights)}`}
               >
                 <span className="text-3xl sm:text-4xl">💰</span>
               </div>
@@ -155,9 +159,13 @@ function TripOverviewStats({
               <span>AI-Optimized</span>
             </div>
             {budgetInfo.total > 0 && (
-              <div 
+              <div
                 className="flex items-center gap-2.5 bg-white/95 text-gray-800 rounded-full px-5 py-2.5 text-sm sm:text-base font-semibold shadow-sm hover:shadow-md transition-all duration-300 hover:bg-white"
-                title={`Activities: ${formatCurrency(budgetInfo.breakdown.activities)} | Hotels: ${formatCurrency(budgetInfo.breakdown.hotels)} | Flights: ${formatCurrency(budgetInfo.breakdown.flights)}`}
+                title={`Activities: ${formatCurrency(
+                  budgetInfo.breakdown.activities
+                )} | Hotels: ${formatCurrency(
+                  budgetInfo.breakdown.hotels
+                )} | Flights: ${formatCurrency(budgetInfo.breakdown.flights)}`}
               >
                 <span className="text-lg sm:text-xl">💰</span>
                 <span>Estimated Cost</span>
