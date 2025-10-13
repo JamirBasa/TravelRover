@@ -63,10 +63,11 @@ class AdminDashboardStatsView(APIView):
                 'executions_24h': 0
             }
             
-            revenue_stats = {
-                'total_estimated': 0.0,
-                'average_trip_value': 0.0
-            }
+            # TEMPORARILY REMOVED: Revenue statistics
+            # revenue_stats = {
+            #     'total_estimated': 0.0,
+            #     'average_trip_value': 0.0
+            # }
             
             # Trip statistics (only if LangGraph is available)
             if LANGGRAPH_AVAILABLE and TravelPlanningSession:
@@ -75,10 +76,10 @@ class AdminDashboardStatsView(APIView):
                 trips_24h = TravelPlanningSession.objects.filter(created_at__gte=last_24h).count()
                 trips_7d = TravelPlanningSession.objects.filter(created_at__gte=last_7d).count()
                 
-                # Financial statistics
-                total_estimated_revenue = TravelPlanningSession.objects.aggregate(
-                    total=Sum('total_estimated_cost')
-                )['total'] or 0
+                # TEMPORARILY REMOVED: Financial statistics
+                # total_estimated_revenue = TravelPlanningSession.objects.aggregate(
+                #     total=Sum('total_estimated_cost')
+                # )['total'] or 0
                 
                 trip_stats.update({
                     'total': total_trips,
@@ -88,10 +89,11 @@ class AdminDashboardStatsView(APIView):
                     'new_7d': trips_7d
                 })
                 
-                revenue_stats.update({
-                    'total_estimated': float(total_estimated_revenue),
-                    'average_trip_value': round(float(total_estimated_revenue) / total_trips if total_trips > 0 else 0, 2)
-                })
+                # TEMPORARILY REMOVED: Revenue stats update
+                # revenue_stats.update({
+                #     'total_estimated': float(total_estimated_revenue),
+                #     'average_trip_value': round(float(total_estimated_revenue) / total_trips if total_trips > 0 else 0, 2)
+                # })
             
             # Agent statistics (only if AgentExecutionLog is available)
             if LANGGRAPH_AVAILABLE and AgentExecutionLog:
@@ -118,7 +120,7 @@ class AdminDashboardStatsView(APIView):
                     },
                     'trips': trip_stats,
                     'agents': agent_stats,
-                    'revenue': revenue_stats
+                    # TEMPORARILY REMOVED: 'revenue': revenue_stats
                 },
                 'system_status': {
                     'langgraph_available': LANGGRAPH_AVAILABLE,
@@ -135,6 +137,95 @@ class AdminDashboardStatsView(APIView):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@method_decorator(csrf_exempt, name='dispatch')
+class AdminTripsView(APIView):
+    """Admin endpoint for TravelRover trip management"""
+    
+    def get(self, request):
+        """Get all trips with comprehensive LangGraph session details"""
+        try:
+            logger.info("🔍 Admin: Fetching all travel sessions")
+            
+            if not LANGGRAPH_AVAILABLE or not TravelPlanningSession:
+                return Response({
+                    'success': True,
+                    'trips': [],
+                    'statistics': {
+                        'total_trips': 0,
+                        'completed_trips': 0,
+                        'success_rate': 0,
+                        # TEMPORARILY REMOVED: 'total_estimated_cost': 0,
+                        # TEMPORARILY REMOVED: 'average_trip_cost': 0
+                    },
+                    'message': 'LangGraph travel planning system not configured'
+                })
+            
+            # Get all travel planning sessions
+            sessions = TravelPlanningSession.objects.all().order_by('-created_at')
+            
+            trips_data = []
+            for session in sessions:
+                # Get agent execution statistics if available
+                agent_stats = {
+                    'total_executions': 0,
+                    'successful_executions': 0,
+                    'failed_executions': 0
+                }
+                
+                if AgentExecutionLog:
+                    logs = AgentExecutionLog.objects.filter(session=session)
+                    agent_stats.update({
+                        'total_executions': logs.count(),
+                        'successful_executions': logs.filter(status='completed').count(),
+                        'failed_executions': logs.filter(status='failed').count()
+                    })
+                
+                trip_data = {
+                    'id': str(session.session_id),
+                    'user_email': session.user_email,
+                    'destination': session.destination,
+                    'start_date': session.start_date.isoformat() if session.start_date else None,
+                    'end_date': session.end_date.isoformat() if session.end_date else None,
+                    'duration': (session.end_date - session.start_date).days if session.start_date and session.end_date else 0,
+                    'travelers': session.travelers,
+                    'budget': session.budget,
+                    'status': session.status,
+                    'optimization_score': session.optimization_score,
+                    # TEMPORARILY REMOVED: 'total_estimated_cost': float(session.total_estimated_cost or 0),
+                    'cost_efficiency': session.cost_efficiency,
+                    'flight_search_requested': session.flight_search_requested,
+                    'hotel_search_requested': session.hotel_search_requested,
+                    'flight_search_completed': session.flight_search_completed,
+                    'hotel_search_completed': session.hotel_search_completed,
+                    'created_at': session.created_at.isoformat(),
+                    'completed_at': session.completed_at.isoformat() if session.completed_at else None,
+                    **agent_stats
+                }
+                trips_data.append(trip_data)
+            
+            # Calculate aggregate statistics
+            total_trips = len(trips_data)
+            completed_trips = len([t for t in trips_data if t['status'] == 'completed'])
+            # TEMPORARILY REMOVED: total_estimated_cost = sum(t['total_estimated_cost'] for t in trips_data)
+            
+            return Response({
+                'success': True,
+                'trips': trips_data,
+                'statistics': {
+                    'total_trips': total_trips,
+                    'completed_trips': completed_trips,
+                    'success_rate': round((completed_trips / total_trips * 100) if total_trips > 0 else 0, 1),
+                    # TEMPORARILY REMOVED: 'total_estimated_cost': total_estimated_cost,
+                    # TEMPORARILY REMOVED: 'average_trip_cost': round(total_estimated_cost / total_trips if total_trips > 0 else 0, 2)
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"❌ Error fetching trips: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AdminUsersView(APIView):
@@ -154,7 +245,7 @@ class AdminUsersView(APIView):
                 trip_stats = {
                     'total_trips': 0,
                     'completed_trips': 0,
-                    'total_spent_estimated': 0.0
+                    # TEMPORARILY REMOVED: 'total_spent_estimated': 0.0
                 }
                 
                 if LANGGRAPH_AVAILABLE and TravelPlanningSession:
@@ -162,9 +253,9 @@ class AdminUsersView(APIView):
                     trip_stats.update({
                         'total_trips': user_sessions.count(),
                         'completed_trips': user_sessions.filter(status='completed').count(),
-                        'total_spent_estimated': float(user_sessions.aggregate(
-                            total=Sum('total_estimated_cost')
-                        )['total'] or 0)
+                        # TEMPORARILY REMOVED: 'total_spent_estimated': float(user_sessions.aggregate(
+                        #     total=Sum('total_estimated_cost')
+                        # )['total'] or 0)
                     })
                 
                 users_data.append({
@@ -194,56 +285,6 @@ class AdminUsersView(APIView):
             
         except Exception as e:
             logger.error(f"❌ Error fetching users: {str(e)}")
-            return Response({
-                'success': False,
-                'error': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    def delete(self, request, user_id):
-        """Safely delete a user with proper validation"""
-        try:
-            logger.info(f"🗑️ Admin: Attempting to delete user {user_id}")
-            
-            user = User.objects.get(id=user_id)
-            
-            # Security check - prevent deletion of superusers
-            if user.is_superuser:
-                return Response({
-                    'success': False,
-                    'error': 'Cannot delete superuser accounts for security reasons'
-                }, status=status.HTTP_403_FORBIDDEN)
-            
-            # Clean up associated data if LangGraph is available
-            if LANGGRAPH_AVAILABLE and TravelPlanningSession:
-                # Delete user's travel sessions and logs
-                sessions = TravelPlanningSession.objects.filter(user_email=user.email)
-                sessions_count = sessions.count()
-                
-                if AgentExecutionLog:
-                    # Delete execution logs first (foreign key constraint)
-                    for session in sessions:
-                        AgentExecutionLog.objects.filter(session=session).delete()
-                
-                # Delete travel sessions
-                sessions.delete()
-                logger.info(f"🧹 Cleaned up {sessions_count} travel sessions for user {user.email}")
-            
-            # Delete the user
-            user.delete()
-            
-            logger.info(f"✅ User {user_id} deleted successfully")
-            return Response({
-                'success': True,
-                'message': 'User and associated data deleted successfully'
-            })
-            
-        except User.DoesNotExist:
-            return Response({
-                'success': False,
-                'error': 'User not found'
-            }, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            logger.error(f"❌ Error deleting user: {str(e)}")
             return Response({
                 'success': False,
                 'error': str(e)
