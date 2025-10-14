@@ -15,12 +15,12 @@ function LocationSelector({ place, onPlaceChange, isPreFilled }) {
         <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           {isPreFilled
             ? "Perfect! Let's plan your trip"
-            : "Where would you like to go?"}
+            : "Which city would you like to explore?"}
         </h2>
         <p className="text-gray-700 text-base font-medium">
           {isPreFilled
             ? `You've selected ${place?.label || place?.value?.description} ✈️`
-            : "Choose your dream destination to start planning ✈️"}
+            : "Choose a city in the Philippines to start planning your adventure ✈️"}
         </p>
       </div>
 
@@ -33,12 +33,12 @@ function LocationSelector({ place, onPlaceChange, isPreFilled }) {
             </div>
             <div>
               <h3 className="font-semibold brand-gradient-text text-base mb-2">
-                Destination Search
+                City-Level Destination
               </h3>
               <p className="text-gray-700 text-sm leading-relaxed">
                 {isPreFilled
-                  ? "You can change your destination or continue with your selection"
-                  : "Start typing any city, landmark, or attraction within the Philippines to see suggestions and detailed location options."}
+                  ? "You can change your city or continue with your selection"
+                  : "Select a city or region. You'll be able to specify exact places you want to visit in a later step for a more personalized itinerary."}
               </p>
             </div>
           </div>
@@ -47,14 +47,19 @@ function LocationSelector({ place, onPlaceChange, isPreFilled }) {
         <div>
           <label className="block text-base font-semibold text-gray-800 mb-3">
             <FaMapMarkerAlt className="inline mr-2 text-sky-500" />
-            Destination *
+            City or Region *
           </label>
           <PlacesAutocomplete
             value={place}
             onChange={handlePlaceChange}
-            placeholder="Search for cities, attractions, or landmarks..."
+            placeholder="Search for cities (e.g., Manila, Cebu, Boracay)..."
             countryRestriction={["ph"]}
+            restrictToCities={true}
           />
+          <p className="mt-2 text-xs text-gray-600 italic">
+            💡 Tip: Select a city first. You can list specific places you want
+            to visit in the "Specific Requests" step later.
+          </p>
         </div>
 
         {/* Unified Selection Indicator */}
@@ -76,9 +81,7 @@ function LocationSelector({ place, onPlaceChange, isPreFilled }) {
                     isPreFilled ? "text-green-800" : "text-sky-800"
                   }`}
                 >
-                  {isPreFilled
-                    ? "Pre-selected Destination"
-                    : "Selected Destination"}
+                  {isPreFilled ? "Pre-selected City" : "Selected City"}
                 </h4>
                 <p
                   className={`text-sm ${
@@ -88,6 +91,11 @@ function LocationSelector({ place, onPlaceChange, isPreFilled }) {
                   {place.label}
                   {isPreFilled && " - Ready to continue or change anytime"}
                 </p>
+                {!isPreFilled && (
+                  <p className="text-xs text-sky-600 mt-1">
+                    You'll be able to specify exact places in the next steps
+                  </p>
+                )}
               </div>
               {!isPreFilled && (
                 <div className="w-3 h-3 bg-gradient-to-r from-sky-500 to-blue-500 rounded-full animate-pulse"></div>

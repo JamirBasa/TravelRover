@@ -171,7 +171,8 @@ function DateRangePicker({
                           {travelDateInfo.dates.flightDepartureDate}
                         </div>
                         <div className="text-sky-600 text-[10px]">
-                          {travelDateInfo.dates.travelInfo?.travelType === "domestic-far"
+                          {travelDateInfo.dates.travelInfo?.travelType ===
+                          "domestic-far"
                             ? "Depart day before (Remote destination)"
                             : "Early morning departure"}
                         </div>
@@ -194,7 +195,8 @@ function DateRangePicker({
                 {/* Travel Type Badge */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-medium bg-sky-100 text-sky-700">
-                    {travelDateInfo.dates.travelInfo?.travelType === "domestic-far"
+                    {travelDateInfo.dates.travelInfo?.travelType ===
+                    "domestic-far"
                       ? "�️ Remote Philippine Destination"
                       : travelDateInfo.dates.travelInfo?.isDomesticShort
                       ? "✈️ Domestic Flight"
@@ -256,16 +258,25 @@ function DateRangePicker({
                 Philippine Travel Planning Tips
               </h3>
               <ul className="text-gray-700 text-sm space-y-1 leading-relaxed">
-                <li>• Book Philippine Airlines, Cebu Pacific, or AirAsia flights 2-3 weeks in advance for better deals</li>
-                <li>• Consider weekday travel for lower domestic flight costs</li>
-                <li>• Check local fiestas and holidays at your Philippine destination</li>
                 <li>
-                  • Allow buffer days for island hopping, diving, or spontaneous adventures
+                  • Book Philippine Airlines, Cebu Pacific, or AirAsia flights
+                  2-3 weeks in advance for better deals
+                </li>
+                <li>
+                  • Consider weekday travel for lower domestic flight costs
+                </li>
+                <li>
+                  • Check local fiestas and holidays at your Philippine
+                  destination
+                </li>
+                <li>
+                  • Allow buffer days for island hopping, diving, or spontaneous
+                  adventures
                 </li>
                 {!destination && (
                   <li className="text-blue-600 font-medium">
-                    💡 Select your Philippine destination first to see smart flight timing
-                    recommendations
+                    💡 Select your Philippine destination first to see smart
+                    flight timing recommendations
                   </li>
                 )}
               </ul>
