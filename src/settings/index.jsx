@@ -243,7 +243,7 @@ const Settings = () => {
                     {tabs.find((tab) => tab.id === activeTab)?.label}
                   </h2>
                   {isEditing && (
-                    <span className="px-3 py-1 text-xs font-medium bg-amber-100 text-amber-700 rounded-full border border-amber-200">
+                    <span className="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-full border border-gray-300">
                       Editing Mode
                     </span>
                   )}
@@ -263,7 +263,7 @@ const Settings = () => {
                       <Button
                         onClick={cancelEdit}
                         variant="outline"
-                        className="flex items-center gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                        className="flex items-center gap-2 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400"
                       >
                         <FaTimes />
                         Cancel
@@ -271,7 +271,7 @@ const Settings = () => {
                       <Button
                         onClick={saveChanges}
                         disabled={saving}
-                        className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md transform hover:scale-105 transition-all duration-200"
+                        className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md transform hover:scale-105 transition-all duration-200"
                       >
                         {saving ? (
                           <>
