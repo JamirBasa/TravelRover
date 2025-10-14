@@ -102,6 +102,43 @@ const TravelPreferences = ({
               Editable
             </span>
           )}
+          <div className="mt-3 p-4 bg-sky-50 border border-sky-200 rounded-lg space-y-2">
+            <p className="text-sm text-sky-700 font-semibold mb-2">
+              💡 Price Guide (per day):
+            </p>
+            <div className="space-y-1.5 text-xs text-gray-700">
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-sky-600 min-w-[75px]">
+                  Budget:
+                </span>
+                <span>
+                  ₱2,000-8,000 - Hostels, local eateries, public transport
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-sky-600 min-w-[75px]">
+                  Moderate:
+                </span>
+                <span>
+                  ₱8,000-20,000 - 3-star hotels, casual dining, mix of transport
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-sky-600 min-w-[75px]">
+                  Luxury:
+                </span>
+                <span>
+                  ₱20,000+ - Premium hotels, fine dining, private transport
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-sky-600 min-w-[75px]">
+                  Flexible:
+                </span>
+                <span>Budget varies based on destination and availability</span>
+              </div>
+            </div>
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {[
