@@ -12,6 +12,8 @@ import {
   FaCheck,
   FaUtensils,
   FaShieldAlt,
+  FaLanguage,
+  FaMosque,
 } from "react-icons/fa";
 
 // ===============================
@@ -181,31 +183,43 @@ export const STEP_CONFIGS = {
   USER_PROFILE: [
     {
       id: 1,
-      title: "Personal Info",
-      description: "Basic information about you",
+      title: "Personal Information",
+      description: "Your name and contact details",
       icon: FaUser,
     },
     {
       id: 2,
-      title: "Travel Style",
-      description: "Your travel preferences and interests",
-      icon: FaHeart,
+      title: "Your Location",
+      description: "Where you're currently based",
+      icon: FaMapMarkerAlt,
     },
     {
       id: 3,
-      title: "Food & Culture",
-      description: "Dietary needs and cultural preferences",
-      icon: FaUtensils,
+      title: "Travel Preferences",
+      description: "Your travel style and interests",
+      icon: FaHeart,
     },
     {
       id: 4,
-      title: "Budget & Safety",
-      description: "Budget range and emergency contacts",
-      icon: FaShieldAlt,
+      title: "Dietary & Cultural",
+      description: "Food and cultural preferences",
+      icon: FaMosque,
     },
     {
       id: 5,
-      title: "Review",
+      title: "Languages",
+      description: "Languages you speak",
+      icon: FaLanguage,
+    },
+    {
+      id: 6,
+      title: "Additional Details",
+      description: "Emergency contacts and experience",
+      icon: FaShieldAlt,
+    },
+    {
+      id: 7,
+      title: "Review Profile",
       description: "Review and confirm your profile",
       icon: FaCheck,
     },

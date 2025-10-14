@@ -64,8 +64,15 @@ const BudgetSelector = ({
       duration: formData.duration,
       travelers: travelerCount,
       includeFlights: flightData.includeFlights || false,
+      startDate: formData.startDate, // Pass startDate for timing-based pricing
     });
-  }, [formData.location, formData.duration, formData.travelers, flightData]);
+  }, [
+    formData.location,
+    formData.duration,
+    formData.travelers,
+    formData.startDate,
+    flightData,
+  ]);
 
   // Get airport recommendations for flight planning
   const airportInfo = useMemo(() => {

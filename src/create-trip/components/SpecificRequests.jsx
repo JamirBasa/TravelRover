@@ -11,7 +11,6 @@ import {
   generateContextSuggestions,
   generateSmartPlaceholder,
   validateSpecificRequests,
-  getContextualHelpText,
 } from "../../utils/contextualSuggestions";
 
 function SpecificRequests({
@@ -65,8 +64,7 @@ function SpecificRequests({
     [context]
   );
 
-  // Get contextual help text
-  const helpText = useMemo(() => getContextualHelpText(context), [context]);
+
 
   // Validate requests against context
   useEffect(() => {
@@ -117,7 +115,7 @@ function SpecificRequests({
         <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           Which specific places do you want to visit?
         </h2>
-        <p className="text-gray-700 text-base font-medium">{helpText} 📝</p>
+        <p> Tell us your must-visit spots, activities, or preferences to personalize your itinerary. </p>
       </div>
 
       {/* Request Input */}
@@ -251,9 +249,6 @@ function SpecificRequests({
         {allSuggestions.length > 0 && formData.location && (
           <div className="brand-card p-5 shadow-lg border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50">
             <div className="flex items-start gap-4">
-              <div className="bg-gradient-to-br from-emerald-500 to-green-600 p-2.5 rounded-full">
-                <FaCheckCircle className="text-white text-lg" />
-              </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-semibold text-emerald-900 text-base">

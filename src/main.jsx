@@ -14,7 +14,6 @@ import Home from "./home/home.jsx";
 import Admin from "./admin/Admin.jsx";
 import AdminLogin from "./admin/AdminLogin.jsx";
 import AdminLayout from "./admin/AdminLayout.jsx";
-import TestValidation from "./test-validation/TestValidation.jsx";
 
 const router = createBrowserRouter([
   {
@@ -48,10 +47,6 @@ const router = createBrowserRouter([
       {
         path: "my-trips",
         element: <MyTrips />,
-      },
-      {
-        path: "test-validation",
-        element: <TestValidation />,
       },
     ],
   },

@@ -456,44 +456,8 @@ export function validateSpecificRequests(requests, context) {
   };
 }
 
-/**
- * Get contextual help text
- */
-export function getContextualHelpText(context) {
-  // Return default help text if no context
-  if (!context) {
-    return 'List specific places and activities (just the names, no full addresses needed!)';
-  }
-
-  const { location, categoryName, duration, budget, userProfile } = context;
-  
-  let helpText = 'List specific places and activities you want to experience. ';
-  
-  if (location) {
-    const cityName = location.split(',')[0]; // Extract just the city name
-    helpText += `Just write the place names - our AI knows you're visiting ${cityName}! `;
-  }
-  
-  if (duration) {
-    if (duration <= 2) {
-      helpText += 'Focus on your top 3-5 must-see spots. ';
-    } else if (duration >= 7) {
-      helpText += 'You have time for 10-15 places! ';
-    } else {
-      helpText += 'List 5-10 places you\'d like to visit. ';
-    }
-  }
-  
-  if (userProfile?.dietaryRestrictions?.length > 0) {
-    helpText += `Don't forget to mention food preferences! `;
-  }
-  
-  return helpText;
-}
-
 export default {
   generateContextSuggestions,
   generateSmartPlaceholder,
   validateSpecificRequests,
-  getContextualHelpText,
 };

@@ -7,6 +7,8 @@ import {
   FaInfoCircle,
   FaPlane,
   FaExclamationTriangle,
+  FaLightbulb,
+  FaDollarSign,
 } from "react-icons/fa";
 import {
   calculateDuration,
@@ -18,6 +20,10 @@ import {
   validateTravelDates,
   getDateExplanation,
 } from "../../utils/travelDateManager";
+import {
+  getBookingAdvice,
+  formatDateDisplay,
+} from "../../utils/flightPricingAnalyzer";
 
 function DateRangePicker({
   startDate,
@@ -81,6 +87,25 @@ function DateRangePicker({
     flightData.departureCity,
   ]);
 
+  // Get flight pricing advice based on booking timing
+  const bookingAdvice = useMemo(() => {
+    if (!startDate || !flightData.includeFlights) return null;
+
+    return getBookingAdvice(
+      startDate,
+      endDate,
+      flightData.includeFlights,
+      flightData.departureCity,
+      destination
+    );
+  }, [
+    startDate,
+    endDate,
+    flightData.includeFlights,
+    flightData.departureCity,
+    destination,
+  ]);
+
   // Use centralized helper functions for date calculations
 
   return (
@@ -140,6 +165,130 @@ function DateRangePicker({
             <p className="text-green-700 text-sm mt-1">
               Perfect! We'll create a {duration}-day itinerary for your trip.
             </p>
+          </div>
+        )}
+
+        {/* Flight Pricing Warnings - Critical for last-minute bookings */}
+        {bookingAdvice && bookingAdvice.warnings.length > 0 && (
+          <div
+            className={`border rounded-lg p-4 ${
+              bookingAdvice.warnings[0].level === "critical"
+                ? "bg-red-50 border-red-300"
+                : bookingAdvice.warnings[0].level === "warning"
+                ? "bg-amber-50 border-amber-300"
+                : "bg-blue-50 border-blue-300"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className={`p-2 rounded-full ${
+                  bookingAdvice.warnings[0].level === "critical"
+                    ? "bg-red-100"
+                    : bookingAdvice.warnings[0].level === "warning"
+                    ? "bg-amber-100"
+                    : "bg-blue-100"
+                }`}
+              >
+                {bookingAdvice.warnings[0].level === "critical" ? (
+                  <FaExclamationTriangle className="text-red-600 text-lg" />
+                ) : bookingAdvice.warnings[0].level === "warning" ? (
+                  <FaDollarSign className="text-amber-600 text-lg" />
+                ) : (
+                  <FaInfoCircle className="text-blue-600 text-lg" />
+                )}
+              </div>
+              <div className="flex-1">
+                <h4
+                  className={`font-semibold text-sm mb-2 ${
+                    bookingAdvice.warnings[0].level === "critical"
+                      ? "text-red-800"
+                      : bookingAdvice.warnings[0].level === "warning"
+                      ? "text-amber-800"
+                      : "text-blue-800"
+                  }`}
+                >
+                  {bookingAdvice.timing.description} -{" "}
+                  {bookingAdvice.pricing.impact}
+                </h4>
+                <div className="space-y-2">
+                  {bookingAdvice.warnings.map((warning, index) => (
+                    <p
+                      key={index}
+                      className={`text-sm ${
+                        warning.level === "critical"
+                          ? "text-red-700"
+                          : warning.level === "warning"
+                          ? "text-amber-700"
+                          : "text-blue-700"
+                      }`}
+                    >
+                      • {warning.message}
+                    </p>
+                  ))}
+                </div>
+
+                {/* Show flexible date suggestions for expensive bookings */}
+                {bookingAdvice.flexibleDates.length > 0 &&
+                  bookingAdvice.pricing.multiplier >= 2.0 && (
+                    <div className="mt-3 p-3 bg-white/60 backdrop-blur-sm rounded-lg border border-green-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FaLightbulb className="text-green-600 text-sm" />
+                        <span className="font-semibold text-green-800 text-xs">
+                          💰 Save up to{" "}
+                          {Math.max(
+                            ...bookingAdvice.flexibleDates.map(
+                              (d) => d.savingsPercent
+                            )
+                          )}
+                          % with flexible dates:
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        {bookingAdvice.flexibleDates
+                          .slice(0, 3)
+                          .map((suggestion, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => {
+                                onStartDateChange(suggestion.startDate);
+                                onEndDateChange(suggestion.endDate);
+                              }}
+                              className="text-left p-2 bg-white rounded border border-green-300 hover:bg-green-50 transition-colors"
+                            >
+                              <div className="font-medium text-green-800 text-xs">
+                                {suggestion.label}
+                              </div>
+                              <div className="text-[10px] text-green-600">
+                                {formatDateDisplay(suggestion.startDate)}
+                              </div>
+                              <div className="text-[10px] text-green-700 font-medium mt-1">
+                                ~{suggestion.savingsPercent}% cheaper
+                              </div>
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                {/* Quick recommendations */}
+                {bookingAdvice.recommendations.length > 0 && (
+                  <div className="mt-3 p-2 bg-white/40 backdrop-blur-sm rounded border border-gray-200">
+                    <div className="text-xs font-semibold text-gray-700 mb-1">
+                      Quick Tips:
+                    </div>
+                    <ul className="space-y-1">
+                      {bookingAdvice.recommendations
+                        .slice(0, 3)
+                        .map((rec, idx) => (
+                          <li key={idx} className="text-[11px] text-gray-600">
+                            • {rec}
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
