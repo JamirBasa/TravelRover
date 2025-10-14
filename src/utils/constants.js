@@ -188,34 +188,37 @@ export const TRIP_GENERATION_CONFIG = {
 // ==========================================
 export const TOAST_CONFIG = {
   position: "top-right",
-  richColors: true,
+  richColors: false, // We'll use custom colors
   expand: true,
-  duration: 4000,
-  gap: 12,
-  visibleToasts: 5,
+  duration: 4500,
+  gap: 16,
+  visibleToasts: 4,
   toastOptions: {
-    className: "text-base font-medium",
+    unstyled: false,
+    className: "group",
     style: {
       padding: "16px 20px",
-      minHeight: "60px",
-      fontSize: "16px",
+      minHeight: "68px",
+      fontSize: "15px",
       fontWeight: "500",
-      borderRadius: "12px",
-      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-      border: "1px solid rgba(229, 231, 235, 0.8)",
-      backdropFilter: "blur(8px)",
+      borderRadius: "16px",
+      boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+      border: "1px solid rgba(255, 255, 255, 0.8)",
+      backdropFilter: "blur(12px)",
+      background: "rgba(255, 255, 255, 0.95)",
     },
     classNames: {
-      title: "text-base font-semibold leading-tight",
-      description: "text-sm text-gray-600 mt-1 leading-relaxed",
-      actionButton: "bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors",
-      cancelButton: "bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium px-4 py-2 rounded-lg transition-colors",
-      closeButton: "hover:bg-gray-100 rounded-full p-1 transition-colors",
-      success: "bg-green-50 border-green-200 text-green-800",
-      error: "bg-red-50 border-red-200 text-red-800",
-      warning: "bg-amber-50 border-amber-200 text-amber-800",
-      info: "bg-blue-50 border-blue-200 text-blue-800",
-      loading: "bg-blue-50 border-blue-200 text-blue-800",
+      toast: "backdrop-blur-xl shadow-2xl border-opacity-80 animate-in slide-in-from-top-5 fade-in duration-300",
+      title: "text-[15px] font-semibold leading-tight text-gray-900",
+      description: "text-[13px] text-gray-600 mt-1.5 leading-relaxed",
+      actionButton: "bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105",
+      cancelButton: "bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2.5 rounded-xl transition-all duration-200",
+      closeButton: "hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-lg p-1.5 transition-all duration-200 hover:rotate-90",
+      success: "bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-300 shadow-emerald-100/50",
+      error: "bg-gradient-to-br from-red-50 to-rose-50 border-red-300 shadow-red-100/50",
+      warning: "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300 shadow-amber-100/50",
+      info: "bg-gradient-to-br from-sky-50 to-blue-50 border-sky-300 shadow-sky-100/50",
+      loading: "bg-gradient-to-br from-sky-50 to-blue-50 border-sky-300 shadow-sky-100/50",
     }
   }
 };
@@ -223,22 +226,27 @@ export const TOAST_CONFIG = {
 // Toast Icons Configuration (JSX will be created in the component)
 export const TOAST_ICON_STYLES = {
   success: {
-    className: "w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold",
-    symbol: "✓"
+    className: "w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-200 animate-in zoom-in duration-300",
+    symbol: "✓",
+    textSize: "text-xl"
   },
   error: {
-    className: "w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold",
-    symbol: "✕"
+    className: "w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-red-200 animate-in zoom-in duration-300",
+    symbol: "✕",
+    textSize: "text-xl"
   },
   warning: {
-    className: "w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center text-white text-xs font-bold",
-    symbol: "!"
+    className: "w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-amber-200 animate-in zoom-in duration-300",
+    symbol: "!",
+    textSize: "text-xl font-bold"
   },
   info: {
-    className: "w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold",
-    symbol: "i"
+    className: "w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-sky-200 animate-in zoom-in duration-300",
+    symbol: "i",
+    textSize: "text-lg font-bold"
   },
   loading: {
-    className: "w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"
+    className: "w-10 h-10 relative flex items-center justify-center",
+    innerClassName: "w-8 h-8 border-[3px] border-sky-200 border-t-sky-600 rounded-full animate-spin"
   }
 };

@@ -11,7 +11,7 @@ const ReviewStep = ({ profileData }) => {
     <div className="max-w-2xl mx-auto">
       {/* Main Question */}
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">
+        <h2 className="text-2xl font-bold brand-gradient-text mb-2">
           Almost done! Let's review your profile
         </h2>
         <p className="text-gray-600">
@@ -21,9 +21,11 @@ const ReviewStep = ({ profileData }) => {
 
       <div className="space-y-6">
         {/* Personal Info Section */}
-        <div className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-gray-300 transition-all">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FaUser className="mr-2 text-xl" />
+        <div className="brand-card p-6 rounded-xl border-sky-200 hover:border-sky-300 transition-all">
+          <h3 className="text-lg font-semibold brand-gradient-text mb-4 flex items-center">
+            <div className="brand-gradient p-2 rounded-lg mr-2">
+              <FaUser className="text-white text-base" />
+            </div>
             Personal Information
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
@@ -33,8 +35,8 @@ const ReviewStep = ({ profileData }) => {
               {profileData.lastName}
             </div>
             <div>
-              <span className="font-medium">Age:</span>{" "}
-              {profileData.age || "Not specified"}
+              <span className="font-medium">Date of Birth:</span>{" "}
+              {profileData.dateOfBirth || "Not specified"}
             </div>
             <div>
               <span className="font-medium">Gender:</span>{" "}
@@ -58,9 +60,11 @@ const ReviewStep = ({ profileData }) => {
         </div>
 
         {/* Travel Style Section */}
-        <div className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-gray-300 transition-all">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FaHeart className="mr-2 text-xl" />
+        <div className="brand-card p-6 rounded-xl border-sky-200 hover:border-sky-300 transition-all">
+          <h3 className="text-lg font-semibold brand-gradient-text mb-4 flex items-center">
+            <div className="brand-gradient p-2 rounded-lg mr-2">
+              <FaHeart className="text-white text-base" />
+            </div>
             Travel Preferences
           </h3>
           <div className="space-y-3 text-sm text-gray-700">
@@ -84,9 +88,11 @@ const ReviewStep = ({ profileData }) => {
         </div>
 
         {/* Food & Culture Section */}
-        <div className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-gray-300 transition-all">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FaUtensils className="mr-2 text-xl" />
+        <div className="brand-card p-6 rounded-xl border-sky-200 hover:border-sky-300 transition-all">
+          <h3 className="text-lg font-semibold brand-gradient-text mb-4 flex items-center">
+            <div className="brand-gradient p-2 rounded-lg mr-2">
+              <FaUtensils className="text-white text-base" />
+            </div>
             Food & Cultural Preferences
           </h3>
           <div className="space-y-3 text-sm text-gray-700">
@@ -110,9 +116,11 @@ const ReviewStep = ({ profileData }) => {
         </div>
 
         {/* Emergency Contact Section */}
-        <div className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-gray-300 transition-all">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FaShieldAlt className="mr-2 text-xl" />
+        <div className="brand-card p-6 rounded-xl border-sky-200 hover:border-sky-300 transition-all">
+          <h3 className="text-lg font-semibold brand-gradient-text mb-4 flex items-center">
+            <div className="brand-gradient p-2 rounded-lg mr-2">
+              <FaShieldAlt className="text-white text-base" />
+            </div>
             Emergency Contact & Additional Info
           </h3>
           <div className="space-y-3 text-sm text-gray-700">
@@ -148,12 +156,14 @@ const ReviewStep = ({ profileData }) => {
         </div>
 
         {/* Success Message */}
-        <div className="bg-black text-white p-6 rounded-xl text-center">
+        <div className="brand-gradient text-white p-6 rounded-xl text-center shadow-lg">
           <div className="flex items-center justify-center space-x-3 mb-3">
-            <FaCheck className="text-xl" />
+            <div className="bg-white/20 p-2 rounded-full">
+              <FaCheck className="text-xl" />
+            </div>
             <span className="text-xl font-semibold">Profile Complete!</span>
           </div>
-          <p className="text-gray-300">
+          <p className="text-white/90">
             Your profile is ready. You can now create personalized trips based
             on your preferences.
           </p>
