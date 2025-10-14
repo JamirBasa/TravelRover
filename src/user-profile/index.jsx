@@ -11,13 +11,21 @@ import {
   MESSAGES,
   calculateProgress,
 } from "../constants/options";
-import { FaArrowRight, FaArrowLeft, FaCheck, FaPlane, FaUser } from "react-icons/fa";
+import {
+  FaArrowRight,
+  FaArrowLeft,
+  FaCheck,
+  FaPlane,
+  FaUser,
+} from "react-icons/fa";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 // Import step components
 import PersonalInfoStep from "./components/PersonalInfoStep";
+import LocationStep from "./components/LocationStep";
 import TravelStyleStep from "./components/TravelStyleStep";
-import FoodCultureStep from "./components/FoodCultureStep";
+import DietaryCulturalStep from "./components/DietaryCulturalStep";
+import LanguageStep from "./components/LanguageStep";
 import BudgetSafetyStep from "./components/BudgetSafetyStep";
 import ReviewStep from "./components/ReviewStep";
 
@@ -38,9 +46,10 @@ const UserProfile = () => {
     firstName: "",
     lastName: "",
     middleName: "",
-    age: "",
+    dateOfBirth: "",
     gender: "",
-    phone: "",
+    phone: "", // Stored as +639XX format
+    phoneDisplay: "", // Display format 09XX-XXX-XXXX
     address: {
       city: "",
       region: "",
@@ -161,14 +170,21 @@ const UserProfile = () => {
         if (
           !profileData.firstName ||
           !profileData.lastName ||
-          !profileData.address.city ||
-          !profileData.address.countryCode
+          !profileData.phone
         ) {
-          toast.error("Please fill in your first name, last name, and city");
+          toast.error(
+            "Please fill in your first name, last name, and phone number"
+          );
           return false;
         }
         break;
-      case 2: // Travel Style
+      case 2: // Location
+        if (!profileData.address.city || !profileData.address.regionCode) {
+          toast.error("Please select your region and city");
+          return false;
+        }
+        break;
+      case 3: // Travel Style
         if (
           profileData.preferredTripTypes.length === 0 ||
           !profileData.budgetRange ||
@@ -178,13 +194,19 @@ const UserProfile = () => {
           return false;
         }
         break;
-      case 3: // Food & Culture
+      case 4: // Dietary & Cultural
         if (profileData.dietaryRestrictions.length === 0) {
-          toast.error("Please select your dietary preferences");
+          toast.error("Please select at least one dietary preference");
           return false;
         }
         break;
-      case 4: // Budget & Safety
+      case 5: // Languages
+        if (profileData.languagePreferences.length === 0) {
+          toast.error("Please select at least one language you speak");
+          return false;
+        }
+        break;
+      case 6: // Budget & Safety
         if (
           !profileData.emergencyContact.name ||
           !profileData.emergencyContact.phone
@@ -253,15 +275,14 @@ const UserProfile = () => {
         );
       case 2:
         return (
-          <TravelStyleStep
+          <LocationStep
             profileData={profileData}
             handleInputChange={handleInputChange}
-            handleMultiSelect={handleMultiSelect}
           />
         );
       case 3:
         return (
-          <FoodCultureStep
+          <TravelStyleStep
             profileData={profileData}
             handleInputChange={handleInputChange}
             handleMultiSelect={handleMultiSelect}
@@ -269,12 +290,27 @@ const UserProfile = () => {
         );
       case 4:
         return (
+          <DietaryCulturalStep
+            profileData={profileData}
+            handleInputChange={handleInputChange}
+            handleMultiSelect={handleMultiSelect}
+          />
+        );
+      case 5:
+        return (
+          <LanguageStep
+            profileData={profileData}
+            handleMultiSelect={handleMultiSelect}
+          />
+        );
+      case 6:
+        return (
           <BudgetSafetyStep
             profileData={profileData}
             handleInputChange={handleInputChange}
           />
         );
-      case 5:
+      case 7:
         return <ReviewStep profileData={profileData} />;
       default:
         return (
@@ -289,9 +325,9 @@ const UserProfile = () => {
   // Show loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600 mb-2">Checking your profile...</p>
           <p className="text-sm text-gray-500">Please wait a moment</p>
         </div>
@@ -300,28 +336,28 @@ const UserProfile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Left Side - Travel Image */}
       <div className="hidden lg:flex lg:w-1/2 relative">
         <div
           className="w-full bg-cover bg-center relative"
           style={{
             backgroundImage:
-              "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjEwMDAiIHZpZXdCb3g9IjAgMCA4MDAgMTAwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGRlZnM+CjxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZGllbnQxIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6IzMzNTVGRjtzdG9wLW9wYWNpdHk6MSIgLz4KPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojNkE4MkZCO3N0b3Atb3BhY2l0eToxIiAvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM+CjxyZWN0IHdpZHRoPSI4MDAiIGhlaWdodD0iMTAwMCIgZmlsbD0idXJsKCNncmFkaWVudDEpIi8+Cjx0ZXh0IHg9IjQwMCIgeT0iNTAwIiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSI0OCIgZm9udC13ZWlnaHQ9ImJvbGQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkV4cGxvcmUgdGhlIFdvcmxkPC90ZXh0Pgo8L3N2Zz4K')",
+              "url('https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=2835&auto=format&fit=crop')",
           }}
         >
-          {/* Travel-themed background image placeholder */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 to-indigo-700/90"></div>
+          {/* Travel-themed background image with lighter overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-sky-600/50 to-blue-700/50"></div>
 
           {/* Travel elements overlay */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center text-white p-8">
+            <div className="text-center text-white p-8 bg-black/20 backdrop-blur-sm rounded-3xl max-w-lg mx-4">
               <div className="mb-8">
-                <h1 className="text-4xl lg:text-5xl font-bold mb-4">
+                <h1 className="text-4xl lg:text-5xl font-bold mb-4 drop-shadow-lg">
                   Your Journey <br />
                   Starts Here
                 </h1>
-                <p className="text-xl opacity-90 max-w-md mx-auto">
+                <p className="text-xl opacity-95 max-w-md mx-auto drop-shadow-md">
                   Create a personalized travel profile and discover amazing
                   destinations tailored just for you
                 </p>
@@ -373,62 +409,139 @@ const UserProfile = () => {
           <p className="opacity-90">Create personalized travel experiences</p>
         </div>
 
-        {/* Form Container */}
-        <div className="flex-1 flex flex-col p-6 lg:p-8 overflow-y-auto">
-          {/* Progress Steps */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-6">
-              {STEPS.map((step, index) => {
-                const Icon = step.icon;
-                const isActive = currentStep === step.id;
-                const isCompleted = currentStep > step.id;
+        {/* Form Container - No Scroll, Compact Layout */}
+        <div className="flex-1 flex flex-col p-6 lg:p-8 overflow-hidden max-h-screen">
+          {/* Modern Progress Header */}
+          <div className="mb-5">
+            {/* Animated Progress Bar with Gradient */}
+            <div className="relative mb-4">
+              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full brand-gradient rounded-full transition-all duration-500 ease-out relative"
+                  style={{ width: `${progress}%` }}
+                >
+                  {/* Shimmer Effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                </div>
+              </div>
 
-                return (
-                  <div key={step.id} className="flex items-center">
+              {/* Step Dots Overlay */}
+              <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 flex justify-between px-1">
+                {STEPS.map((step, index) => {
+                  const isActive = currentStep === step.id;
+                  const isCompleted = currentStep > step.id;
+                  const Icon = step.icon;
+
+                  return (
                     <div
-                      className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${
-                        isCompleted
-                          ? "bg-green-500 border-green-500 text-white"
-                          : isActive
-                          ? "bg-black border-black text-white"
-                          : "bg-white border-gray-300 text-gray-400"
-                      }`}
+                      key={step.id}
+                      className="relative group"
+                      style={{ width: `${100 / STEPS.length}%` }}
                     >
-                      {isCompleted ? (
-                        <FaCheck className="text-sm" />
-                      ) : (
-                        <Icon className="text-sm" />
-                      )}
+                      <div className="flex justify-center">
+                        <div
+                          className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                            isCompleted
+                              ? "bg-green-500 border-green-500 text-white shadow-lg shadow-green-500/30"
+                              : isActive
+                              ? "brand-gradient border-sky-500 text-white shadow-lg shadow-sky-500/40 scale-110"
+                              : "bg-white border-gray-300 text-gray-400"
+                          }`}
+                        >
+                          {isCompleted ? (
+                            <FaCheck className="text-xs" />
+                          ) : (
+                            <Icon className="text-xs" />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Tooltip on hover - hidden on small screens */}
+                      <div className="hidden md:block absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                        <div className="bg-gray-900 text-white text-xs py-1 px-2 rounded shadow-lg">
+                          {step.title}
+                        </div>
+                      </div>
                     </div>
-                    {index < STEPS.length - 1 && (
-                      <div
-                        className={`hidden md:block w-12 lg:w-16 h-0.5 mx-2 transition-all ${
-                          isCompleted ? "bg-green-500" : "bg-gray-300"
-                        }`}
-                      />
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Modern Title Card with Progress Badge */}
+            <div className="text-center mt-8">
+              <div className="inline-flex items-center gap-3 mb-3">
+                {/* Progress Badge */}
+                <div className="relative">
+                  <svg className="w-16 h-16 transform -rotate-90">
+                    {/* Background circle */}
+                    <circle
+                      cx="32"
+                      cy="32"
+                      r="28"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                      className="text-gray-200"
+                    />
+                    {/* Progress circle */}
+                    <circle
+                      cx="32"
+                      cy="32"
+                      r="28"
+                      stroke="url(#gradient)"
+                      strokeWidth="4"
+                      fill="none"
+                      strokeDasharray={`${2 * Math.PI * 28}`}
+                      strokeDashoffset={`${
+                        2 * Math.PI * 28 * (1 - progress / 100)
+                      }`}
+                      className="transition-all duration-500 ease-out"
+                      strokeLinecap="round"
+                    />
+                    <defs>
+                      <linearGradient
+                        id="gradient"
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="100%"
+                      >
+                        <stop offset="0%" stopColor="#0ea5e9" />
+                        <stop offset="100%" stopColor="#0284c7" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  {/* Percentage in center */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-sm font-bold brand-gradient-text">
+                      {Math.round(progress)}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Step Info */}
+                <div className="text-left">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-sky-100 to-blue-100 text-sky-700 border border-sky-200">
+                      Step {currentStep} of {STEPS.length}
+                    </span>
+                    {currentStep === STEPS.length && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
+                        Final Step 🎉
+                      </span>
                     )}
                   </div>
-                );
-              })}
-            </div>
-
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold brand-gradient-text mb-3">
-                {STEPS[currentStep - 1].title}
-              </h2>
-              <p className="text-gray-700 text-lg">
-                {STEPS[currentStep - 1].description}
-              </p>
-            </div>
-
-            <Progress value={progress} className="w-full h-2 mb-2" />
-            <div className="text-center text-sm text-gray-500">
-              Step {currentStep} of {STEPS.length}
+                  <h2 className="text-xl font-bold brand-gradient-text">
+                    {STEPS[currentStep - 1].title}
+                  </h2>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Step Content */}
-          <div className="flex-1 mb-8">{renderStepContent()}</div>
+          {/* Step Content - Fits viewport */}
+          <div className="flex-1 overflow-y-auto">{renderStepContent()}</div>
 
           {/* Navigation Buttons */}
           <div className="flex justify-between items-center pt-4 border-t border-gray-200">

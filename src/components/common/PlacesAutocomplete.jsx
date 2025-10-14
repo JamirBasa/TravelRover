@@ -17,6 +17,7 @@ export function PlacesAutocomplete({
   countryRestriction = ["ph"],
   className = "",
   disabled = false,
+  restrictToCities = false, // New prop to restrict to cities only
 }) {
   const [inputValue, setInputValue] = useState(value?.label || "");
   const [suggestions, setSuggestions] = useState([]);
@@ -204,6 +205,8 @@ export function PlacesAutocomplete({
           input: searchText,
           componentRestrictions: { country: countryRestriction },
           sessionToken: sessionToken.current,
+          // Filter to cities/regions only if restrictToCities is enabled
+          ...(restrictToCities && { types: ["(cities)"] }),
         };
 
         autocompleteService.current.getPlacePredictions(

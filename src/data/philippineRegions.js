@@ -138,6 +138,11 @@ export const PHILIPPINE_REGIONS = {
  * Get region data for a destination
  */
 export function getRegionData(destination) {
+  // Return null if no destination provided
+  if (!destination || typeof destination !== 'string') {
+    return null;
+  }
+
   // Normalize destination name
   const normalizedDestination = destination.trim();
   
