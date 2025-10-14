@@ -23,6 +23,7 @@ import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 import { formatTripTypes } from "../config/formatUserPreferences";
 import { safeJsonParse } from "../utils/jsonParsers";
+import { getValidationExamples } from "../data/philippineRegions";
 import {
   FaCalendarAlt,
   FaArrowRight,
@@ -657,14 +658,14 @@ function CreateTrip() {
       setLangGraphLoading(false);
 
       // Enhanced prompt with user profile data and category focus
-      let enhancedPrompt = AI_PROMPT.replace("{location}", formData?.location)
-        .replace("{duration}", formData?.duration + " days")
-        .replace("{travelers}", formData?.travelers)
-        .replace(
+      let enhancedPrompt = AI_PROMPT.replaceAll("{location}", formData?.location)
+        .replaceAll("{duration}", formData?.duration + " days")
+        .replaceAll("{travelers}", formData?.travelers)
+        .replaceAll(
           "{budget}",
           customBudget ? `Custom: ₱${customBudget}` : formData?.budget
         )
-        .replace(
+        .replaceAll(
           "{specificRequests}",
           formData?.specificRequests ||
             "No specific requests - create a balanced itinerary"
@@ -756,6 +757,12 @@ IMPORTANT: Every day should have a strong ${
         "Philippines";
       const tripDestination = formData?.location || "Unknown";
 
+      // Determine effective budget (trip-level overrides profile)
+      const tripBudget = customBudget ? `Custom: ₱${customBudget}` : formData?.budget;
+      const profileBudget = userProfile.budgetRange || "Moderate";
+      const budgetOverridden = tripBudget && profileBudget && 
+        !tripBudget.toLowerCase().includes(profileBudget.toLowerCase());
+
       // Check if user is traveling to a different region
       const isDifferentRegion =
         !tripDestination.toLowerCase().includes(userHomeCity.toLowerCase()) &&
@@ -771,10 +778,25 @@ IMPORTANT: Every day should have a strong ${
         userProfile.preferredTripTypes?.join(", ") || "General travel"
       }
 - Travel Style: ${userProfile.travelStyle || "Not specified"}
-- Budget Range: ${userProfile.budgetRange || "Moderate"}
 - Accommodation Preference: ${
         userProfile.accommodationPreference || "Not specified"
       }
+
+💰 BUDGET INFORMATION:
+${budgetOverridden ? `
+⚠️ BUDGET OVERRIDE ACTIVE:
+- 🎯 THIS TRIP'S BUDGET: ${tripBudget} (USE THIS FOR ALL RECOMMENDATIONS)
+- 📋 Profile Preference: ${profileBudget} (context only - user chose different budget for this trip)
+
+CRITICAL: Recommend hotels and activities based on ${tripBudget} budget level, NOT the profile preference.
+The user explicitly selected ${tripBudget} for this specific trip.
+` : `
+- 💵 Trip Budget: ${tripBudget || profileBudget}
+${tripBudget && profileBudget && tripBudget !== profileBudget ? 
+  `- Note: Matches user's profile preference (${profileBudget})` : 
+  ''
+}
+`}
 
 ${
   isDifferentRegion
@@ -847,7 +869,7 @@ ${
 `
     : `
 🏨 TRAVEL CONTEXT:
-- User is handling their own transport (no flights booked through us)
+- Flight options provided below are recommendations for your convenience
 - Plan full days of activities from ${travelDates.activitiesStartDate}
 `
 }
@@ -866,9 +888,13 @@ ${getActivityGuidance(travelDates)
   .join("\n")}
 
 CRITICAL ITINERARY INSTRUCTIONS:
-- Last day activities must end by NOON for ${
-        travelDates.flightReturnDate
-      } departure
+- Last day (${travelDates.flightReturnDate}) activities can run until evening
+- Hotel checkout is ${travelDates.hotelCheckOutDate} morning - plan departure accordingly
+${
+  flightData.includeFlights
+    ? `- Return flight departs on ${travelDates.flightReturnDate} - ensure activities end by afternoon/evening for travel`
+    : ""
+}
 ${
   travelDates.travelInfo.isDomesticShort
     ? "- First day should have 2-3 activities starting AFTER 1PM (arrival time)"
@@ -894,7 +920,33 @@ PERSONALIZATION INSTRUCTIONS:
 
 Please create a highly personalized itinerary for these exact dates.
 
-🚨 CRITICAL JSON REQUIREMENTS:
+� DESTINATION-SPECIFIC LOCATION VALIDATION:
+${(() => {
+  const validationExamples = getValidationExamples(formData.location);
+  if (validationExamples) {
+    return `
+⚠️ CRITICAL: ALL places must be in ${formData.location} or its immediate vicinity!
+
+✅ CORRECT EXAMPLES (Use these types of places):
+${validationExamples.correctExamples.map(ex => `   - ${ex}`).join('\n')}
+
+❌ FORBIDDEN EXAMPLES (DO NOT include these):
+${validationExamples.incorrectExamples.map(ex => `   - ${ex.place} (This is in ${ex.actualLocation}, NOT ${formData.location})`).join('\n')}
+
+📍 NEARBY AREAS YOU CAN INCLUDE:
+${validationExamples.nearbyAreas.map(area => `   - ${area}`).join('\n')}
+
+🔑 LOCATION KEYWORDS TO USE:
+${validationExamples.keywords.slice(0, 5).map(kw => `   - ${kw}`).join('\n')}
+
+VALIDATION RULE: Every place name should include "${formData.location}" or one of the nearby areas in its name or description.
+Example: "Magellan's Cross, Cebu City" NOT just "Magellan's Cross"
+`;
+  }
+  return `\n⚠️ Ensure ALL places are within ${formData.location} region. Include city/area qualifiers in place names.\n`;
+})()}
+
+�🚨 CRITICAL JSON REQUIREMENTS:
 - Return ONLY complete, valid JSON
 - Ensure all braces {} and brackets [] are properly closed  
 - Keep descriptions concise (under 100 characters each)
@@ -1395,6 +1447,33 @@ Generate general accommodation recommendations without specific pricing or booki
         throw new Error("Parsed data is not a valid object");
       }
 
+      // 🔍 GEOGRAPHIC VALIDATION - Check if places match destination
+      console.log("🔍 Validating location consistency...");
+      const { validateTripLocations, getValidationSummary } = await import('../utils/locationValidator');
+      const locationValidation = validateTripLocations(parsedTripData, formData.location);
+      
+      // Log validation results
+      console.log("📍 Location Validation Results:", locationValidation);
+      console.log(getValidationSummary(locationValidation));
+      
+      // Warn about suspicious places (don't block, just notify)
+      if (locationValidation.suspiciousPlaces.length > 0) {
+        console.warn(
+          `⚠️ Found ${locationValidation.suspiciousPlaces.length} places that may not be in ${formData.location}:`,
+          locationValidation.suspiciousPlaces
+        );
+        
+        // Optional: Toast warning to user
+        if (locationValidation.errors.length > 0) {
+          toast.warning("Location Verification", {
+            description: `Some places in the itinerary may not be in ${formData.location}. Please review the trip details.`,
+            duration: 5000
+          });
+        }
+      } else {
+        console.log(`✅ All places validated for ${formData.location}`);
+      }
+
       const tripDocument = {
         userSelection: {
           ...formData,
@@ -1514,6 +1593,7 @@ Generate general accommodation recommendations without specific pricing or booki
               error={null}
               formData={formData} // Pass trip details for smart estimation
               flightData={flightData} // Pass flight info for cost calculation
+              userProfile={userProfile} // Pass profile for budget override detection
             />
             <TravelerSelector
               selectedTravelers={formData?.travelers}

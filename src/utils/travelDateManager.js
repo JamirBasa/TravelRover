@@ -26,10 +26,20 @@ export const calculateTravelDates = ({
   let hotelCheckOutDate = tripEndDate;
   let activitiesStartDate = tripStartDate;
   let activitiesEndDate = tripEndDate;
+  
+  // Initialize travelInfo with default values (for cases without flights)
+  let travelInfo = {
+    needsBufferDay: false,
+    isDomesticShort: false,
+    isInternational: false,
+    estimatedFlightHours: 0,
+    recommendation: "Self-arranged transport",
+    travelType: "self-transport",
+  };
 
   // If flights are included, we need to adjust for travel time
   if (includeFlights && departureCity && destination) {
-    const travelInfo = estimateTravelTime(departureCity, destination);
+    travelInfo = estimateTravelTime(departureCity, destination);
 
     // Morning departure scenario (most common)
     if (travelInfo.needsBufferDay) {
@@ -118,9 +128,10 @@ export const calculateTravelDates = ({
 };
 
 /**
- * Estimate travel time and requirements between locations
- * @param {string} origin - Departure city
- * @param {string} destination - Destination city
+ * Estimate travel time and requirements between Philippine locations
+ * Philippines-only travel planning system
+ * @param {string} origin - Departure city (Philippine location)
+ * @param {string} destination - Destination city (Philippine location)
  * @returns {Object} Travel information and recommendations
  */
 export const estimateTravelTime = (origin, destination) => {
@@ -128,47 +139,40 @@ export const estimateTravelTime = (origin, destination) => {
   const from = origin.toLowerCase();
   const to = destination.toLowerCase();
 
-  // International destinations always need buffer
-  const internationalDestinations = [
-    "japan",
-    "korea",
-    "singapore",
-    "thailand",
-    "malaysia",
-    "vietnam",
-    "taiwan",
-    "hongkong",
-    "hong kong",
-    "usa",
-    "dubai",
-    "bali",
-    "indonesia",
-  ];
-
-  const isInternational = internationalDestinations.some(
-    (country) => to.includes(country)
-  );
-
-  if (isInternational) {
-    return {
-      needsBufferDay: true,
-      isDomesticShort: false,
-      isInternational: true,
-      estimatedFlightHours: 3,
-      recommendation:
-        "International flight - depart day before to arrive refreshed",
-      travelType: "international",
-    };
-  }
-
-  // Domestic Philippines routing
+  // ✅ PHILIPPINES ONLY: Domestic routing within the Philippines
   const domesticShortFlights = {
-    // From Manila
-    manila: ["cebu", "boracay", "palawan", "bohol", "siargao", "davao"],
-    // From Cebu
-    cebu: ["manila", "bohol", "siargao", "palawan"],
-    // From Davao
-    davao: ["manila", "cebu"],
+    // From Manila (National Capital Region)
+    manila: [
+      "cebu", "boracay", "caticlan", "kalibo", "palawan", "puerto princesa", 
+      "el nido", "bohol", "tagbilaran", "siargao", "davao", "iloilo", 
+      "bacolod", "dumaguete", "cagayan de oro", "clark", "subic", "baguio"
+    ],
+    // From Cebu (Visayas hub)
+    cebu: [
+      "manila", "bohol", "tagbilaran", "siargao", "palawan", "puerto princesa",
+      "davao", "cagayan de oro", "iloilo", "bacolod", "dumaguete", "boracay",
+      "caticlan", "ormoc", "tacloban"
+    ],
+    // From Davao (Mindanao hub)
+    davao: [
+      "manila", "cebu", "siargao", "general santos", "zamboanga", 
+      "cagayan de oro", "palawan", "tagbilaran", "iloilo"
+    ],
+    // From Clark (Luzon alternative)
+    clark: [
+      "manila", "cebu", "boracay", "palawan", "davao", "iloilo", "bacolod", "baguio"
+    ],
+    // From Iloilo (Western Visayas)
+    iloilo: [
+      "manila", "cebu", "boracay", "caticlan", "davao", "puerto princesa", "palawan"
+    ],
+    // From Palawan
+    palawan: ["manila", "cebu", "el nido", "puerto princesa", "coron", "davao"],
+    "puerto princesa": ["manila", "cebu", "el nido", "coron", "iloilo"],
+    // From Bacolod
+    bacolod: ["manila", "cebu", "davao", "iloilo"],
+    // From Cagayan de Oro
+    "cagayan de oro": ["manila", "cebu", "davao"],
   };
 
   // Check if it's a short domestic flight (1-2 hours)
@@ -190,12 +194,22 @@ export const estimateTravelTime = (origin, destination) => {
     };
   }
 
-  // Far domestic flights (3+ hours) or multiple connections
+  // Far domestic flights within Philippines (3+ hours) or remote destinations
   const farDomesticDestinations = [
-    "batanes",
-    "mindanao",
-    "general santos",
-    "zamboanga",
+    "batanes", // Northernmost Philippines
+    "itbayat", // Batanes islands
+    "general santos", // Southern Mindanao
+    "zamboanga", // Western Mindanao
+    "sulu", // Far south
+    "tawi-tawi", // Southernmost Philippines
+    "jolo", // Sulu archipelago
+    "cotabato", // BARMM region
+    "marawi", // Lanao del Sur
+    "pagadian", // Zamboanga del Sur
+    "dipolog", // Zamboanga del Norte
+    "surigao", // Northeastern Mindanao
+    "tandag", // Surigao del Sur
+    "camiguin", // Island province
   ];
   const isFarDomestic = farDomesticDestinations.some((dest) =>
     to.includes(dest)
@@ -207,18 +221,19 @@ export const estimateTravelTime = (origin, destination) => {
       isDomesticShort: false,
       isInternational: false,
       estimatedFlightHours: 3,
-      recommendation: "Remote destination - early departure or buffer day",
+      recommendation: "Remote Philippine destination - early departure or buffer day recommended",
       travelType: "domestic-far",
     };
   }
 
-  // Same region / land travel possible
+  // Same region / land travel possible within Philippines
+  // For nearby destinations where bus, van, or ferry is common
   return {
     needsBufferDay: false,
     isDomesticShort: false,
     isInternational: false,
     estimatedFlightHours: 0,
-    recommendation: "Land travel may be more convenient",
+    recommendation: "Land or sea travel within Philippines - convenient transport options available",
     travelType: "local",
   };
 };
@@ -233,7 +248,7 @@ const formatDateForAPI = (date) => {
 };
 
 /**
- * Get user-friendly date explanation for the UI
+ * Get user-friendly date explanation for the UI (Philippines travel)
  * @param {Object} dateInfo - Result from calculateTravelDates
  * @returns {string} Human-readable explanation
  */
@@ -241,15 +256,15 @@ export const getDateExplanation = (dateInfo) => {
   if (!dateInfo.includesArrivalDay) {
     return `Your trip runs ${dateInfo.tripStartDate} to ${dateInfo.tripEndDate}. ${
       dateInfo.travelInfo.isDomesticShort
-        ? "Morning flight on departure day - arrive by noon and start exploring!"
-        : "You'll handle your own transport to the destination."
+        ? "Morning flight recommended - arrive by noon and start exploring the Philippines!"
+        : "You'll handle your own transport within the Philippines (bus, ferry, or private vehicle)."
     }`;
   }
 
-  return `Your trip is ${dateInfo.tripStartDate} to ${dateInfo.tripEndDate}. ${
-    dateInfo.travelInfo.isInternational
-      ? `We recommend flying out on ${dateInfo.flightDepartureDate} (day before) for international travel, so you arrive fresh and ready to explore.`
-      : `We recommend an early morning flight on ${dateInfo.flightDepartureDate} to maximize your time.`
+  return `Your Philippine adventure is ${dateInfo.tripStartDate} to ${dateInfo.tripEndDate}. ${
+    dateInfo.travelInfo.travelType === "domestic-far"
+      ? `We recommend flying out on ${dateInfo.flightDepartureDate} (day before) for remote destinations like Batanes or Zamboanga, so you arrive fresh and ready to explore.`
+      : `We recommend an early morning domestic flight on ${dateInfo.flightDepartureDate} to maximize your time exploring.`
   } Return flight on ${dateInfo.flightReturnDate}.`;
 };
 
@@ -260,12 +275,13 @@ export const getDateExplanation = (dateInfo) => {
  */
 export const getActivityGuidance = (dateInfo) => {
   const guidance = [];
-  const { activitiesStartDate, activitiesEndDate, travelInfo } = dateInfo;
+  const { activitiesStartDate, activitiesEndDate, totalNights, travelInfo } = dateInfo;
 
   const startDate = new Date(activitiesStartDate);
   const endDate = new Date(activitiesEndDate);
-  const dayCount =
-    Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+  
+  // Calculate actual activity days (not including checkout day)
+  const activityDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
   // Day 1 guidance
   if (travelInfo.isDomesticShort) {
@@ -292,7 +308,7 @@ export const getActivityGuidance = (dateInfo) => {
   }
 
   // Middle days - full activities
-  for (let i = 2; i < dayCount; i++) {
+  for (let i = 2; i < activityDays; i++) {
     guidance.push({
       day: i,
       timing: "Full Day",
@@ -301,13 +317,15 @@ export const getActivityGuidance = (dateInfo) => {
     });
   }
 
-  // Last day guidance
-  guidance.push({
-    day: dayCount,
-    timing: "Morning/Afternoon",
-    note: "Check out and depart - plan morning activities only",
-    recommendedPace: "relaxed",
-  });
+  // Last day guidance (final activity day, not checkout day)
+  if (activityDays > 1) {
+    guidance.push({
+      day: activityDays,
+      timing: "Full Day",
+      note: "Final day of activities - hotel checkout is tomorrow morning",
+      recommendedPace: "active",
+    });
+  }
 
   return guidance;
 };
@@ -343,38 +361,44 @@ export const validateTravelDates = ({
 
   const dayCount = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
 
-  // Trip length warnings
+  // Trip length warnings for Philippine travel
   if (dayCount < 2 && includeFlights) {
     warnings.push(
-      "Very short trip with flights - consider adding more days to enjoy your destination"
+      "Very short trip with domestic flights - consider adding more days to fully enjoy your Philippine destination"
     );
   }
 
   if (dayCount === 1 && includeFlights) {
     const travelInfo = estimateTravelTime(departureCity, destination);
-    if (travelInfo.isInternational) {
+    if (travelInfo.travelType === "domestic-far") {
       errors.push(
-        "1-day international trip is not feasible - add at least 2 more days"
+        "1-day trip to remote Philippine destinations (Batanes, Zamboanga, etc.) is not feasible - add at least 2 more days"
       );
     } else if (!travelInfo.isDomesticShort) {
       warnings.push(
-        "1-day trip with travel time - very rushed. Consider adding 1-2 days."
+        "1-day trip with travel time within Philippines - very rushed. Consider adding 1-2 days."
       );
     }
   }
 
-  // Advance booking recommendations
+  // Advance booking recommendations for Philippine domestic travel
   const daysUntilTrip = Math.ceil((start - today) / (1000 * 60 * 60 * 24));
 
   if (daysUntilTrip < 7 && includeFlights) {
     warnings.push(
-      "Booking less than a week in advance - flight prices may be higher"
+      "Booking less than a week in advance - Philippine domestic flight prices may be higher, especially for popular routes"
+    );
+  }
+
+  if (daysUntilTrip < 3 && includeFlights) {
+    warnings.push(
+      "Last-minute booking - limited seat availability for Philippine flights. Book now!"
     );
   }
 
   if (daysUntilTrip > 365) {
     warnings.push(
-      "Booking more than a year in advance - prices may not be available yet"
+      "Booking more than a year in advance - Philippine airline prices may not be available yet"
     );
   }
 

@@ -166,8 +166,20 @@ export class UserProfileService {
       return "Just Me";
     };
 
+    // Helper to normalize budget value to match SelectBudgetOptions
+    const normalizeBudget = (budgetRange) => {
+      if (!budgetRange) return undefined;
+      
+      // Capitalize first letter to match form options: "Budget", "Moderate", "Luxury"
+      const normalized = budgetRange.charAt(0).toUpperCase() + budgetRange.slice(1).toLowerCase();
+      
+      // Validate against known options
+      const validOptions = ["Budget", "Moderate", "Luxury"];
+      return validOptions.includes(normalized) ? normalized : undefined;
+    };
+
     return {
-      budget: userProfile.budgetRange || undefined,
+      budget: normalizeBudget(userProfile.budgetRange),
       travelers: getDefaultTravelers(userProfile) || undefined,
     };
   }

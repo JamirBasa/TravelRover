@@ -8,7 +8,7 @@
 import axios from "axios";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 export class GeminiProxyService {
   /**
@@ -32,7 +32,7 @@ export class GeminiProxyService {
       const startTime = Date.now();
 
       const response = await axios.post(
-        `${API_BASE_URL}/langgraph/gemini/generate/`,
+        `${API_BASE_URL}/api/langgraph/gemini/generate/`,
         {
           prompt,
           schema,
@@ -124,7 +124,7 @@ export class GeminiProxyService {
   static async checkHealth() {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/langgraph/gemini/health/`,
+        `${API_BASE_URL}/api/langgraph/gemini/health/`,
         {
           timeout: 10000, // 10 seconds
         }

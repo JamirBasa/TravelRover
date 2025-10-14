@@ -171,8 +171,8 @@ function DateRangePicker({
                           {travelDateInfo.dates.flightDepartureDate}
                         </div>
                         <div className="text-sky-600 text-[10px]">
-                          {travelDateInfo.dates.travelInfo.isInternational
-                            ? "Depart day before (International)"
+                          {travelDateInfo.dates.travelInfo?.travelType === "domestic-far"
+                            ? "Depart day before (Remote destination)"
                             : "Early morning departure"}
                         </div>
                       </div>
@@ -194,14 +194,14 @@ function DateRangePicker({
                 {/* Travel Type Badge */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-medium bg-sky-100 text-sky-700">
-                    {travelDateInfo.dates.travelInfo.isInternational
-                      ? "🌏 International"
-                      : travelDateInfo.dates.travelInfo.isDomesticShort
-                      ? "🛫 Domestic Short"
-                      : "🚗 Local Travel"}
+                    {travelDateInfo.dates.travelInfo?.travelType === "domestic-far"
+                      ? "�️ Remote Philippine Destination"
+                      : travelDateInfo.dates.travelInfo?.isDomesticShort
+                      ? "✈️ Domestic Flight"
+                      : "🚗 Land/Sea Travel"}
                   </span>
                   <span className="text-[10px] text-sky-600">
-                    {travelDateInfo.dates.travelInfo.recommendation}
+                    {travelDateInfo.dates.travelInfo?.recommendation || ""}
                   </span>
                 </div>
               </div>
@@ -253,18 +253,18 @@ function DateRangePicker({
             </div>
             <div>
               <h3 className="font-semibold brand-gradient-text text-base mb-2">
-                Travel Planning Tips
+                Philippine Travel Planning Tips
               </h3>
               <ul className="text-gray-700 text-sm space-y-1 leading-relaxed">
-                <li>• Book at least 2-3 weeks in advance for better deals</li>
-                <li>• Consider weekday travel for lower costs</li>
-                <li>• Check local holidays and events at your destination</li>
+                <li>• Book Philippine Airlines, Cebu Pacific, or AirAsia flights 2-3 weeks in advance for better deals</li>
+                <li>• Consider weekday travel for lower domestic flight costs</li>
+                <li>• Check local fiestas and holidays at your Philippine destination</li>
                 <li>
-                  • Allow buffer days for relaxation and spontaneous activities
+                  • Allow buffer days for island hopping, diving, or spontaneous adventures
                 </li>
                 {!destination && (
                   <li className="text-blue-600 font-medium">
-                    💡 Select your destination first to see smart flight timing
+                    💡 Select your Philippine destination first to see smart flight timing
                     recommendations
                   </li>
                 )}
