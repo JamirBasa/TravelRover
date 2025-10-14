@@ -11,7 +11,7 @@ import {
   MESSAGES,
   calculateProgress,
 } from "../constants/options";
-import { FaArrowRight, FaArrowLeft, FaCheck } from "react-icons/fa";
+import { FaArrowRight, FaArrowLeft, FaCheck, FaPlane, FaUser } from "react-icons/fa";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 // Import step components
