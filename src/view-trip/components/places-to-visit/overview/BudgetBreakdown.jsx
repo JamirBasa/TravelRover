@@ -44,7 +44,9 @@ function BudgetBreakdown({ trip, className = "" }) {
       {/* Total Budget */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6 border border-blue-200">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-600">Total Estimated Budget</span>
+          <span className="text-sm font-medium text-gray-600">
+            Total Estimated Budget
+          </span>
           <span className="text-2xl font-bold brand-gradient-text">
             {formatCurrency(budgetInfo.total)}
           </span>
@@ -61,8 +63,12 @@ function BudgetBreakdown({ trip, className = "" }) {
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1">
-                <span className="font-semibold text-gray-900">Activities & Attractions</span>
-                <span className="font-bold text-gray-900">{formatCurrency(breakdown.activities)}</span>
+                <span className="font-semibold text-gray-900">
+                  Activities & Attractions
+                </span>
+                <span className="font-bold text-gray-900">
+                  {formatCurrency(breakdown.activities)}
+                </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
                 <div
@@ -70,7 +76,9 @@ function BudgetBreakdown({ trip, className = "" }) {
                   style={{ width: `${percentages.activities}%` }}
                 ></div>
               </div>
-              <span className="text-xs text-gray-500">{percentages.activities.toFixed(1)}% of total budget</span>
+              <span className="text-xs text-gray-500">
+                {percentages.activities.toFixed(1)}% of total budget
+              </span>
             </div>
           </div>
         )}
@@ -83,8 +91,12 @@ function BudgetBreakdown({ trip, className = "" }) {
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1">
-                <span className="font-semibold text-gray-900">Accommodation</span>
-                <span className="font-bold text-gray-900">{formatCurrency(breakdown.hotels)}</span>
+                <span className="font-semibold text-gray-900">
+                  Accommodation
+                </span>
+                <span className="font-bold text-gray-900">
+                  {formatCurrency(breakdown.hotels)}
+                </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
                 <div
@@ -92,7 +104,9 @@ function BudgetBreakdown({ trip, className = "" }) {
                   style={{ width: `${percentages.hotels}%` }}
                 ></div>
               </div>
-              <span className="text-xs text-gray-500">{percentages.hotels.toFixed(1)}% of total budget</span>
+              <span className="text-xs text-gray-500">
+                {percentages.hotels.toFixed(1)}% of total budget
+              </span>
             </div>
           </div>
         )}
@@ -106,7 +120,9 @@ function BudgetBreakdown({ trip, className = "" }) {
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1">
                 <span className="font-semibold text-gray-900">Flights</span>
-                <span className="font-bold text-gray-900">{formatCurrency(breakdown.flights)}</span>
+                <span className="font-bold text-gray-900">
+                  {formatCurrency(breakdown.flights)}
+                </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
                 <div
@@ -114,7 +130,9 @@ function BudgetBreakdown({ trip, className = "" }) {
                   style={{ width: `${percentages.flights}%` }}
                 ></div>
               </div>
-              <span className="text-xs text-gray-500">{percentages.flights.toFixed(1)}% of total budget</span>
+              <span className="text-xs text-gray-500">
+                {percentages.flights.toFixed(1)}% of total budget
+              </span>
             </div>
           </div>
         )}
@@ -123,7 +141,8 @@ function BudgetBreakdown({ trip, className = "" }) {
       {/* Footer Note */}
       <div className="mt-6 pt-4 border-t border-gray-200">
         <p className="text-xs text-gray-500 text-center">
-          💡 <strong>Note:</strong> These are estimated costs. Actual prices may vary based on season, availability, and booking time.
+          💡 <strong>Note:</strong> These are estimated costs. Actual prices may
+          vary based on season, availability, and booking time.
         </p>
       </div>
     </div>

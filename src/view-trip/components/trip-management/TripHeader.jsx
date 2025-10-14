@@ -63,7 +63,13 @@ function TripHeader({ trip, onShare, onDownload, onEdit }) {
                 <Badge
                   variant="secondary"
                   className="bg-purple-50 text-purple-700 border-purple-200 px-2 py-1 text-xs font-medium"
-                  title={`Breakdown - Activities: ${formatCurrency(budgetInfo.breakdown.activities)} | Hotels: ${formatCurrency(budgetInfo.breakdown.hotels)} | Flights: ${formatCurrency(budgetInfo.breakdown.flights)}`}
+                  title={`Breakdown - Activities: ${formatCurrency(
+                    budgetInfo.breakdown.activities
+                  )} | Hotels: ${formatCurrency(
+                    budgetInfo.breakdown.hotels
+                  )} | Flights: ${formatCurrency(
+                    budgetInfo.breakdown.flights
+                  )}`}
                 >
                   <DollarSign className="h-3 w-3 mr-1" />
                   Total: {formatCurrency(budgetInfo.total)}
