@@ -254,7 +254,7 @@ const UserProfile = () => {
       const updatedUser = { ...user, hasProfile: true };
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
-      toast.success("🎉 Profile saved successfully!");
+      toast.success("Your travel profile is now complete. You can start creating personalized trips and receive AI-powered recommendations tailored to your preferences.");
       navigate("/");
     } catch (error) {
       console.error("Error saving profile:", error);
@@ -528,7 +528,7 @@ const UserProfile = () => {
                     </span>
                     {currentStep === STEPS.length && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
-                        Final Step 🎉
+                        Almost done!
                       </span>
                     )}
                   </div>

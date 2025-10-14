@@ -5,104 +5,110 @@ const DietaryCulturalStep = ({
   handleInputChange,
   handleMultiSelect,
 }) => {
-  // Dietary restrictions with emojis/flags
+  // Dietary restrictions with intuitive emojis
   const dietaryOptions = [
     {
       id: "halal",
       label: "Halal",
-      flag: "🕌",
+      emoji: "☪️",
       desc: "Islamic dietary laws",
     },
     {
       id: "vegetarian",
       label: "Vegetarian",
-      flag: "🥗",
+      emoji: "🥗",
       desc: "No meat or fish",
     },
-    { id: "vegan", label: "Vegan", flag: "🌱", desc: "No animal products" },
+    { id: "vegan", label: "Vegan", emoji: "🌱", desc: "No animal products" },
     {
       id: "pescatarian",
       label: "Pescatarian",
-      flag: "🐟",
+      emoji: "🐟",
       desc: "Fish but no meat",
     },
     {
       id: "glutenfree",
       label: "Gluten-Free",
-      flag: "🌾",
+      emoji: "🚫🌾",
       desc: "No gluten foods",
     },
     {
       id: "dairyfree",
       label: "Dairy-Free",
-      flag: "🥛",
+      emoji: "🚫🥛",
       desc: "No dairy products",
     },
     {
       id: "none",
       label: "No Restrictions",
-      flag: "🍽️",
+      emoji: "🍽️",
       desc: "Open to all cuisines",
     },
   ];
 
-  // Cultural preferences - inclusive of all religions
+  // Cultural preferences - universal and inclusive
   const culturalOptions = [
     {
       id: "islamic",
       label: "Islamic-friendly",
-      flag: "🕌",
+      emoji: "🕌",
       desc: "Prayer rooms, halal options",
     },
     {
       id: "catholic",
       label: "Catholic-friendly",
-      flag: "⛪",
+      emoji: "⛪",
       desc: "Churches, religious sites",
     },
     {
       id: "christian",
       label: "Christian-friendly",
-      flag: "✝️",
+      emoji: "✝️",
       desc: "Churches, worship spaces",
     },
     {
       id: "spiritual",
       label: "Spiritual sites",
-      flag: "🙏",
+      emoji: "🙏",
       desc: "Temples, meditation centers",
     },
     {
       id: "family",
       label: "Family-oriented",
-      flag: "👨‍👩‍👧‍👦",
+      emoji: "👨‍👩‍👧‍👦",
       desc: "Kid-friendly activities",
     },
     {
       id: "modest",
       label: "Modest dress codes",
-      flag: "👔",
+      emoji: "👔",
       desc: "Conservative dress preferences",
     },
     {
       id: "alcohol_free",
       label: "Alcohol-free",
-      flag: "🚫",
+      emoji: "🚫🍺",
       desc: "No alcohol in environment",
     },
   ];
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="space-y-5">
+      <div className="space-y-6">
         {/* Dietary Restrictions - 2 Column Grid */}
         <div>
-          <div className="mb-3">
-            <h3 className="text-base font-bold brand-gradient-text mb-1 flex items-center gap-1.5">
-              <FaUtensils className="text-sm" />
-              Dietary Needs
-            </h3>
-            <p className="text-xs text-gray-600">Select all that apply</p>
+          <div className="mb-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <div className="brand-gradient p-1.5 rounded-lg">
+                <FaUtensils className="text-white text-base" />
+              </div>
+              <h3 className="text-base font-bold brand-gradient-text">
+                Dietary Preferences
+              </h3>
+            </div>
+            <p className="text-xs text-gray-600">
+              Choose dietary restrictions we should consider
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
@@ -113,7 +119,7 @@ const DietaryCulturalStep = ({
               return (
                 <div
                   key={diet.id}
-                  className={`group flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                  className={`group p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
                     isSelected
                       ? "border-sky-500 brand-gradient text-white shadow-md"
                       : "border-gray-200 bg-white hover:border-sky-400 hover:shadow-sm"
@@ -122,36 +128,38 @@ const DietaryCulturalStep = ({
                     handleMultiSelect("dietaryRestrictions", diet.id)
                   }
                 >
-                  <div
-                    className={`${
-                      isSelected
-                        ? "bg-white/20"
-                        : "bg-gradient-to-br from-sky-100 to-blue-100"
-                    } p-2 rounded-lg text-2xl`}
-                  >
-                    {diet.flag}
-                  </div>
-                  <div className="flex-1 min-w-0 ml-3">
-                    <span
-                      className={`font-semibold text-sm block ${
-                        isSelected ? "text-white" : "text-gray-800"
-                      }`}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`${
+                        isSelected
+                          ? "bg-white/20"
+                          : "bg-gradient-to-br from-sky-100 to-blue-100"
+                      } p-2 rounded-lg text-2xl flex-shrink-0`}
                     >
-                      {diet.label}
-                    </span>
-                    <p
-                      className={`text-xs mt-0.5 truncate ${
-                        isSelected ? "text-white/90" : "text-gray-600"
-                      }`}
-                    >
-                      {diet.desc}
-                    </p>
+                      {diet.emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className={`font-semibold text-sm ${
+                          isSelected ? "text-white" : "text-gray-800"
+                        }`}
+                      >
+                        {diet.label}
+                      </div>
+                      <div
+                        className={`text-xs mt-0.5 ${
+                          isSelected ? "text-white/90" : "text-gray-600"
+                        }`}
+                      >
+                        {diet.desc}
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <span className="text-white bg-white/20 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        ✓
+                      </span>
+                    )}
                   </div>
-                  {isSelected && (
-                    <span className="text-white bg-white/20 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                      ✓
-                    </span>
-                  )}
                 </div>
               );
             })}
@@ -186,11 +194,15 @@ const DietaryCulturalStep = ({
 
         {/* Cultural Considerations - 2 Column Grid */}
         <div>
-          <div className="mb-3">
-            <h3 className="text-base font-bold brand-gradient-text mb-1 flex items-center gap-1.5">
-              <FaHeart className="text-sm" />
-              Cultural Considerations
-            </h3>
+          <div className="mb-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <div className="brand-gradient p-1.5 rounded-lg">
+                <FaHeart className="text-white text-base" />
+              </div>
+              <h3 className="text-base font-bold brand-gradient-text">
+                Cultural Considerations
+              </h3>
+            </div>
             <p className="text-xs text-gray-600">
               Select any preferences (optional)
             </p>
@@ -204,7 +216,7 @@ const DietaryCulturalStep = ({
               return (
                 <div
                   key={culture.id}
-                  className={`group flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                  className={`group p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
                     isSelected
                       ? "border-sky-500 brand-gradient text-white shadow-md"
                       : "border-gray-200 bg-white hover:border-sky-400 hover:shadow-sm"
@@ -213,36 +225,38 @@ const DietaryCulturalStep = ({
                     handleMultiSelect("culturalPreferences", culture.id)
                   }
                 >
-                  <div
-                    className={`${
-                      isSelected
-                        ? "bg-white/20"
-                        : "bg-gradient-to-br from-sky-100 to-blue-100"
-                    } p-2 rounded-lg text-2xl`}
-                  >
-                    {culture.flag}
-                  </div>
-                  <div className="flex-1 min-w-0 ml-3">
-                    <span
-                      className={`font-semibold text-sm block ${
-                        isSelected ? "text-white" : "text-gray-800"
-                      }`}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`${
+                        isSelected
+                          ? "bg-white/20"
+                          : "bg-gradient-to-br from-sky-100 to-blue-100"
+                      } p-2 rounded-lg text-2xl flex-shrink-0`}
                     >
-                      {culture.label}
-                    </span>
-                    <p
-                      className={`text-xs mt-0.5 truncate ${
-                        isSelected ? "text-white/90" : "text-gray-600"
-                      }`}
-                    >
-                      {culture.desc}
-                    </p>
+                      {culture.emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className={`font-semibold text-sm ${
+                          isSelected ? "text-white" : "text-gray-800"
+                        }`}
+                      >
+                        {culture.label}
+                      </div>
+                      <div
+                        className={`text-xs mt-0.5 ${
+                          isSelected ? "text-white/90" : "text-gray-600"
+                        }`}
+                      >
+                        {culture.desc}
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <span className="text-white bg-white/20 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        ✓
+                      </span>
+                    )}
                   </div>
-                  {isSelected && (
-                    <span className="text-white bg-white/20 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                      ✓
-                    </span>
-                  )}
                 </div>
               );
             })}

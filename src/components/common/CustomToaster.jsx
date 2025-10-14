@@ -3,33 +3,50 @@ import { Toaster } from "sonner";
 import { TOAST_CONFIG, TOAST_ICON_STYLES } from "@/utils/constants";
 
 /**
- * Centralized Toaster component with consistent design system
- * Used across all layouts for unified notification experience
+ * Enhanced Toaster component with modern, glassmorphic design
+ * Features:
+ * - Gradient backgrounds with soft colors
+ * - Larger, more prominent icons with shadows
+ * - Smooth animations and transitions
+ * - Brand-consistent sky-blue color scheme
+ * - Backdrop blur effect for depth
  */
 const CustomToaster = () => {
-  // Create icon components from configuration
+  // Create modern icon components with enhanced styling
   const icons = {
     success: (
       <div className={TOAST_ICON_STYLES.success.className}>
-        {TOAST_ICON_STYLES.success.symbol}
+        <span className={TOAST_ICON_STYLES.success.textSize}>
+          {TOAST_ICON_STYLES.success.symbol}
+        </span>
       </div>
     ),
     error: (
       <div className={TOAST_ICON_STYLES.error.className}>
-        {TOAST_ICON_STYLES.error.symbol}
+        <span className={TOAST_ICON_STYLES.error.textSize}>
+          {TOAST_ICON_STYLES.error.symbol}
+        </span>
       </div>
     ),
     warning: (
       <div className={TOAST_ICON_STYLES.warning.className}>
-        {TOAST_ICON_STYLES.warning.symbol}
+        <span className={TOAST_ICON_STYLES.warning.textSize}>
+          {TOAST_ICON_STYLES.warning.symbol}
+        </span>
       </div>
     ),
     info: (
       <div className={TOAST_ICON_STYLES.info.className}>
-        {TOAST_ICON_STYLES.info.symbol}
+        <span className={TOAST_ICON_STYLES.info.textSize}>
+          {TOAST_ICON_STYLES.info.symbol}
+        </span>
       </div>
     ),
-    loading: <div className={TOAST_ICON_STYLES.loading.className}></div>,
+    loading: (
+      <div className={TOAST_ICON_STYLES.loading.className}>
+        <div className={TOAST_ICON_STYLES.loading.innerClassName}></div>
+      </div>
+    ),
   };
 
   return (
