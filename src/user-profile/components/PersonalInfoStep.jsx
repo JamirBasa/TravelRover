@@ -217,17 +217,10 @@ const PersonalInfoStep = ({ profileData, handleInputChange }) => {
             />
             {profileData.phone &&
               !isValidPhilippinePhone(profileData.phone) && (
-                <p className="text-xs text-red-500 mt-0.5 flex items-center gap-1">
-                  <span>⚠️</span>
-                  Invalid
+                <p className="text-xs text-red-500 mt-0.5">
+                  Please enter a valid mobile number
                 </p>
               )}
-            {profileData.phone && isValidPhilippinePhone(profileData.phone) && (
-              <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
-                <span>✓</span>
-                Valid
-              </p>
-            )}
           </div>
         </div>
       </div>
