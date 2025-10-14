@@ -1,19 +1,21 @@
-import { Outlet } from "react-router-dom";
+import React from "react";
+import { Outlet, useLocation } from "react-router-dom";
 import Header from "./custom/Header";
 import Footer from "./custom/Footer";
-import CustomToaster from "./common/CustomToaster";
 
-const Layout = () => {
+function Layout() {
+  const location = useLocation();
+  const hideFooter = location.pathname.startsWith("/user-profile");
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex flex-col min-h-screen">
       <Header />
-      <CustomToaster />
       <main className="flex-1">
         <Outlet />
       </main>
-      <Footer />
+      {!hideFooter && <Footer />}
     </div>
   );
-};
+}
 
 export default Layout;

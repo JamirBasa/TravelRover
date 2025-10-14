@@ -79,7 +79,7 @@ const TravelStyleStep = ({
               key={type.id}
               className={`flex items-center p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
                 profileData.preferredTripTypes.includes(type.id)
-                  ? "border-black bg-black text-white"
+                  ? "border-sky-500 bg-gradient-to-r from-sky-500 to-blue-600 text-white"
                   : "border-gray-200 bg-white hover:border-gray-300"
               }`}
               onClick={() => handleMultiSelect("preferredTripTypes", type.id)}
@@ -106,11 +106,11 @@ const TravelStyleStep = ({
             { value: "luxury", label: "Luxury", range: "₱20,000+" },
             { value: "flexible", label: "Flexible", range: "It depends" },
           ].map((budget) => (
-            <div
+             <div
               key={budget.value}
               className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                 profileData.budgetRange === budget.value
-                  ? "border-black bg-black text-white"
+                  ? "border-sky-500 bg-gradient-to-r from-sky-500 to-blue-600 text-white"
                   : "border-gray-200 bg-white hover:border-gray-300"
               }`}
               onClick={() => handleInputChange("budgetRange", budget.value)}
@@ -135,11 +135,11 @@ const TravelStyleStep = ({
             { value: "group", label: "Group trips with friends" },
             { value: "business", label: "Business/work travel" },
           ].map((style) => (
-            <div
+       <div
               key={style.value}
               className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                 profileData.travelStyle === style.value
-                  ? "border-black bg-black text-white"
+                  ? "border-sky-500 bg-gradient-to-r from-sky-500 to-blue-600 text-white"
                   : "border-gray-200 bg-white hover:border-gray-300"
               }`}
               onClick={() => handleInputChange("travelStyle", style.value)}

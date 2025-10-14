@@ -4,6 +4,10 @@ import {
   FaLanguage,
   FaLeaf,
   FaHeart,
+  FaUsers,
+  FaLandmark,
+  FaMusic,
+  FaBan,
 } from "react-icons/fa";
 
 const FoodCultureStep = ({
@@ -45,12 +49,6 @@ const FoodCultureStep = ({
       desc: "No dairy products",
     },
     {
-      id: "kosher",
-      label: "Kosher",
-      icon: FaUtensils,
-      desc: "Jewish dietary laws",
-    },
-    {
       id: "none",
       label: "No Restrictions",
       icon: FaUtensils,
@@ -59,13 +57,7 @@ const FoodCultureStep = ({
   ];
 
   // Cultural preferences
-  const culturalOptions = [
-    {
-      id: "islamic",
-      label: "Islamic-friendly",
-      icon: FaMosque,
-      desc: "Prayer facilities, modest environment",
-    },
+ const culturalOptions = [
     {
       id: "family",
       label: "Family-oriented",
@@ -82,7 +74,7 @@ const FoodCultureStep = ({
       id: "prayer",
       label: "Prayer facilities",
       icon: FaMosque,
-      desc: "Access to prayer rooms/mosques",
+      desc: "Access to prayer rooms, churches, and mosques",
     },
     {
       id: "alcohol_free",
@@ -91,7 +83,6 @@ const FoodCultureStep = ({
       desc: "No alcohol in environment",
     },
   ];
-
   // Languages
   const languages = [
     { id: "english", label: "English" },
@@ -134,7 +125,7 @@ const FoodCultureStep = ({
                   key={diet.id}
                   className={`flex items-center p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
                     isSelected
-                      ? "border-black bg-black text-white"
+                      ? "border-sky-500 bg-gradient-to-r from-sky-500 to-blue-600 text-white"
                       : "border-gray-200 bg-white hover:border-gray-300"
                   }`}
                   onClick={() =>
@@ -146,7 +137,7 @@ const FoodCultureStep = ({
                     <span className="font-medium">{diet.label}</span>
                     <p
                       className={`text-sm ${
-                        isSelected ? "text-gray-300" : "text-gray-500"
+                        isSelected ? "text-blue-100" : "text-gray-500"
                       }`}
                     >
                       {diet.desc}
@@ -166,7 +157,7 @@ const FoodCultureStep = ({
               type="checkbox"
               checked={profileData.isHalal}
               onChange={(e) => handleInputChange("isHalal", e.target.checked)}
-              className="w-5 h-5 text-black focus:ring-black border-gray-300 rounded"
+              className="w-5 h-5 text-sky-600 border-gray-300 rounded focus:ring-sky-500 focus:ring-2"
             />
             <div className="flex items-center space-x-3">
               <FaMosque className="text-gray-700 text-xl" />
@@ -199,7 +190,7 @@ const FoodCultureStep = ({
                   key={culture.id}
                   className={`flex items-center p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
                     isSelected
-                      ? "border-black bg-black text-white"
+                      ? "border-sky-500 bg-gradient-to-r from-sky-500 to-blue-600 text-white"
                       : "border-gray-200 bg-white hover:border-gray-300"
                   }`}
                   onClick={() =>
@@ -240,7 +231,7 @@ const FoodCultureStep = ({
                   key={lang.id}
                   className={`p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
                     isSelected
-                      ? "border-black bg-black text-white"
+                      ? "border-sky-500 bg-gradient-to-r from-sky-500 to-blue-600 text-white"
                       : "border-gray-200 bg-white hover:border-gray-300"
                   }`}
                   onClick={() =>

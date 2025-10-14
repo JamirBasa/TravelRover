@@ -148,7 +148,7 @@ const ReviewStep = ({ profileData }) => {
         </div>
 
         {/* Success Message */}
-        <div className="bg-black text-white p-6 rounded-xl text-center">
+        <div className="border-sky-500 bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md p-6 rounded-xl text-center">
           <div className="flex items-center justify-center space-x-3 mb-3">
             <FaCheck className="text-xl" />
             <span className="text-xl font-semibold">Profile Complete!</span>

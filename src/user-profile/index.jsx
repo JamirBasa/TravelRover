@@ -300,11 +300,11 @@ const UserProfile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="h-screen w-screen bg-white flex overflow-hidden fixed inset-0">
       {/* Left Side - Travel Image */}
-      <div className="hidden lg:flex lg:w-1/2 relative">
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         <div
-          className="w-full bg-cover bg-center relative"
+          className="w-full h-full bg-cover bg-center relative"
           style={{
             backgroundImage:
               "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjEwMDAiIHZpZXdCb3g9IjAgMCA4MDAgMTAwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGRlZnM+CjxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZGllbnQxIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6IzMzNTVGRjtzdG9wLW9wYWNpdHk6MSIgLz4KPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojNkE4MkZCO3N0b3Atb3BhY2l0eToxIiAvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM+CjxyZWN0IHdpZHRoPSI4MDAiIGhlaWdodD0iMTAwMCIgZmlsbD0idXJsKCNncmFkaWVudDEpIi8+Cjx0ZXh0IHg9IjQwMCIgeT0iNTAwIiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSI0OCIgZm9udC13ZWlnaHQ9ImJvbGQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkV4cGxvcmUgdGhlIFdvcmxkPC90ZXh0Pgo8L3N2Zz4K')",
@@ -364,20 +364,21 @@ const UserProfile = () => {
       </div>
 
       {/* Right Side - Form */}
-      <div className="w-full lg:w-1/2 flex flex-col">
+      <div className="w-full lg:w-1/2 h-full flex flex-col overflow-hidden">
         {/* Header for mobile */}
-        <div className="lg:hidden bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 text-center">
-          <h1 className="text-2xl font-bold mb-2">
+        <div className="lg:hidden bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-3 text-center flex-shrink-0">
+          <h1 className="text-lg font-bold mb-1">
             Complete Your Travel Profile
           </h1>
-          <p className="opacity-90">Create personalized travel experiences</p>
+          <p className="opacity-90 text-xs">Create personalized travel experiences</p>
         </div>
 
-        {/* Form Container */}
-        <div className="flex-1 flex flex-col p-6 lg:p-8 overflow-y-auto">
-          {/* Progress Steps */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-6">
+        {/* Scrollable Form Area */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 lg:p-6">
+            {/* Progress Steps */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-3">
               {STEPS.map((step, index) => {
                 const Icon = step.icon;
                 const isActive = currentStep === step.id;
@@ -386,23 +387,25 @@ const UserProfile = () => {
                 return (
                   <div key={step.id} className="flex items-center">
                     <div
-                      className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${
-                        isCompleted
-                          ? "bg-green-500 border-green-500 text-white"
-                          : isActive
-                          ? "bg-black border-black text-white"
-                          : "bg-white border-gray-300 text-gray-400"
-                      }`}
+                      className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all
+                        ${
+                          isCompleted
+                            ? "bg-green-500 border-green-500 text-white"
+                            : isActive
+                            ? "bg-black border-black text-white"
+                            : "bg-white border-gray-300 text-gray-400"
+                        }
+                      `}
                     >
                       {isCompleted ? (
-                        <FaCheck className="text-sm" />
+                        <FaCheck className="text-xs" />
                       ) : (
-                        <Icon className="text-sm" />
+                        <Icon className="text-xs" />
                       )}
                     </div>
                     {index < STEPS.length - 1 && (
                       <div
-                        className={`hidden md:block w-12 lg:w-16 h-0.5 mx-2 transition-all ${
+                        className={`hidden md:block w-8 lg:w-12 h-0.5 mx-1 transition-all ${
                           isCompleted ? "bg-green-500" : "bg-gray-300"
                         }`}
                       />
@@ -412,33 +415,36 @@ const UserProfile = () => {
               })}
             </div>
 
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold brand-gradient-text mb-3">
+            <div className="text-center mb-3">
+              <h2 className="text-xl font-bold brand-gradient-text mb-1">
                 {STEPS[currentStep - 1].title}
               </h2>
-              <p className="text-gray-700 text-lg">
+              <p className="text-gray-700 text-sm">
                 {STEPS[currentStep - 1].description}
               </p>
             </div>
 
-            <Progress value={progress} className="w-full h-2 mb-2" />
-            <div className="text-center text-sm text-gray-500">
+            <Progress value={progress} className="w-full h-2 mb-1" />
+            <div className="text-center text-xs text-gray-500">
               Step {currentStep} of {STEPS.length}
             </div>
           </div>
 
           {/* Step Content */}
-          <div className="flex-1 mb-8">{renderStepContent()}</div>
+          <div className="mb-4">{renderStepContent()}</div>
+          </div>
+        </div>
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+        {/* Fixed Navigation Buttons */}
+        <div className="flex-shrink-0 border-t border-gray-200 bg-white p-4">
+          <div className="flex justify-between items-center">
             <Button
               variant="outline"
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="flex items-center gap-2 px-6"
+              className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 hover:border-gray-400"
             >
-              <FaArrowLeft />
+              <FaArrowLeft className="text-sm" />
               Previous
             </Button>
 
@@ -446,16 +452,16 @@ const UserProfile = () => {
               {currentStep < STEPS.length ? (
                 <Button
                   onClick={nextStep}
-                  className="brand-button flex items-center gap-2 px-8 py-3"
+                  className="brand-button flex items-center gap-2 px-6 py-2 transition-colors hover:brightness-90"
                 >
                   Next
-                  <FaArrowRight />
+                  <FaArrowRight className="text-sm" />
                 </Button>
               ) : (
                 <Button
                   onClick={saveProfile}
                   disabled={saving}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 px-6"
+                  className="flex items-center gap-2 border-sky-500 bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md hover:brightness-90 px-6 py-2 transition-colors"
                 >
                   {saving ? (
                     <>

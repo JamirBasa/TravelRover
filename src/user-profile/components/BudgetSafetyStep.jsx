@@ -108,7 +108,7 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
                   key={exp.value}
                   className={`flex items-center p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
                     isSelected
-                      ? "border-black bg-black text-white"
+                      ? "border-sky-500 bg-gradient-to-r from-sky-500 to-blue-600 text-white"
                       : "border-gray-200 bg-white hover:border-gray-300"
                   }`}
                   onClick={() =>
