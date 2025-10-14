@@ -121,8 +121,8 @@ const FoodCulture = ({ formData, handleMultiSelect, isEditing = false }) => {
                     ? "cursor-pointer transform hover:scale-105 hover:shadow-md hover:border-amber-300 hover:bg-amber-50"
                     : "cursor-not-allowed"
                 } ${
-                  isSelected
-                    ? "border-amber-400 bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md"
+                   isSelected
+                    ? "border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
                     : isEditing
                     ? "border-blue-200 bg-white text-gray-900"
                     : "border-gray-300 bg-gray-100 text-gray-500"
@@ -164,8 +164,8 @@ const FoodCulture = ({ formData, handleMultiSelect, isEditing = false }) => {
                     ? "cursor-pointer transform hover:scale-105 hover:shadow-md hover:border-red-300 hover:bg-red-50"
                     : "cursor-not-allowed"
                 } ${
-                  isSelected
-                    ? "border-red-400 bg-gradient-to-r from-red-400 to-red-500 text-white shadow-md"
+                    isSelected
+                    ? "border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
                     : isEditing
                     ? "border-blue-200 bg-white text-gray-900"
                     : "border-gray-300 bg-gray-100 text-gray-500"
