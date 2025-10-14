@@ -17,28 +17,18 @@ const PersonalInfo = ({ formData, handleInputChange, isEditing = false }) => {
 
   useEffect(() => {
     // Load cities when region changes
-    if (formData.address?.regionCode) {
-      const regionCities = getCitiesByRegion("PH", formData.address.regionCode);
+    if (formData.address?.region) {
+      const regionCities = getCitiesByRegion("PH", formData.address.region);
       setCities(regionCities);
     } else {
       setCities([]);
     }
-  }, [formData.address?.regionCode]);
+  }, [formData.address?.region]);
 
   const handleRegionChange = (regionCode) => {
-    // Get the region name from the code
-    const philippinesRegions = getRegionsByCountry("PH");
-    const selectedRegion = philippinesRegions.find(r => r.code === regionCode);
-    
-    // Update address with both region name and code, clear city
-    handleInputChange("address", { 
-      ...formData.address,
-      region: selectedRegion?.name || regionCode,
-      regionCode: regionCode,
-      city: "" 
-    });
+    // Clear city when region changes
+    handleInputChange("address", { region: regionCode, city: "" });
   };
-
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -175,7 +165,7 @@ const PersonalInfo = ({ formData, handleInputChange, isEditing = false }) => {
             Region
           </label>
           <select
-            value={formData.address?.regionCode || ""}
+            value={formData.address?.region || ""}
             onChange={(e) => handleRegionChange(e.target.value)}
             disabled={!isEditing}
             className={`w-full h-12 px-3 py-2 border rounded-md focus:outline-none ${
@@ -200,14 +190,11 @@ const PersonalInfo = ({ formData, handleInputChange, isEditing = false }) => {
           <select
             value={formData.address?.city || ""}
             onChange={(e) =>
-              handleInputChange("address", {
-                ...formData.address,
-                city: e.target.value,
-              })
+              handleInputChange("address", e.target.value, "city")
             }
-            disabled={!isEditing || !formData.address?.regionCode}
+            disabled={!isEditing || !formData.address?.region}
             className={`w-full h-12 px-3 py-2 border rounded-md focus:outline-none ${
-              isEditing && formData.address?.regionCode
+              isEditing && formData.address?.region
                 ? "border-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white text-gray-900"
                 : "border-gray-300 bg-gray-100 cursor-not-allowed text-gray-500"
             }`}
