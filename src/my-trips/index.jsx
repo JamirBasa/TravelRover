@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { query, collection, where, getDocs, doc, deleteDoc } from "firebase/firestore";
-import { db } from "@/config/firebaseConfig"; // ✅ Fixed import path
+import { db } from "@/config/firebaseConfig";
 import { Button } from "@/components/ui/button";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { toast } from "sonner";
 
 // Component imports
 import TripCard from "./components/TripCard";
@@ -13,7 +14,6 @@ import LoadingState from "./components/LoadingState";
 import DeleteConfirmDialog from "./components/DeleteConfirmDialog";
 
 function MyTrips() {
-  // Set page title for my trips
   usePageTitle("My Trips");
   const [userTrips, setUserTrips] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,8 +23,8 @@ function MyTrips() {
   const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
 
-  // Search and Filter States
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("date-newest");
   const [filters, setFilters] = useState({
     budget: "",
     duration: "",
@@ -41,20 +41,14 @@ function MyTrips() {
 
     try {
       const userString = localStorage.getItem("user");
-
       if (!userString) {
-        console.warn("No user found, redirecting to home");
-        navigate("/");
-        return;
+        throw new Error("Please log in to view your trips");
       }
 
       const user = JSON.parse(userString);
-
       if (!user?.email) {
-        throw new Error("No email found in user data");
+        throw new Error("Invalid user session");
       }
-
-      console.log("📋 Fetching trips for user:", user.email);
 
       const q = query(
         collection(db, "AITrips"),
@@ -65,186 +59,127 @@ function MyTrips() {
       const trips = [];
 
       querySnapshot.forEach((doc) => {
-        console.log("🔍 Trip found:", doc.id, doc.data());
         trips.push({
           id: doc.id,
           ...doc.data(),
         });
       });
 
-      console.log("✅ Total trips loaded:", trips.length);
       setUserTrips(trips);
-    } catch (error) {
-      console.error("❌ Error fetching user trips:", error);
-
-      if (error.code === "permission-denied") {
-        setError("Access denied. Please check your permissions.");
-      } else if (error.code === "unavailable") {
-        setError("Database unavailable. Please try again later.");
-      } else {
-        setError(error.message || "Failed to load trips");
-      }
+    } catch (err) {
+      console.error("Error fetching trips:", err);
+      setError(err.message || "Failed to load trips. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ✅ Enhanced delete trip function with better validation
-  const handleDeleteTrip = async (trip) => {
-    console.log("🗑️ Delete trip requested:", {
-      tripId: trip.id,
-      location: trip.userSelection?.location,
-      userEmail: trip.userEmail
-    });
-    
-    // Validate trip object
-    if (!trip || !trip.id) {
-      toast.error("Invalid trip data");
-      return;
-    }
-    
-    // Validate user ownership
-    const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-    if (!currentUser?.email) {
-      toast.error("Please sign in to delete trips");
-      return;
-    }
-
-    if (trip.userEmail !== currentUser.email) {
-      console.warn("❌ User doesn't own this trip:", {
-        tripOwner: trip.userEmail,
-        currentUser: currentUser.email
-      });
-      toast.error("You can only delete your own trips");
-      return;
-    }
-
-    // Show confirmation dialog
+  const handleDeleteClick = (trip) => {
     setTripToDelete(trip);
     setDeleteDialogOpen(true);
   };
 
-  // ✅ Enhanced confirm delete with better error handling
-  const confirmDeleteTrip = async () => {
-    if (!tripToDelete) {
-      console.warn("❌ No trip to delete");
-      return;
-    }
+  const handleDeleteConfirm = async () => {
+    if (!tripToDelete) return;
 
     setIsDeleting(true);
-
     try {
-      console.log(`🗑️ Deleting trip: ${tripToDelete.id}`);
-
-      // Verify trip exists before attempting delete
-      const docRef = doc(db, "AITrips", tripToDelete.id);
-      
-      // Delete from Firebase
-      await deleteDoc(docRef);
-
-      // Update local state immediately for better UX
-      setUserTrips(prev => {
-        const updatedTrips = prev.filter(trip => trip.id !== tripToDelete.id);
-        console.log(`✅ Local state updated: ${prev.length} → ${updatedTrips.length} trips`);
-        return updatedTrips;
-      });
-
-      // Show success message
-      toast.success(
-        `🎯 Trip to ${tripToDelete.userSelection?.location || 'destination'} deleted successfully`,
-        {
-          description: "Your trip has been permanently removed from your collection.",
-          duration: 3000,
-        }
+      await deleteDoc(doc(db, "AITrips", tripToDelete.id));
+      setUserTrips((prevTrips) =>
+        prevTrips.filter((trip) => trip.id !== tripToDelete.id)
       );
-
-      console.log("✅ Trip deleted successfully:", tripToDelete.id);
-
-    } catch (error) {
-      console.error("❌ Error deleting trip:", {
-        tripId: tripToDelete.id,
-        error: error.message,
-        code: error.code
-      });
-
-      // Handle specific Firebase errors
-      if (error.code === "permission-denied") {
-        toast.error("Permission denied. You can only delete your own trips.");
-      } else if (error.code === "not-found") {
-        toast.error("Trip not found. It may have been already deleted.");
-        // Remove from local state anyway since it doesn't exist
-        setUserTrips(prev => prev.filter(trip => trip.id !== tripToDelete.id));
-      } else if (error.code === "unavailable") {
-        toast.error("Database unavailable. Please try again later.");
-      } else {
-        toast.error("Failed to delete trip: " + (error.message || "Unknown error"));
-      }
-    } finally {
-      // Always cleanup dialog state
-      setIsDeleting(false);
+      
+      toast.success(
+        `Trip to ${tripToDelete.userSelection?.location || 'destination'} deleted successfully`
+      );
+      
       setDeleteDialogOpen(false);
       setTripToDelete(null);
+    } catch (err) {
+      console.error("Error deleting trip:", err);
+      toast.error("Failed to delete trip. Please try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  const cancelDelete = () => {
-    setDeleteDialogOpen(false);
-    setTripToDelete(null);
-  };
-
-  // Search and Filter Logic
+  // Enhanced filtering and sorting with travel date
   const filteredTrips = useMemo(() => {
-    return userTrips.filter((trip) => {
-      // Search in content only
-      const matchesSearch =
-        !searchTerm ||
-        (() => {
-          const searchLower = searchTerm.toLowerCase().trim();
-          const searchWords = searchLower
-            .split(/\s+/)
-            .filter((word) => word.length > 0);
+    let filtered = userTrips.filter((trip) => {
+      // Enhanced search functionality
+      const matchesSearch = (() => {
+        if (!searchTerm) return true;
 
-          const containsAllWords = (text) => {
-            if (!text || typeof text !== "string") return false;
-            const lowerText = text.toLowerCase();
-            return searchWords.every((word) => lowerText.includes(word));
-          };
+        const searchWords = searchTerm
+          .toLowerCase()
+          .split(/\s+/)
+          .filter((word) => word.length > 0);
 
-          const containsAnyWord = (text) => {
-            if (!text || typeof text !== "string") return false;
-            const lowerText = text.toLowerCase();
-            return searchWords.some((word) => lowerText.includes(word));
-          };
+        const containsAllWords = (text) => {
+          if (!text || typeof text !== "string") return false;
+          const lowerText = text.toLowerCase();
+          return searchWords.every((word) => lowerText.includes(word));
+        };
 
-          // 1. Trip title/destination
-          const titleMatch = containsAllWords(trip.userSelection?.location);
+        const containsAnyWord = (text) => {
+          if (!text || typeof text !== "string") return false;
+          const lowerText = text.toLowerCase();
+          return searchWords.some((word) => lowerText.includes(word));
+        };
 
-          // 2. Trip summary
-          const summaryMatch = containsAnyWord(trip.tripData?.trip_summary);
+        // 1. Trip title/destination
+        const titleMatch = containsAllWords(trip.userSelection?.location);
 
-          // 3. Hotels
-          const hotelMatch =
-            trip.tripData?.tripData?.accommodations?.some(
-              (hotel) =>
-                containsAnyWord(hotel?.name) ||
-                containsAnyWord(hotel?.address) ||
-                containsAnyWord(hotel?.description) ||
-                containsAnyWord(hotel?.type)
-            ) || false;
+        // 2. Trip summary
+        const summaryMatch = containsAnyWord(trip.tripData?.trip_summary);
 
-          // 4. Activities/Places
-          const placesMatch =
-            trip.tripData?.tripData?.itinerary?.some((day) =>
-              day?.activities?.some(
-                (activity) =>
-                  containsAnyWord(activity?.activity) ||
-                  containsAnyWord(activity?.location) ||
-                  containsAnyWord(activity?.description)
-              )
-            ) || false;
+        // 3. Hotels
+        const hotelMatch =
+          trip.tripData?.tripData?.accommodations?.some(
+            (hotel) =>
+              containsAnyWord(hotel?.name) ||
+              containsAnyWord(hotel?.address) ||
+              containsAnyWord(hotel?.description) ||
+              containsAnyWord(hotel?.type)
+          ) || false;
 
-          return titleMatch || summaryMatch || hotelMatch || placesMatch;
-        })();
+        // 4. Activities/Places in itinerary
+        const placesMatch =
+          trip.tripData?.tripData?.itinerary?.some((day) =>
+            day?.activities?.some(
+              (activity) =>
+                containsAnyWord(activity?.activity) ||
+                containsAnyWord(activity?.location) ||
+                containsAnyWord(activity?.description) ||
+                containsAnyWord(activity?.placeName) ||
+                containsAnyWord(activity?.placeDetails)
+            )
+          ) || false;
+
+        // 5. Places to visit section
+        const attractionsMatch =
+          trip.tripData?.tripData?.placesToVisit?.some(
+            (place) =>
+              containsAnyWord(place?.placeName) ||
+              containsAnyWord(place?.placeDetails) ||
+              containsAnyWord(place?.location)
+          ) || false;
+
+        // 6. Day themes
+        const themeMatch =
+          trip.tripData?.tripData?.itinerary?.some((day) =>
+            containsAnyWord(day?.theme)
+          ) || false;
+
+        return (
+          titleMatch ||
+          summaryMatch ||
+          hotelMatch ||
+          placesMatch ||
+          attractionsMatch ||
+          themeMatch
+        );
+      })();
 
       // Filter by attributes
       const matchesBudget =
@@ -276,11 +211,53 @@ function MyTrips() {
         matchesSearch && matchesBudget && matchesDuration && matchesTravelers
       );
     });
-  }, [userTrips, searchTerm, filters]);
 
-  // Clear all filters
+    // Enhanced sorting with travel date options
+    const sorted = filtered.sort((a, b) => {
+      switch (sortBy) {
+        case "date-newest": {
+          // Sort by creation date (newest first)
+          const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt || 0);
+          const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt || 0);
+          return dateB - dateA;
+        }
+        case "date-oldest": {
+          // Sort by creation date (oldest first)
+          const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt || 0);
+          const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt || 0);
+          return dateA - dateB;
+        }
+        case "travel-earliest": {
+          // Sort by travel start date (soonest first)
+          const startA = a.userSelection?.startDate 
+            ? new Date(a.userSelection.startDate).getTime() 
+            : Infinity; // No date = push to end
+          const startB = b.userSelection?.startDate 
+            ? new Date(b.userSelection.startDate).getTime() 
+            : Infinity;
+          return startA - startB; // Ascending (earliest first)
+        }
+        case "travel-latest": {
+          // Sort by travel start date (farthest first)
+          const startA = a.userSelection?.startDate 
+            ? new Date(a.userSelection.startDate).getTime() 
+            : -Infinity; // No date = push to end
+          const startB = b.userSelection?.startDate 
+            ? new Date(b.userSelection.startDate).getTime() 
+            : -Infinity;
+          return startB - startA; // Descending (latest first)
+        }
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [userTrips, searchTerm, filters, sortBy]);
+
   const clearFilters = () => {
     setSearchTerm("");
+    setSortBy("date-newest");
     setFilters({
       budget: "",
       duration: "",
@@ -294,32 +271,14 @@ function MyTrips() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">My Trips</h1>
-          <p className="text-gray-600 mt-1">
-            {filteredTrips.length} of {userTrips.length}{" "}
-            {userTrips.length === 1 ? "trip" : "trips"}
-            {searchTerm || Object.values(filters).some((f) => f)
-              ? " (filtered)"
-              : ""}
-          </p>
-        </div>
-        <Button
-          onClick={() => navigate("/create-trip")}
-          className="bg-blue-500 hover:bg-blue-600 self-start"
-        >
-          + Create New Trip
-        </Button>
-      </div>
-
       {/* Search and Filter */}
       <SearchAndFilter
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         filters={filters}
         setFilters={setFilters}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
         clearFilters={clearFilters}
         userTrips={userTrips}
       />
@@ -342,28 +301,31 @@ function MyTrips() {
         </div>
       )}
 
-      {/* Results */}
-      {!error && filteredTrips.length === 0 ? (
-        <EmptyState userTrips={userTrips} clearFilters={clearFilters} />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Trips Grid */}
+      {filteredTrips.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4">
           {filteredTrips.map((trip) => (
-            <TripCard 
-              key={trip.id} 
-              trip={trip} 
-              onDelete={handleDeleteTrip}
+            <TripCard
+              key={trip.id}
+              trip={trip}
+              onDelete={handleDeleteClick}
             />
           ))}
         </div>
+      ) : (
+        <EmptyState
+          userTrips={userTrips}
+          clearFilters={clearFilters}
+        />
       )}
 
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog
-        isOpen={deleteDialogOpen}
-        onClose={cancelDelete}
-        onConfirm={confirmDeleteTrip}
-        tripData={tripToDelete}
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
         isDeleting={isDeleting}
+        tripName={tripToDelete?.userSelection?.location || "this trip"}
       />
     </div>
   );
