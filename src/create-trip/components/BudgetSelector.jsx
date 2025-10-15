@@ -23,9 +23,20 @@ const BudgetSelector = ({
   // New props for smart estimation
   formData = {},
   flightData = {},
+  userProfile = {}, // Add userProfile prop
 }) => {
   const [showCustom, setShowCustom] = useState(!!customValue); // Show custom if there's already a custom value
   const [showEstimates, setShowEstimates] = useState(false);
+
+  // Detect budget override
+  const profileBudget = userProfile?.budgetRange;
+  const tripBudget = customValue ? "Custom" : value;
+  const isBudgetOverridden =
+    profileBudget &&
+    tripBudget &&
+    profileBudget !== "Not specified" &&
+    !tripBudget.toLowerCase().includes(profileBudget.toLowerCase()) &&
+    profileBudget.toLowerCase() !== tripBudget.toLowerCase();
 
   // Keep showCustom state in sync with customValue
   useEffect(() => {
@@ -53,8 +64,15 @@ const BudgetSelector = ({
       duration: formData.duration,
       travelers: travelerCount,
       includeFlights: flightData.includeFlights || false,
+      startDate: formData.startDate, // Pass startDate for timing-based pricing
     });
-  }, [formData.location, formData.duration, formData.travelers, flightData]);
+  }, [
+    formData.location,
+    formData.duration,
+    formData.travelers,
+    formData.startDate,
+    flightData,
+  ]);
 
   // Get airport recommendations for flight planning
   const airportInfo = useMemo(() => {
@@ -122,6 +140,26 @@ const BudgetSelector = ({
         <p className="text-gray-700 text-base font-medium">
           Choose a budget that works for you - we'll optimize your experience 💰
         </p>
+
+        {/* Budget Override Indicator */}
+        {isBudgetOverridden && profileBudget && (
+          <div className="mt-4 mx-auto max-w-md p-3 bg-amber-50 border-2 border-amber-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <span className="text-amber-600 text-lg">⚡</span>
+              <div className="text-left flex-1">
+                <p className="text-xs font-semibold text-amber-800 mb-1">
+                  Budget Override Active
+                </p>
+                <p className="text-xs text-amber-700 leading-relaxed">
+                  Your profile preference is{" "}
+                  <span className="font-bold">{profileBudget}</span>, but you've
+                  selected <span className="font-bold">{tripBudget}</span> for
+                  this trip. We'll use your trip-level choice.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">

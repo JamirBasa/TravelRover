@@ -1,13 +1,29 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Plane } from "lucide-react";
+import { Plane, Loader2 } from "lucide-react";
 import { PlacesAutocomplete } from "../../components/common/PlacesAutocomplete";
 import { toast } from "sonner";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../config/firebaseConfig";
 
 function HeroSection() {
   const [place, setPlace] = useState(null);
+  const [isCheckingProfile, setIsCheckingProfile] = useState(false);
+  const [user, setUser] = useState(null);
   const navigate = useNavigate();
+
+  // Load user from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored));
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
+    }
+  }, []);
 
   // Clean categories with essential data
   const categories = [
@@ -89,35 +105,127 @@ function HeroSection() {
     },
   ];
 
-  const handlePlanTrip = () => {
-    if (place) {
-      // Navigate to create-trip with the selected location
-      navigate("/create-trip", {
-        state: {
-          searchedLocation: place.label,
-          selectedDestination: place.label,
-        },
+  const handlePlanTrip = async () => {
+    // Check if user is logged in
+    if (!user) {
+      toast.error("Please sign in to start planning your trip", {
+        description: "You need to be logged in to create and save trips.",
+        duration: 4000,
       });
-    } else {
-      // Navigate to create-trip without location
-      navigate("/create-trip");
+      return;
+    }
+
+    // Start loading state
+    setIsCheckingProfile(true);
+
+    try {
+      // Check if user has a complete profile
+      const docRef = doc(db, "UserProfiles", user.email);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists() || !docSnap.data()?.isProfileComplete) {
+        // Profile doesn't exist or is incomplete
+        toast.error("Please complete your profile first", {
+          description:
+            "We need some information about your travel preferences to create personalized itineraries.",
+          duration: 5000,
+        });
+
+        // Redirect to profile page after a short delay
+        setTimeout(() => {
+          navigate("/user-profile", {
+            state: {
+              returnTo: "/home",
+              message: "Complete your profile to start planning trips",
+            },
+          });
+        }, 1500);
+        return;
+      }
+
+      // Profile is complete, proceed with trip planning
+      if (place) {
+        // Navigate to create-trip with the selected location
+        navigate("/create-trip", {
+          state: {
+            searchedLocation: place.label,
+            selectedDestination: place.label,
+          },
+        });
+      } else {
+        // Navigate to create-trip without location
+        navigate("/create-trip");
+      }
+    } catch (error) {
+      console.error("Error checking profile:", error);
+      toast.error("Something went wrong", {
+        description:
+          "Please try again or contact support if the issue persists.",
+      });
+    } finally {
+      setIsCheckingProfile(false);
     }
   };
 
-  const handleCategorySelect = (category) => {
-    // Enhanced category data for better AI prompt generation
-    navigate("/create-trip", {
-      state: {
-        selectedCategory: category.tripType,
-        categoryName: category.name,
-        categoryActivities: category.activities,
-        categoryKeywords: category.keywords,
-        searchedLocation: place?.label || null,
-        prefilledTripType: category.tripType,
-        categoryFocus: true, // Flag to indicate this is a category-focused trip
-      },
-    });
-    // Toast removed - user will see feedback in the create-trip page
+  const handleCategorySelect = async (category) => {
+    // Check if user is logged in
+    if (!user) {
+      toast.error("Please sign in to start planning your trip", {
+        description: "You need to be logged in to create and save trips.",
+        duration: 4000,
+      });
+      return;
+    }
+
+    // Start loading state
+    setIsCheckingProfile(true);
+
+    try {
+      // Check if user has a complete profile
+      const docRef = doc(db, "UserProfiles", user.email);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists() || !docSnap.data()?.isProfileComplete) {
+        // Profile doesn't exist or is incomplete
+        toast.error("Please complete your profile first", {
+          description:
+            "We need some information about your travel preferences to create personalized itineraries.",
+          duration: 5000,
+        });
+
+        // Redirect to profile page after a short delay
+        setTimeout(() => {
+          navigate("/user-profile", {
+            state: {
+              returnTo: "/home",
+              message: "Complete your profile to start planning trips",
+            },
+          });
+        }, 1500);
+        return;
+      }
+
+      // Profile is complete, proceed with category selection
+      navigate("/create-trip", {
+        state: {
+          selectedCategory: category.tripType,
+          categoryName: category.name,
+          categoryActivities: category.activities,
+          categoryKeywords: category.keywords,
+          searchedLocation: place?.label || null,
+          prefilledTripType: category.tripType,
+          categoryFocus: true, // Flag to indicate this is a category-focused trip
+        },
+      });
+    } catch (error) {
+      console.error("Error checking profile:", error);
+      toast.error("Something went wrong", {
+        description:
+          "Please try again or contact support if the issue persists.",
+      });
+    } finally {
+      setIsCheckingProfile(false);
+    }
   };
 
   return (
@@ -145,18 +253,30 @@ function HeroSection() {
               onChange={(v) => {
                 setPlace(v);
               }}
-              placeholder="Where would you like to explore?"
+              placeholder="Search for cities or regions..."
               countryRestriction={["ph"]}
+              restrictToCities={true}
               className="border-0 bg-transparent focus:ring-0"
             />
           </div>
           <Button
-            className="brand-button px-6 py-3 cursor-pointer shadow-lg hover:shadow-xl"
+            className="brand-gradient text-white font-semibold px-6 py-3 cursor-pointer shadow-lg hover:shadow-xl rounded-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             onClick={handlePlanTrip}
+            disabled={isCheckingProfile}
           >
-            <Plane className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Plan Trip</span>
-            <span className="sm:hidden">Plan</span>
+            {isCheckingProfile ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <span className="hidden sm:inline">Checking...</span>
+                <span className="sm:hidden">Wait</span>
+              </>
+            ) : (
+              <>
+                <Plane className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Plan Trip</span>
+                <span className="sm:hidden">Plan</span>
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -174,9 +294,13 @@ function HeroSection() {
           {categories.map((cat, index) => (
             <div
               key={cat.id}
-              className="group cursor-pointer transform transition-all duration-300 hover:-translate-y-1"
-              onClick={() => handleCategorySelect(cat)}
-              title={cat.description}
+              className={`group transform transition-all duration-300 ${
+                isCheckingProfile
+                  ? "opacity-50 cursor-not-allowed"
+                  : "cursor-pointer hover:-translate-y-1"
+              }`}
+              onClick={() => !isCheckingProfile && handleCategorySelect(cat)}
+              title={isCheckingProfile ? "Please wait..." : cat.description}
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <div className="bg-white/90 backdrop-blur-sm border border-gray-200/50 hover:border-sky-300/80 hover:shadow-xl p-5 rounded-2xl transition-all duration-300 text-center relative overflow-hidden min-h-[160px]">

@@ -51,7 +51,7 @@ const router = createBrowserRouter([
     ],
   },
 
- // ADMIN ROUTES - Separate layout without header
+  // ADMIN ROUTES - Separate layout without header
   {
     path: "/admin",
     element: <AdminLayout />, // Now properly imported

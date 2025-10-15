@@ -12,6 +12,8 @@ import {
   FaCheck,
   FaUtensils,
   FaShieldAlt,
+  FaLanguage,
+  FaMosque,
 } from "react-icons/fa";
 
 // ===============================
@@ -181,31 +183,43 @@ export const STEP_CONFIGS = {
   USER_PROFILE: [
     {
       id: 1,
-      title: "Personal Info",
-      description: "Basic information about you",
+      title: "Personal Information",
+      description: "Your name and contact details",
       icon: FaUser,
     },
     {
       id: 2,
-      title: "Travel Style",
-      description: "Your travel preferences and interests",
-      icon: FaHeart,
+      title: "Your Location",
+      description: "Where you're currently based",
+      icon: FaMapMarkerAlt,
     },
     {
       id: 3,
-      title: "Food & Culture",
-      description: "Dietary needs and cultural preferences",
-      icon: FaUtensils,
+      title: "Travel Preferences",
+      description: "Your travel style and interests",
+      icon: FaHeart,
     },
     {
       id: 4,
-      title: "Budget & Safety",
-      description: "Budget range and emergency contacts",
-      icon: FaShieldAlt,
+      title: "Dietary & Cultural",
+      description: "Food and cultural preferences",
+      icon: FaMosque,
     },
     {
       id: 5,
-      title: "Review",
+      title: "Languages",
+      description: "Languages you speak",
+      icon: FaLanguage,
+    },
+    {
+      id: 6,
+      title: "Additional Details",
+      description: "Emergency contacts and experience",
+      icon: FaShieldAlt,
+    },
+    {
+      id: 7,
+      title: "Review Profile",
       description: "Review and confirm your profile",
       icon: FaCheck,
     },
@@ -387,7 +401,41 @@ export const SelectBudgetOptions = [
   },
 ];
 
-export const AI_PROMPT = `Create travel itinerary JSON for {location}, {duration} days, {travelers}, {budget}.
+export const AI_PROMPT = `Create travel itinerary JSON for {location}, {duration}, {travelers}, {budget}.
+
+🗺️ GEOGRAPHIC VALIDATION - ABSOLUTELY CRITICAL:
+⚠️ DESTINATION: {location} (Philippines)
+
+STRICT LOCATION REQUIREMENTS:
+✅ ALL places MUST be physically located IN {location}
+✅ Verify each place name includes the correct city/province identifier
+✅ Only suggest attractions that are WITHIN or IMMEDIATELY ADJACENT to {location}
+✅ Hotel addresses MUST explicitly mention {location} or its districts
+
+❌ FORBIDDEN - DO NOT INCLUDE:
+- Places with the same name in different Philippine regions
+- Hotels/attractions that are in OTHER cities/provinces
+- Places that require leaving {location} to visit
+- Generic Philippine attractions not in {location}
+
+VALIDATION EXAMPLES:
+- If destination is "Manila": 
+  ✅ CORRECT: "Intramuros, Manila", "Manila Ocean Park", "SM Mall of Asia, Pasay"
+  ❌ WRONG: "Chocolate Hills" (Bohol), "Mayon Volcano" (Albay), "White Beach" (Boracay)
+  
+- If destination is "Cebu":
+  ✅ CORRECT: "Magellan's Cross, Cebu City", "Kawasan Falls, Badian", "Oslob Whale Sharks"
+  ❌ WRONG: "Rizal Park" (Manila), "Taal Volcano" (Batangas), "Burnham Park" (Baguio)
+  
+- If destination is "Palawan":
+  ✅ CORRECT: "El Nido Lagoons", "Puerto Princesa Underground River", "Coron Island"
+  ❌ WRONG: "Boracay Beach" (Aklan), "Panglao Island" (Bohol), "Siargao Cloud 9"
+
+NAMING FORMAT FOR PLACES:
+- Always include location qualifier: "Place Name, City/District"
+- Example: "Fort Santiago, Intramuros, Manila" NOT just "Fort Santiago"
+- Example: "Tops Lookout, Busay, Cebu" NOT just "Tops Lookout"
+- This prevents confusion with places of the same name elsewhere
 
 CRITICAL JSON REQUIREMENTS:
 - Return ONLY valid JSON - no markdown, no extra text, no code blocks
@@ -417,10 +465,10 @@ export const HOTEL_CONFIG = {
   HOTEL_TYPES: ["lodging", "hotel", "resort"],
   MAX_RESULTS: 20,
   PRICE_LEVELS: {
-    1: "Budget (₱1,000-2,500)",
-    2: "Mid-range (₱2,500-5,000)",
-    3: "Upscale (₱5,000-10,000)",
-    4: "Luxury (₱10,000+)",
+    1: "Budget (₱2,000-8,000)",
+    2: "Moderate (₱8,000-20,000)",
+    3: "Luxury (₱20,000-40,000)",
+    4: "Ultra-Luxury (₱40,000+)",
   },
   DEFAULT_CHECKIN_DAYS: 7, // Days from now
   DEFAULT_CHECKOUT_DAYS: 10, // Days from now

@@ -9,6 +9,99 @@ const PersonalInfo = ({ formData, handleInputChange, isEditing = false }) => {
   const [regions, setRegions] = useState([]);
   const [cities, setCities] = useState([]);
 
+  // Handle Philippine phone number input with formatting
+  const handlePhoneChange = (e) => {
+    let value = e.target.value.replace(/\D/g, ""); // Remove non-digits
+
+    // Handle if user pastes +63 format - convert to 09XX
+    if (value.startsWith("63") && value.length === 12) {
+      value = "0" + value.slice(2);
+    }
+
+    // Limit to 11 digits (Philippine mobile number format: 09XX-XXX-XXXX)
+    if (value.length > 11) {
+      value = value.slice(0, 11);
+    }
+
+    // Format as 09XX-XXX-XXXX for display
+    let formattedValue = value;
+    if (value.length > 0) {
+      if (value.length <= 4) {
+        formattedValue = value;
+      } else if (value.length <= 7) {
+        formattedValue = value.slice(0, 4) + "-" + value.slice(4);
+      } else {
+        formattedValue =
+          value.slice(0, 4) + "-" + value.slice(4, 7) + "-" + value.slice(7);
+      }
+    }
+
+    // Store in international format (+639XX) but display as 09XX
+    let storedValue = formattedValue;
+    if (value.length === 11 && value.startsWith("09")) {
+      // Convert 09XX to +639XX for storage
+      storedValue = "+63" + value.slice(1);
+    } else {
+      storedValue = formattedValue;
+    }
+
+    // Create synthetic event for handleInputChange
+    const syntheticEvent = {
+      target: {
+        name: "phone",
+        value: storedValue,
+      },
+    };
+    handleInputChange(syntheticEvent);
+  };
+
+  // Validate Philippine phone number
+  const isValidPhilippinePhone = (phone) => {
+    if (!phone) return false;
+    // Remove all non-digits and check if it's valid
+    const digits = phone.replace(/\D/g, "");
+
+    // Check for +639XX format (12 digits) or 09XX format (11 digits)
+    if (digits.length === 12 && digits.startsWith("63")) {
+      return true; // +639XX-XXX-XXXX
+    }
+    if (digits.length === 11 && digits.startsWith("09")) {
+      return true; // 09XX-XXX-XXXX
+    }
+
+    return false;
+  };
+
+  // Get display value for phone (convert +639XX back to 09XX for display)
+  const getPhoneDisplayValue = () => {
+    const phone = formData.phone || "";
+    if (!phone) return "";
+
+    const digits = phone.replace(/\D/g, "");
+
+    // If stored as +639XX, convert to 09XX for display
+    if (digits.startsWith("63") && digits.length === 12) {
+      const localNumber = "0" + digits.slice(2);
+      // Format as 09XX-XXX-XXXX
+      if (localNumber.length <= 4) {
+        return localNumber;
+      } else if (localNumber.length <= 7) {
+        return localNumber.slice(0, 4) + "-" + localNumber.slice(4);
+      } else {
+        return (
+          localNumber.slice(0, 4) +
+          "-" +
+          localNumber.slice(4, 7) +
+          "-" +
+          localNumber.slice(7)
+        );
+      }
+    }
+
+    // Already in display format
+    return phone;
+  };
+
   useEffect(() => {
     // Load Philippines regions
     const philippinesRegions = getRegionsByCountry("PH");
@@ -16,19 +109,29 @@ const PersonalInfo = ({ formData, handleInputChange, isEditing = false }) => {
   }, []);
 
   useEffect(() => {
-    // Load cities when region changes
-    if (formData.address?.region) {
-      const regionCities = getCitiesByRegion("PH", formData.address.region);
+    // Load cities when regionCode changes (not region name)
+    if (formData.address?.regionCode) {
+      const regionCities = getCitiesByRegion("PH", formData.address.regionCode);
       setCities(regionCities);
     } else {
       setCities([]);
     }
-  }, [formData.address?.region]);
+  }, [formData.address?.regionCode]); // Changed from region to regionCode
 
   const handleRegionChange = (regionCode) => {
-    // Clear city when region changes
-    handleInputChange("address", { region: regionCode, city: "" });
+    // Get the region name from the code
+    const philippinesRegions = getRegionsByCountry("PH");
+    const selectedRegion = philippinesRegions.find(r => r.code === regionCode);
+    
+    // Update address with both region name and code, clear city
+    handleInputChange("address", { 
+      ...formData.address,
+      region: selectedRegion?.name || regionCode,
+      regionCode: regionCode,
+      city: "" 
+    });
   };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -81,9 +184,10 @@ const PersonalInfo = ({ formData, handleInputChange, isEditing = false }) => {
           <Input
             type="tel"
             name="phone"
-            value={formData.phone || ""}
-            onChange={handleInputChange}
-            placeholder="Enter your phone number"
+            value={getPhoneDisplayValue()}
+            onChange={handlePhoneChange}
+            placeholder="0917-123-4567"
+            maxLength={13}
             disabled={!isEditing}
             className={`h-12 ${
               isEditing
@@ -91,6 +195,11 @@ const PersonalInfo = ({ formData, handleInputChange, isEditing = false }) => {
                 : "border-gray-300 bg-gray-100 cursor-not-allowed text-gray-500"
             }`}
           />
+          {formData.phone && !isValidPhilippinePhone(formData.phone) && (
+            <p className="text-xs text-red-500 mt-1">
+              Please enter a valid mobile number
+            </p>
+          )}
         </div>
 
         <div>
@@ -165,7 +274,7 @@ const PersonalInfo = ({ formData, handleInputChange, isEditing = false }) => {
             Region
           </label>
           <select
-            value={formData.address?.region || ""}
+            value={formData.address?.regionCode || ""}
             onChange={(e) => handleRegionChange(e.target.value)}
             disabled={!isEditing}
             className={`w-full h-12 px-3 py-2 border rounded-md focus:outline-none ${
@@ -190,11 +299,14 @@ const PersonalInfo = ({ formData, handleInputChange, isEditing = false }) => {
           <select
             value={formData.address?.city || ""}
             onChange={(e) =>
-              handleInputChange("address", e.target.value, "city")
+              handleInputChange("address", {
+                ...formData.address,
+                city: e.target.value,
+              })
             }
-            disabled={!isEditing || !formData.address?.region}
+            disabled={!isEditing || !formData.address?.regionCode}
             className={`w-full h-12 px-3 py-2 border rounded-md focus:outline-none ${
-              isEditing && formData.address?.region
+              isEditing && formData.address?.regionCode
                 ? "border-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white text-gray-900"
                 : "border-gray-300 bg-gray-100 cursor-not-allowed text-gray-500"
             }`}

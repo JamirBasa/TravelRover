@@ -3,7 +3,14 @@
  * Estimates trip budgets based on destination, duration, travelers, and preferences
  * Tailored for Philippines destinations with accurate regional pricing
  * Includes nearest airport recommendations for cities without direct airports
+ * NOW INCLUDES: Smart flight pricing based on booking timing
  */
+
+import { 
+  getDaysUntilDeparture, 
+  getTimingPriceMultiplier,
+  calculateTimingAdjustedFlightCost 
+} from './flightPricingAnalyzer';
 
 // ========================================
 // MAJOR AIRPORTS IN PHILIPPINES
@@ -241,8 +248,9 @@ export const getDestinationMultiplier = (destination) => {
 /**
  * Estimate flight costs based on route
  * Realistic pricing for domestic Philippines flights (round-trip per person)
+ * NOW INCLUDES: Dynamic pricing based on booking timing
  */
-export const estimateFlightCost = (departureLocation, destination) => {
+export const estimateFlightCost = (departureLocation, destination, startDate = null) => {
   if (!departureLocation || !destination) return 0;
   
   const depLower = departureLocation.toLowerCase();
@@ -291,12 +299,18 @@ export const estimateFlightCost = (departureLocation, destination) => {
   const routeKey = `${depRegion}-${destRegion}`;
   const reverseKey = `${destRegion}-${depRegion}`;
   
-  const directCost = flightCosts[routeKey] || flightCosts[reverseKey];
+  let baseCost = flightCosts[routeKey] || flightCosts[reverseKey] || 5000;
   
-  if (directCost) return directCost;
+  // Apply timing multiplier if startDate is provided
+  if (startDate) {
+    const daysUntil = getDaysUntilDeparture(startDate);
+    if (daysUntil !== null) {
+      const multiplier = getTimingPriceMultiplier(daysUntil);
+      baseCost = calculateTimingAdjustedFlightCost(baseCost, daysUntil);
+    }
+  }
   
-  // Default flight cost for unknown routes (typically via Manila)
-  return 5000;
+  return baseCost;
 };
 
 /**
@@ -311,6 +325,7 @@ export const calculateEstimatedBudget = (params) => {
     travelers = 1,
     budgetLevel = 'moderate', // 'budget', 'moderate', 'luxury'
     includeFlights = false,
+    startDate = null, // NEW: For timing-based flight pricing
   } = params;
   
   // Get cost factors
@@ -346,7 +361,7 @@ export const calculateEstimatedBudget = (params) => {
   // Add flight costs if needed
   let flightCost = 0;
   if (includeFlights) {
-    const flightCostPerPerson = estimateFlightCost(departureLocation, destination);
+    const flightCostPerPerson = estimateFlightCost(departureLocation, destination, startDate);
     flightCost = flightCostPerPerson * travelerCount;
     totalCost += flightCost;
   }

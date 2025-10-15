@@ -1,7 +1,13 @@
 import React, { useState } from "react";
 import { Input } from "../../components/ui/input";
 import Select from "../../components/ui/select";
-import { FaPlane, FaMapMarkerAlt, FaInfoCircle, FaCheck } from "react-icons/fa";
+import {
+  FaPlane,
+  FaMapMarkerAlt,
+  FaInfoCircle,
+  FaCheck,
+  FaExclamationTriangle,
+} from "react-icons/fa";
 import {
   getRegionsByCountry,
   getCitiesByRegion,
@@ -9,11 +15,59 @@ import {
 } from "../../data/locationData";
 import { useMemo } from "react";
 import { UserProfileService } from "../../services/userProfileService";
+import {
+  getFlightRecommendationMessage,
+  getFlightContextTips,
+} from "../../utils/flightRecommendations";
 
-const FlightPreferences = ({ flightData, onFlightDataChange, userProfile }) => {
+const FlightPreferences = ({
+  flightData,
+  onFlightDataChange,
+  userProfile,
+  formData,
+}) => {
   // Get profile summary for consistent display
   const profileSummary =
     UserProfileService.getProfileDisplaySummary(userProfile);
+
+  // Get smart flight recommendations
+  const flightRecommendation = useMemo(() => {
+    if (!flightData.includeFlights) return null;
+
+    return getFlightRecommendationMessage({
+      departureCity: flightData.departureCity,
+      destination: formData?.location,
+      startDate: formData?.startDate,
+      endDate: formData?.endDate,
+      includeFlights: flightData.includeFlights,
+    });
+  }, [
+    flightData.includeFlights,
+    flightData.departureCity,
+    formData?.location,
+    formData?.startDate,
+    formData?.endDate,
+  ]);
+
+  // Get contextual tips
+  const contextTips = useMemo(() => {
+    if (!flightData.includeFlights || !flightData.departureCity) return [];
+
+    return getFlightContextTips({
+      departureCity: flightData.departureCity,
+      destination: formData?.location,
+      startDate: formData?.startDate,
+      endDate: formData?.endDate,
+      duration: formData?.duration,
+    });
+  }, [
+    flightData.includeFlights,
+    flightData.departureCity,
+    formData?.location,
+    formData?.startDate,
+    formData?.endDate,
+    formData?.duration,
+  ]);
 
   // Auto-populate when flights are enabled and we have profile data
   React.useEffect(() => {
@@ -131,9 +185,39 @@ const FlightPreferences = ({ flightData, onFlightDataChange, userProfile }) => {
           {flightData.includeFlights && (
             <div className="ml-7 pl-4 border-l-2 border-blue-200 space-y-4">
               <div className="bg-gray-50 p-4 rounded-lg">
+                {/* Smart Flight Recommendations */}
+                {flightRecommendation && (
+                  <div
+                    className={`mb-3 p-3 rounded-lg border ${
+                      flightRecommendation.type === "same-city"
+                        ? "bg-amber-50 border-amber-300"
+                        : flightRecommendation.type === "remote-destination"
+                        ? "bg-blue-50 border-blue-300"
+                        : "bg-green-50 border-green-300"
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      {flightRecommendation.type === "same-city" ? (
+                        <FaExclamationTriangle className="text-amber-600 text-sm mt-0.5 flex-shrink-0" />
+                      ) : (
+                        <FaInfoCircle className="text-blue-600 text-sm mt-0.5 flex-shrink-0" />
+                      )}
+                      <p
+                        className={`text-sm ${
+                          flightRecommendation.type === "same-city"
+                            ? "text-amber-800"
+                            : "text-blue-800"
+                        }`}
+                      >
+                        {flightRecommendation.message}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 {/* Auto-populated indicator */}
                 {flightData.departureCity &&
-                  profileSummary?.hasLocationData && (
+                  profileSummary?.hasLocationData &&
+                  flightRecommendation?.type !== "same-city" && (
                     <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg">
                       <div className="flex items-center gap-2 text-green-700 text-sm">
                         <FaCheck className="text-xs" />
@@ -201,10 +285,25 @@ const FlightPreferences = ({ flightData, onFlightDataChange, userProfile }) => {
                     )}
                   </div>
                 </div>
-                <div className="mt-3 text-xs text-gray-600">
-                  💡 We'll find the best flight options from your departure city
-                  to your destination and include pricing in your itinerary.
-                </div>
+                {/* Contextual Tips */}
+                {contextTips.length > 0 && (
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="space-y-1">
+                      {contextTips.map((tip, index) => (
+                        <p key={index} className="text-xs text-blue-700">
+                          {tip}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {contextTips.length === 0 && (
+                  <div className="mt-3 text-xs text-gray-600">
+                    💡 We'll find the best flight options from your departure
+                    city to your destination and include pricing in your
+                    itinerary.
+                  </div>
+                )}
               </div>
             </div>
           )}
