@@ -98,34 +98,75 @@ const HotelPreferences = ({
 
         {/* Include Hotels Toggle */}
         <div className="space-y-4">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={hotelData.includeHotels}
-              onChange={(e) => {
-                const isEnabled = e.target.checked;
+          <div
+            onClick={() => {
+              const isEnabled = !hotelData.includeHotels;
 
-                onHotelDataChange({
-                  ...hotelData,
-                  includeHotels: isEnabled,
-                  // Auto-populate when enabling hotels using centralized service
-                  ...(isEnabled
-                    ? UserProfileService.autoPopulateHotelData(userProfile, {
-                        ...hotelData,
-                        includeHotels: isEnabled,
-                      })
-                    : {}),
-                });
-              }}
-              className="w-4 h-4 text-orange-600 dark:text-orange-500 bg-gray-100 dark:bg-slate-800 border-gray-300 dark:border-slate-600 rounded focus:ring-orange-500 dark:focus:ring-orange-600"
-            />
-            <div className="flex items-center gap-2">
-              <FaHotel className="text-orange-600 dark:text-orange-500" />
-              <span className="font-medium text-gray-800 dark:text-gray-200">
-                Include hotel search and recommendations
-              </span>
+              onHotelDataChange({
+                ...hotelData,
+                includeHotels: isEnabled,
+                // Auto-populate when enabling hotels using centralized service
+                ...(isEnabled
+                  ? UserProfileService.autoPopulateHotelData(userProfile, {
+                      ...hotelData,
+                      includeHotels: isEnabled,
+                    })
+                  : {}),
+              });
+            }}
+            className={`brand-card p-5 cursor-pointer transition-all duration-200 border-2 hover:shadow-lg ${
+              hotelData.includeHotels
+                ? "border-orange-500 dark:border-orange-600 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30"
+                : "border-gray-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-700"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`p-2.5 rounded-full transition-all ${
+                    hotelData.includeHotels
+                      ? "bg-gradient-to-br from-orange-500 to-amber-600 dark:from-orange-600 dark:to-amber-700"
+                      : "bg-gray-100 dark:bg-slate-800"
+                  }`}
+                >
+                  <FaHotel
+                    className={`text-lg ${
+                      hotelData.includeHotels
+                        ? "text-white"
+                        : "text-gray-400 dark:text-gray-500"
+                    }`}
+                  />
+                </div>
+                <div>
+                  <h3
+                    className={`font-semibold text-base ${
+                      hotelData.includeHotels
+                        ? "text-orange-900 dark:text-orange-300"
+                        : "text-gray-800 dark:text-gray-200"
+                    }`}
+                  >
+                    Include Hotel Search
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {hotelData.includeHotels
+                      ? "Hotel preferences enabled"
+                      : "Click to enable hotel search"}
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                  hotelData.includeHotels
+                    ? "border-orange-500 dark:border-orange-600 bg-orange-500 dark:bg-orange-600"
+                    : "border-gray-300 dark:border-slate-600"
+                }`}
+              >
+                {hotelData.includeHotels && (
+                  <FaCheck className="text-white text-xs" />
+                )}
+              </div>
             </div>
-          </label>
+          </div>
 
           {hotelData.includeHotels && (
             <div className="ml-7 pl-4 border-l-2 border-orange-200 dark:border-orange-800 space-y-4">

@@ -153,34 +153,75 @@ const FlightPreferences = ({
 
         {/* Include Flights Toggle */}
         <div className="space-y-4">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={flightData.includeFlights}
-              onChange={(e) => {
-                const isEnabled = e.target.checked;
+          <div
+            onClick={() => {
+              const isEnabled = !flightData.includeFlights;
 
-                onFlightDataChange({
-                  ...flightData,
-                  includeFlights: isEnabled,
-                  // Auto-populate when enabling flights using centralized service
-                  ...(isEnabled
-                    ? UserProfileService.autoPopulateFlightData(userProfile, {
-                        ...flightData,
-                        includeFlights: isEnabled,
-                      })
-                    : {}),
-                });
-              }}
-              className="w-4 h-4 text-blue-600 dark:text-blue-500 bg-gray-100 dark:bg-slate-800 border-gray-300 dark:border-slate-600 rounded focus:ring-blue-500 dark:focus:ring-blue-600"
-            />
-            <div className="flex items-center gap-2">
-              <FaPlane className="text-blue-600 dark:text-blue-500" />
-              <span className="font-medium text-gray-800 dark:text-gray-200">
-                Include flight search and recommendations
-              </span>
+              onFlightDataChange({
+                ...flightData,
+                includeFlights: isEnabled,
+                // Auto-populate when enabling flights using centralized service
+                ...(isEnabled
+                  ? UserProfileService.autoPopulateFlightData(userProfile, {
+                      ...flightData,
+                      includeFlights: isEnabled,
+                    })
+                  : {}),
+              });
+            }}
+            className={`brand-card p-5 cursor-pointer transition-all duration-200 border-2 hover:shadow-lg ${
+              flightData.includeFlights
+                ? "border-blue-500 dark:border-blue-600 bg-gradient-to-r from-blue-50 to-sky-50 dark:from-blue-950/30 dark:to-sky-950/30"
+                : "border-gray-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`p-2.5 rounded-full transition-all ${
+                    flightData.includeFlights
+                      ? "brand-gradient"
+                      : "bg-gray-100 dark:bg-slate-800"
+                  }`}
+                >
+                  <FaPlane
+                    className={`text-lg ${
+                      flightData.includeFlights
+                        ? "text-white"
+                        : "text-gray-400 dark:text-gray-500"
+                    }`}
+                  />
+                </div>
+                <div>
+                  <h3
+                    className={`font-semibold text-base ${
+                      flightData.includeFlights
+                        ? "brand-gradient-text"
+                        : "text-gray-800 dark:text-gray-200"
+                    }`}
+                  >
+                    Include Flight Search
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {flightData.includeFlights
+                      ? "Flight preferences enabled"
+                      : "Click to enable flight search"}
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                  flightData.includeFlights
+                    ? "border-blue-500 dark:border-blue-600 bg-blue-500 dark:bg-blue-600"
+                    : "border-gray-300 dark:border-slate-600"
+                }`}
+              >
+                {flightData.includeFlights && (
+                  <FaCheck className="text-white text-xs" />
+                )}
+              </div>
             </div>
-          </label>
+          </div>
 
           {flightData.includeFlights && (
             <div className="ml-7 pl-4 border-l-2 border-blue-200 dark:border-blue-800 space-y-4">

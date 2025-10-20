@@ -114,9 +114,8 @@ function SpecificRequests({
           Which specific places do you want to visit?
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          {" "}
           Tell us your must-visit spots, activities, or preferences to
-          personalize your itinerary.{" "}
+          personalize your itinerary.
         </p>
       </div>
 
@@ -131,7 +130,7 @@ function SpecificRequests({
               </div>
               <div className="flex-1">
                 <p className="text-gray-700 dark:text-gray-300 text-sm">
-                  📍 List specific places in{" "}
+                  List specific places in{" "}
                   <span className="font-semibold">{formData.location}</span> you
                   want to visit
                 </p>

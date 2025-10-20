@@ -713,7 +713,6 @@ function FlightCard({ flight, onBook, trip, formatDuration }) {
 
             <Button
               onClick={onBook}
-              className="brand-button cursor-pointer"
               className="brand-button cursor-pointer group-hover:scale-105 transition-all duration-200 w-full sm:w-auto lg:w-auto px-6 py-3 sm:px-4 sm:py-2 text-base sm:text-sm font-semibold"
             >
               <span className="flex items-center justify-center gap-2">

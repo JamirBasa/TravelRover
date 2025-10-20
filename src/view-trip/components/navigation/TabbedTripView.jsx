@@ -183,14 +183,14 @@ function TabbedTripView({ trip, onTripUpdate }) {
                   className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all duration-300 whitespace-nowrap cursor-pointer ${
                     activeTab === tab.id
                       ? "border-sky-500 dark:border-sky-400 text-sky-700 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/50"
-                      : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-800"
+                      : "border-transparent text-gray-600 dark:text-gray-400 hover:text-sky-600 dark:hover:text-sky-400 hover:border-sky-300 dark:hover:border-sky-700 hover:bg-sky-50/30 dark:hover:bg-sky-950/20"
                   }`}
                 >
                   <span
                     className={`transition-colors duration-300 ${
                       activeTab === tab.id
                         ? "text-sky-600 dark:text-sky-400"
-                        : "text-gray-500 dark:text-gray-500"
+                        : "text-gray-500 dark:text-gray-500 group-hover:text-sky-500"
                     }`}
                   >
                     {tab.icon}

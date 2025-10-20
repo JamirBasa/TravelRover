@@ -13,14 +13,46 @@ export const ThemeProvider = ({ children }) => {
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
+  // Prevent transitions on initial page load
+  useEffect(() => {
+    // Add preload class to prevent transitions during initial render
+    document.documentElement.classList.add("preload");
+
+    // Remove preload class after a brief delay to enable transitions
+    const timer = setTimeout(() => {
+      document.documentElement.classList.remove("preload");
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     // Update document class and localStorage when theme changes
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
+    const htmlElement = document.documentElement;
+
+    // Use View Transitions API if available for ultra-smooth transitions
+    if (
+      document.startViewTransition &&
+      !htmlElement.classList.contains("preload")
+    ) {
+      document.startViewTransition(() => {
+        if (isDarkMode) {
+          htmlElement.classList.add("dark");
+          localStorage.setItem("theme", "dark");
+        } else {
+          htmlElement.classList.remove("dark");
+          localStorage.setItem("theme", "light");
+        }
+      });
     } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
+      // Fallback for browsers without View Transitions API
+      if (isDarkMode) {
+        htmlElement.classList.add("dark");
+        localStorage.setItem("theme", "dark");
+      } else {
+        htmlElement.classList.remove("dark");
+        localStorage.setItem("theme", "light");
+      }
     }
   }, [isDarkMode]);
 
