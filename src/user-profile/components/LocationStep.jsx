@@ -120,7 +120,7 @@ const LocationStep = ({ profileData, handleInputChange }) => {
                     : "Enter your city"
                 }
                 disabled={!profileData.address.regionCode}
-                className="w-full text-sm py-2.5 px-3 rounded-lg border-2 border-gray-200 focus:border-sky-500 focus:outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-full text-sm py-2.5 px-3 rounded-lg border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100 focus:border-sky-500 dark:focus:border-sky-400 focus:outline-none transition-all disabled:bg-gray-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
               />
             )}
           </div>

@@ -21,8 +21,8 @@ function PlacesToVisitSection({ placesToVisit }) {
       >
         {/* Background decoration */}
         <div className={PATTERNS.sectionHeader.decoration}>
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white dark:bg-white/10 opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white dark:bg-white/10 opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
         </div>
 
         <div className={PATTERNS.sectionHeader.content}>
@@ -92,16 +92,18 @@ function PlacesToVisitSection({ placesToVisit }) {
         </div>
 
         {/* Compact helpful tip */}
-        <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg border border-emerald-100">
+        <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 rounded-lg border border-emerald-100 dark:border-emerald-800">
           <div className="flex items-start gap-3">
-            <div className="w-12 h-12 bg-emerald-100 rounded flex items-center justify-center flex-shrink-0">
-              <span className="text-emerald-600 text-xl">💡</span>
+            <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/50 rounded flex items-center justify-center flex-shrink-0">
+              <span className="text-emerald-600 dark:text-emerald-400 text-xl">
+                💡
+              </span>
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="font-bold text-emerald-800 mb-2 text-base">
+              <h4 className="font-bold text-emerald-800 dark:text-emerald-300 mb-2 text-base">
                 Pro Travel Tip
               </h4>
-              <p className="text-emerald-700 text-base font-medium break-words">
+              <p className="text-emerald-700 dark:text-emerald-400 text-base font-medium break-words">
                 Click on any attraction to view its exact location on Google
                 Maps. Consider visiting nearby places together to save time and
                 transportation costs!

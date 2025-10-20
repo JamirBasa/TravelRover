@@ -205,7 +205,7 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
                   className={`flex items-center p-2.5 rounded-lg border-2 cursor-pointer transition-all ${
                     isSelected
                       ? "border-sky-500 brand-gradient text-white shadow-md"
-                      : "border-gray-200 bg-white hover:border-sky-400 hover:shadow-sm"
+                      : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-sky-400 dark:hover:border-sky-500 hover:shadow-sm"
                   }`}
                   onClick={() =>
                     handleInputChange("travelExperience", exp.value)

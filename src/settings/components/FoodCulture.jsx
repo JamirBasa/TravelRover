@@ -78,8 +78,8 @@ const FoodCulture = ({ formData, handleMultiSelect, isEditing = false }) => {
                   isSelected
                     ? "border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
                     : isEditing
-                    ? "border-blue-200 bg-white text-gray-900"
-                    : "border-gray-300 bg-gray-100 text-gray-500"
+                    ? "border-blue-200 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
+                    : "border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400"
                 }`}
               >
                 <div className="flex-1">
@@ -121,11 +121,11 @@ const FoodCulture = ({ formData, handleMultiSelect, isEditing = false }) => {
                     ? "cursor-pointer transform hover:scale-105 hover:shadow-md hover:border-amber-300 hover:bg-amber-50"
                     : "cursor-not-allowed"
                 } ${
-                   isSelected
+                  isSelected
                     ? "border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
                     : isEditing
-                    ? "border-blue-200 bg-white text-gray-900"
-                    : "border-gray-300 bg-gray-100 text-gray-500"
+                    ? "border-blue-200 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
+                    : "border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400"
                 }`}
               >
                 <div className="flex-1">
@@ -164,11 +164,11 @@ const FoodCulture = ({ formData, handleMultiSelect, isEditing = false }) => {
                     ? "cursor-pointer transform hover:scale-105 hover:shadow-md hover:border-red-300 hover:bg-red-50"
                     : "cursor-not-allowed"
                 } ${
-                    isSelected
+                  isSelected
                     ? "border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
                     : isEditing
-                    ? "border-blue-200 bg-white text-gray-900"
-                    : "border-gray-300 bg-gray-100 text-gray-500"
+                    ? "border-blue-200 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
+                    : "border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400"
                 }`}
               >
                 <span className="font-medium">{lang.label}</span>

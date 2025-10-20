@@ -150,10 +150,6 @@ function TravelTimeConnector({ travelInfo }) {
       >
         <ArrowDown className="h-3.5 w-3.5 text-sky-600 dark:text-sky-500" />
         <div className="flex items-center gap-3 text-xs text-gray-700 dark:text-gray-300">
-          <div className="flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5 text-sky-600 dark:text-sky-500" />
-            <span className="font-medium">{travelInfo.time}</span>
-          </div>
           {travelInfo.distance && (
             <div className="flex items-center gap-1.5">
               <Navigation className="h-3.5 w-3.5 text-green-600 dark:text-green-500" />

@@ -522,22 +522,26 @@ function FlightBooking({ trip }) {
 
         {/* Price Alerts & Partner Links - Outside main container */}
         {trip?.realFlightData?.price_alerts && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <h4 className="font-medium text-green-900 mb-2 flex items-center gap-2">
+          <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <h4 className="font-medium text-green-900 dark:text-green-400 mb-2 flex items-center gap-2">
               <TrendingDown className="h-4 w-4" />
               Price Insights
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
-                <span className="text-green-700 font-medium">Lowest: </span>
-                <span className="text-green-800">
+                <span className="text-green-700 dark:text-green-400 font-medium">
+                  Lowest:{" "}
+                </span>
+                <span className="text-green-800 dark:text-green-300">
                   ₱
                   {trip.realFlightData.price_alerts.lowest_price?.toLocaleString()}
                 </span>
               </div>
               <div>
-                <span className="text-green-700 font-medium">Average: </span>
-                <span className="text-green-800">
+                <span className="text-green-700 dark:text-green-400 font-medium">
+                  Average:{" "}
+                </span>
+                <span className="text-green-800 dark:text-green-300">
                   ₱
                   {Math.round(
                     trip.realFlightData.price_alerts.average_price
@@ -545,13 +549,15 @@ function FlightBooking({ trip }) {
                 </span>
               </div>
               <div>
-                <span className="text-green-700 font-medium">Trend: </span>
-                <span className="text-green-800 capitalize">
+                <span className="text-green-700 dark:text-green-400 font-medium">
+                  Trend:{" "}
+                </span>
+                <span className="text-green-800 dark:text-green-300 capitalize">
                   {trip.realFlightData.price_alerts.price_trend}
                 </span>
               </div>
             </div>
-            <p className="text-green-700 text-xs mt-2 font-medium">
+            <p className="text-green-700 dark:text-green-400 text-xs mt-2 font-medium">
               💡 {trip.realFlightData.price_alerts.best_booking_time}
             </p>
           </div>
@@ -638,7 +644,7 @@ function FlightCard({ flight, onBook, trip, formatDuration }) {
                 {flight.name}
               </div>
               {flight.is_best && (
-                <Badge className="bg-green-100 text-green-800 text-xs">
+                <Badge className="bg-green-100 dark:bg-green-950/30 text-green-800 dark:text-green-400 text-xs">
                   <Star className="h-3 w-3 mr-1" />
                   Best Value
                 </Badge>

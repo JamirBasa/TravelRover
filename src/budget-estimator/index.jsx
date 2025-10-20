@@ -148,7 +148,7 @@ const BudgetEstimator = () => {
                   placeholder="e.g., Boracay, Palawan, Cebu, Siargao..."
                   value={estimatorData.destination}
                   onChange={(e) => handleChange("destination", e.target.value)}
-                  className="w-full text-base py-6 px-4 rounded-xl border-2 border-gray-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+                  className="w-full text-base py-6 px-4 rounded-xl border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100 focus:border-sky-500 dark:focus:border-sky-400 focus:ring-4 focus:ring-sky-100 dark:focus:ring-sky-900/30"
                 />
                 {destinationInfo && (
                   <div className="mt-3 p-3 bg-sky-50 rounded-lg border border-sky-200">
@@ -185,7 +185,7 @@ const BudgetEstimator = () => {
                     onChange={(e) =>
                       handleChange("duration", parseInt(e.target.value) || 1)
                     }
-                    className="w-24 text-xl text-center font-bold py-4 rounded-xl border-2 border-gray-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+                    className="w-24 text-xl text-center font-bold py-4 rounded-xl border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100 focus:border-sky-500 dark:focus:border-sky-400 focus:ring-4 focus:ring-sky-100 dark:focus:ring-sky-900/30"
                   />
                   <div className="flex-1">
                     <input
@@ -223,8 +223,8 @@ const BudgetEstimator = () => {
                       onClick={() => handleChange("travelers", option.title)}
                       className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                         estimatorData.travelers === option.title
-                          ? "border-sky-500 bg-gradient-to-r from-sky-50 to-blue-50 shadow-sm"
-                          : "border-gray-200 hover:border-sky-300"
+                          ? "border-sky-500 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 shadow-sm"
+                          : "border-gray-200 dark:border-slate-600 hover:border-sky-300 dark:hover:border-sky-500"
                       }`}
                     >
                       <div className="text-2xl mb-2">{option.icon}</div>
@@ -261,8 +261,8 @@ const BudgetEstimator = () => {
                     }
                     className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                       estimatorData.includeFlights
-                        ? "border-sky-500 bg-gradient-to-r from-sky-50 to-blue-50"
-                        : "border-gray-200 hover:border-sky-300"
+                        ? "border-sky-500 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30"
+                        : "border-gray-200 dark:border-slate-600 hover:border-sky-300 dark:hover:border-sky-500"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -288,7 +288,7 @@ const BudgetEstimator = () => {
                   {/* Departure City - Only show if flights included */}
                   {estimatorData.includeFlights && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Departure City
                       </label>
                       <Input
@@ -298,17 +298,17 @@ const BudgetEstimator = () => {
                         onChange={(e) =>
                           handleChange("departureCity", e.target.value)
                         }
-                        className="w-full text-base py-4 px-4 rounded-xl border-2 border-gray-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+                        className="w-full text-base py-4 px-4 rounded-xl border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100 focus:border-sky-500 dark:focus:border-sky-400 focus:ring-4 focus:ring-sky-100 dark:focus:ring-sky-900/30"
                       />
                     </div>
                   )}
 
-                  {/* Travel Date - Optional for timing-based pricing */}
+                  {/* Travel Date - Only show if flights included */}
                   {estimatorData.includeFlights && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Travel Date (Optional)
-                        <span className="text-xs text-gray-500 ml-2">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
                           for accurate pricing
                         </span>
                       </label>
@@ -319,7 +319,7 @@ const BudgetEstimator = () => {
                           handleChange("startDate", e.target.value)
                         }
                         min={new Date().toISOString().split("T")[0]}
-                        className="w-full text-base py-4 px-4 rounded-xl border-2 border-gray-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+                        className="w-full text-base py-4 px-4 rounded-xl border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100 focus:border-sky-500 dark:focus:border-sky-400 focus:ring-4 focus:ring-sky-100 dark:focus:ring-sky-900/30"
                       />
                     </div>
                   )}
