@@ -117,9 +117,96 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ============================================
+   OPTIMIZED DARK MODE TRANSITIONS
+   ============================================ */
+
+/* Strategy: Ultra-fast transitions for immediate visual feedback */
+
+/* Root element - Instant background change */
+html {
+  background-color: hsl(var(--background));
+  transition: background-color 150ms ease-out;
+}
+
+/* Body - Quick color transition */
+body {
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+
+/* Global color transitions - Faster for text */
+*,
+*::before,
+*::after {
+  /* Fast text color changes (120ms = nearly instant) */
+  transition: 
+    color 120ms ease-out,
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    fill 120ms ease-out,
+    stroke 120ms ease-out;
+}
+
+/* Optimize specific elements for instant feel */
+h1, h2, h3, h4, h5, h6, p, span, a, label {
+  transition: color 100ms ease-out, background-color 150ms ease-out;
+}
+
+/* Interactive elements - Preserve hover/active states */
+button,
+a,
+input,
+textarea,
+select,
+[role="button"],
+[tabindex] {
+  transition: 
+    color 100ms ease-out,
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 200ms ease-out,
+    box-shadow 200ms ease-out,
+    scale 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Animated elements - Preserve complex animations */
+*[class*="animate-"],
+*[class*="transition-transform"],
+*[class*="transition-opacity"],
+*[class*="hover:scale"],
+*[class*="group-hover"],
+*[class*="hover:shadow"] {
+  transition: 
+    color 100ms ease-out,
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    transform 250ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 250ms ease-out,
+    box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1),
+    scale 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Cards and containers - Smooth but not slow */
+[class*="card"],
+[class*="brand-card"],
+.bg-white,
+.dark\:bg-slate-900 {
+  transition: 
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    box-shadow 200ms ease-out;
+}
+
+/* Disable transitions during page load */
+.preload * {
+  transition: none !important;
 }
 
 /* Hero Animation Styles */
@@ -202,7 +289,7 @@
   --glass-border: rgba(255, 255, 255, 0.3);
 }
 
-/* Dark Mode Variables */
+/* Dark Mode Variables - No transition on variables themselves */
 .dark {
   --brand-sky: #38bdf8;
   --brand-blue: #0ea5e9;

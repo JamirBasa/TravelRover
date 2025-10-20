@@ -1829,12 +1829,12 @@ Generate general accommodation recommendations without specific pricing or booki
           <div className="mb-12">{renderStepContent()}</div>
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+          <div className="flex justify-between items-center pt-6 border-t border-gray-200 dark:border-slate-700">
             <Button
               variant="outline"
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="flex items-center gap-2 px-8 py-3"
+              className="flex items-center gap-2 px-8 py-3 cursor-pointer border-sky-200 dark:border-sky-700 text-gray-700 dark:text-gray-200 hover:bg-sky-50 dark:hover:bg-sky-950/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FaArrowLeft />
               Previous
@@ -1844,7 +1844,7 @@ Generate general accommodation recommendations without specific pricing or booki
               {currentStep < STEPS.length ? (
                 <Button
                   onClick={nextStep}
-                  className="flex items-center gap-2 bg-black hover:bg-gray-800 px-8 py-3"
+                  className="brand-button cursor-pointer flex items-center gap-2 px-8 py-3"
                 >
                   Next
                   <FaArrowRight />

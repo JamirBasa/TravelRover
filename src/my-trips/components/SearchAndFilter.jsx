@@ -8,14 +8,15 @@ import SortPopover from "./SortPopover";
 function SearchAndFilter({
   searchTerm,
   setSearchTerm,
-  filters,
+  filters = {},
   setFilters,
   clearFilters,
   userTrips,
   sortBy,
   setSortBy,
 }) {
-  const hasActiveFilters = searchTerm || Object.values(filters).some((f) => f);
+  const hasActiveFilters =
+    searchTerm || (filters && Object.values(filters).some((f) => f));
 
   const formatFilterValue = (key, value) => {
     if (key === "duration") {
@@ -94,29 +95,30 @@ function SearchAndFilter({
           )}
 
           {/* Filter Badges */}
-          {Object.entries(filters).map(
-            ([key, value]) =>
-              value && (
-                <div
-                  key={key}
-                  className="bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-400 px-3 py-1 rounded-full text-sm flex items-center gap-1"
-                >
-                  {key === "budget" && <DollarSign className="h-3 w-3" />}
-                  {key === "duration" && <Calendar className="h-3 w-3" />}
-                  {key === "travelers" && <Users className="h-3 w-3" />}
-                  <span className="font-medium capitalize">{key}:</span>
-                  <span>{formatFilterValue(key, value)}</span>
-                  <button
-                    onClick={() =>
-                      setFilters((prev) => ({ ...prev, [key]: "" }))
-                    }
-                    className="ml-1 hover:bg-blue-200 dark:hover:bg-blue-900/50 rounded-full p-0.5 transition-colors"
+          {filters &&
+            Object.entries(filters).map(
+              ([key, value]) =>
+                value && (
+                  <div
+                    key={key}
+                    className="bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-400 px-3 py-1 rounded-full text-sm flex items-center gap-1"
                   >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )
-          )}
+                    {key === "budget" && <DollarSign className="h-3 w-3" />}
+                    {key === "duration" && <Calendar className="h-3 w-3" />}
+                    {key === "travelers" && <Users className="h-3 w-3" />}
+                    <span className="font-medium capitalize">{key}:</span>
+                    <span>{formatFilterValue(key, value)}</span>
+                    <button
+                      onClick={() =>
+                        setFilters((prev) => ({ ...prev, [key]: "" }))
+                      }
+                      className="ml-1 hover:bg-blue-200 dark:hover:bg-blue-900/50 rounded-full p-0.5 transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )
+            )}
 
           {/* Clear All Button */}
           <Button
