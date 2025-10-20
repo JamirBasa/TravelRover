@@ -25,7 +25,7 @@ function HotelCardItem({ hotel, onBookHotel }) {
 
       try {
         // Random delay to prevent rate limiting
-        await new Promise((resolve) => 
+        await new Promise((resolve) =>
           setTimeout(resolve, Math.random() * 1000)
         );
 
@@ -64,7 +64,7 @@ function HotelCardItem({ hotel, onBookHotel }) {
           // ✅ SECURE: Use fetchPlacePhoto with header authentication
           try {
             const blobUrl = await fetchPlacePhoto(photoReference);
-            
+
             if (!isMounted) {
               // Component unmounted, cleanup immediately
               URL.revokeObjectURL(blobUrl);
@@ -75,7 +75,10 @@ function HotelCardItem({ hotel, onBookHotel }) {
             setPhotoUrl(blobUrl);
             console.log("✅ Secure hotel photo loaded");
           } catch (photoError) {
-            console.warn("🏨 Failed to fetch secure photo:", photoError.message);
+            console.warn(
+              "🏨 Failed to fetch secure photo:",
+              photoError.message
+            );
             setPhotoUrl("");
           }
         } else {
@@ -110,7 +113,7 @@ function HotelCardItem({ hotel, onBookHotel }) {
     // ✅ Cleanup: Revoke blob URL to prevent memory leak
     return () => {
       isMounted = false;
-      if (currentPhotoUrl && currentPhotoUrl.startsWith('blob:')) {
+      if (currentPhotoUrl && currentPhotoUrl.startsWith("blob:")) {
         URL.revokeObjectURL(currentPhotoUrl);
         console.log("🗑️ Cleaned up blob URL for:", hotel?.name);
       }
@@ -133,17 +136,17 @@ function HotelCardItem({ hotel, onBookHotel }) {
 
   return (
     <Link to={generateMapsURL()} target="_blank" className="block group">
-      <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 hover:shadow-md transition-all duration-300 group-hover:border-purple-200 group-hover:shadow-purple-100/50 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-50/0 to-purple-100/0 group-hover:from-purple-50/30 group-hover:to-purple-100/20 transition-all duration-300 pointer-events-none"></div>
+      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg p-4 sm:p-5 hover:shadow-md dark:hover:shadow-sky-500/10 transition-all duration-300 group-hover:border-sky-300 dark:group-hover:border-sky-700 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-50/0 to-blue-50/0 dark:from-sky-950/0 dark:to-blue-950/0 group-hover:from-sky-50/30 group-hover:to-blue-50/20 dark:group-hover:from-sky-950/30 dark:group-hover:to-blue-950/20 transition-all duration-300 pointer-events-none"></div>
 
         <div className="relative">
           {/* Hotel Image */}
           <div className="relative mb-4">
             {isLoading ? (
-              <div className="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-150 rounded-lg flex items-center justify-center">
+              <div className="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-150 dark:from-slate-800 dark:to-slate-750 rounded-lg flex items-center justify-center">
                 <div className="text-center">
-                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-purple-300 border-t-purple-600"></div>
-                  <p className="mt-2 text-sm text-gray-500 font-medium">
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-sky-300 dark:border-sky-700 border-t-sky-600 dark:border-t-sky-400"></div>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 font-medium">
                     Loading hotel...
                   </p>
                 </div>
@@ -168,12 +171,12 @@ function HotelCardItem({ hotel, onBookHotel }) {
             )}
 
             {error && (
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200">
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-750 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-slate-600">
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <div className="w-12 h-12 bg-gray-200 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-2">
                     <span className="text-2xl">🏨</span>
                   </div>
-                  <p className="text-sm text-gray-500 font-medium">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
                     Photo unavailable
                   </p>
                 </div>
@@ -182,10 +185,10 @@ function HotelCardItem({ hotel, onBookHotel }) {
 
             {/* Rating Badge */}
             {hotel?.rating && (
-              <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-full px-2 py-1 shadow-sm">
+              <div className="absolute top-3 right-3 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-full px-2 py-1 shadow-sm">
                 <div className="flex items-center gap-1">
                   <span className="text-yellow-500 text-sm">⭐</span>
-                  <span className="text-sm font-semibold text-gray-800">
+                  <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
                     {hotel.rating}
                   </span>
                 </div>
@@ -196,23 +199,27 @@ function HotelCardItem({ hotel, onBookHotel }) {
           {/* Hotel Info */}
           <div className="space-y-3">
             <div>
-              <h4 className="font-semibold text-gray-900 text-base line-clamp-2 group-hover:text-purple-600 transition-colors duration-200 leading-tight">
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-base line-clamp-2 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors duration-200 leading-tight">
                 {hotel?.name || hotel?.hotelName}
               </h4>
 
               {hotel?.address && (
-                <p className="text-sm text-gray-600 line-clamp-2 mt-1 flex items-start gap-1">
-                  <span className="text-gray-400 flex-shrink-0 mt-0.5">📍</span>
+                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-1 flex items-start gap-1">
+                  <span className="text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5">
+                    📍
+                  </span>
                   <span>{hotel.address}</span>
                 </p>
               )}
             </div>
 
             {(hotel?.amenities || hotel?.description) && (
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
                 {hotel?.amenities && (
                   <p className="line-clamp-2">
-                    <span className="text-gray-500">Amenities:</span>{" "}
+                    <span className="text-gray-500 dark:text-gray-500">
+                      Amenities:
+                    </span>{" "}
                     {Array.isArray(hotel.amenities)
                       ? hotel.amenities.join(", ")
                       : hotel.amenities}
@@ -224,15 +231,17 @@ function HotelCardItem({ hotel, onBookHotel }) {
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+            <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
                 {(hotel?.pricePerNight || hotel?.priceRange) && (
                   <div className="flex items-center gap-1">
-                    <span className="text-green-600 font-semibold text-base">
+                    <span className="text-green-600 dark:text-green-500 font-semibold text-base">
                       {hotel?.pricePerNight || hotel?.priceRange}
                     </span>
                     {hotel?.pricePerNight && (
-                      <span className="text-gray-500 text-sm">/night</span>
+                      <span className="text-gray-500 dark:text-gray-400 text-sm">
+                        /night
+                      </span>
                     )}
                   </div>
                 )}
@@ -246,13 +255,13 @@ function HotelCardItem({ hotel, onBookHotel }) {
                       e.stopPropagation();
                       onBookHotel(hotel);
                     }}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1"
+                    className="bg-sky-600 dark:bg-sky-500 hover:bg-sky-700 dark:hover:bg-sky-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 cursor-pointer"
                   >
                     <span>Book Now</span>
                     <span className="text-xs">🔗</span>
                   </button>
                 )}
-                <div className="flex items-center gap-1 text-purple-600 font-medium text-sm group-hover:text-purple-700 transition-colors duration-200">
+                <div className="flex items-center gap-1 text-sky-600 dark:text-sky-400 font-medium text-sm group-hover:text-sky-700 dark:group-hover:text-sky-300 transition-colors duration-200">
                   <span>View on Map</span>
                   <span className="transform group-hover:translate-x-0.5 transition-transform duration-200">
                     →

@@ -294,23 +294,23 @@ function ActivityEditor({
         <div className="space-y-3 mb-4" role="alert" aria-live="assertive">
           {/* Overall schedule summary */}
           {validationResult.totalTime > 0 && (
-            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+            <div className="p-4 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border border-sky-200 dark:border-sky-800 rounded-lg">
               <div className="flex items-start gap-3">
                 <Clock
-                  className="h-5 w-5 text-blue-600 mt-0.5"
+                  className="h-5 w-5 text-sky-600 dark:text-sky-500 mt-0.5"
                   aria-hidden="true"
                 />
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-blue-900 mb-1">
+                  <p className="text-sm font-semibold text-sky-900 dark:text-sky-300 mb-1">
                     Schedule Overview
                   </p>
-                  <p className="text-sm text-blue-700">
+                  <p className="text-sm text-sky-700 dark:text-sky-400">
                     Total time needed: ~
                     {Math.round(validationResult.totalTime / 60)} hours (
                     {validationResult.utilizationPercent}% of day)
                   </p>
                   {!validationResult.isValid && (
-                    <p className="text-sm text-red-600 font-medium mt-2">
+                    <p className="text-sm text-red-600 dark:text-red-500 font-medium mt-2">
                       ⚠️ This schedule may not be realistic
                     </p>
                   )}

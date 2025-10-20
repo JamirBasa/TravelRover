@@ -202,6 +202,17 @@
   --glass-border: rgba(255, 255, 255, 0.3);
 }
 
+/* Dark Mode Variables */
+.dark {
+  --brand-sky: #38bdf8;
+  --brand-blue: #0ea5e9;
+  --brand-sky-hover: #7dd3fc;
+  --brand-blue-hover: #38bdf8;
+  --brand-light: #0ea5e9;
+  --glass-bg: rgba(15, 23, 42, 0.8);
+  --glass-border: rgba(148, 163, 184, 0.2);
+}
+
 /* Brand Gradient Classes */
 .brand-gradient {
   background: linear-gradient(
@@ -235,6 +246,7 @@
   box-shadow: 0 10px 15px -3px rgb(14 165 233 / 0.3),
     0 4px 6px -4px rgb(14 165 233 / 0.2);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
 }
 
 .brand-button:hover {
@@ -248,6 +260,11 @@
   transform: scale(1.05);
 }
 
+.brand-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .brand-card {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(16px);
@@ -255,10 +272,21 @@
   border-radius: 12px;
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
   transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.dark .brand-card {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgb(51 65 85);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
 }
 
 .brand-card:hover {
   box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+}
+
+.dark .brand-card:hover {
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.4);
 }
 
 .glass-morphism {
@@ -372,4 +400,31 @@
     flex-direction: column;
     gap: 4px;
   }
+}
+
+/* Sonner Toast Custom Overrides */
+/* Icon on left side with optimal spacing - gap controlled via toastOptions.style.gap */
+[data-sonner-toast] [data-icon] {
+  margin-right: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+/* Ensure text content has proper spacing and alignment */
+[data-sonner-toast] [data-content] {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+/* Prevent text overflow */
+[data-sonner-toast] [data-title],
+[data-sonner-toast] [data-description] {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Dark Mode Logo Styling */
+.dark img[src="/logo.svg"] {
+  filter: brightness(0) invert(1);
+  transition: filter 0.3s ease;
 }

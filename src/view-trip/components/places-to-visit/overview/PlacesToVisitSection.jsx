@@ -66,7 +66,7 @@ function PlacesToVisitSection({ placesToVisit }) {
         {/* Category breakdown if available */}
         <div className="mb-4 flex flex-wrap gap-2">
           {placesToVisit.some((p) => p.category) && (
-            <div className="flex items-center gap-2 text-base font-medium text-gray-600">
+            <div className="flex items-center gap-2 text-base font-medium text-gray-600 dark:text-gray-400">
               <span>Categories:</span>
               {[
                 ...new Set(
@@ -76,7 +76,7 @@ function PlacesToVisitSection({ placesToVisit }) {
                 <Badge
                   key={category}
                   variant="secondary"
-                  className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-3 py-1.5 text-sm font-semibold"
+                  className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 px-3 py-1.5 text-sm font-semibold"
                 >
                   {category}
                 </Badge>

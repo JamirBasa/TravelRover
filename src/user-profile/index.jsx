@@ -402,7 +402,7 @@ const UserProfile = () => {
       {/* Right Side - Form */}
       <div className="w-full lg:w-1/2 flex flex-col">
         {/* Header for mobile */}
-        <div className="lg:hidden bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 text-center">
+        <div className="lg:hidden brand-gradient text-white p-6 text-center">
           <h1 className="text-2xl font-bold mb-2">
             Complete Your Travel Profile
           </h1>

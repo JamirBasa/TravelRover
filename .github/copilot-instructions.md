@@ -54,12 +54,19 @@ text
 - Info Cards: `brand-card p-5 shadow-lg border-sky-200`
 - Selection States: `border-sky-500 bg-gradient-to-r from-sky-50 to-blue-50`
 - Icons: `brand-gradient p-2.5 rounded-full` with white icons
+- Primary Buttons: `brand-button px-6 py-2` (cursor-pointer included)
+- Ghost Buttons: `variant="ghost" cursor-pointer` (explicit cursor needed)
+- Interactive Cards: `brand-card cursor-pointer` (or conditional cursor)
 
 **Rules**:
 
 - Always use `brand-gradient` instead of custom purple/pink gradients
 - Selection states use sky-500 borders, not blue-500
 - All text gradients use `brand-gradient-text` class
+- All actionable buttons must have visible pointer cursor
+- `brand-button` class includes cursor-pointer automatically
+- Ghost/variant buttons need explicit `cursor-pointer` class
+- Disabled buttons automatically show `cursor-not-allowed`
 
 ## File Naming Conventions
 

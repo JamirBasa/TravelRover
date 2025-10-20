@@ -60,13 +60,13 @@ function DestinationsSection() {
   return (
     <section className="pt-16 pb-20 px-6 md:px-20 max-w-6xl mx-auto relative">
       {/* Subtle background decoration */}
-      <div className="absolute -top-16 right-0 w-32 h-32 bg-gradient-to-br from-sky-100/30 to-blue-100/30 rounded-full blur-2xl -z-20"></div>
+      <div className="absolute -top-16 right-0 w-32 h-32 bg-gradient-to-br from-sky-100/30 to-blue-100/30 dark:from-sky-500/20 dark:to-blue-500/20 rounded-full blur-2xl -z-20"></div>
 
       <div className="text-center mb-12">
         <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           Popular Destinations
         </h2>
-        <p className="text-gray-600 max-w-md mx-auto">
+        <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
           Explore these handpicked destinations loved by travelers
         </p>
         <div className="w-16 h-1 brand-gradient rounded-full mx-auto mt-4"></div>
@@ -79,7 +79,7 @@ function DestinationsSection() {
             className="group cursor-pointer transform transition-all duration-300 hover:-translate-y-1"
             style={{ animationDelay: `${index * 150}ms` }}
           >
-            <div className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-2xl overflow-hidden hover:shadow-2xl hover:border-sky-300/50 transition-all duration-300 relative h-full">
+            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-2xl overflow-hidden hover:shadow-2xl dark:hover:shadow-sky-500/20 hover:border-sky-300/50 dark:hover:border-sky-500/50 transition-all duration-300 relative h-full">
               {/* Image with overlay gradient */}
               <div className="relative overflow-hidden">
                 <img
@@ -100,14 +100,16 @@ function DestinationsSection() {
               </div>
 
               <div className="p-5">
-                <h3 className="font-semibold text-lg text-gray-900 group-hover:brand-gradient-text transition-all duration-300">
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 group-hover:brand-gradient-text transition-all duration-300">
                   {dest.name}
                 </h3>
-                <p className="text-gray-500 text-sm mt-1 mb-4">{dest.desc}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 mb-4">
+                  {dest.desc}
+                </p>
 
                 <Button
                   variant="outline"
-                  className="w-full border-sky-200 text-sky-700 hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 hover:border-sky-400 transition-all duration-300 group-hover:shadow-lg"
+                  className="w-full border-sky-200 dark:border-sky-700 text-sky-700 dark:text-sky-400 hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 dark:hover:from-sky-900/30 dark:hover:to-blue-900/30 hover:border-sky-400 dark:hover:border-sky-500 transition-all duration-300 group-hover:shadow-lg cursor-pointer"
                 >
                   <span>Explore Destination</span>
                   <div className="ml-2 transform transition-transform duration-300 group-hover:translate-x-1">
