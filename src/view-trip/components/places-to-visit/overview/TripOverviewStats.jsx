@@ -62,9 +62,7 @@ function TripOverviewStats({
           className={`grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8`}
         >
           <div className="text-center">
-            <div
-              className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3"
-            >
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3">
               <span className="text-3xl sm:text-4xl">📅</span>
             </div>
             <div className={`text-2xl sm:text-3xl font-bold text-white mb-2`}>
@@ -78,9 +76,7 @@ function TripOverviewStats({
           </div>
 
           <div className="text-center">
-            <div
-              className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3"
-            >
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3">
               <span className="text-3xl sm:text-4xl">🎯</span>
             </div>
             <div className={`text-2xl sm:text-3xl font-bold text-white mb-2`}>
@@ -94,9 +90,7 @@ function TripOverviewStats({
           </div>
 
           <div className="text-center">
-            <div
-              className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3"
-            >
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3">
               <span className="text-3xl sm:text-4xl">⚡</span>
             </div>
             <div className={`text-2xl sm:text-3xl font-bold text-white mb-2`}>
@@ -110,9 +104,7 @@ function TripOverviewStats({
           </div>
 
           <div className="text-center">
-            <div
-              className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3"
-            >
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3">
               <span className="text-3xl sm:text-4xl">⏱️</span>
             </div>
             <div className={`text-2xl sm:text-3xl font-bold text-white mb-2`}>
