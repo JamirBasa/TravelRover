@@ -1,11 +1,6 @@
 import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-
-function FilterPopover({ filters, setFilters, userTrips }) {
 import { Filter, Calendar, Users, DollarSign, Check } from "lucide-react";
 
 function FilterPopover({ filters, setFilters, clearFilters, userTrips }) {
