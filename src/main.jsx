@@ -14,6 +14,7 @@ import Home from "./home/home.jsx";
 import Admin from "./admin/Admin.jsx";
 import AdminLogin from "./admin/AdminLogin.jsx";
 import AdminLayout from "./admin/AdminLayout.jsx";
+import { ThemeProvider } from "./contexts/ThemeContext.jsx";
 
 const router = createBrowserRouter([
   {
@@ -22,11 +23,11 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <App />, // Landing page for unauthenticated users
+        element: <Home />, // Home page accessible to everyone (logged in or not)
       },
       {
         path: "home",
-        element: <Home />, // Authenticated user home page
+        element: <Home />, // Keep /home route for compatibility
       },
       {
         path: "user-profile",
@@ -71,7 +72,9 @@ const router = createBrowserRouter([
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_AUTH_CLIENT_ID}>
-      <RouterProvider router={router} />
+      <ThemeProvider>
+        <RouterProvider router={router} />
+      </ThemeProvider>
     </GoogleOAuthProvider>
   </StrictMode>
 );

@@ -197,8 +197,8 @@ export const TOAST_CONFIG = {
     unstyled: false,
     className: "group",
     style: {
-      padding: "16px 20px",
-      minHeight: "68px",
+      padding: "14px 18px 14px 20px", // More padding on left for icon breathing room
+      minHeight: "64px",
       fontSize: "15px",
       fontWeight: "500",
       borderRadius: "16px",
@@ -206,14 +206,17 @@ export const TOAST_CONFIG = {
       border: "1px solid rgba(255, 255, 255, 0.8)",
       backdropFilter: "blur(12px)",
       background: "rgba(255, 255, 255, 0.95)",
+      display: "flex",
+      alignItems: "center", // Center icon vertically
+      gap: "25px", // Optimal gap between icon and text for clear visual separation
     },
     classNames: {
       toast: "backdrop-blur-xl shadow-2xl border-opacity-80 animate-in slide-in-from-top-5 fade-in duration-300",
-      title: "text-[15px] font-semibold leading-tight text-gray-900",
-      description: "text-[13px] text-gray-600 mt-1.5 leading-relaxed",
+      title: "text-[15px] font-semibold leading-tight text-gray-900 break-words",
+      description: "text-[13px] text-gray-600 mt-1.5 leading-relaxed break-words",
       actionButton: "bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105",
       cancelButton: "bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2.5 rounded-xl transition-all duration-200",
-      closeButton: "hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-lg p-1.5 transition-all duration-200 hover:rotate-90",
+      closeButton: "hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-lg p-1.5 transition-all duration-200 hover:rotate-90 ml-auto flex-shrink-0",
       success: "bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-300 shadow-emerald-100/50",
       error: "bg-gradient-to-br from-red-50 to-rose-50 border-red-300 shadow-red-100/50",
       warning: "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300 shadow-amber-100/50",
@@ -226,27 +229,27 @@ export const TOAST_CONFIG = {
 // Toast Icons Configuration (JSX will be created in the component)
 export const TOAST_ICON_STYLES = {
   success: {
-    className: "w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-200 animate-in zoom-in duration-300",
+    className: "w-8 h-8 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-emerald-200/50 animate-in zoom-in duration-300 flex-shrink-0",
     symbol: "✓",
-    textSize: "text-xl"
+    textSize: "text-base font-semibold"
   },
   error: {
-    className: "w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-red-200 animate-in zoom-in duration-300",
+    className: "w-8 h-8 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-red-200/50 animate-in zoom-in duration-300 flex-shrink-0",
     symbol: "✕",
-    textSize: "text-xl"
+    textSize: "text-base font-semibold"
   },
   warning: {
-    className: "w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-amber-200 animate-in zoom-in duration-300",
+    className: "w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-amber-200/50 animate-in zoom-in duration-300 flex-shrink-0",
     symbol: "!",
-    textSize: "text-xl font-bold"
+    textSize: "text-base font-bold"
   },
   info: {
-    className: "w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-sky-200 animate-in zoom-in duration-300",
+    className: "w-8 h-8 bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-sky-200/50 animate-in zoom-in duration-300 flex-shrink-0",
     symbol: "i",
-    textSize: "text-lg font-bold"
+    textSize: "text-sm font-bold"
   },
   loading: {
-    className: "w-10 h-10 relative flex items-center justify-center",
-    innerClassName: "w-8 h-8 border-[3px] border-sky-200 border-t-sky-600 rounded-full animate-spin"
+    className: "w-8 h-8 relative flex items-center justify-center flex-shrink-0",
+    innerClassName: "w-6 h-6 border-[3px] border-sky-200 border-t-sky-600 rounded-full animate-spin"
   }
 };

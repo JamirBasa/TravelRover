@@ -137,20 +137,22 @@ const BudgetSelector = ({
         <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           What's your budget range?
         </h2>
-        <p className="text-gray-700 text-base font-medium">
+        <p className="text-gray-700 dark:text-gray-300 text-base font-medium">
           Choose a budget that works for you - we'll optimize your experience 💰
         </p>
 
         {/* Budget Override Indicator */}
         {isBudgetOverridden && profileBudget && (
-          <div className="mt-4 mx-auto max-w-md p-3 bg-amber-50 border-2 border-amber-200 rounded-lg">
+          <div className="mt-4 mx-auto max-w-md p-3 bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-200 dark:border-amber-800 rounded-lg">
             <div className="flex items-start gap-2">
-              <span className="text-amber-600 text-lg">⚡</span>
+              <span className="text-amber-600 dark:text-amber-400 text-lg">
+                ⚡
+              </span>
               <div className="text-left flex-1">
-                <p className="text-xs font-semibold text-amber-800 mb-1">
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1">
                   Budget Override Active
                 </p>
-                <p className="text-xs text-amber-700 leading-relaxed">
+                <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
                   Your profile preference is{" "}
                   <span className="font-bold">{profileBudget}</span>, but you've
                   selected <span className="font-bold">{tripBudget}</span> for
@@ -164,7 +166,7 @@ const BudgetSelector = ({
 
       <div className="space-y-4">
         {/* Budget Info */}
-        <div className="brand-card p-5 shadow-lg border-sky-200">
+        <div className="brand-card p-5 shadow-lg border-sky-200 dark:border-sky-800">
           <div className="flex items-start gap-4">
             <div className="brand-gradient p-2.5 rounded-full">
               <FaInfoCircle className="text-white text-lg" />
@@ -173,7 +175,7 @@ const BudgetSelector = ({
               <h3 className="font-semibold brand-gradient-text text-base mb-2">
                 Budget Planning
               </h3>
-              <p className="text-gray-700 text-sm leading-relaxed">
+              <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
                 Your budget helps us recommend the best accommodations, dining,
                 activities, and transportation options for your trip.
               </p>
@@ -183,30 +185,30 @@ const BudgetSelector = ({
 
         {/* Smart Budget Estimates - Shows when location & duration are selected */}
         {budgetEstimates && destinationInfo && (
-          <div className="brand-card p-5 shadow-lg border-sky-200 bg-gradient-to-br from-sky-50 to-blue-50">
+          <div className="brand-card p-5 shadow-lg border-sky-200 dark:border-sky-800 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="brand-gradient p-2 rounded-full">
                   <FaCalculator className="text-white text-sm" />
                 </div>
-                <h3 className="font-semibold text-sky-800 text-base">
+                <h3 className="font-semibold text-sky-800 dark:text-sky-300 text-base">
                   💡 Estimated Budget for {formData.location}
                 </h3>
               </div>
               <button
                 onClick={() => setShowEstimates(!showEstimates)}
-                className="text-sky-600 hover:text-sky-800 text-sm font-medium transition-colors"
+                className="text-sky-600 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-300 text-sm font-medium transition-colors cursor-pointer"
               >
                 {showEstimates ? "Hide Details" : "Show Breakdown"}
               </button>
             </div>
 
             {/* Price Level Indicator */}
-            <div className="flex items-center gap-2 mb-4 p-3 bg-white/60 backdrop-blur-sm rounded-lg border border-sky-200">
-              <FaMapMarkerAlt className="text-sky-600" />
-              <span className="text-sm text-gray-700">
+            <div className="flex items-center gap-2 mb-4 p-3 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg border border-sky-200 dark:border-sky-700">
+              <FaMapMarkerAlt className="text-sky-600 dark:text-sky-400" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
                 <span className="font-semibold">{formData.location}</span> is a{" "}
-                <span className="font-bold text-sky-700">
+                <span className="font-bold text-sky-700 dark:text-sky-400">
                   {destinationInfo.priceLevel}
                 </span>{" "}
                 price destination
@@ -224,36 +226,36 @@ const BudgetSelector = ({
 
             {/* Quick Estimates */}
             <div className="grid grid-cols-3 gap-3 mb-3">
-              <div className="bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-sky-200 hover:shadow-md transition-shadow">
-                <div className="text-xs text-sky-600 font-medium mb-1">
+              <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg p-3 border border-sky-200 dark:border-sky-700 hover:shadow-md transition-shadow">
+                <div className="text-xs text-sky-600 dark:text-sky-400 font-medium mb-1">
                   Budget
                 </div>
-                <div className="text-base font-bold text-sky-900">
+                <div className="text-base font-bold text-sky-900 dark:text-sky-300">
                   {budgetEstimates.budget.range}
                 </div>
-                <div className="text-xs text-sky-600 mt-1">
+                <div className="text-xs text-sky-600 dark:text-sky-400 mt-1">
                   {budgetEstimates.budget.perPerson}/person
                 </div>
               </div>
-              <div className="bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-sky-200 hover:shadow-md transition-shadow">
-                <div className="text-xs text-sky-600 font-medium mb-1">
+              <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg p-3 border border-sky-200 dark:border-sky-700 hover:shadow-md transition-shadow">
+                <div className="text-xs text-sky-600 dark:text-sky-400 font-medium mb-1">
                   Moderate
                 </div>
-                <div className="text-base font-bold text-sky-900">
+                <div className="text-base font-bold text-sky-900 dark:text-sky-300">
                   {budgetEstimates.moderate.range}
                 </div>
-                <div className="text-xs text-sky-600 mt-1">
+                <div className="text-xs text-sky-600 dark:text-sky-400 mt-1">
                   {budgetEstimates.moderate.perPerson}/person
                 </div>
               </div>
-              <div className="bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-sky-200 hover:shadow-md transition-shadow">
-                <div className="text-xs text-sky-600 font-medium mb-1">
+              <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg p-3 border border-sky-200 dark:border-sky-700 hover:shadow-md transition-shadow">
+                <div className="text-xs text-sky-600 dark:text-sky-400 font-medium mb-1">
                   Luxury
                 </div>
-                <div className="text-base font-bold text-sky-900">
+                <div className="text-base font-bold text-sky-900 dark:text-sky-300">
                   {budgetEstimates.luxury.range}
                 </div>
-                <div className="text-xs text-sky-600 mt-1">
+                <div className="text-xs text-sky-600 dark:text-sky-400 mt-1">
                   {budgetEstimates.luxury.perPerson}/person
                 </div>
               </div>
@@ -265,12 +267,12 @@ const BudgetSelector = ({
                 {Object.entries(budgetEstimates).map(([level, data]) => (
                   <div
                     key={level}
-                    className="bg-white/70 rounded-lg p-4 border border-sky-200"
+                    className="bg-white/70 dark:bg-slate-800/70 rounded-lg p-4 border border-sky-200 dark:border-sky-700"
                   >
-                    <div className="font-semibold text-sky-900 capitalize mb-2 text-sm">
+                    <div className="font-semibold text-sky-900 dark:text-sky-300 capitalize mb-2 text-sm">
                       {level}
                     </div>
-                    <div className="text-xs text-gray-700 space-y-1">
+                    <div className="text-xs text-gray-700 dark:text-gray-300 space-y-1">
                       <p className="flex justify-between">
                         <span>• Accommodation:</span>
                         <span className="font-semibold">
@@ -296,7 +298,7 @@ const BudgetSelector = ({
                         </span>
                       </p>
                       {data.breakdown.flights > 0 && (
-                        <p className="flex justify-between border-t border-sky-100 pt-1 mt-1">
+                        <p className="flex justify-between border-t border-sky-100 dark:border-sky-800 pt-1 mt-1">
                           <span>• ✈️ Flights:</span>
                           <span className="font-semibold">
                             ₱{data.breakdown.flights.toLocaleString()}
@@ -310,7 +312,7 @@ const BudgetSelector = ({
                         </span>
                       </p>
                     </div>
-                    <p className="text-xs text-sky-600 italic mt-2 pt-2 border-t border-sky-100">
+                    <p className="text-xs text-sky-600 dark:text-sky-400 italic mt-2 pt-2 border-t border-sky-100 dark:border-sky-800">
                       {data.description}
                     </p>
                   </div>
@@ -319,9 +321,9 @@ const BudgetSelector = ({
             )}
 
             {/* Info Note */}
-            <div className="mt-3 flex items-start gap-2 p-3 bg-sky-100/50 rounded-lg">
-              <span className="text-sky-600">ℹ️</span>
-              <p className="text-xs text-sky-700">
+            <div className="mt-3 flex items-start gap-2 p-3 bg-sky-100/50 dark:bg-sky-950/30 rounded-lg">
+              <span className="text-sky-600 dark:text-sky-400">ℹ️</span>
+              <p className="text-xs text-sky-700 dark:text-sky-300">
                 Estimates based on{" "}
                 <span className="font-semibold">{formData.duration} days</span>{" "}
                 in <span className="font-semibold">{formData.location}</span>
@@ -345,33 +347,33 @@ const BudgetSelector = ({
 
         {/* Airport Recommendations - Shows when flights are included */}
         {airportInfo && flightData.includeFlights && (
-          <div className="brand-card p-5 shadow-lg border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50">
+          <div className="brand-card p-5 shadow-lg border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30">
             <div className="flex items-start gap-4">
-              <div className="bg-gradient-to-br from-emerald-500 to-green-600 p-2.5 rounded-full">
+              <div className="bg-gradient-to-br from-emerald-500 to-green-600 dark:from-emerald-600 dark:to-green-700 p-2.5 rounded-full">
                 <FaPlane className="text-white text-lg" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-emerald-900 text-base mb-3">
+                <h3 className="font-semibold text-emerald-900 dark:text-emerald-300 text-base mb-3">
                   ✈️ Airport Information
                 </h3>
 
                 {/* Departure Airport */}
                 {airportInfo.departure && (
-                  <div className="bg-white/60 backdrop-blur-sm rounded-lg p-3 mb-3 border border-emerald-200">
+                  <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg p-3 mb-3 border border-emerald-200 dark:border-emerald-700">
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="text-xs text-emerald-600 font-medium mb-1">
+                        <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-1">
                           Departure From
                         </div>
-                        <div className="font-semibold text-emerald-900">
+                        <div className="font-semibold text-emerald-900 dark:text-emerald-300">
                           {airportInfo.departure.name}
                         </div>
-                        <div className="text-xs text-emerald-700 mt-1">
+                        <div className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">
                           {airportInfo.departure.code} •{" "}
                           {airportInfo.departure.city}
                         </div>
                         {!airportInfo.departure.hasDirectAirport && (
-                          <div className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                          <div className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
                             <span>⚠️</span>
                             <span>
                               {flightData.departureCity} doesn't have an
@@ -381,7 +383,7 @@ const BudgetSelector = ({
                           </div>
                         )}
                       </div>
-                      <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-medium">
+                      <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-xs rounded-full font-medium">
                         {airportInfo.departure.type}
                       </span>
                     </div>
@@ -390,21 +392,21 @@ const BudgetSelector = ({
 
                 {/* Destination Airport */}
                 {airportInfo.destination && (
-                  <div className="bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-emerald-200">
+                  <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg p-3 border border-emerald-200 dark:border-emerald-700">
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="text-xs text-emerald-600 font-medium mb-1">
+                        <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-1">
                           Flying To
                         </div>
-                        <div className="font-semibold text-emerald-900">
+                        <div className="font-semibold text-emerald-900 dark:text-emerald-300">
                           {airportInfo.destination.name}
                         </div>
-                        <div className="text-xs text-emerald-700 mt-1">
+                        <div className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">
                           {airportInfo.destination.code} •{" "}
                           {airportInfo.destination.city}
                         </div>
                         {!airportInfo.destination.hasDirectAirport && (
-                          <div className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                          <div className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
                             <span>⚠️</span>
                             <span>
                               {formData.location} doesn't have an airport.
@@ -414,7 +416,7 @@ const BudgetSelector = ({
                           </div>
                         )}
                       </div>
-                      <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-medium">
+                      <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-xs rounded-full font-medium">
                         {airportInfo.destination.type}
                       </span>
                     </div>
@@ -423,8 +425,8 @@ const BudgetSelector = ({
 
                 {/* Flight Route Info */}
                 {airportInfo.route && (
-                  <div className="mt-3 p-3 bg-emerald-100/50 rounded-lg border border-emerald-200">
-                    <div className="text-xs text-emerald-700 flex items-center justify-between">
+                  <div className="mt-3 p-3 bg-emerald-100/50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-700">
+                    <div className="text-xs text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
                       <span className="font-semibold">Flight Route:</span>
                       <span className="font-mono font-semibold">
                         {airportInfo.route}
@@ -434,8 +436,8 @@ const BudgetSelector = ({
                 )}
 
                 {!airportInfo.needsFlight && (
-                  <div className="mt-3 p-3 bg-blue-100/50 rounded-lg border border-blue-200">
-                    <div className="text-xs text-blue-700 flex items-center gap-2">
+                  <div className="mt-3 p-3 bg-blue-100/50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                    <div className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-2">
                       <span>💡</span>
                       <span>
                         <strong>Same region:</strong> Land travel is recommended
@@ -465,8 +467,8 @@ const BudgetSelector = ({
                 }}
                 className={`group p-5 cursor-pointer border-2 rounded-xl hover:shadow-xl transition-all duration-300 ${
                   value === option.title && !customValue
-                    ? "shadow-xl border-sky-500 bg-gradient-to-r from-sky-50 to-blue-50"
-                    : "border-gray-200 hover:border-sky-300 hover:shadow-lg"
+                    ? "shadow-xl border-sky-500 dark:border-sky-600 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30"
+                    : "border-gray-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-700 hover:shadow-lg"
                 }`}
               >
                 <div className="flex items-center gap-4">
@@ -474,14 +476,14 @@ const BudgetSelector = ({
                     className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 ${
                       value === option.title && !customValue
                         ? "brand-gradient shadow-lg"
-                        : "bg-gray-100 group-hover:bg-sky-100"
+                        : "bg-gray-100 dark:bg-slate-800 group-hover:bg-sky-100 dark:group-hover:bg-sky-950/50"
                     }`}
                   >
                     <span
                       className={
                         value === option.title && !customValue
                           ? "text-white"
-                          : ""
+                          : "dark:text-gray-300"
                       }
                     >
                       {option.icon}
@@ -491,18 +493,20 @@ const BudgetSelector = ({
                     <h3
                       className={`font-semibold text-lg transition-colors ${
                         value === option.title && !customValue
-                          ? "text-sky-800"
-                          : "text-gray-800 group-hover:text-sky-700"
+                          ? "text-sky-800 dark:text-sky-300"
+                          : "text-gray-800 dark:text-gray-200 group-hover:text-sky-700 dark:group-hover:text-sky-400"
                       }`}
                     >
                       {option.title}
                     </h3>
-                    <p className="text-sm text-gray-600">{option.desc}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {option.desc}
+                    </p>
                     {estimate && (
                       <div className="mt-2 flex items-center gap-2 flex-wrap">
-                        <p className="text-xs font-bold text-sky-700">
+                        <p className="text-xs font-bold text-sky-700 dark:text-sky-400">
                           {estimate.range}{" "}
-                          <span className="font-normal text-gray-600">
+                          <span className="font-normal text-gray-600 dark:text-gray-400">
                             total
                           </span>
                         </p>
@@ -510,10 +514,12 @@ const BudgetSelector = ({
                           formData.travelers !== "Just Me" &&
                           formData.travelers !== "1 Person" && (
                             <>
-                              <span className="text-gray-400">•</span>
-                              <p className="text-xs font-semibold text-emerald-700">
+                              <span className="text-gray-400 dark:text-gray-600">
+                                •
+                              </span>
+                              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                                 {estimate.perPerson}{" "}
-                                <span className="font-normal text-gray-600">
+                                <span className="font-normal text-gray-600 dark:text-gray-400">
                                   per person
                                 </span>
                               </p>
@@ -521,10 +527,12 @@ const BudgetSelector = ({
                           )}
                         {estimate.perDay && formData.duration && (
                           <>
-                            <span className="text-gray-400">•</span>
-                            <p className="text-xs font-medium text-purple-700">
+                            <span className="text-gray-400 dark:text-gray-600">
+                              •
+                            </span>
+                            <p className="text-xs font-medium text-sky-700 dark:text-sky-400">
                               {estimate.perDay}{" "}
-                              <span className="font-normal text-gray-600">
+                              <span className="font-normal text-gray-600 dark:text-gray-400">
                                 per day
                               </span>
                             </p>
@@ -547,15 +555,17 @@ const BudgetSelector = ({
         {/* Custom Budget Option */}
         <div className="pt-2">
           <div className="flex items-center gap-3 mb-3">
-            <div className="h-px bg-gray-200 flex-1"></div>
-            <span className="text-xs text-gray-500 font-medium px-2">OR</span>
-            <div className="h-px bg-gray-200 flex-1"></div>
+            <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1"></div>
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium px-2">
+              OR
+            </span>
+            <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1"></div>
           </div>
           <div
             className={`group border-2 rounded-xl hover:shadow-xl transition-all duration-300 ${
               showCustom || customValue
-                ? "shadow-xl border-sky-500 bg-gradient-to-r from-sky-50 to-blue-50"
-                : "border-gray-200 hover:border-sky-300 hover:shadow-lg"
+                ? "shadow-xl border-sky-500 dark:border-sky-600 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30"
+                : "border-gray-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-700 hover:shadow-lg"
             }`}
           >
             {/* Custom Budget Header - Always Visible */}
@@ -575,22 +585,28 @@ const BudgetSelector = ({
                     className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 ${
                       customValue
                         ? "brand-gradient shadow-lg"
-                        : "bg-gray-100 group-hover:bg-sky-100"
+                        : "bg-gray-100 dark:bg-slate-800 group-hover:bg-sky-100 dark:group-hover:bg-sky-950/50"
                     }`}
                   >
-                    <span className={customValue ? "text-white" : ""}>🎯</span>
+                    <span
+                      className={
+                        customValue ? "text-white" : "dark:text-gray-300"
+                      }
+                    >
+                      🎯
+                    </span>
                   </div>
                   <div>
                     <h3
                       className={`font-semibold text-lg transition-colors ${
                         customValue
-                          ? "text-sky-800"
-                          : "text-gray-800 group-hover:text-sky-700"
+                          ? "text-sky-800 dark:text-sky-300"
+                          : "text-gray-800 dark:text-gray-200 group-hover:text-sky-700 dark:group-hover:text-sky-400"
                       }`}
                     >
                       Custom Budget
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       {customValue
                         ? `₱${parseInt(customValue).toLocaleString()}`
                         : "Enter your specific budget amount"}
@@ -610,7 +626,7 @@ const BudgetSelector = ({
                         setShowCustom(false);
                         onCustomBudgetChange("");
                       }}
-                      className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors flex items-center justify-center text-sm"
+                      className="w-6 h-6 rounded-full bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex items-center justify-center text-sm cursor-pointer"
                       title="Clear custom budget"
                     >
                       ✕
@@ -623,12 +639,12 @@ const BudgetSelector = ({
             {/* Custom Budget Input - Only When Active */}
             {showCustom && (
               <div
-                className="px-5 pb-5 border-t border-gray-200 bg-gray-50"
+                className="px-5 pb-5 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="mt-4 space-y-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg font-semibold text-gray-700">
+                    <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
                       ₱
                     </span>
                     <Input
@@ -639,19 +655,15 @@ const BudgetSelector = ({
                         onCustomBudgetChange(e.target.value);
                         onBudgetChange("");
                       }}
-                      className="text-lg py-3 px-4 rounded-xl border-2 border-gray-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-100 focus:outline-none h-auto transition-all bg-white hover:border-sky-300 focus:bg-white active:bg-white"
-                      style={{
-                        WebkitBoxShadow: "0 0 0 1000px white inset",
-                        WebkitTextFillColor: "inherit",
-                      }}
+                      className="text-lg py-3 px-4 rounded-xl border-2 border-gray-200 dark:border-slate-600 focus:border-sky-500 dark:focus:border-sky-600 focus:ring-4 focus:ring-sky-100 dark:focus:ring-sky-950/50 focus:outline-none h-auto transition-all bg-white dark:bg-slate-900 dark:text-white hover:border-sky-300 dark:hover:border-sky-700 focus:bg-white dark:focus:bg-slate-900 active:bg-white dark:active:bg-slate-900"
                       min="1000"
                       step="500"
                       autoFocus
                     />
                   </div>
-                  <div className="flex items-start gap-2 p-3 bg-sky-50 rounded-xl border border-sky-100">
-                    <span className="text-sky-600">💡</span>
-                    <p className="text-sm text-sky-700 font-medium">
+                  <div className="flex items-start gap-2 p-3 bg-sky-50 dark:bg-sky-950/30 rounded-xl border border-sky-100 dark:border-sky-800">
+                    <span className="text-sky-600 dark:text-sky-400">💡</span>
+                    <p className="text-sm text-sky-700 dark:text-sky-300 font-medium">
                       {minimumBudget > 1000 && budgetEstimates ? (
                         <>
                           Minimum recommended:{" "}
@@ -667,9 +679,9 @@ const BudgetSelector = ({
                     </p>
                   </div>
                   {customBudgetError && (
-                    <div className="flex items-start gap-2 p-3 bg-red-50 rounded-xl border border-red-200">
-                      <span className="text-red-600">⚠️</span>
-                      <p className="text-sm text-red-700 font-medium">
+                    <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/30 rounded-xl border border-red-200 dark:border-red-800">
+                      <span className="text-red-600 dark:text-red-400">⚠️</span>
+                      <p className="text-sm text-red-700 dark:text-red-300 font-medium">
                         {customBudgetError}
                       </p>
                     </div>
@@ -681,12 +693,14 @@ const BudgetSelector = ({
         </div>
 
         {error && (
-          <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 shadow-sm">
+          <div className="bg-red-50 dark:bg-red-950/30 border-2 border-red-200 dark:border-red-800 rounded-xl p-4 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                <span className="text-red-600">⚠️</span>
+              <div className="w-8 h-8 bg-red-100 dark:bg-red-950/50 rounded-full flex items-center justify-center">
+                <span className="text-red-600 dark:text-red-400">⚠️</span>
               </div>
-              <p className="text-red-800 text-sm font-medium">{error}</p>
+              <p className="text-red-800 dark:text-red-300 text-sm font-medium">
+                {error}
+              </p>
             </div>
           </div>
         )}

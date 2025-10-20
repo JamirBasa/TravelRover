@@ -406,7 +406,8 @@ export function PlacesAutocomplete({
           autoComplete="off"
         />
 
-        {inputValue && !disabled && (
+        {/* Only show clear button when NOT loading */}
+        {inputValue && !disabled && !isLoading && (
           <button
             type="button"
             onClick={handleClear}
@@ -417,6 +418,7 @@ export function PlacesAutocomplete({
           </button>
         )}
 
+        {/* Loading spinner */}
         {isLoading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
             <div className="w-5 h-5 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>

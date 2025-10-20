@@ -29,36 +29,39 @@ function SearchAndFilter({
   };
 
   return (
-    <div className="mb-6">
-      {/* Search Bar */}
-      <div className="bg-white/80 backdrop-blur-sm border border-gray-200/80 rounded-2xl p-2 shadow-lg hover:shadow-xl transition-all duration-300 w-full relative">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 z-10" />
+    <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-6 mb-6 shadow-sm dark:shadow-sky-500/5">
+      <div className="flex flex-col lg:flex-row gap-4">
+        {/* Search Bar */}
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
             <Input
               placeholder="Search destinations, hotels, activities, places..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 pr-10 border-0 bg-transparent focus:ring-0 h-12 text-base"
+              className="pl-10 pr-10 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-500"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm("")}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
             )}
           </div>
-          <Button
-            onClick={() => {
-              /* Search action if needed */
-            }}
-            className="brand-gradient text-white font-semibold px-6 py-3 cursor-pointer shadow-lg hover:shadow-xl rounded-lg transition-all duration-300 hover:scale-105 h-12"
-          >
-            <Search className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Search</span>
-          </Button>
+
+          {/* Search Helper */}
+          {searchTerm && (
+            <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/50 rounded text-xs text-blue-600 dark:text-blue-400">
+              🔍 Searching in: destinations, trip summaries, hotel names, and
+              activity descriptions
+            </div>
+          )}
+        </div>
+
+        {/* Sort and Filter Buttons */}
+        <div className="flex gap-2">
           <SortPopover sortBy={sortBy} setSortBy={setSortBy} />
           <FilterPopover
             filters={filters}
@@ -69,34 +72,21 @@ function SearchAndFilter({
         </div>
       </div>
 
-      {/* Search Helper */}
-      {searchTerm && (
-        <div className="mt-3 p-3 bg-sky-50 rounded-lg text-sm text-sky-700 border border-sky-200">
-          <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-sky-600" />
-            <span className="font-medium">
-              Searching in: destinations, trip summaries, hotel names, and
-              activity descriptions
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Active Filters Display */}
       {hasActiveFilters && (
-        <div className="flex flex-wrap items-center gap-2 mt-4 bg-gradient-to-r from-sky-50 to-blue-50 backdrop-blur-sm rounded-xl p-4 border border-sky-200/50 shadow-sm">
-          <span className="text-sm text-gray-700 font-semibold flex items-center gap-1">
-            <span className="text-sky-600">🎯</span> Active Filters:
+        <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
+          <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+            Active:
           </span>
 
           {/* Search Term Badge */}
           {searchTerm && (
-            <div className="brand-gradient text-white px-3 py-1.5 rounded-full text-sm flex items-center gap-1.5 shadow-md">
-              <MapPin className="h-3.5 w-3.5" />
+            <div className="bg-green-100 dark:bg-green-950/50 text-green-800 dark:text-green-400 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
               <span className="font-medium">Search:</span> "{searchTerm}"
               <button
                 onClick={() => setSearchTerm("")}
-                className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                className="ml-1 hover:bg-green-200 dark:hover:bg-green-900/50 rounded-full p-0.5 transition-colors"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -109,22 +99,20 @@ function SearchAndFilter({
               value && (
                 <div
                   key={key}
-                  className="brand-gradient text-white px-3 py-1.5 rounded-full text-sm flex items-center gap-1.5 font-medium shadow-md"
+                  className="bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-400 px-3 py-1 rounded-full text-sm flex items-center gap-1"
                 >
-                  {key === "budget" && <DollarSign className="h-3.5 w-3.5" />}
-                  {key === "duration" && <Calendar className="h-3.5 w-3.5" />}
-                  {key === "travelers" && <Users className="h-3.5 w-3.5" />}
-                  <span className="capitalize">{key}:</span>
-                  <span className="font-semibold">
-                    {formatFilterValue(key, value)}
-                  </span>
+                  {key === "budget" && <DollarSign className="h-3 w-3" />}
+                  {key === "duration" && <Calendar className="h-3 w-3" />}
+                  {key === "travelers" && <Users className="h-3 w-3" />}
+                  <span className="font-medium capitalize">{key}:</span>
+                  <span>{formatFilterValue(key, value)}</span>
                   <button
                     onClick={() =>
                       setFilters((prev) => ({ ...prev, [key]: "" }))
                     }
-                    className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                    className="ml-1 hover:bg-blue-200 dark:hover:bg-blue-900/50 rounded-full p-0.5 transition-colors"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X className="h-3 w-3" />
                   </button>
                 </div>
               )
@@ -135,7 +123,7 @@ function SearchAndFilter({
             variant="ghost"
             size="sm"
             onClick={clearFilters}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50 text-sm font-medium ml-2 border border-red-200 hover:border-red-300"
+            className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm ml-2"
           >
             <X className="h-3.5 w-3.5 mr-1" />
             Clear All

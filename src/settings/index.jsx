@@ -167,27 +167,31 @@ const Settings = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-50 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-blue-700 font-medium">Loading your settings...</p>
-          <p className="text-blue-500 text-sm mt-2">Please wait a moment</p>
+          <div className="w-16 h-16 border-4 border-sky-500 dark:border-sky-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-sky-700 dark:text-sky-400 font-medium">
+            Loading your settings...
+          </p>
+          <p className="text-sky-500 dark:text-sky-500 text-sm mt-2">
+            Please wait a moment
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-50 dark:from-slate-950 dark:to-slate-900">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-blue-100">
+      <div className="bg-white dark:bg-slate-900 shadow-sm border-b border-sky-100 dark:border-slate-700">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
                 variant="outline"
                 onClick={() => navigate("/")}
-                className="flex items-center gap-2 border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300"
+                className="flex items-center gap-2 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/50 hover:border-sky-300 dark:hover:border-sky-600 cursor-pointer"
               >
                 <FaArrowLeft />
                 Back to Home
