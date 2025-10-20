@@ -56,16 +56,16 @@ function InfoSection({ trip }) {
   return (
     <div className="space-y-6">
       {/* Consistent Trip Overview Header */}
-      <div className="brand-gradient rounded-lg p-6 text-white shadow-lg relative overflow-hidden">
+      <div className="brand-gradient dark:bg-gradient-to-br dark:from-sky-900 dark:via-blue-900 dark:to-indigo-950 rounded-lg p-6 text-white shadow-lg relative overflow-hidden">
         {/* Background decoration */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white rounded-full -translate-y-4 translate-x-4"></div>
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white rounded-full translate-y-2 -translate-x-2"></div>
+        <div className="absolute inset-0 opacity-10 dark:opacity-5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white dark:bg-white/10 rounded-full -translate-y-4 translate-x-4"></div>
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white dark:bg-white/10 rounded-full translate-y-2 -translate-x-2"></div>
         </div>
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+            <div className="w-10 h-10 bg-white bg-opacity-20 dark:bg-opacity-15 rounded-lg flex items-center justify-center backdrop-blur-sm">
               <span
                 className="text-white text-lg"
                 role="img"
@@ -78,7 +78,7 @@ function InfoSection({ trip }) {
               <h2 className="text-2xl font-bold mb-1 text-white drop-shadow-lg break-words">
                 {trip?.userSelection?.location}
               </h2>
-              <p className="text-blue-100 drop-shadow-md text-sm">
+              <p className="text-blue-100 dark:text-blue-200 drop-shadow-md text-sm">
                 Your personalized travel adventure awaits
               </p>
             </div>
@@ -86,7 +86,7 @@ function InfoSection({ trip }) {
 
           {/* Compact Trip Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div className="bg-white/95 backdrop-blur-md rounded-lg p-3 text-center border border-white/60 shadow-md transition-all duration-300">
+            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-lg p-3 text-center border border-white/60 dark:border-slate-600 shadow-md transition-all duration-300">
               <Calendar className="h-5 w-5 mx-auto mb-2 text-blue-600 dark:text-blue-500" />
               <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 {trip?.userSelection?.duration}
@@ -144,7 +144,7 @@ function InfoSection({ trip }) {
               Local Insights
             </Badge>
             {trip?.hasRealFlights && (
-              <Badge className="bg-emerald-100/90 text-emerald-800 border-emerald-200 text-xs font-medium">
+              <Badge className="bg-emerald-100/90 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700 text-xs font-medium">
                 <Plane className="h-3 w-3 mr-1" />
                 Live Flight Data
               </Badge>

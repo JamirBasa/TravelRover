@@ -475,7 +475,13 @@ function OptimizedRouteMap({ itinerary, destination }) {
   // Calculate total travel time and distance
   const totalStats = useMemo(() => {
     if (travelData.length === 0) {
-      return { totalTime: 0, totalDistance: 0, timeText: "Calculating..." };
+      return { 
+        totalTime: 0, 
+        totalDistance: 0, 
+        timeText: "Calculating...",
+        distanceText: "0 km",
+        avgSpeed: "N/A"
+      };
     }
 
     const totalMinutes = travelData.reduce(
@@ -492,11 +498,18 @@ function OptimizedRouteMap({ itinerary, destination }) {
     const timeText = hours > 0 ? `${hours}h ${minutes}m` : `${minutes} minutes`;
     const distanceText = `${(totalMeters / 1000).toFixed(1)} km`;
 
+    // Calculate average speed (km/h)
+    const totalHours = totalMinutes / 60;
+    const totalKm = totalMeters / 1000;
+    const avgSpeedValue = totalHours > 0 ? totalKm / totalHours : 0;
+    const avgSpeed = avgSpeedValue > 0 ? `${avgSpeedValue.toFixed(1)} km/h` : "N/A";
+
     return {
       totalTime: totalMinutes,
       totalDistance: totalMeters,
       timeText,
       distanceText,
+      avgSpeed,
     };
   }, [travelData]);
 

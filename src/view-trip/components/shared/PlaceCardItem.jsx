@@ -202,37 +202,37 @@ function PlaceCardItem({ place }) {
               {/* Badges Container */}
               <div className="flex flex-wrap gap-2">
                 {place?.ticketPricing && (
-                  <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 border border-green-300 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-green-200 transition-colors">
-                    <span className="text-green-600 text-base">💰</span>
+                  <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-950/30 text-green-800 dark:text-green-400 border border-green-300 dark:border-green-800 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors">
+                    <span className="text-green-600 dark:text-green-400 text-base">💰</span>
                     <span>{place.ticketPricing}</span>
                   </div>
                 )}
 
                 {place?.timeTravel && (
-                  <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-800 border border-orange-300 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-orange-200 transition-colors">
-                    <span className="text-orange-600 text-base">⏰</span>
+                  <div className="inline-flex items-center gap-2 bg-orange-100 dark:bg-orange-950/30 text-orange-800 dark:text-orange-400 border border-orange-300 dark:border-orange-800 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors">
+                    <span className="text-orange-600 dark:text-orange-400 text-base">⏰</span>
                     <span>{place.timeTravel}</span>
                   </div>
                 )}
 
                 {place?.rating && (
-                  <div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-800 border border-yellow-300 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-yellow-200 transition-colors">
-                    <span className="text-yellow-600 text-base">⭐</span>
+                  <div className="inline-flex items-center gap-2 bg-yellow-100 dark:bg-yellow-950/30 text-yellow-800 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-800 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-yellow-200 dark:hover:bg-yellow-900/50 transition-colors">
+                    <span className="text-yellow-600 dark:text-yellow-400 text-base">⭐</span>
                     <span>{place.rating}/5</span>
                   </div>
                 )}
               </div>
 
               {/* Enhanced Action indicator */}
-              <div className="flex items-center justify-between pt-2 mt-2 border-t border-gray-100">
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                  <span className="text-blue-500 text-base">🌐</span>
+              <div className="flex items-center justify-between pt-2 mt-2 border-t border-gray-100 dark:border-slate-700">
+                <div className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+                  <span className="text-blue-500 dark:text-blue-400 text-base">🌐</span>
                   <span>Interactive map view</span>
                 </div>
-                <div className="flex items-center gap-2 text-blue-600 font-bold text-sm group-hover:text-blue-700 transition-all duration-200">
+                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-sm group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-all duration-200">
                   <span>Open Maps</span>
-                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors duration-200">
-                    <span className="text-blue-600 text-sm transform group-hover:translate-x-0.5 transition-transform duration-200">
+                  <div className="w-6 h-6 bg-blue-100 dark:bg-blue-950/50 rounded-full flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/70 transition-colors duration-200">
+                    <span className="text-blue-600 dark:text-blue-400 text-sm transform group-hover:translate-x-0.5 transition-transform duration-200">
                       →
                     </span>
                   </div>

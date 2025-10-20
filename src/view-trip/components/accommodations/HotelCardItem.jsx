@@ -233,22 +233,34 @@ function HotelCardItem({ hotel, onBookHotel }) {
 
             <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
-                {(hotel?.pricePerNight || hotel?.priceRange) && (
-                  <div className="flex items-center gap-1">
-                    <span className="text-green-600 dark:text-green-500 font-semibold text-base">
-                      {hotel?.pricePerNight || hotel?.priceRange}
-                    </span>
-                    {hotel?.pricePerNight && (
-                      <span className="text-gray-500 dark:text-gray-400 text-sm">
-                        /night
+                {/* Only show prices for real hotel data (has place_id from Google Places API) */}
+                {hotel?.place_id &&
+                  (hotel?.pricePerNight || hotel?.priceRange) && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-green-600 dark:text-green-500 font-semibold text-base">
+                        {hotel?.pricePerNight || hotel?.priceRange}
                       </span>
-                    )}
+                      {hotel?.pricePerNight && (
+                        <span className="text-gray-500 dark:text-gray-400 text-sm">
+                          /night
+                        </span>
+                      )}
+                    </div>
+                  )}
+                {/* Show check prices message for AI-generated hotels */}
+                {!hotel?.place_id && (
+                  <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-sm">
+                    <span>💡</span>
+                    <span className="italic">
+                      Check booking sites for current prices
+                    </span>
                   </div>
                 )}
               </div>
 
               <div className="flex items-center gap-2">
-                {onBookHotel && (
+                {/* Only show Book Now for real hotel data with place_id */}
+                {onBookHotel && hotel?.place_id && (
                   <button
                     onClick={(e) => {
                       e.preventDefault();

@@ -197,11 +197,15 @@ const Settings = () => {
                 Back to Home
               </Button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-                <p className="text-blue-600">Manage your travel preferences</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  Settings
+                </h1>
+                <p className="text-blue-600 dark:text-blue-400">
+                  Manage your travel preferences
+                </p>
               </div>
             </div>
-            <div className="text-sm text-blue-600">
+            <div className="text-sm text-blue-600 dark:text-blue-400">
               Last updated:{" "}
               {profileData?.updatedAt
                 ? new Date(profileData.updatedAt).toLocaleDateString()
@@ -215,7 +219,7 @@ const Settings = () => {
         <div className="flex gap-8">
           {/* Sidebar Navigation */}
           <div className="w-64 flex-shrink-0">
-            <div className="bg-white rounded-lg shadow-sm border border-blue-100 p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-blue-100 dark:border-slate-700 p-4">
               <nav className="space-y-2">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
@@ -226,7 +230,7 @@ const Settings = () => {
                       className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all ${
                         activeTab === tab.id
                           ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md transform scale-105"
-                          : "text-gray-600 hover:bg-blue-50 hover:text-blue-700"
+                          : "text-gray-600 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-700 dark:hover:text-blue-400"
                       }`}
                     >
                       <Icon className="text-lg" />
@@ -240,14 +244,14 @@ const Settings = () => {
 
           {/* Main Content */}
           <div className="flex-1">
-            <div className="bg-white rounded-lg shadow-sm border border-blue-100 p-6">
+            <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-blue-100 dark:border-slate-700 p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-semibold text-gray-900">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                     {tabs.find((tab) => tab.id === activeTab)?.label}
                   </h2>
                   {isEditing && (
-                    <span className="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-full border border-gray-300">
+                    <span className="px-3 py-1 text-xs font-medium bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-full border border-gray-300 dark:border-slate-600">
                       Editing Mode
                     </span>
                   )}

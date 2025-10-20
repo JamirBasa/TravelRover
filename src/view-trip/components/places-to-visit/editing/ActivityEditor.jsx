@@ -206,10 +206,10 @@ function ActivityEditor({
                   {/* Activity title */}
                   <div className="flex items-start gap-3">
                     <MapPin
-                      className="h-6 w-6 text-sky-600 mt-0.5 flex-shrink-0"
+                      className="h-6 w-6 text-sky-600 dark:text-sky-400 mt-0.5 flex-shrink-0"
                       aria-hidden="true"
                     />
-                    <h4 className="text-lg font-bold text-gray-900">
+                    <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                       {activity.placeName}
                     </h4>
                   </div>
@@ -362,7 +362,7 @@ function ActivityEditor({
             return (
               <li key={index}>
                 <Card
-                  className="bg-white rounded-lg border-2 border-dashed border-sky-200 shadow-md hover:border-sky-300 hover:shadow-lg transition-all duration-300"
+                  className="bg-white dark:bg-slate-800 rounded-lg border-2 border-dashed border-sky-200 dark:border-sky-700 shadow-md hover:border-sky-300 dark:hover:border-sky-600 hover:shadow-lg transition-all duration-300"
                   id={activityId}
                 >
                   <CardContent className="p-4 space-y-4">

@@ -289,6 +289,12 @@ function Hotels({ trip }) {
   const handleBookHotel = (hotel) => {
     console.log("Hotel booking attempt:", hotel);
 
+    // Only proceed if this is real hotel data (has place_id)
+    if (!hotel?.place_id) {
+      console.warn("⚠️ Cannot book AI-generated hotel without place_id");
+      return;
+    }
+
     // Extract hotel details matching your API structure
     const extractedHotelName =
       hotel?.hotelName || hotel?.name || hotel?.title || "";
@@ -317,15 +323,16 @@ function Hotels({ trip }) {
     window.open(bookingUrl, "_blank");
   };
 
-  // Calculate average price if available
+  // Calculate average price ONLY for real hotels with place_id
+  const realHotels = hotels.filter((hotel) => hotel?.place_id);
   const avgPrice =
-    hotels.length > 0
-      ? hotels.reduce((sum, hotel) => {
+    realHotels.length > 0
+      ? realHotels.reduce((sum, hotel) => {
           const price = hotel?.pricePerNight || hotel?.priceRange || "0";
           const numPrice = parseFloat(price.replace(/[₱$€£,]/g, ""));
           return sum + (isNaN(numPrice) ? 0 : numPrice);
         }, 0) /
-        hotels.filter((hotel) => {
+        realHotels.filter((hotel) => {
           const price = hotel?.pricePerNight || hotel?.priceRange || "0";
           const numPrice = parseFloat(price.replace(/[₱$€£,]/g, ""));
           return !isNaN(numPrice);
@@ -356,13 +363,13 @@ function Hotels({ trip }) {
         {/* Consistent Header Section */}
         <div className="brand-gradient px-4 sm:px-6 py-4 relative overflow-hidden">
           {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white dark:bg-white/10 opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white dark:bg-white/10 opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
 
           <div className="relative">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-white dark:bg-white/20 bg-opacity-20 rounded-lg flex items-center justify-center">
                   <span className="text-white text-lg">🏨</span>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -386,6 +393,14 @@ function Hotels({ trip }) {
                     </div>
                     <div className="text-xs text-white/80">avg/night</div>
                   </div>
+                </div>
+              )}
+              {/* Show hotel count badge for AI-generated hotels */}
+              {!avgPrice && hotels.length > 0 && (
+                <div className="hidden sm:flex items-center gap-2 bg-white/20 dark:bg-white/10 px-3 py-1.5 rounded-lg">
+                  <span className="text-white/90 text-xs font-medium">
+                    AI-Recommended
+                  </span>
                 </div>
               )}
             </div>

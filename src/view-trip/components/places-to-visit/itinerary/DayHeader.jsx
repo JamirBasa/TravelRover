@@ -47,8 +47,8 @@ function DayHeader({
         PATTERNS.card.base
       } p-4 sm:p-5 mb-3 shadow-md transition-all duration-300 ${
         isEditing
-          ? `${COLORS.editing.border} ${COLORS.editing.ring}`
-          : "border-gray-200"
+          ? `${COLORS.editing.border} ${COLORS.editing.ring} dark:border-amber-800 dark:ring-amber-900/50`
+          : "border-gray-200 dark:border-slate-700"
       }`}
       id={headerId}
     >
@@ -59,7 +59,7 @@ function DayHeader({
               PATTERNS.iconContainer.large
             } shadow-sm transition-all duration-300 ${
               isEditing ? COLORS.editing.gradient : COLORS.primary.gradient
-            }`}
+            } dark:opacity-90`}
             aria-hidden="true"
           >
             <Calendar className="h-8 w-8 text-white" aria-hidden="true" />
@@ -70,7 +70,7 @@ function DayHeader({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
             <div className="flex items-center gap-2">
               <h3
-                className={`${TYPOGRAPHY.heading.h2} text-gray-900`}
+                className={`${TYPOGRAPHY.heading.h2} text-gray-900 dark:text-gray-100`}
                 id={`day-heading-${dayIndex}`}
               >
                 Day {dayNumber}
@@ -79,8 +79,8 @@ function DayHeader({
                 variant="secondary"
                 className={
                   isEditing
-                    ? "bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 hover:from-amber-200 hover:to-orange-200 text-base px-3 py-1.5 font-semibold border border-amber-200"
-                    : "bg-gradient-to-r from-sky-100 to-blue-100 text-sky-700 hover:from-sky-200 hover:to-blue-200 text-base px-3 py-1.5 font-semibold border border-sky-200"
+                    ? "bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-950/30 dark:to-orange-950/30 text-amber-700 dark:text-amber-400 hover:from-amber-200 hover:to-orange-200 dark:hover:from-amber-900/50 dark:hover:to-orange-900/50 text-base px-3 py-1.5 font-semibold border border-amber-200 dark:border-amber-800"
+                    : "bg-gradient-to-r from-sky-100 to-blue-100 dark:from-sky-950/30 dark:to-blue-950/30 text-sky-700 dark:text-sky-400 hover:from-sky-200 hover:to-blue-200 dark:hover:from-sky-900/50 dark:hover:to-blue-900/50 text-base px-3 py-1.5 font-semibold border border-sky-200 dark:border-sky-800"
                 }
               >
                 {activitiesCount}{" "}
@@ -106,8 +106,8 @@ function DayHeader({
                 onClick={() => handleToggleExpanded(dayIndex)}
                 className={`gap-2 ${ANIMATIONS.transition.medium} ${
                   isEditing && isExpanded
-                    ? `text-amber-700 hover:text-amber-800 hover:bg-amber-50`
-                    : `text-sky-700 hover:text-sky-800 hover:bg-sky-50`
+                    ? `text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30`
+                    : `text-sky-700 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/30`
                 }`}
                 disabled={isEditing && isExpanded}
                 aria-expanded={isExpanded}
@@ -140,7 +140,7 @@ function DayHeader({
                     variant="outline"
                     size="sm"
                     onClick={() => handleStopEdit(dayIndex)}
-                    className={`gap-2 ${COLORS.editing.border} hover:bg-amber-50 ${COLORS.editing.text} hover:text-amber-800 transition-colors`}
+                    className={`gap-2 ${COLORS.editing.border} dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/30 ${COLORS.editing.text} dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 transition-colors`}
                     aria-label="Cancel editing day"
                   >
                     <X className="h-6 w-6" aria-hidden="true" />
@@ -162,7 +162,7 @@ function DayHeader({
                   variant="outline"
                   size="sm"
                   onClick={() => handleStartEdit(dayIndex)}
-                  className="gap-2 border-sky-300 text-sky-700 hover:bg-sky-50 hover:text-sky-800 transition-colors"
+                  className="gap-2 border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/30 hover:text-sky-800 dark:hover:text-sky-300 transition-colors"
                   aria-label="Edit this day's activities"
                 >
                   <Edit className="h-6 w-6" aria-hidden="true" />
@@ -174,11 +174,11 @@ function DayHeader({
 
           {isEditing && (
             <div
-              className="mb-3 p-3 bg-amber-50 rounded-md border border-amber-200"
+              className="mb-3 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-md border border-amber-200 dark:border-amber-800"
               role="status"
               aria-live="polite"
             >
-              <div className="flex items-center gap-2 text-amber-700">
+              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
                 <span aria-hidden="true">🎯</span>
                 <span className="font-semibold text-base">
                   Editing Mode Active - Drag activities to reorder them within
@@ -191,7 +191,9 @@ function DayHeader({
           {dayItem?.theme && (
             <p
               className={`font-bold text-lg ${
-                isEditing ? "text-amber-700" : "text-sky-700"
+                isEditing
+                  ? "text-amber-700 dark:text-amber-400"
+                  : "text-sky-700 dark:text-sky-400"
               }`}
             >
               <span aria-hidden="true">🎯</span> {dayItem.theme}
@@ -202,7 +204,7 @@ function DayHeader({
 
       {/* Day-specific Map */}
       {showDayMap && activitiesCount > 0 && (
-        <div className="mt-4 border-t border-gray-200 pt-4">
+        <div className="mt-4 border-t border-gray-200 dark:border-slate-700 pt-4">
           <DayItineraryMap
             trip={trip}
             day={dayNumber}

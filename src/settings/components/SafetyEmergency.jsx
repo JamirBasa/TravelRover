@@ -138,8 +138,8 @@ const SafetyEmergency = ({
                 disabled={!isEditing}
                 className={`h-12 ${
                   isEditing
-                    ? "border-blue-200 focus:border-blue-400 bg-white text-gray-900"
-                    : "border-gray-300 bg-gray-100 cursor-not-allowed text-gray-500"
+                    ? "border-blue-200 focus:border-blue-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
+                    : "border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 cursor-not-allowed text-gray-500 dark:text-gray-400"
                 }`}
               />
             </div>
@@ -161,8 +161,8 @@ const SafetyEmergency = ({
                 disabled={!isEditing}
                 className={`h-12 ${
                   isEditing
-                    ? "border-blue-200 focus:border-blue-400 bg-white text-gray-900"
-                    : "border-gray-300 bg-gray-100 cursor-not-allowed text-gray-500"
+                    ? "border-blue-200 focus:border-blue-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
+                    : "border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 cursor-not-allowed text-gray-500 dark:text-gray-400"
                 }`}
               />
             </div>
@@ -180,8 +180,8 @@ const SafetyEmergency = ({
               disabled={!isEditing}
               className={`h-12 ${
                 isEditing
-                  ? "border-blue-200 focus:border-blue-400 bg-white text-gray-900"
-                  : "border-gray-300 bg-gray-100 cursor-not-allowed text-gray-500"
+                  ? "border-blue-200 focus:border-blue-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
+                  : "border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 cursor-not-allowed text-gray-500 dark:text-gray-400"
               }`}
             />
             {formData.emergencyContact?.phone &&
@@ -217,8 +217,8 @@ const SafetyEmergency = ({
                   isSelected
                     ? "border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
                     : isEditing
-                    ? "border-blue-200 bg-white hover:border-blue-300 hover:bg-blue-50 text-gray-900"
-                    : "border-gray-300 bg-gray-100 text-gray-500"
+                    ? "border-blue-200 bg-white dark:bg-slate-800 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-gray-900 dark:text-gray-100"
+                    : "border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400"
                 }`}
               >
                 <IconComponent
@@ -255,8 +255,8 @@ const SafetyEmergency = ({
           disabled={!isEditing}
           className={`h-12 ${
             isEditing
-              ? "border-blue-200 focus:border-blue-400 bg-white text-gray-900"
-              : "border-gray-300 bg-gray-100 cursor-not-allowed text-gray-500"
+              ? "border-blue-200 focus:border-blue-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
+              : "border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 cursor-not-allowed text-gray-500 dark:text-gray-400"
           }`}
         />
       </div>
@@ -275,8 +275,8 @@ const SafetyEmergency = ({
           disabled={!isEditing}
           className={`h-12 ${
             isEditing
-              ? "border-blue-200 focus:border-blue-400 bg-white text-gray-900"
-              : "border-gray-300 bg-gray-100 cursor-not-allowed text-gray-500"
+              ? "border-blue-200 focus:border-blue-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
+              : "border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 cursor-not-allowed text-gray-500 dark:text-gray-400"
           }`}
         />
       </div>

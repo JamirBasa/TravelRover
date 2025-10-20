@@ -122,7 +122,7 @@ const DietaryCulturalStep = ({
                   className={`group p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
                     isSelected
                       ? "border-sky-500 brand-gradient text-white shadow-md"
-                      : "border-gray-200 bg-white hover:border-sky-400 hover:shadow-sm"
+                      : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-sky-400 dark:hover:border-sky-500 hover:shadow-sm"
                   }`}
                   onClick={() =>
                     handleMultiSelect("dietaryRestrictions", diet.id)
@@ -219,7 +219,7 @@ const DietaryCulturalStep = ({
                   className={`group p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
                     isSelected
                       ? "border-sky-500 brand-gradient text-white shadow-md"
-                      : "border-gray-200 bg-white hover:border-sky-400 hover:shadow-sm"
+                      : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-sky-400 dark:hover:border-sky-500 hover:shadow-sm"
                   }`}
                   onClick={() =>
                     handleMultiSelect("culturalPreferences", culture.id)
