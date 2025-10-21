@@ -283,17 +283,52 @@ function Hotels({ trip }) {
     trip?.tripData?.tripData?.accommodations ||
     [];
 
-  const hotels = parseDataArray(hotelsRaw, "hotels");
+  const hotelsUnsorted = parseDataArray(hotelsRaw, "hotels");
 
-  // Handle hotel booking
-  const handleBookHotel = (hotel) => {
-    console.log("Hotel booking attempt:", hotel);
+  // Helper function to extract numeric price from various price formats
+  const extractPrice = (hotel) => {
+    const priceStr =
+      hotel?.pricePerNight || hotel?.priceRange || hotel?.price_range || "0";
 
-    // Only proceed if this is real hotel data (has place_id)
-    if (!hotel?.place_id) {
-      console.warn("⚠️ Cannot book AI-generated hotel without place_id");
-      return;
+    // Handle price ranges like "₱2,000-8,000" or "Budget (₱2,000-8,000)"
+    if (priceStr.includes("-")) {
+      const rangeMatch = priceStr.match(/[\d,]+/g);
+      if (rangeMatch && rangeMatch.length >= 1) {
+        // Use the lower bound of the range for sorting
+        return parseFloat(rangeMatch[0].replace(/,/g, ""));
+      }
     }
+
+    // Handle single prices like "₱5,000" or "$100"
+    const numPrice = parseFloat(priceStr.replace(/[₱$€£,]/g, ""));
+    return isNaN(numPrice) ? 0 : numPrice;
+  };
+
+  // Sort hotels by price (lowest to highest)
+  const hotels = [...hotelsUnsorted].sort((a, b) => {
+    const priceA = extractPrice(a);
+    const priceB = extractPrice(b);
+
+    // Hotels without prices go to the end
+    if (priceA === 0 && priceB === 0) return 0;
+    if (priceA === 0) return 1;
+    if (priceB === 0) return -1;
+
+    return priceA - priceB;
+  });
+
+  console.log(
+    "🏨 Hotels sorted by price (lowest to highest):",
+    hotels.map((h) => ({
+      name: h?.name || h?.hotelName,
+      price: extractPrice(h),
+      priceStr: h?.pricePerNight || h?.priceRange || h?.price_range,
+    }))
+  );
+
+  // Handle hotel booking for both real and AI-generated hotels
+  const handleBookHotel = (hotel) => {
+    console.log("🏨 Hotel booking attempt:", hotel);
 
     // Extract hotel details matching your API structure
     const extractedHotelName =
@@ -308,9 +343,12 @@ function Hotels({ trip }) {
       description: hotel?.description,
       finalName: extractedHotelName,
       finalAddress: extractedAddress,
+      hasPlaceId: !!hotel?.place_id,
+      isAIGenerated: !hotel?.place_id,
     });
 
     // Generate Trip.com affiliate URL using hotel name for specific search
+    // Works for both real hotels (with place_id) and AI-generated hotels
     const bookingUrl = generateHotelBookingURL({
       hotelName: extractedHotelName,
       destination:
@@ -319,7 +357,7 @@ function Hotels({ trip }) {
     });
     console.log("🔗 Generated Trip.com booking URL:", bookingUrl);
 
-    // Open booking URL
+    // Open booking URL in new tab
     window.open(bookingUrl, "_blank");
   };
 
@@ -380,7 +418,7 @@ function Hotels({ trip }) {
                     <span>🏨</span>
                     <span>{hotels.length} accommodations found</span>
                     <span>•</span>
-                    <span>🎯 AI-recommended</span>
+                    <span>💰 Sorted: Lowest to Highest Price</span>
                   </p>
                 </div>
               </div>

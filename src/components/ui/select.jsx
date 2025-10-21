@@ -14,8 +14,10 @@ const Select = ({
       value={value}
       onChange={onChange}
       disabled={disabled}
-      className={`w-full py-3 px-3 pr-10 border-2 border-gray-200 rounded-lg focus:border-black focus:outline-none bg-white text-base appearance-none leading-tight ${
-        disabled ? "bg-gray-100 text-gray-400" : ""
+      className={`w-full py-3 px-3 pr-10 border-2 border-gray-200 dark:border-slate-600 rounded-lg focus:border-black dark:focus:border-sky-500 focus:outline-none bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-base appearance-none leading-tight ${
+        disabled
+          ? "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-500"
+          : ""
       } ${className}`}
       style={{
         backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
@@ -25,9 +27,15 @@ const Select = ({
       }}
       {...props}
     >
-      <option value="">{placeholder}</option>
+      <option value="" className="dark:bg-slate-900 dark:text-white">
+        {placeholder}
+      </option>
       {options.map((option) => (
-        <option key={option.value} value={option.value}>
+        <option
+          key={option.value}
+          value={option.value}
+          className="dark:bg-slate-900 dark:text-white"
+        >
           {option.label}
         </option>
       ))}

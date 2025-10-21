@@ -475,12 +475,12 @@ function OptimizedRouteMap({ itinerary, destination }) {
   // Calculate total travel time and distance
   const totalStats = useMemo(() => {
     if (travelData.length === 0) {
-      return { 
-        totalTime: 0, 
-        totalDistance: 0, 
+      return {
+        totalTime: 0,
+        totalDistance: 0,
         timeText: "Calculating...",
         distanceText: "0 km",
-        avgSpeed: "N/A"
+        avgSpeed: "N/A",
       };
     }
 
@@ -502,7 +502,8 @@ function OptimizedRouteMap({ itinerary, destination }) {
     const totalHours = totalMinutes / 60;
     const totalKm = totalMeters / 1000;
     const avgSpeedValue = totalHours > 0 ? totalKm / totalHours : 0;
-    const avgSpeed = avgSpeedValue > 0 ? `${avgSpeedValue.toFixed(1)} km/h` : "N/A";
+    const avgSpeed =
+      avgSpeedValue > 0 ? `${avgSpeedValue.toFixed(1)} km/h` : "N/A";
 
     return {
       totalTime: totalMinutes,
@@ -606,6 +607,31 @@ function OptimizedRouteMap({ itinerary, destination }) {
         totalStats={totalStats}
         isLoadingRoutes={isLoadingRoutes}
       />
+
+      {/* AI Disclaimer Notice */}
+      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0 mt-0.5">
+            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-amber-900 dark:text-amber-300 text-sm mb-1">
+              AI-Generated Routes & Locations
+            </h4>
+            <p className="text-amber-800 dark:text-amber-400 text-xs leading-relaxed">
+              These routes and locations are AI-generated suggestions. While we
+              strive for accuracy,
+              <strong className="font-semibold">
+                {" "}
+                please verify details
+              </strong>{" "}
+              like addresses, opening hours, and directions before visiting.
+              Travel times are estimates and may vary based on traffic and
+              conditions.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Map Container */}
       <Card ref={mapContainerRef} className="overflow-hidden">
