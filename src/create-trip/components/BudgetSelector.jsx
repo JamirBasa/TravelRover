@@ -1,17 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { SelectBudgetOptions } from "../../constants/options";
-import {
-  FaInfoCircle,
-  FaCalculator,
-  FaMapMarkerAlt,
-  FaPlane,
-} from "react-icons/fa";
+import { FaInfoCircle, FaCalculator, FaMapMarkerAlt } from "react-icons/fa";
 import {
   getBudgetRecommendations,
   getDestinationInfo,
-  getAirportRecommendations,
-  findNearestAirport,
 } from "../../utils/budgetEstimator";
 
 const BudgetSelector = ({
@@ -74,16 +67,6 @@ const BudgetSelector = ({
     flightData,
   ]);
 
-  // Get airport recommendations for flight planning
-  const airportInfo = useMemo(() => {
-    if (!formData.location) return null;
-
-    const departureCity = flightData.departureCity || "Manila";
-    const destinationCity = formData.location;
-
-    return getAirportRecommendations(departureCity, destinationCity);
-  }, [formData.location, flightData.departureCity]);
-
   // Get destination info for display
   const destinationInfo = useMemo(() => {
     if (!formData.location) return null;
@@ -137,7 +120,7 @@ const BudgetSelector = ({
         <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           What's your budget range?
         </h2>
-        <p className="text-gray-700 dark:text-gray-300 text-base font-medium">
+        <p className="text-gray-600 dark:text-gray-400 text-base max-w-2xl mx-auto leading-relaxed">
           Choose a budget that works for you - we'll optimize your experience 💰
         </p>
 
@@ -165,24 +148,6 @@ const BudgetSelector = ({
       </div>
 
       <div className="space-y-4">
-        {/* Budget Info */}
-        <div className="brand-card p-5 shadow-lg border-sky-200 dark:border-sky-800">
-          <div className="flex items-start gap-4">
-            <div className="brand-gradient p-2.5 rounded-full">
-              <FaInfoCircle className="text-white text-lg" />
-            </div>
-            <div>
-              <h3 className="font-semibold brand-gradient-text text-base mb-2">
-                Budget Planning
-              </h3>
-              <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-                Your budget helps us recommend the best accommodations, dining,
-                activities, and transportation options for your trip.
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Smart Budget Estimates - Shows when location & duration are selected */}
         {budgetEstimates && destinationInfo && (
           <div className="brand-card p-5 shadow-lg border-sky-200 dark:border-sky-800 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30">
@@ -341,112 +306,6 @@ const BudgetSelector = ({
                   </span>
                 )}
               </p>
-            </div>
-          </div>
-        )}
-
-        {/* Airport Recommendations - Shows when flights are included */}
-        {airportInfo && flightData.includeFlights && (
-          <div className="brand-card p-5 shadow-lg border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30">
-            <div className="flex items-start gap-4">
-              <div className="bg-gradient-to-br from-emerald-500 to-green-600 dark:from-emerald-600 dark:to-green-700 p-2.5 rounded-full">
-                <FaPlane className="text-white text-lg" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-emerald-900 dark:text-emerald-300 text-base mb-3">
-                  ✈️ Airport Information
-                </h3>
-
-                {/* Departure Airport */}
-                {airportInfo.departure && (
-                  <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg p-3 mb-3 border border-emerald-200 dark:border-emerald-700">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-1">
-                          Departure From
-                        </div>
-                        <div className="font-semibold text-emerald-900 dark:text-emerald-300">
-                          {airportInfo.departure.name}
-                        </div>
-                        <div className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">
-                          {airportInfo.departure.code} •{" "}
-                          {airportInfo.departure.city}
-                        </div>
-                        {!airportInfo.departure.hasDirectAirport && (
-                          <div className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
-                            <span>⚠️</span>
-                            <span>
-                              {flightData.departureCity} doesn't have an
-                              airport. Nearest: {airportInfo.departure.city} (
-                              {airportInfo.departure.travelTime})
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-xs rounded-full font-medium">
-                        {airportInfo.departure.type}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Destination Airport */}
-                {airportInfo.destination && (
-                  <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg p-3 border border-emerald-200 dark:border-emerald-700">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-1">
-                          Flying To
-                        </div>
-                        <div className="font-semibold text-emerald-900 dark:text-emerald-300">
-                          {airportInfo.destination.name}
-                        </div>
-                        <div className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">
-                          {airportInfo.destination.code} •{" "}
-                          {airportInfo.destination.city}
-                        </div>
-                        {!airportInfo.destination.hasDirectAirport && (
-                          <div className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
-                            <span>⚠️</span>
-                            <span>
-                              {formData.location} doesn't have an airport.
-                              Nearest: {airportInfo.destination.city} (
-                              {airportInfo.destination.travelTime})
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-xs rounded-full font-medium">
-                        {airportInfo.destination.type}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Flight Route Info */}
-                {airportInfo.route && (
-                  <div className="mt-3 p-3 bg-emerald-100/50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-700">
-                    <div className="text-xs text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
-                      <span className="font-semibold">Flight Route:</span>
-                      <span className="font-mono font-semibold">
-                        {airportInfo.route}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {!airportInfo.needsFlight && (
-                  <div className="mt-3 p-3 bg-blue-100/50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-700">
-                    <div className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-2">
-                      <span>💡</span>
-                      <span>
-                        <strong>Same region:</strong> Land travel is recommended
-                        (more economical and scenic!)
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         )}
