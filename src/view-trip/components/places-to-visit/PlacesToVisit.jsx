@@ -409,7 +409,7 @@ function PlacesToVisit({ trip, onTripUpdate }) {
             return (
               <div
                 key={dayIndex}
-                className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden w-full"
+                className="bg-white dark:bg-slate-900 rounded-lg shadow-md border border-gray-200 dark:border-slate-700 overflow-hidden w-full"
               >
                 {/* Day Header */}
                 <DayHeader

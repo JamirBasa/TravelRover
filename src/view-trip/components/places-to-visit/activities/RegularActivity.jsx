@@ -80,7 +80,7 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                   id={titleId}
                   className={cn(
                     "text-base font-semibold leading-tight",
-                    "text-gray-900",
+                    "text-gray-900 dark:text-gray-100",
                     "break-words"
                   )}
                 >
@@ -95,7 +95,7 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-blue-600 font-medium transition-colors mt-1 cursor-pointer"
+                    className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors mt-1 cursor-pointer"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <MapPin className="h-3 w-3" />
@@ -108,7 +108,7 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
             {/* Enhanced description - More readable text */}
             <p
               id={detailsId}
-              className="text-sm text-gray-600 leading-relaxed break-words"
+              className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed break-words"
             >
               {activity?.placeDetails ||
                 "Discover this amazing location and create unforgettable memories during your visit."}

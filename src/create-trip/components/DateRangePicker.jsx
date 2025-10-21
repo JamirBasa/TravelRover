@@ -115,7 +115,7 @@ function DateRangePicker({
         <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           When are you traveling?
         </h2>
-        <p className="text-gray-700 text-base font-medium">
+        <p className="text-gray-700 dark:text-gray-300 text-base font-medium">
           Select your travel dates to plan the perfect itinerary 📅
         </p>
       </div>
@@ -124,7 +124,7 @@ function DateRangePicker({
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-base font-medium text-gray-800 mb-2">
+            <label className="block text-base font-medium text-gray-800 dark:text-gray-200 mb-2">
               <FaCalendarAlt className="inline mr-2" />
               Start Date *
             </label>
@@ -133,12 +133,12 @@ function DateRangePicker({
               min={getMinDate()}
               value={startDate || ""}
               onChange={(e) => onStartDateChange(e.target.value)}
-              className="text-base py-3 px-3 rounded-lg border-2 focus:border-black h-auto"
+              className="text-base py-3 px-3 rounded-lg border-2 focus:border-black dark:focus:border-sky-500 h-auto dark:bg-slate-900 dark:text-white dark:border-slate-600"
               placeholder="Select start date"
             />
           </div>
           <div>
-            <label className="block text-base font-medium text-gray-800 mb-2">
+            <label className="block text-base font-medium text-gray-800 dark:text-gray-200 mb-2">
               End Date *
             </label>
             <Input
@@ -146,7 +146,7 @@ function DateRangePicker({
               min={getMinEndDate(startDate)}
               value={endDate || ""}
               onChange={(e) => onEndDateChange(e.target.value)}
-              className="text-base py-3 px-3 rounded-lg border-2 focus:border-black h-auto"
+              className="text-base py-3 px-3 rounded-lg border-2 focus:border-black dark:focus:border-sky-500 h-auto dark:bg-slate-900 dark:text-white dark:border-slate-600"
               disabled={!startDate}
               placeholder="Select end date"
             />
@@ -155,14 +155,14 @@ function DateRangePicker({
 
         {/* Show calculated duration */}
         {duration > 0 && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4">
             <div className="flex items-center gap-2">
-              <FaClock className="text-green-600" />
-              <span className="font-medium text-green-800">
+              <FaClock className="text-green-600 dark:text-green-400" />
+              <span className="font-medium text-green-800 dark:text-green-300">
                 Trip Duration: {duration} {duration === 1 ? "day" : "days"}
               </span>
             </div>
-            <p className="text-green-700 text-sm mt-1">
+            <p className="text-green-700 dark:text-green-400 text-sm mt-1">
               Perfect! We'll create a {duration}-day itinerary for your trip.
             </p>
           </div>
@@ -173,38 +173,38 @@ function DateRangePicker({
           <div
             className={`border rounded-lg p-4 ${
               bookingAdvice.warnings[0].level === "critical"
-                ? "bg-red-50 border-red-300"
+                ? "bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800"
                 : bookingAdvice.warnings[0].level === "warning"
-                ? "bg-amber-50 border-amber-300"
-                : "bg-blue-50 border-blue-300"
+                ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800"
+                : "bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800"
             }`}
           >
             <div className="flex items-start gap-3">
               <div
                 className={`p-2 rounded-full ${
                   bookingAdvice.warnings[0].level === "critical"
-                    ? "bg-red-100"
+                    ? "bg-red-100 dark:bg-red-950/50"
                     : bookingAdvice.warnings[0].level === "warning"
-                    ? "bg-amber-100"
-                    : "bg-blue-100"
+                    ? "bg-amber-100 dark:bg-amber-950/50"
+                    : "bg-blue-100 dark:bg-blue-950/50"
                 }`}
               >
                 {bookingAdvice.warnings[0].level === "critical" ? (
-                  <FaExclamationTriangle className="text-red-600 text-lg" />
+                  <FaExclamationTriangle className="text-red-600 dark:text-red-400 text-lg" />
                 ) : bookingAdvice.warnings[0].level === "warning" ? (
-                  <FaDollarSign className="text-amber-600 text-lg" />
+                  <FaDollarSign className="text-amber-600 dark:text-amber-400 text-lg" />
                 ) : (
-                  <FaInfoCircle className="text-blue-600 text-lg" />
+                  <FaInfoCircle className="text-blue-600 dark:text-blue-400 text-lg" />
                 )}
               </div>
               <div className="flex-1">
                 <h4
                   className={`font-semibold text-sm mb-2 ${
                     bookingAdvice.warnings[0].level === "critical"
-                      ? "text-red-800"
+                      ? "text-red-800 dark:text-red-300"
                       : bookingAdvice.warnings[0].level === "warning"
-                      ? "text-amber-800"
-                      : "text-blue-800"
+                      ? "text-amber-800 dark:text-amber-300"
+                      : "text-blue-800 dark:text-blue-300"
                   }`}
                 >
                   {bookingAdvice.timing.description} -{" "}
@@ -216,10 +216,10 @@ function DateRangePicker({
                       key={index}
                       className={`text-sm ${
                         warning.level === "critical"
-                          ? "text-red-700"
+                          ? "text-red-700 dark:text-red-400"
                           : warning.level === "warning"
-                          ? "text-amber-700"
-                          : "text-blue-700"
+                          ? "text-amber-700 dark:text-amber-400"
+                          : "text-blue-700 dark:text-blue-400"
                       }`}
                     >
                       • {warning.message}
@@ -230,10 +230,10 @@ function DateRangePicker({
                 {/* Show flexible date suggestions for expensive bookings */}
                 {bookingAdvice.flexibleDates.length > 0 &&
                   bookingAdvice.pricing.multiplier >= 2.0 && (
-                    <div className="mt-3 p-3 bg-white/60 backdrop-blur-sm rounded-lg border border-green-200">
+                    <div className="mt-3 p-3 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg border border-green-200 dark:border-green-800">
                       <div className="flex items-center gap-2 mb-2">
-                        <FaLightbulb className="text-green-600 text-sm" />
-                        <span className="font-semibold text-green-800 text-xs">
+                        <FaLightbulb className="text-green-600 dark:text-green-400 text-sm" />
+                        <span className="font-semibold text-green-800 dark:text-green-300 text-xs">
                           💰 Save up to{" "}
                           {Math.max(
                             ...bookingAdvice.flexibleDates.map(
@@ -253,15 +253,15 @@ function DateRangePicker({
                                 onStartDateChange(suggestion.startDate);
                                 onEndDateChange(suggestion.endDate);
                               }}
-                              className="text-left p-2 bg-white rounded border border-green-300 hover:bg-green-50 transition-colors"
+                              className="text-left p-2 bg-white dark:bg-slate-900 rounded border border-green-300 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-950/30 transition-colors cursor-pointer"
                             >
-                              <div className="font-medium text-green-800 text-xs">
+                              <div className="font-medium text-green-800 dark:text-green-300 text-xs">
                                 {suggestion.label}
                               </div>
-                              <div className="text-[10px] text-green-600">
+                              <div className="text-[10px] text-green-600 dark:text-green-400">
                                 {formatDateDisplay(suggestion.startDate)}
                               </div>
-                              <div className="text-[10px] text-green-700 font-medium mt-1">
+                              <div className="text-[10px] text-green-700 dark:text-green-400 font-medium mt-1">
                                 ~{suggestion.savingsPercent}% cheaper
                               </div>
                             </button>
@@ -272,15 +272,18 @@ function DateRangePicker({
 
                 {/* Quick recommendations */}
                 {bookingAdvice.recommendations.length > 0 && (
-                  <div className="mt-3 p-2 bg-white/40 backdrop-blur-sm rounded border border-gray-200">
-                    <div className="text-xs font-semibold text-gray-700 mb-1">
+                  <div className="mt-3 p-2 bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm rounded border border-gray-200 dark:border-slate-700">
+                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                       Quick Tips:
                     </div>
                     <ul className="space-y-1">
                       {bookingAdvice.recommendations
                         .slice(0, 3)
                         .map((rec, idx) => (
-                          <li key={idx} className="text-[11px] text-gray-600">
+                          <li
+                            key={idx}
+                            className="text-[11px] text-gray-600 dark:text-gray-400"
+                          >
                             • {rec}
                           </li>
                         ))}
@@ -386,10 +389,10 @@ function DateRangePicker({
 
         {/* Validation messages */}
         {startDate && endDate && duration <= 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
             <div className="flex items-center gap-2">
-              <span className="text-red-600">⚠️</span>
-              <span className="font-medium text-red-800">
+              <span className="text-red-600 dark:text-red-400">⚠️</span>
+              <span className="font-medium text-red-800 dark:text-red-300">
                 End date must be after start date
               </span>
             </div>
@@ -397,7 +400,7 @@ function DateRangePicker({
         )}
 
         {/* Date Selection Tips */}
-        <div className="brand-card p-5 shadow-lg border-sky-200">
+        <div className="brand-card p-5 shadow-lg border-sky-200 dark:border-sky-800">
           <div className="flex items-start gap-4">
             <div className="brand-gradient p-2.5 rounded-full">
               <FaClock className="text-white text-lg" />
@@ -406,7 +409,7 @@ function DateRangePicker({
               <h3 className="font-semibold brand-gradient-text text-base mb-2">
                 Philippine Travel Planning Tips
               </h3>
-              <ul className="text-gray-700 text-sm space-y-1 leading-relaxed">
+              <ul className="text-gray-700 dark:text-gray-300 text-sm space-y-1 leading-relaxed">
                 <li>
                   • Book Philippine Airlines, Cebu Pacific, or AirAsia flights
                   2-3 weeks in advance for better deals
@@ -423,7 +426,7 @@ function DateRangePicker({
                   adventures
                 </li>
                 {!destination && (
-                  <li className="text-blue-600 font-medium">
+                  <li className="text-blue-600 dark:text-blue-400 font-medium">
                     💡 Select your Philippine destination first to see smart
                     flight timing recommendations
                   </li>

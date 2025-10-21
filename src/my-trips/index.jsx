@@ -1,6 +1,13 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { query, collection, where, getDocs, doc, deleteDoc } from "firebase/firestore";
+import {
+  query,
+  collection,
+  where,
+  getDocs,
+  doc,
+  deleteDoc,
+} from "firebase/firestore";
 import { db } from "@/config/firebaseConfig";
 import { Button } from "@/components/ui/button";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -74,7 +81,37 @@ function MyTrips() {
     }
   };
 
-  const handleDeleteClick = (trip) => {
+  // Enhanced delete trip function with better validation
+  const handleDeleteTrip = async (trip) => {
+    console.log("🗑️ Delete trip requested:", {
+      tripId: trip.id,
+      location: trip.userSelection?.location,
+      userEmail: trip.userEmail,
+    });
+
+    // Validate trip object
+    if (!trip || !trip.id) {
+      toast.error("Invalid trip data");
+      return;
+    }
+
+    // Validate user ownership
+    const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+    if (!currentUser?.email) {
+      toast.error("Please sign in to delete trips");
+      return;
+    }
+
+    if (trip.userEmail !== currentUser.email) {
+      console.warn("❌ User doesn't own this trip:", {
+        tripOwner: trip.userEmail,
+        currentUser: currentUser.email,
+      });
+      toast.error("You can only delete your own trips");
+      return;
+    }
+
+    // Show confirmation dialog
     setTripToDelete(trip);
     setDeleteDialogOpen(true);
   };
@@ -84,22 +121,64 @@ function MyTrips() {
 
     setIsDeleting(true);
     try {
-      await deleteDoc(doc(db, "AITrips", tripToDelete.id));
-      setUserTrips((prevTrips) =>
-        prevTrips.filter((trip) => trip.id !== tripToDelete.id)
-      );
-      
+      console.log(`🗑️ Deleting trip: ${tripToDelete.id}`);
+
+      // Verify trip exists before attempting delete
+      const docRef = doc(db, "AITrips", tripToDelete.id);
+
+      // Delete from Firebase
+      await deleteDoc(docRef);
+
+      // Update local state immediately for better UX
+      setUserTrips((prev) => {
+        const updatedTrips = prev.filter((trip) => trip.id !== tripToDelete.id);
+        console.log(
+          `✅ Local state updated: ${prev.length} → ${updatedTrips.length} trips`
+        );
+        return updatedTrips;
+      });
+
+      // Show success message
       toast.success(
-        `Trip to ${tripToDelete.userSelection?.location || 'destination'} deleted successfully`
+        `🎯 Trip to ${
+          tripToDelete.userSelection?.location || "destination"
+        } deleted successfully`,
+        {
+          description:
+            "Your trip has been permanently removed from your collection.",
+          duration: 3000,
+        }
       );
-      
+
+      console.log("✅ Trip deleted successfully:", tripToDelete.id);
+    } catch (error) {
+      console.error("❌ Error deleting trip:", {
+        tripId: tripToDelete.id,
+        error: error.message,
+        code: error.code,
+      });
+
+      // Handle specific Firebase errors
+      if (error.code === "permission-denied") {
+        toast.error("Permission denied. You can only delete your own trips.");
+      } else if (error.code === "not-found") {
+        toast.error("Trip not found. It may have been already deleted.");
+        // Remove from local state anyway since it doesn't exist
+        setUserTrips((prev) =>
+          prev.filter((trip) => trip.id !== tripToDelete.id)
+        );
+      } else if (error.code === "unavailable") {
+        toast.error("Database unavailable. Please try again later.");
+      } else {
+        toast.error(
+          "Failed to delete trip: " + (error.message || "Unknown error")
+        );
+      }
+    } finally {
+      // Always cleanup dialog state
+      setIsDeleting(false);
       setDeleteDialogOpen(false);
       setTripToDelete(null);
-    } catch (err) {
-      console.error("Error deleting trip:", err);
-      toast.error("Failed to delete trip. Please try again.");
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -229,21 +308,21 @@ function MyTrips() {
         }
         case "travel-earliest": {
           // Sort by travel start date (soonest first)
-          const startA = a.userSelection?.startDate 
-            ? new Date(a.userSelection.startDate).getTime() 
+          const startA = a.userSelection?.startDate
+            ? new Date(a.userSelection.startDate).getTime()
             : Infinity; // No date = push to end
-          const startB = b.userSelection?.startDate 
-            ? new Date(b.userSelection.startDate).getTime() 
+          const startB = b.userSelection?.startDate
+            ? new Date(b.userSelection.startDate).getTime()
             : Infinity;
           return startA - startB; // Ascending (earliest first)
         }
         case "travel-latest": {
           // Sort by travel start date (farthest first)
-          const startA = a.userSelection?.startDate 
-            ? new Date(a.userSelection.startDate).getTime() 
+          const startA = a.userSelection?.startDate
+            ? new Date(a.userSelection.startDate).getTime()
             : -Infinity; // No date = push to end
-          const startB = b.userSelection?.startDate 
-            ? new Date(b.userSelection.startDate).getTime() 
+          const startB = b.userSelection?.startDate
+            ? new Date(b.userSelection.startDate).getTime()
             : -Infinity;
           return startB - startA; // Descending (latest first)
         }
@@ -271,6 +350,28 @@ function MyTrips() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+            My Trips
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            {filteredTrips.length} of {userTrips.length}{" "}
+            {userTrips.length === 1 ? "trip" : "trips"}
+            {searchTerm || Object.values(filters).some((f) => f)
+              ? " (filtered)"
+              : ""}
+          </p>
+        </div>
+        <Button
+          onClick={() => navigate("/create-trip")}
+          className="brand-button cursor-pointer self-start"
+        >
+          + Create New Trip
+        </Button>
+      </div>
+
       {/* Search and Filter */}
       <SearchAndFilter
         searchTerm={searchTerm}
@@ -285,15 +386,19 @@ function MyTrips() {
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
           <div className="flex items-center">
-            <span className="text-red-500 text-sm font-medium">Error:</span>
-            <span className="text-red-700 text-sm ml-2">{error}</span>
+            <span className="text-red-500 dark:text-red-400 text-sm font-medium">
+              Error:
+            </span>
+            <span className="text-red-700 dark:text-red-300 text-sm ml-2">
+              {error}
+            </span>
           </div>
           <Button
             variant="outline"
             size="sm"
-            className="mt-2"
+            className="mt-2 cursor-pointer"
             onClick={GetUserTrips}
           >
             Try Again
@@ -305,18 +410,11 @@ function MyTrips() {
       {filteredTrips.length > 0 ? (
         <div className="grid grid-cols-1 gap-4">
           {filteredTrips.map((trip) => (
-            <TripCard
-              key={trip.id}
-              trip={trip}
-              onDelete={handleDeleteClick}
-            />
+            <TripCard key={trip.id} trip={trip} onDelete={handleDeleteTrip} />
           ))}
         </div>
       ) : (
-        <EmptyState
-          userTrips={userTrips}
-          clearFilters={clearFilters}
-        />
+        <EmptyState userTrips={userTrips} clearFilters={clearFilters} />
       )}
 
       {/* Delete Confirmation Dialog */}

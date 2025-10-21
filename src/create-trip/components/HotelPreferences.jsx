@@ -70,7 +70,7 @@ const HotelPreferences = ({
         <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           Hotel Preferences
         </h2>
-        <p className="text-gray-700 text-base font-medium">
+        <p className="text-gray-700 dark:text-gray-300 text-base font-medium">
           Would you like us to include hotel recommendations in your itinerary?
           🏨
         </p>
@@ -78,7 +78,7 @@ const HotelPreferences = ({
 
       {/* Hotel Toggle */}
       <div className="space-y-6">
-        <div className="brand-card p-5 shadow-lg border-sky-200">
+        <div className="brand-card p-5 shadow-lg border-sky-200 dark:border-sky-800">
           <div className="flex items-start gap-4">
             <div className="brand-gradient p-2.5 rounded-full">
               <FaInfoCircle className="text-white text-lg" />
@@ -87,7 +87,7 @@ const HotelPreferences = ({
               <h3 className="font-semibold brand-gradient-text text-base mb-2">
                 Hotel Search Feature
               </h3>
-              <p className="text-gray-700 text-sm leading-relaxed">
+              <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
                 Enable this to get real hotel recommendations with pricing,
                 ratings, and availability for your destination. Helps with
                 accommodation planning and booking.
@@ -98,44 +98,85 @@ const HotelPreferences = ({
 
         {/* Include Hotels Toggle */}
         <div className="space-y-4">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={hotelData.includeHotels}
-              onChange={(e) => {
-                const isEnabled = e.target.checked;
+          <div
+            onClick={() => {
+              const isEnabled = !hotelData.includeHotels;
 
-                onHotelDataChange({
-                  ...hotelData,
-                  includeHotels: isEnabled,
-                  // Auto-populate when enabling hotels using centralized service
-                  ...(isEnabled
-                    ? UserProfileService.autoPopulateHotelData(userProfile, {
-                        ...hotelData,
-                        includeHotels: isEnabled,
-                      })
-                    : {}),
-                });
-              }}
-              className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500"
-            />
-            <div className="flex items-center gap-2">
-              <FaHotel className="text-orange-600" />
-              <span className="font-medium text-gray-800">
-                Include hotel search and recommendations
-              </span>
+              onHotelDataChange({
+                ...hotelData,
+                includeHotels: isEnabled,
+                // Auto-populate when enabling hotels using centralized service
+                ...(isEnabled
+                  ? UserProfileService.autoPopulateHotelData(userProfile, {
+                      ...hotelData,
+                      includeHotels: isEnabled,
+                    })
+                  : {}),
+              });
+            }}
+            className={`brand-card p-5 cursor-pointer transition-all duration-200 border-2 hover:shadow-lg ${
+              hotelData.includeHotels
+                ? "border-orange-500 dark:border-orange-600 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30"
+                : "border-gray-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-700"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`p-2.5 rounded-full transition-all ${
+                    hotelData.includeHotels
+                      ? "bg-gradient-to-br from-orange-500 to-amber-600 dark:from-orange-600 dark:to-amber-700"
+                      : "bg-gray-100 dark:bg-slate-800"
+                  }`}
+                >
+                  <FaHotel
+                    className={`text-lg ${
+                      hotelData.includeHotels
+                        ? "text-white"
+                        : "text-gray-400 dark:text-gray-500"
+                    }`}
+                  />
+                </div>
+                <div>
+                  <h3
+                    className={`font-semibold text-base ${
+                      hotelData.includeHotels
+                        ? "text-orange-900 dark:text-orange-300"
+                        : "text-gray-800 dark:text-gray-200"
+                    }`}
+                  >
+                    Include Hotel Search
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {hotelData.includeHotels
+                      ? "Hotel preferences enabled"
+                      : "Click to enable hotel search"}
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                  hotelData.includeHotels
+                    ? "border-orange-500 dark:border-orange-600 bg-orange-500 dark:bg-orange-600"
+                    : "border-gray-300 dark:border-slate-600"
+                }`}
+              >
+                {hotelData.includeHotels && (
+                  <FaCheck className="text-white text-xs" />
+                )}
+              </div>
             </div>
-          </label>
+          </div>
 
           {hotelData.includeHotels && (
-            <div className="ml-7 pl-4 border-l-2 border-orange-200 space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="ml-7 pl-4 border-l-2 border-orange-200 dark:border-orange-800 space-y-4">
+              <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-lg">
                 {/* Auto-populated indicator */}
                 {hotelData.preferredType &&
                   profileSummary?.accommodationPreference ===
                     hotelData.preferredType && (
-                    <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-center gap-2 text-green-700 text-sm">
+                    <div className="mb-3 p-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
+                      <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm">
                         <FaCheck className="text-xs" />
                         <span>
                           Auto-populated from your profile:{" "}
@@ -145,14 +186,14 @@ const HotelPreferences = ({
                     </div>
                   )}
 
-                <h4 className="font-medium text-gray-800 mb-3">
+                <h4 className="font-medium text-gray-800 dark:text-gray-200 mb-3">
                   What type of accommodation do you prefer?
                 </h4>
 
                 {/* Accommodation Type */}
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       <FaHotel className="inline mr-1" />
                       Accommodation Type
                     </label>
@@ -172,7 +213,7 @@ const HotelPreferences = ({
 
                   {/* Price Range */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       <FaStar className="inline mr-1" />
                       Budget Range
                     </label>
@@ -187,15 +228,15 @@ const HotelPreferences = ({
 
                   {/* Guest Information Display */}
                   {formData?.travelers && (
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <div className="flex items-center gap-2 text-blue-700 text-sm">
+                    <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg">
+                      <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 text-sm">
                         <FaUsers className="text-xs" />
                         <span>
                           <strong>Guests:</strong> {formData.travelers}
                         </span>
                       </div>
                       {formData.startDate && formData.endDate && (
-                        <div className="flex items-center gap-2 text-blue-700 text-sm mt-1">
+                        <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 text-sm mt-1">
                           <FaCalendarAlt className="text-xs" />
                           <span>
                             <strong>Duration:</strong> {formData.startDate} to{" "}
@@ -207,7 +248,7 @@ const HotelPreferences = ({
                   )}
                 </div>
 
-                <div className="mt-3 text-xs text-gray-600">
+                <div className="mt-3 text-xs text-gray-600 dark:text-gray-400">
                   💡 We'll find the best hotel options matching your preferences
                   and budget in your destination.
                 </div>
@@ -217,16 +258,16 @@ const HotelPreferences = ({
         </div>
 
         {/* Hotel Benefits */}
-        <div className="brand-card p-5 shadow-lg border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+        <div className="brand-card p-5 shadow-lg border-sky-200 dark:border-sky-800 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30">
           <div className="flex items-start gap-4">
-            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-2.5 rounded-full">
+            <div className="brand-gradient p-2.5 rounded-full">
               <FaHotel className="text-white text-lg" />
             </div>
             <div>
-              <h3 className="font-semibold text-purple-900 text-base mb-2">
+              <h3 className="font-semibold brand-gradient-text text-base mb-2">
                 Benefits of including hotels
               </h3>
-              <ul className="text-purple-800 text-sm space-y-1 leading-relaxed">
+              <ul className="text-gray-700 dark:text-gray-300 text-sm space-y-1 leading-relaxed">
                 <li>• Real hotel prices and availability</li>
                 <li>• Multiple accommodation options and reviews</li>
                 <li>• Integrated into your total trip budget</li>

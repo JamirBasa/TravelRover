@@ -402,21 +402,23 @@ export function PlacesAutocomplete({
           }}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full px-4 py-3 pr-10 text-base border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:ring-4 focus:ring-sky-100 focus:outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="w-full px-4 py-3 pr-10 text-base border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100 rounded-lg focus:border-sky-500 dark:focus:border-sky-400 focus:ring-4 focus:ring-sky-100 dark:focus:ring-sky-900/30 focus:outline-none transition-all disabled:bg-gray-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
           autoComplete="off"
         />
 
-        {inputValue && !disabled && (
+        {/* Only show clear button when NOT loading */}
+        {inputValue && !disabled && !isLoading && (
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             aria-label="Clear input"
           >
             <FaTimes className="text-lg" />
           </button>
         )}
 
+        {/* Loading spinner */}
         {isLoading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
             <div className="w-5 h-5 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
@@ -428,7 +430,7 @@ export function PlacesAutocomplete({
       {showDropdown && suggestions.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute z-[100] w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl max-h-80 overflow-y-auto"
+          className="absolute z-[100] w-full mt-2 bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-600 rounded-lg shadow-xl max-h-80 overflow-y-auto"
         >
           {suggestions.map((suggestion, index) => (
             <button
@@ -439,17 +441,17 @@ export function PlacesAutocomplete({
                 e.stopPropagation();
                 handleSelectPlace(suggestion);
               }}
-              className={`w-full px-4 py-3 text-left hover:bg-sky-50 transition-colors border-b border-gray-100 last:border-b-0 ${
-                index === selectedIndex ? "bg-sky-100" : ""
+              className={`w-full px-4 py-3 text-left hover:bg-sky-50 dark:hover:bg-sky-950/30 transition-colors border-b border-gray-100 dark:border-slate-700 last:border-b-0 ${
+                index === selectedIndex ? "bg-sky-100 dark:bg-sky-950/50" : ""
               }`}
             >
               <div className="flex items-start gap-3">
-                <FaMapMarkerAlt className="text-sky-500 mt-1 flex-shrink-0" />
+                <FaMapMarkerAlt className="text-sky-500 dark:text-sky-400 mt-1 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-900 truncate">
+                  <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
                     {suggestion.mainText}
                   </div>
-                  <div className="text-sm text-gray-600 truncate">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 truncate">
                     {suggestion.secondaryText}
                   </div>
                 </div>
@@ -472,7 +474,7 @@ export function PlacesAutocomplete({
         !isLoading &&
         suggestions.length === 0 &&
         inputValue.length >= 3 && (
-          <div className="absolute z-[100] w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl p-4 text-center text-gray-500">
+          <div className="absolute z-[100] w-full mt-2 bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-600 rounded-lg shadow-xl p-4 text-center text-gray-500 dark:text-gray-400">
             No locations found. Try a different search term.
           </div>
         )}

@@ -347,14 +347,14 @@ function FlightBooking({ trip }) {
 
     if (!hasFlightData || validFlights.length === 0) {
       return (
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-12 text-center">
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-12 text-center">
           <div className="w-16 h-16 brand-gradient rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <span className="text-2xl text-white">✈️</span>
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
             Flight Booking Available
           </h3>
-          <p className="text-gray-600 text-sm max-w-md mx-auto font-medium mb-4">
+          <p className="text-gray-600 dark:text-gray-400 text-sm max-w-md mx-auto font-medium mb-4">
             Contact our travel partners for the best flight deals to{" "}
             {trip?.userSelection?.location}
           </p>
@@ -419,17 +419,17 @@ function FlightBooking({ trip }) {
 
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md border border-gray-100 dark:border-slate-700 overflow-hidden">
           {/* Consistent Header Section */}
           <div className="brand-gradient px-4 sm:px-6 py-4 relative overflow-hidden">
             {/* Background decoration */}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
-            <div className="absolute bottom-0 left-0 w-16 h-16 bg-white opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
+            <div className="absolute top-0 right-0 w-24 h-24 bg-white dark:bg-white/10 opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
+            <div className="absolute bottom-0 left-0 w-16 h-16 bg-white dark:bg-white/10 opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
 
             <div className="relative">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-lg border border-white/30">
+                  <div className="w-10 h-10 bg-white dark:bg-white/90 rounded-lg flex items-center justify-center shadow-lg border border-white/30">
                     <Plane className="h-5 w-5 text-sky-600" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -462,12 +462,12 @@ function FlightBooking({ trip }) {
           <div className="p-4 sm:p-6">
             {/* Sort Options Section */}
             <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <span>Sort by:</span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="text-sm border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-sky-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-white cursor-pointer"
                 >
                   <option value="price">Price (Low to High)</option>
                   <option value="departure">Departure Time</option>
@@ -522,22 +522,26 @@ function FlightBooking({ trip }) {
 
         {/* Price Alerts & Partner Links - Outside main container */}
         {trip?.realFlightData?.price_alerts && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <h4 className="font-medium text-green-900 mb-2 flex items-center gap-2">
+          <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <h4 className="font-medium text-green-900 dark:text-green-400 mb-2 flex items-center gap-2">
               <TrendingDown className="h-4 w-4" />
               Price Insights
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
-                <span className="text-green-700 font-medium">Lowest: </span>
-                <span className="text-green-800">
+                <span className="text-green-700 dark:text-green-400 font-medium">
+                  Lowest:{" "}
+                </span>
+                <span className="text-green-800 dark:text-green-300">
                   ₱
                   {trip.realFlightData.price_alerts.lowest_price?.toLocaleString()}
                 </span>
               </div>
               <div>
-                <span className="text-green-700 font-medium">Average: </span>
-                <span className="text-green-800">
+                <span className="text-green-700 dark:text-green-400 font-medium">
+                  Average:{" "}
+                </span>
+                <span className="text-green-800 dark:text-green-300">
                   ₱
                   {Math.round(
                     trip.realFlightData.price_alerts.average_price
@@ -545,13 +549,15 @@ function FlightBooking({ trip }) {
                 </span>
               </div>
               <div>
-                <span className="text-green-700 font-medium">Trend: </span>
-                <span className="text-green-800 capitalize">
+                <span className="text-green-700 dark:text-green-400 font-medium">
+                  Trend:{" "}
+                </span>
+                <span className="text-green-800 dark:text-green-300 capitalize">
                   {trip.realFlightData.price_alerts.price_trend}
                 </span>
               </div>
             </div>
-            <p className="text-green-700 text-xs mt-2 font-medium">
+            <p className="text-green-700 dark:text-green-400 text-xs mt-2 font-medium">
               💡 {trip.realFlightData.price_alerts.best_booking_time}
             </p>
           </div>
@@ -559,8 +565,8 @@ function FlightBooking({ trip }) {
 
         {/* Alternative Booking Partners */}
         {trip?.realFlightData?.booking_info?.partner_links && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <h4 className="font-medium text-gray-900 mb-3">
+          <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-lg p-4">
+            <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
               Compare Prices on Other Sites
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -572,7 +578,7 @@ function FlightBooking({ trip }) {
                   onClick={() => window.open(url, "_blank")}
                   variant="outline"
                   size="sm"
-                  className="text-xs hover:bg-gray-100"
+                  className="text-xs hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer"
                 >
                   <ExternalLink className="h-3 w-3 mr-1" />
                   {name.charAt(0).toUpperCase() + name.slice(1)}
@@ -626,19 +632,19 @@ function FlightBooking({ trip }) {
 // Individual Flight Card Component
 function FlightCard({ flight, onBook, trip, formatDuration }) {
   return (
-    <div className="border border-gray-200 bg-white rounded-lg transition-all duration-200 hover:shadow-lg hover:border-sky-300 hover:-translate-y-1 group">
+    <div className="border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg transition-all duration-200 hover:shadow-lg hover:border-sky-300 dark:hover:border-sky-600 hover:-translate-y-1 group">
       {/* Main Flight Info */}
       <div className="p-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           {/* Flight Details */}
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-3">
-              <div className="font-semibold text-gray-900 flex items-center gap-2">
-                <Plane className="h-4 w-4 text-gray-600" />
+              <div className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Plane className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                 {flight.name}
               </div>
               {flight.is_best && (
-                <Badge className="bg-green-100 text-green-800 text-xs">
+                <Badge className="bg-green-100 dark:bg-green-950/30 text-green-800 dark:text-green-400 text-xs">
                   <Star className="h-3 w-3 mr-1" />
                   Best Value
                 </Badge>
@@ -653,30 +659,36 @@ function FlightCard({ flight, onBook, trip, formatDuration }) {
             {/* Flight Times and Route */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
               <div>
-                <div className="text-gray-600 text-xs mb-1">Departure</div>
+                <div className="text-gray-600 dark:text-gray-400 text-xs mb-1">
+                  Departure
+                </div>
                 <div className="font-medium flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-gray-400" />
+                  <Calendar className="h-3 w-3 text-gray-400 dark:text-gray-500" />
                   {flight.departure}
                 </div>
               </div>
               <div>
-                <div className="text-gray-600 text-xs mb-1">Arrival</div>
+                <div className="text-gray-600 dark:text-gray-400 text-xs mb-1">
+                  Arrival
+                </div>
                 <div className="font-medium flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-gray-400" />
+                  <Clock className="h-3 w-3 text-gray-400 dark:text-gray-500" />
                   {flight.arrival}
                 </div>
               </div>
               <div>
-                <div className="text-gray-600 text-xs mb-1">Duration</div>
+                <div className="text-gray-600 dark:text-gray-400 text-xs mb-1">
+                  Duration
+                </div>
                 <div className="font-medium flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-gray-400" />
+                  <Clock className="h-3 w-3 text-gray-400 dark:text-gray-500" />
                   {formatDuration(flight.duration)}
                 </div>
               </div>
             </div>
 
             {/* Flight Features */}
-            <div className="flex items-center gap-4 mt-3 text-xs text-gray-600">
+            <div className="flex items-center gap-4 mt-3 text-xs text-gray-600 dark:text-gray-400">
               <span className="flex items-center gap-1">
                 <Shield className="h-3 w-3" />
                 {flight.stops === 0 ? "Non-stop" : `${flight.stops} stop(s)`}
@@ -694,11 +706,15 @@ function FlightCard({ flight, onBook, trip, formatDuration }) {
           {/* Price and Booking */}
           <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-3 lg:gap-2">
             <div className="text-center sm:text-right lg:text-right flex-1 sm:flex-initial">
-              <div className="text-xs text-gray-600 mb-1">Total Price</div>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                Total Price
+              </div>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-500">
                 {flight.price}
               </div>
-              <div className="text-xs text-gray-500">per person</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                per person
+              </div>
             </div>
 
             <Button

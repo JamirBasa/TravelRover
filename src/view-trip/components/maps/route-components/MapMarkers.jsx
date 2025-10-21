@@ -151,8 +151,8 @@ function CustomMarkerContent({ location, index, markerColor }) {
                  pointer-events-none whitespace-nowrap"
       >
         <div
-          className="bg-gray-900 text-white text-xs font-medium px-3 py-1.5 
-                   rounded-lg shadow-lg"
+          className="bg-gray-900 dark:bg-slate-800 text-white text-xs font-medium px-3 py-1.5 
+                   rounded-lg shadow-lg dark:shadow-sky-500/20 dark:border dark:border-slate-700"
         >
           {location.name}
         </div>

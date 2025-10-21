@@ -40,8 +40,8 @@ const TravelPreferences = ({
                   isSelected
                     ? "border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
                     : isEditing
-                    ? "border-blue-200 bg-white text-gray-900"
-                    : "border-gray-300 bg-gray-100 text-gray-500"
+                    ? "border-blue-200 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
+                    : "border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400"
                 }`}
               >
                 <span className="font-medium">{type.label}</span>
@@ -120,8 +120,8 @@ const TravelPreferences = ({
                   isSelected
                     ? "border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
                     : isEditing
-                    ? "border-blue-200 bg-white text-gray-900"
-                    : "border-gray-300 bg-gray-100 text-gray-500"
+                    ? "border-blue-200 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
+                    : "border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400"
                 }`}
               >
                 <div>
@@ -169,8 +169,8 @@ const TravelPreferences = ({
                   isSelected
                     ? "border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
                     : isEditing
-                    ? "border-blue-200 bg-white text-gray-900"
-                    : "border-gray-300 bg-gray-100 text-gray-500"
+                    ? "border-blue-200 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
+                    : "border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400"
                 }`}
               >
                 <span className="font-medium">{style.label}</span>

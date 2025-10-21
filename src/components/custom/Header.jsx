@@ -20,8 +20,12 @@ import { FcGoogle } from "react-icons/fc";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../config/firebaseConfig";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "../../contexts/ThemeContext";
+import { Moon, Sun } from "lucide-react";
 
 function Header() {
+  const { isDarkMode, toggleTheme } = useTheme();
+
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem("user");
     return stored ? JSON.parse(stored) : null;
@@ -91,7 +95,7 @@ function Header() {
         if (userData.hasProfile) {
           // User has a profile, redirect to home page
           toast.success("Welcome back! Taking you to the homepage...");
-          setTimeout(() => navigate("/home"), 1000);
+          setTimeout(() => navigate("/"), 1000);
         } else {
           // First-time user or incomplete profile, redirect to user profile
           toast.success("Welcome! Let's set up your travel profile...");
@@ -114,7 +118,7 @@ function Header() {
   }, []);
 
   return (
-    <div className="px-4 py-3 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-lg sticky top-0 z-50">
+    <div className="px-4 py-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200 dark:border-slate-700 shadow-lg sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <div
           className="flex items-center cursor-pointer group"
@@ -134,21 +138,37 @@ function Header() {
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
-                className="rounded-full cursor-pointer font-medium text-gray-600 hover:text-sky-600 hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 transition-all duration-200"
-                onClick={() => navigate("/home")}
+                className="rounded-full cursor-pointer font-medium text-gray-600 dark:text-gray-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 dark:hover:from-sky-900/30 dark:hover:to-blue-900/30 transition-all duration-200"
+                onClick={() => navigate("/")}
               >
                 Home
               </Button>
               <Button
                 variant="ghost"
-                className="rounded-full cursor-pointer font-medium text-gray-600 hover:text-sky-600 hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 transition-all duration-200"
+                className="rounded-full cursor-pointer font-medium text-gray-600 dark:text-gray-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 dark:hover:from-sky-900/30 dark:hover:to-blue-900/30 transition-all duration-200"
                 onClick={() => navigate("/my-trips")}
               >
                 My Trips
               </Button>
-              <span className="text-gray-700 font-medium text-sm">
+
+              {/* Dark Mode Toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full cursor-pointer hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 transition-all duration-200"
+                onClick={toggleTheme}
+                aria-label="Toggle dark mode"
+              >
+                {isDarkMode ? (
+                  <Sun className="h-5 w-5 text-sky-600" />
+                ) : (
+                  <Moon className="h-5 w-5 text-gray-600" />
+                )}
+              </Button>
+
+              <span className="text-gray-700 dark:text-gray-300 font-medium text-sm">
                 Hello,{" "}
-                <span className="text-sky-600 font-semibold">
+                <span className="text-sky-600 dark:text-sky-400 font-semibold">
                   {user?.given_name ||
                     user?.name?.trim().split(" ")[0] ||
                     "there"}
@@ -166,24 +186,26 @@ function Header() {
                     <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                   </div>
                 </PopoverTrigger>
-                <PopoverContent className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-xl rounded-xl p-4">
+                <PopoverContent className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-gray-200 dark:border-slate-700 shadow-xl rounded-xl p-4">
                   <div className="flex flex-col">
-                    <span className="font-semibold text-gray-800">
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">
                       {user?.name}
                     </span>
-                    <span className="text-sm text-gray-500">{user?.email}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {user?.email}
+                    </span>
                   </div>
                   <div className="flex flex-col gap-2 mt-4">
                     <Button
                       variant="ghost"
-                      className="w-full text-left cursor-pointer hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 hover:text-sky-600 transition-all duration-200 rounded-lg"
+                      className="w-full text-left cursor-pointer hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 dark:hover:from-sky-900/30 dark:hover:to-blue-900/30 hover:text-sky-600 dark:hover:text-sky-400 transition-all duration-200 rounded-lg"
                       onClick={() => navigate("/settings")}
                     >
                       ⚙️ Settings
                     </Button>
                     <Button
                       variant="ghost"
-                      className="w-full text-left cursor-pointer hover:bg-red-50 hover:text-red-600 transition-all duration-200 rounded-lg"
+                      className="w-full text-left cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200 rounded-lg"
                       onClick={handleLogout}
                     >
                       🚪 Logout
@@ -193,19 +215,36 @@ function Header() {
               </Popover>
             </div>
           ) : (
-            <Button
-              onClick={() => setOpenDialog(true)}
-              disabled={isLoggingIn}
-              className="brand-button px-6 py-2"
-            >
-              {isLoggingIn ? "Signing in..." : "Sign In"}
-            </Button>
+            <div className="flex items-center gap-3">
+              {/* Dark Mode Toggle for non-logged users */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full cursor-pointer hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 transition-all duration-200"
+                onClick={toggleTheme}
+                aria-label="Toggle dark mode"
+              >
+                {isDarkMode ? (
+                  <Sun className="h-5 w-5 text-sky-600" />
+                ) : (
+                  <Moon className="h-5 w-5 text-gray-600" />
+                )}
+              </Button>
+
+              <Button
+                onClick={() => setOpenDialog(true)}
+                disabled={isLoggingIn}
+                className="brand-button px-6 py-2 cursor-pointer"
+              >
+                {isLoggingIn ? "Signing in..." : "Sign In"}
+              </Button>
+            </div>
           )}
         </div>
       </div>
 
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-2xl rounded-2xl">
+        <DialogContent className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-gray-200 dark:border-slate-700 shadow-2xl rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-center">
               <img src="/logo.svg" alt="Logo" className="h-12 w-auto" />
@@ -214,16 +253,16 @@ function Header() {
               </span>
             </DialogTitle>
 
-            <DialogDescription className="mt-3 text-sm text-gray-600 text-center">
+            <DialogDescription className="mt-3 text-sm text-gray-600 dark:text-gray-400 text-center">
               Sign in to save your trips and access them from any device.
             </DialogDescription>
 
             <div className="mt-6">
-              <h2 className="text-lg font-semibold text-gray-800 text-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 text-center mb-4">
                 Start Your Journey
               </h2>
               <Button
-                className="w-full mt-4 flex gap-3 items-center justify-center brand-button py-3"
+                className="w-full mt-4 flex gap-3 items-center justify-center brand-button py-3 cursor-pointer"
                 onClick={() => googleLogin()}
                 disabled={isLoggingIn}
               >

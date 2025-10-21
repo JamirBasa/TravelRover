@@ -81,7 +81,7 @@ const TravelStyleStep = ({
                   className={`group flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
                     isSelected
                       ? "border-sky-500 brand-gradient text-white shadow-md"
-                      : "border-gray-200 bg-white hover:border-sky-400"
+                      : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-sky-400 dark:hover:border-sky-500"
                   }`}
                   onClick={() =>
                     handleMultiSelect("preferredTripTypes", type.id)
@@ -163,7 +163,7 @@ const TravelStyleStep = ({
                     className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
                       isSelected
                         ? "border-sky-500 brand-gradient text-white shadow-md"
-                        : "border-gray-200 bg-white hover:border-sky-400"
+                        : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-sky-400 dark:hover:border-sky-500"
                     }`}
                     onClick={() =>
                       handleInputChange("budgetRange", budget.value)
@@ -218,7 +218,7 @@ const TravelStyleStep = ({
                     className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
                       isSelected
                         ? "border-sky-500 brand-gradient text-white shadow-md"
-                        : "border-gray-200 bg-white hover:border-sky-400"
+                        : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-sky-400 dark:hover:border-sky-500"
                     }`}
                     onClick={() =>
                       handleInputChange("travelStyle", style.value)

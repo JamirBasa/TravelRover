@@ -135,7 +135,7 @@ const FoodCultureStep = ({
                   className={`flex items-center p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
                     isSelected
                       ? "border-black bg-black text-white"
-                      : "border-gray-200 bg-white hover:border-gray-300"
+                      : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-500"
                   }`}
                   onClick={() =>
                     handleMultiSelect("dietaryRestrictions", diet.id)
@@ -200,7 +200,7 @@ const FoodCultureStep = ({
                   className={`flex items-center p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
                     isSelected
                       ? "border-black bg-black text-white"
-                      : "border-gray-200 bg-white hover:border-gray-300"
+                      : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-500"
                   }`}
                   onClick={() =>
                     handleMultiSelect("culturalPreferences", culture.id)
@@ -241,7 +241,7 @@ const FoodCultureStep = ({
                   className={`p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
                     isSelected
                       ? "border-black bg-black text-white"
-                      : "border-gray-200 bg-white hover:border-gray-300"
+                      : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-500"
                   }`}
                   onClick={() =>
                     handleMultiSelect("languagePreferences", lang.id)

@@ -10,71 +10,71 @@ export const COLORS = {
   // Primary gradients for main components
   primary: {
     gradient: 'bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700',
-    lightGradient: 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50',
-    text: 'text-blue-700',
-    border: 'border-blue-200',
-    hover: 'hover:border-blue-300',
+    lightGradient: 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/30 dark:via-indigo-950/30 dark:to-purple-950/30',
+    text: 'text-blue-700 dark:text-blue-400',
+    border: 'border-blue-200 dark:border-blue-800',
+    hover: 'hover:border-blue-300 dark:hover:border-blue-700',
   },
   
   // Secondary gradients for accent components  
   secondary: {
     gradient: 'bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600',
-    lightGradient: 'bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50',
-    text: 'text-emerald-700',
-    border: 'border-emerald-200',
-    hover: 'hover:border-emerald-300',
+    lightGradient: 'bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/20 dark:via-teal-950/20 dark:to-cyan-950/20',
+    text: 'text-emerald-700 dark:text-emerald-400',
+    border: 'border-emerald-200 dark:border-emerald-800',
+    hover: 'hover:border-emerald-300 dark:hover:border-emerald-700',
   },
   
   // Edit state - Warm amber for editing mode
   editing: {
     gradient: 'bg-gradient-to-br from-amber-500 via-orange-500 to-red-500',
-    lightGradient: 'bg-gradient-to-br from-amber-50 via-orange-50 to-red-50',
-    text: 'text-amber-700',
-    border: 'border-amber-200',
-    ring: 'ring-2 ring-amber-100',
+    lightGradient: 'bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 dark:from-amber-950/30 dark:via-orange-950/30 dark:to-red-950/30',
+    text: 'text-amber-700 dark:text-amber-400',
+    border: 'border-amber-200 dark:border-amber-800',
+    ring: 'ring-2 ring-amber-100 dark:ring-amber-900/50',
   },
   
   // Success states - Green for confirmations
   success: {
     gradient: 'bg-gradient-to-r from-green-500 to-emerald-600',
-    lightGradient: 'bg-gradient-to-r from-green-50 to-emerald-50',
-    text: 'text-green-700',
-    border: 'border-green-200',
+    lightGradient: 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30',
+    text: 'text-green-700 dark:text-green-400',
+    border: 'border-green-200 dark:border-green-800',
   },
   
   // Info states - Cool blues for information
   info: {
     gradient: 'bg-gradient-to-r from-sky-500 to-blue-600', 
-    lightGradient: 'bg-gradient-to-r from-sky-50 to-blue-50',
-    text: 'text-sky-700',
-    border: 'border-sky-200',
+    lightGradient: 'bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30',
+    text: 'text-sky-700 dark:text-sky-400',
+    border: 'border-sky-200 dark:border-sky-800',
   },
   
   // Badge color system for consistent activity badges
   badges: {
     pricing: {
-      bg: 'bg-green-100',
-      text: 'text-green-800',
-      border: 'border-green-300',
-      hover: 'hover:bg-green-200',
+      bg: 'bg-green-100 dark:bg-green-950/30',
+      text: 'text-green-800 dark:text-green-400',
+      border: 'border-green-300 dark:border-green-800',
+      hover: 'hover:bg-green-200 dark:hover:bg-green-900/50',
     },
     time: {
-      bg: 'bg-orange-100', 
-      text: 'text-orange-800',
-      border: 'border-orange-300',
-      hover: 'hover:bg-orange-200',
+      bg: 'bg-orange-100 dark:bg-orange-950/30', 
+      text: 'text-orange-800 dark:text-orange-400',
+      border: 'border-orange-300 dark:border-orange-800',
+      hover: 'hover:bg-orange-200 dark:hover:bg-orange-900/50',
     },
     rating: {
-      bg: 'bg-yellow-100',
-      text: 'text-yellow-800', 
-      border: 'border-yellow-300',
-      hover: 'hover:bg-yellow-200',
+      bg: 'bg-yellow-100 dark:bg-yellow-950/30',
+      text: 'text-yellow-800 dark:text-yellow-400', 
+      border: 'border-yellow-300 dark:border-yellow-800',
+      hover: 'hover:bg-yellow-200 dark:hover:bg-yellow-900/50',
     },
     general: {
-      bg: 'bg-blue-100',
-      text: 'text-blue-800',
-      border: 'border-blue-300', 
-      hover: 'hover:bg-blue-200',
+      bg: 'bg-blue-100 dark:bg-blue-950/30',
+      text: 'text-blue-800 dark:text-blue-400',
+      border: 'border-blue-300 dark:border-blue-800', 
+      hover: 'hover:bg-blue-200 dark:hover:bg-blue-900/50',
     }
   }
 };
@@ -128,9 +128,9 @@ export const TYPOGRAPHY = {
 export const PATTERNS = {
   // Card designs
   card: {
-    base: 'bg-white rounded-lg border border-gray-200 overflow-hidden',
-    hover: 'hover:shadow-lg hover:shadow-primary/5 transition-all duration-300',
-    interactive: 'cursor-pointer hover:border-primary/30',
+    base: 'bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden',
+    hover: 'hover:shadow-lg hover:shadow-primary/5 dark:hover:shadow-sky-500/10 transition-all duration-300',
+    interactive: 'cursor-pointer hover:border-primary/30 dark:hover:border-sky-600',
   },
   
   // Section headers  

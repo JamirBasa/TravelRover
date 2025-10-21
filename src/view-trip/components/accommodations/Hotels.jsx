@@ -283,11 +283,52 @@ function Hotels({ trip }) {
     trip?.tripData?.tripData?.accommodations ||
     [];
 
-  const hotels = parseDataArray(hotelsRaw, "hotels");
+  const hotelsUnsorted = parseDataArray(hotelsRaw, "hotels");
 
-  // Handle hotel booking
+  // Helper function to extract numeric price from various price formats
+  const extractPrice = (hotel) => {
+    const priceStr =
+      hotel?.pricePerNight || hotel?.priceRange || hotel?.price_range || "0";
+
+    // Handle price ranges like "₱2,000-8,000" or "Budget (₱2,000-8,000)"
+    if (priceStr.includes("-")) {
+      const rangeMatch = priceStr.match(/[\d,]+/g);
+      if (rangeMatch && rangeMatch.length >= 1) {
+        // Use the lower bound of the range for sorting
+        return parseFloat(rangeMatch[0].replace(/,/g, ""));
+      }
+    }
+
+    // Handle single prices like "₱5,000" or "$100"
+    const numPrice = parseFloat(priceStr.replace(/[₱$€£,]/g, ""));
+    return isNaN(numPrice) ? 0 : numPrice;
+  };
+
+  // Sort hotels by price (lowest to highest)
+  const hotels = [...hotelsUnsorted].sort((a, b) => {
+    const priceA = extractPrice(a);
+    const priceB = extractPrice(b);
+
+    // Hotels without prices go to the end
+    if (priceA === 0 && priceB === 0) return 0;
+    if (priceA === 0) return 1;
+    if (priceB === 0) return -1;
+
+    return priceA - priceB;
+  });
+
+  console.log(
+    "🏨 Hotels sorted by price (lowest to highest):",
+    hotels.map((h) => ({
+      name: h?.name || h?.hotelName,
+      price: extractPrice(h),
+      priceStr: h?.pricePerNight || h?.priceRange || h?.price_range,
+    }))
+  );
+
+  // Handle hotel booking for both real and AI-generated hotels
   const handleBookHotel = (hotel) => {
-    console.log("Hotel booking attempt:", hotel);
+    console.log("🏨 Hotel booking attempt:", hotel);
 
     // Extract hotel details matching your API structure
     const extractedHotelName =
@@ -302,9 +343,12 @@ function Hotels({ trip }) {
       description: hotel?.description,
       finalName: extractedHotelName,
       finalAddress: extractedAddress,
+      hasPlaceId: !!hotel?.place_id,
+      isAIGenerated: !hotel?.place_id,
     });
 
     // Generate Trip.com affiliate URL using hotel name for specific search
+    // Works for both real hotels (with place_id) and AI-generated hotels
     const bookingUrl = generateHotelBookingURL({
       hotelName: extractedHotelName,
       destination:
@@ -313,19 +357,20 @@ function Hotels({ trip }) {
     });
     console.log("🔗 Generated Trip.com booking URL:", bookingUrl);
 
-    // Open booking URL
+    // Open booking URL in new tab
     window.open(bookingUrl, "_blank");
   };
 
-  // Calculate average price if available
+  // Calculate average price ONLY for real hotels with place_id
+  const realHotels = hotels.filter((hotel) => hotel?.place_id);
   const avgPrice =
-    hotels.length > 0
-      ? hotels.reduce((sum, hotel) => {
+    realHotels.length > 0
+      ? realHotels.reduce((sum, hotel) => {
           const price = hotel?.pricePerNight || hotel?.priceRange || "0";
           const numPrice = parseFloat(price.replace(/[₱$€£,]/g, ""));
           return sum + (isNaN(numPrice) ? 0 : numPrice);
         }, 0) /
-        hotels.filter((hotel) => {
+        realHotels.filter((hotel) => {
           const price = hotel?.pricePerNight || hotel?.priceRange || "0";
           const numPrice = parseFloat(price.replace(/[₱$€£,]/g, ""));
           return !isNaN(numPrice);
@@ -335,14 +380,14 @@ function Hotels({ trip }) {
   // Empty state - High Contrast Design
   if (!hotels || hotels.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-12 text-center">
-        <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-          <span className="text-2xl text-purple-600">🏨</span>
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg dark:shadow-sky-500/5 border border-gray-200 dark:border-slate-700 p-12 text-center">
+        <div className="w-16 h-16 bg-sky-100 dark:bg-sky-950/50 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+          <span className="text-2xl text-sky-600 dark:text-sky-400">🏨</span>
         </div>
-        <h3 className="text-lg font-bold text-gray-900 mb-2">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
           No Hotels Found
         </h3>
-        <p className="text-gray-600 text-sm max-w-md mx-auto font-medium">
+        <p className="text-gray-600 dark:text-gray-400 text-sm max-w-md mx-auto font-medium">
           We're still finding the perfect accommodations for your trip. Please
           check back soon.
         </p>
@@ -352,28 +397,28 @@ function Hotels({ trip }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md dark:shadow-sky-500/5 border border-gray-100 dark:border-slate-700 overflow-hidden">
         {/* Consistent Header Section */}
-        <div className="bg-gradient-to-r from-purple-500 via-purple-600 to-pink-600 px-4 sm:px-6 py-4 relative overflow-hidden">
+        <div className="brand-gradient px-4 sm:px-6 py-4 relative overflow-hidden">
           {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white dark:bg-white/10 opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white dark:bg-white/10 opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
 
           <div className="relative">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-white dark:bg-white/20 bg-opacity-20 rounded-lg flex items-center justify-center">
                   <span className="text-white text-lg">🏨</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <h2 className="text-xl font-bold text-white mb-1 break-words">
                     Available Hotels
                   </h2>
-                  <p className="text-purple-100 text-xs flex items-center gap-2 flex-wrap">
+                  <p className="text-white/90 text-xs flex items-center gap-2 flex-wrap">
                     <span>🏨</span>
                     <span>{hotels.length} accommodations found</span>
                     <span>•</span>
-                    <span>🎯 AI-recommended</span>
+                    <span>💰 Sorted: Lowest to Highest Price</span>
                   </p>
                 </div>
               </div>
@@ -384,8 +429,16 @@ function Hotels({ trip }) {
                     <div className="text-base font-bold">
                       ₱{Math.round(avgPrice).toLocaleString()}
                     </div>
-                    <div className="text-xs text-purple-100">avg/night</div>
+                    <div className="text-xs text-white/80">avg/night</div>
                   </div>
+                </div>
+              )}
+              {/* Show hotel count badge for AI-generated hotels */}
+              {!avgPrice && hotels.length > 0 && (
+                <div className="hidden sm:flex items-center gap-2 bg-white/20 dark:bg-white/10 px-3 py-1.5 rounded-lg">
+                  <span className="text-white/90 text-xs font-medium">
+                    AI-Recommended
+                  </span>
                 </div>
               )}
             </div>
@@ -393,7 +446,7 @@ function Hotels({ trip }) {
         </div>
 
         {/* Hotels List */}
-        <div className="p-4 sm:p-6">
+        <div className="p-4 sm:p-6 bg-gray-50 dark:bg-slate-950">
           <div className="grid gap-6">
             {hotels.map((hotel, index) => (
               <div
@@ -408,25 +461,27 @@ function Hotels({ trip }) {
                 <HotelCardItem hotel={hotel} onBookHotel={handleBookHotel} />
                 {/* Add separator except for last item */}
                 {index < hotels.length - 1 && (
-                  <div className="mt-6 border-b border-gray-100"></div>
+                  <div className="mt-6 border-b border-gray-100 dark:border-slate-800"></div>
                 )}
               </div>
             ))}
           </div>
 
           {/* Compact Hotel Selection Tips */}
-          <div className="mt-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200 shadow-sm">
+          <div className="mt-6 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 rounded-lg p-4 border border-sky-200 dark:border-sky-800 shadow-sm dark:shadow-sky-500/5">
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-purple-600 text-xs">💡</span>
+              <div className="w-6 h-6 bg-sky-100 dark:bg-sky-950/50 rounded flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-sky-600 dark:text-sky-400 text-xs">
+                  💡
+                </span>
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-purple-900 mb-2 text-sm">
+                <h4 className="font-semibold text-sky-900 dark:text-sky-300 mb-2 text-sm">
                   Booking Tips
                 </h4>
-                <ul className="text-xs text-purple-800 space-y-1.5 font-medium">
+                <ul className="text-xs text-sky-800 dark:text-sky-400 space-y-1.5 font-medium">
                   <li className="flex items-start gap-2">
-                    <span className="text-purple-600 mt-0.5 flex-shrink-0">
+                    <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
                       •
                     </span>
                     <span>
@@ -434,13 +489,13 @@ function Hotels({ trip }) {
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-purple-600 mt-0.5 flex-shrink-0">
+                    <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
                       •
                     </span>
                     <span>Compare prices and amenities before booking</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-purple-600 mt-0.5 flex-shrink-0">
+                    <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
                       •
                     </span>
                     <span>
@@ -448,7 +503,7 @@ function Hotels({ trip }) {
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-purple-600 mt-0.5 flex-shrink-0">
+                    <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
                       •
                     </span>
                     <span>Book early for better rates and availability</span>

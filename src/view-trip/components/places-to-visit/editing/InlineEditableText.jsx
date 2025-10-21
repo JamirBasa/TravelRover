@@ -249,7 +249,7 @@ function InlineEditableText({
                 e.stopPropagation();
                 handleSave();
               }}
-              className="p-1 rounded hover:bg-green-100 hover:text-green-600 focus:ring-2 focus:ring-offset-1 focus:ring-green-500 transition-colors"
+              className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-950/50 hover:text-green-600 dark:hover:text-green-400 focus:ring-2 focus:ring-offset-1 focus:ring-green-500 dark:focus:ring-green-700 transition-colors"
               aria-label="Save changes"
               title="Save (Enter)"
               disabled={isSaving}

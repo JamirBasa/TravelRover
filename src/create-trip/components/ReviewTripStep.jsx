@@ -68,7 +68,7 @@ const ReviewTripStep = ({
         <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           Review Your Trip Details
         </h2>
-        <p className="text-gray-700 text-base font-medium">
+        <p className="text-gray-700 dark:text-gray-300 text-base font-medium">
           Please review your travel preferences before generating your itinerary
           ✅
         </p>
@@ -77,12 +77,14 @@ const ReviewTripStep = ({
       {/* Review Cards */}
       <div className="space-y-4">
         {/* Destination */}
-        <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
+        <div className="bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <FaMapMarkerAlt className="text-blue-600 mt-1 flex-shrink-0" />
+            <FaMapMarkerAlt className="text-blue-600 dark:text-blue-500 mt-1 flex-shrink-0" />
             <div>
-              <h3 className="font-medium text-gray-800 mb-1">Destination</h3>
-              <p className="text-gray-600 text-sm">
+              <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-1">
+                Destination
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
                 {place?.label || formData.location || "Not selected"}
               </p>
             </div>
@@ -90,27 +92,29 @@ const ReviewTripStep = ({
         </div>
 
         {/* Travel Dates */}
-        <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
+        <div className="bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <FaCalendarAlt className="text-green-600 mt-1 flex-shrink-0" />
+            <FaCalendarAlt className="text-green-600 dark:text-green-500 mt-1 flex-shrink-0" />
             <div className="flex-1">
-              <h3 className="font-medium text-gray-800 mb-1">Travel Dates</h3>
-              <p className="text-gray-600 text-sm">
+              <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-1">
+                Travel Dates
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
                 <strong>Start:</strong> {formatDate(formData.startDate)}
               </p>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
                 <strong>End:</strong> {formatDate(formData.endDate)}
               </p>
-              <p className="text-blue-600 text-sm font-medium mt-1">
+              <p className="text-blue-600 dark:text-blue-500 text-sm font-medium mt-1">
                 Duration: {getDuration()}
               </p>
 
               {/* Smart Date Explanation */}
               {travelDates && (
-                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <div className="flex items-start gap-2">
-                    <FaInfoCircle className="text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div className="text-xs text-blue-700">
+                    <FaInfoCircle className="text-blue-600 dark:text-blue-500 mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-blue-700 dark:text-blue-400">
                       <p className="font-semibold mb-1">Travel Timing:</p>
                       <p>{getDateExplanation(travelDates)}</p>
                       {travelDates.includesArrivalDay && (
@@ -134,12 +138,14 @@ const ReviewTripStep = ({
         </div>
 
         {/* Travelers */}
-        <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
+        <div className="bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <FaUsers className="text-purple-600 mt-1 flex-shrink-0" />
+            <FaUsers className="text-sky-600 dark:text-sky-500 mt-1 flex-shrink-0" />
             <div>
-              <h3 className="font-medium text-gray-800 mb-1">Travel Group</h3>
-              <p className="text-gray-600 text-sm">
+              <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-1">
+                Travel Group
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
                 {formData.travelers || "Not selected"}
               </p>
             </div>
@@ -147,34 +153,40 @@ const ReviewTripStep = ({
         </div>
 
         {/* Budget */}
-        <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
+        <div className="bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <FaMoneyBillWave className="text-orange-600 mt-1 flex-shrink-0" />
+            <FaMoneyBillWave className="text-orange-600 dark:text-orange-500 mt-1 flex-shrink-0" />
             <div>
-              <h3 className="font-medium text-gray-800 mb-1">Budget</h3>
-              <p className="text-gray-600 text-sm">{getBudgetDisplay()}</p>
+              <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-1">
+                Budget
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                {getBudgetDisplay()}
+              </p>
             </div>
           </div>
         </div>
 
         {/* Flight Preferences */}
-        <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
+        <div className="bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <FaPlane className="text-indigo-600 mt-1 flex-shrink-0" />
+            <FaPlane className="text-blue-600 dark:text-blue-500 mt-1 flex-shrink-0" />
             <div>
-              <h3 className="font-medium text-gray-800 mb-1">Flight Options</h3>
+              <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-1">
+                Flight Options
+              </h3>
               {flightData.includeFlights ? (
                 <div>
-                  <p className="text-green-600 text-sm font-medium">
+                  <p className="text-green-600 dark:text-green-500 text-sm font-medium">
                     ✓ Include flight search
                   </p>
-                  <p className="text-gray-600 text-sm">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
                     Departing from:{" "}
                     {flightData.departureCity || "Not specified"}
                   </p>
                 </div>
               ) : (
-                <p className="text-gray-600 text-sm">
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
                   No flight search requested
                 </p>
               )}
@@ -183,25 +195,27 @@ const ReviewTripStep = ({
         </div>
 
         {/* Hotel Preferences */}
-        <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
+        <div className="bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <FaHotel className="text-orange-600 mt-1 flex-shrink-0" />
+            <FaHotel className="text-orange-600 dark:text-orange-500 mt-1 flex-shrink-0" />
             <div>
-              <h3 className="font-medium text-gray-800 mb-1">Hotel Options</h3>
+              <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-1">
+                Hotel Options
+              </h3>
               {hotelData?.includeHotels ? (
                 <div>
-                  <p className="text-green-600 text-sm font-medium">
+                  <p className="text-green-600 dark:text-green-500 text-sm font-medium">
                     ✓ Include hotel search
                   </p>
-                  <p className="text-gray-600 text-sm">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
                     Preferred Type: {hotelData.preferredType || "Not specified"}
                   </p>
-                  <p className="text-gray-600 text-sm">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
                     Budget Range: {hotelData.priceRange || "Not specified"}
                   </p>
                 </div>
               ) : (
-                <p className="text-gray-600 text-sm">
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
                   No hotel search requested
                 </p>
               )}
@@ -211,14 +225,14 @@ const ReviewTripStep = ({
 
         {/* Special Requests */}
         {formData.specificRequests && (
-          <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
+          <div className="bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <FaListAlt className="text-teal-600 mt-1 flex-shrink-0" />
+              <FaListAlt className="text-teal-600 dark:text-teal-500 mt-1 flex-shrink-0" />
               <div>
-                <h3 className="font-medium text-gray-800 mb-1">
+                <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-1">
                   Special Requests
                 </h3>
-                <p className="text-gray-600 text-sm whitespace-pre-line">
+                <p className="text-gray-600 dark:text-gray-400 text-sm whitespace-pre-line">
                   {formData.specificRequests}
                 </p>
               </div>
@@ -228,11 +242,11 @@ const ReviewTripStep = ({
 
         {/* User Profile Summary */}
         {userProfile && (
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-            <h3 className="font-medium text-blue-800 mb-2">
+          <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <h3 className="font-medium text-blue-800 dark:text-blue-300 mb-2">
               Personalization Based on Your Profile:
             </h3>
-            <div className="space-y-1 text-blue-700 text-sm">
+            <div className="space-y-1 text-blue-700 dark:text-blue-400 text-sm">
               <p>• Travel Style: {userProfile.travelStyle}</p>
               <p>
                 • Preferred Trip Types:{" "}
@@ -248,14 +262,14 @@ const ReviewTripStep = ({
 
         {/* LangGraph Multi-Agent Notice */}
         {(flightData?.includeFlights || hotelData?.includeHotels) && (
-          <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
-            <h3 className="font-medium text-purple-800 mb-2">
+          <div className="bg-sky-50 dark:bg-sky-950/30 border-2 border-sky-200 dark:border-sky-800 rounded-lg p-4">
+            <h3 className="font-medium text-sky-800 dark:text-sky-300 mb-2">
               🤖 LangGraph Multi-Agent System
             </h3>
-            <p className="text-purple-700 text-sm">
+            <p className="text-sky-700 dark:text-sky-400 text-sm">
               Our AI agents will work together to find the best options:
             </p>
-            <ul className="text-purple-700 text-sm mt-2 space-y-1">
+            <ul className="text-sky-700 dark:text-sky-400 text-sm mt-2 space-y-1">
               {flightData?.includeFlights && (
                 <li>
                   • ✈️ Flight Agent: Real-time flight search and optimization
@@ -272,11 +286,11 @@ const ReviewTripStep = ({
         )}
 
         {/* Generation Notice */}
-        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-          <h3 className="font-medium text-green-800 mb-2">
+        <div className="bg-green-50 dark:bg-green-950/30 border-2 border-green-200 dark:border-green-800 rounded-lg p-4">
+          <h3 className="font-medium text-green-800 dark:text-green-300 mb-2">
             🎉 Ready to Generate!
           </h3>
-          <p className="text-green-700 text-sm">
+          <p className="text-green-700 dark:text-green-400 text-sm">
             Your personalized itinerary will include accommodations, activities,
             dining recommendations, and transportation options based on your
             preferences and profile.

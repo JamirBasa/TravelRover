@@ -56,7 +56,7 @@ function Footer() {
               </Badge>
               <Badge
                 variant="secondary"
-                className="bg-purple-100/10 text-purple-200 border-purple-400/20"
+                className="bg-sky-100/10 text-sky-200 border-sky-400/20"
               >
                 <Plane className="h-3 w-3 mr-1" />
                 Live Flight Data
@@ -68,21 +68,21 @@ function Footer() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-blue-200 hover:text-white hover:bg-white/10"
+                className="text-blue-200 hover:text-white hover:bg-white/10 cursor-pointer"
               >
                 <Github className="h-4 w-4" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-blue-200 hover:text-white hover:bg-white/10"
+                className="text-blue-200 hover:text-white hover:bg-white/10 cursor-pointer"
               >
                 <Twitter className="h-4 w-4" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-blue-200 hover:text-white hover:bg-white/10"
+                className="text-blue-200 hover:text-white hover:bg-white/10 cursor-pointer"
               >
                 <Mail className="h-4 w-4" />
               </Button>
