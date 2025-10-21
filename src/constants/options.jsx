@@ -14,6 +14,7 @@ import {
   FaShieldAlt,
   FaLanguage,
   FaMosque,
+  FaClock, // Add this line
 } from "react-icons/fa";
 
 // ===============================
@@ -163,18 +164,24 @@ export const STEP_CONFIGS = {
     },
     {
       id: 3,
+      title: "Activity Pace",
+      description: "Choose your daily activity level",
+      icon: FaClock,
+    },
+    {
+      id: 4,
       title: "Flight Options",
       description: "Include flights in your itinerary",
       icon: FaPlane,
     },
     {
-      id: 4,
+      id: 5,
       title: "Hotel Options",
       description: "Include hotel recommendations",
       icon: FaHotel,
     },
     {
-      id: 5,
+      id: 6,
       title: "Review & Generate",
       description: "Confirm details and create your trip",
       icon: FaCheck,
@@ -356,11 +363,12 @@ export const SelectTravelList = [
   },
   {
     id: 2,
-    title: "Family Trip",
-    desc: "A fun-filled adventure for the whole family.",
-    icon: <FaUsers style={{ color: "#27ae60" }} />,
-    people: "3 to 5 People",
+    title: "Couple Getaway",
+    desc: "A romantic escape for couples to enjoy the beauty of the Philippines.",
+    icon: <FaHeart style={{ color: "#e74c3c" }} />,
+    people: "2 People",
   },
+
   {
     id: 3,
     title: "Group Tour",
@@ -370,10 +378,10 @@ export const SelectTravelList = [
   },
   {
     id: 4,
-    title: "Couple Getaway",
-    desc: "A romantic escape for couples to enjoy the beauty of the Philippines.",
-    icon: <FaHeart style={{ color: "#e74c3c" }} />,
-    people: "2 People",
+    title: "Family Trip",
+    desc: "A fun-filled adventure for the whole family.",
+    icon: <FaUsers style={{ color: "#27ae60" }} />,
+    people: "3 to 5 People",
   },
 ];
 
@@ -437,6 +445,126 @@ NAMING FORMAT FOR PLACES:
 - Example: "Tops Lookout, Busay, Cebu" NOT just "Tops Lookout"
 - This prevents confusion with places of the same name elsewhere
 
+🚨 ARRIVAL & DEPARTURE LOGISTICS - CRITICAL:
+
+📍 DAY 1 (ARRIVAL DAY):
+✅ Assume traveler arrives morning/afternoon (9 AM - 3 PM typical)
+✅ MANDATORY buffer time:
+   - Airport/station → Hotel: 45-90 min (traffic dependent)
+   - Check-in process: 15-30 min
+   - Freshen up/rest: 30-60 min
+   - TOTAL: 2-3 hours before first activity
+✅ First activity timing:
+   - If arrival 10 AM → First activity 1:00 PM earliest
+   - If arrival 2 PM → First activity 5:00 PM earliest
+✅ Day 1 schedule: LIGHT (2-3 activities max, 4-5 hours total)
+✅ Choose nearby attractions (walking distance or 15-min ride from hotel)
+✅ Example Day 1 structure:
+   - "2:00 PM - Hotel check-in and rest"
+   - "4:30 PM - Welcome walk at [nearby attraction]"
+   - "7:00 PM - Dinner at local restaurant"
+
+📍 LAST DAY (DEPARTURE DAY):
+✅ Assume departure afternoon/evening (2 PM - 8 PM typical)
+✅ MANDATORY buffer time:
+   - Hotel check-out: 12:00 PM (standard)
+   - Pre-checkout packing: 60 min before
+   - Hotel → Airport: 45-90 min (traffic)
+   - Airport early arrival: 2-3 hrs domestic, 3-4 hrs international
+   - TOTAL: Plan last activity END 4-5 hours before departure
+✅ Last day schedule: VERY LIGHT (1-2 activities max, 3 hours total)
+✅ Morning-only activities near hotel
+✅ Example Last Day structure:
+   - "7:30 AM - Breakfast at hotel cafe"
+   - "9:00 AM - Quick souvenir shopping nearby"
+   - "11:00 AM - Return to hotel, pack and check-out"
+   - "12:30 PM - Departure transfer to airport"
+
+🕐 TRAVEL TIME BETWEEN ACTIVITIES (ALL DAYS):
+
+REALISTIC TRAVEL TIME RULES:
+✅ Same neighborhood/district: 15-30 minutes
+✅ Across city zones: 30-60 minutes
+✅ City center ↔ Suburbs: 60-120 minutes
+✅ Major city traffic multiplier: +30-50% (Manila, Cebu, Davao)
+✅ Peak hours (7-9 AM, 5-7 PM): +50-100% travel time
+
+ACTIVITY SPACING:
+✅ Activity duration + Travel time + Buffer = Gap between activities
+✅ Example: 1-hour activity + 30-min travel + 15-min buffer = 1.75 hours minimum gap
+✅ DON'T schedule back-to-back without accounting for transit
+✅ Sample realistic schedule:
+   - "9:00 AM - Museum (2 hours)"
+   - "12:00 PM - Lunch (1 hour)" [30-min travel included]
+   - "2:30 PM - Park (1.5 hours)" [30-min travel, 30-min rest included]
+   - "5:30 PM - Return to hotel" [30-min travel]
+
+TIMETRAVEL FIELD FORMAT:
+✅ Always include both transit and visit duration:
+   - "30 minutes travel from hotel + 2 hours visit"
+   - "15 minutes walking distance + 1.5 hours activity"
+   - "45 minutes drive + 3 hours exploration"
+✅ Be specific about transportation mode when relevant:
+   - "20 minutes by taxi + 1 hour dining"
+   - "10 minutes walking + 2 hours sightseeing"
+
+GEOGRAPHIC CLUSTERING:
+✅ Group nearby attractions on same day to minimize transit
+✅ Avoid zigzagging across city - cluster by neighborhood
+✅ Example good clustering:
+   - Day 2: All Intramuros area attractions
+   - Day 3: All Makati/BGC area attractions
+   - Day 4: Bay area attractions (MOA, Bay Walk, etc.)
+
+DAILY SCHEDULE REALISM:
+✅ Include mandatory breaks:
+   - Breakfast: 7:00-9:00 AM (30-60 min)
+   - Lunch: 12:00-2:00 PM (60-90 min)
+   - Dinner: 6:00-8:00 PM (60-90 min)
+   - Rest periods: 30-60 min between intense activities
+✅ Active hours per day (excluding meals/rest):
+   - Day 1 (Arrival): 3-4 hours
+   - Middle days: 6-8 hours
+
+🎯 ACTIVITY PACE - USER PREFERENCE:
+The traveler has selected: {activityPreference} activities per day
+
+ACTIVITY COUNT RULES:
+✅ MIDDLE DAYS (Day 2 to Day N-1): Generate EXACTLY {activityPreference} main activities per day
+✅ DAY 1 (Arrival): 1-2 activities maximum (regardless of user preference)
+✅ LAST DAY (Departure): 0-1 activities maximum (regardless of user preference)
+✅ Meals (breakfast, lunch, dinner) DON'T count toward activity limit
+✅ "Return to hotel" or transit DON'T count toward activity limit
+
+PACING BY ACTIVITY COUNT:
+- 1 activity/day: Relaxed pace, more downtime, longer at each place (elderly, families with kids)
+- 2 activities/day: Balanced pace, comfortable exploration (first-timers, balanced schedules)
+- 3 activities/day: Active pace, efficient use of time (experienced travelers)
+- 4 activities/day: Intensive pace, maximize experiences (short trips, energetic travelers)
+
+EXAMPLES:
+If user selected 2 activities/day for a 3-day trip:
+- Day 1 (Arrival): 1-2 activities (max)
+- Day 2 (Middle): EXACTLY 2 activities
+- Day 3 (Departure): 0-1 activities (max)
+
+If user selected 4 activities/day for a 5-day trip:
+- Day 1 (Arrival): 1-2 activities (max)
+- Days 2-4 (Middle): EXACTLY 4 activities each
+- Day 5 (Departure): 0-1 activities (max)
+   - Last day (Departure): 2-3 hours
+✅ Don't exceed 10 hours total scheduled time per day
+
+PLACE DETAILS ENHANCEMENTS:
+✅ Always mention distance/time from hotel or previous location:
+   - "15-minute taxi ride from hotel"
+   - "Walking distance from previous location"
+   - "1-hour scenic drive along coast"
+✅ Include accessibility notes:
+   - "Accessible by jeepney (₱15, 25 mins)"
+   - "Best reached by Grab/taxi (₱200, 30 mins)"
+   - "Walking distance through pedestrian mall"
+
 CRITICAL JSON REQUIREMENTS:
 - Return ONLY valid JSON - no markdown, no extra text, no code blocks
 - NO trailing commas before } or ]
@@ -454,10 +582,16 @@ FORBIDDEN:
 - Incomplete objects like {...
 - Extra text after JSON
 - Missing closing braces
+- Activities immediately after arrival (no transit buffer)
+- Activities too close to departure time
+- Back-to-back schedules without travel time
+- Unrealistic cross-city travel times
+- Ignoring traffic conditions
+- Scheduling during typical check-in/check-out times
 
 REQUESTS: {specificRequests}
 
-Generate complete, valid JSON that passes JSON.parse() validation.`;
+Generate complete, valid JSON that passes JSON.parse() validation with REALISTIC travel logistics.`;
 
 export const HOTEL_CONFIG = {
   GOOGLE_PLACES_API_KEY: import.meta.env.VITE_GOOGLE_PLACES_API_KEY,
@@ -465,10 +599,20 @@ export const HOTEL_CONFIG = {
   HOTEL_TYPES: ["lodging", "hotel", "resort"],
   MAX_RESULTS: 20,
   PRICE_LEVELS: {
-    1: "Budget (₱2,000-8,000)",
-    2: "Moderate (₱8,000-20,000)",
-    3: "Luxury (₱20,000-40,000)",
-    4: "Ultra-Luxury (₱40,000+)",
+    1: "Budget (₱500-1,500)",
+    2: "Economy (₱1,500-3,500)",
+    3: "Moderate (₱3,500-8,000)",
+    4: "Upscale (₱8,000-15,000)",
+    5: "Luxury (₱15,000-30,000)",
+    6: "Ultra-Luxury (₱30,000+)",
+  },
+  PRICE_DESCRIPTIONS: {
+    1: "Basic hostels, backpacker inns, fan rooms, shared facilities",
+    2: "Budget hotels, air-con rooms, private bath, basic amenities",
+    3: "Mid-range hotels, good comfort, swimming pool, restaurant",
+    4: "Quality hotels, excellent service, full amenities, business facilities",
+    5: "Premium resorts, luxury suites, spa, multiple dining options",
+    6: "5-star resorts, exclusive villas, private beaches, world-class service",
   },
   DEFAULT_CHECKIN_DAYS: 7, // Days from now
   DEFAULT_CHECKOUT_DAYS: 10, // Days from now

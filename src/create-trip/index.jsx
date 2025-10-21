@@ -40,6 +40,7 @@ import TravelerSelector from "./components/TravelerSelector";
 import SpecificRequests from "./components/SpecificRequests";
 import FlightPreferences from "./components/FlightPreferences";
 import HotelPreferences from "./components/HotelPreferences";
+import ActivityPreferenceSelector from "./components/ActivityPreferenceSelector";
 import ReviewTripStep from "./components/ReviewTripStep";
 import GenerateTripButton from "./components/GenerateTripButton";
 import LoginDialog from "./components/LoginDialog";
@@ -93,6 +94,7 @@ function CreateTrip() {
     budgetLevel: 2,
     priceRange: "",
   });
+  const [activityPreference, setActivityPreference] = useState(2); // Default to moderate pace
   const [openDialog, setOpenDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [flightLoading, setFlightLoading] = useState(false);
@@ -109,6 +111,14 @@ function CreateTrip() {
   useEffect(() => {
     checkUserProfile();
   }, []);
+
+  // Sync activity preference to formData
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      activityPreference,
+    }));
+  }, [activityPreference]);
 
   // Handle searched location from home page
   useEffect(() => {
@@ -672,6 +682,10 @@ function CreateTrip() {
           "{specificRequests}",
           formData?.specificRequests ||
             "No specific requests - create a balanced itinerary"
+        )
+        .replaceAll(
+          "{activityPreference}",
+          formData?.activityPreference || "2"
         );
 
       // Add category-specific focus if selected from home page
@@ -1623,6 +1637,10 @@ Generate general accommodation recommendations without specific pricing or booki
       case 2:
         return (
           <div className="space-y-8">
+            <TravelerSelector
+              selectedTravelers={formData?.travelers}
+              onTravelersChange={handleTravelersChange}
+            />
             <BudgetSelector
               value={formData?.budget}
               customValue={customBudget}
@@ -1633,13 +1651,18 @@ Generate general accommodation recommendations without specific pricing or booki
               flightData={flightData} // Pass flight info for cost calculation
               userProfile={userProfile} // Pass profile for budget override detection
             />
-            <TravelerSelector
-              selectedTravelers={formData?.travelers}
-              onTravelersChange={handleTravelersChange}
-            />
           </div>
         );
       case 3:
+        return (
+          <ActivityPreferenceSelector
+            activityPreference={activityPreference}
+            onActivityPreferenceChange={setActivityPreference}
+            formData={formData}
+            userProfile={userProfile}
+          />
+        );
+      case 4:
         return (
           <FlightPreferences
             flightData={flightData}
@@ -1648,7 +1671,7 @@ Generate general accommodation recommendations without specific pricing or booki
             formData={formData}
           />
         );
-      case 4:
+      case 5:
         return (
           <HotelPreferences
             hotelData={hotelData}
@@ -1657,7 +1680,7 @@ Generate general accommodation recommendations without specific pricing or booki
             userProfile={userProfile}
           />
         );
-      case 5:
+      case 6:
         return (
           <ReviewTripStep
             formData={formData}
@@ -1773,6 +1796,7 @@ Generate general accommodation recommendations without specific pricing or booki
         <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6 lg:p-8">
           {/* Progress Steps */}
           <div className="mb-8">
+            {/* Step Circles - Responsive Layout */}
             <div className="flex items-center justify-between mb-6">
               {STEPS.map((step, index) => {
                 const Icon = step.icon;
@@ -1782,7 +1806,7 @@ Generate general accommodation recommendations without specific pricing or booki
                 return (
                   <div key={step.id} className="flex items-center">
                     <div
-                      className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all ${
+                      className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full border-2 transition-all ${
                         isCompleted
                           ? "bg-green-500 dark:bg-green-600 border-green-500 dark:border-green-600 text-white"
                           : isActive
@@ -1791,14 +1815,14 @@ Generate general accommodation recommendations without specific pricing or booki
                       }`}
                     >
                       {isCompleted ? (
-                        <FaCheck className="text-sm" />
+                        <FaCheck className="text-[10px] sm:text-xs md:text-sm" />
                       ) : (
-                        <Icon className="text-sm" />
+                        <Icon className="text-[10px] sm:text-xs md:text-sm" />
                       )}
                     </div>
                     {index < STEPS.length - 1 && (
                       <div
-                        className={`hidden sm:block w-16 lg:w-24 h-0.5 mx-3 transition-all ${
+                        className={`w-4 sm:w-8 md:w-12 lg:w-16 h-0.5 mx-1 sm:mx-2 md:mx-3 transition-all ${
                           isCompleted
                             ? "bg-green-500 dark:bg-green-600"
                             : "bg-gray-300 dark:bg-slate-600"
@@ -1810,17 +1834,19 @@ Generate general accommodation recommendations without specific pricing or booki
               })}
             </div>
 
+            {/* Step Title and Description */}
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">
                 {STEPS[currentStep - 1].title}
               </h2>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                 {STEPS[currentStep - 1].description}
               </p>
             </div>
 
+            {/* Progress Bar */}
             <Progress value={progress} className="w-full h-3 mb-2" />
-            <div className="text-center text-sm text-gray-500">
+            <div className="text-center text-sm text-gray-500 dark:text-gray-400">
               Step {currentStep} of {STEPS.length}
             </div>
           </div>

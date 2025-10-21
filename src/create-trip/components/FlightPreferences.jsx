@@ -19,6 +19,7 @@ import {
   getFlightRecommendationMessage,
   getFlightContextTips,
 } from "../../utils/flightRecommendations";
+import { getAirportRecommendations } from "../../utils/budgetEstimator";
 
 const FlightPreferences = ({
   flightData,
@@ -68,6 +69,21 @@ const FlightPreferences = ({
     formData?.endDate,
     formData?.duration,
   ]);
+
+  // Get airport recommendations for intelligent routing
+  const airportInfo = useMemo(() => {
+    if (
+      !flightData.includeFlights ||
+      !flightData.departureCity ||
+      !formData?.location
+    )
+      return null;
+
+    return getAirportRecommendations(
+      flightData.departureCity,
+      formData.location
+    );
+  }, [flightData.includeFlights, flightData.departureCity, formData?.location]);
 
   // Auto-populate when flights are enabled and we have profile data
   React.useEffect(() => {
@@ -255,7 +271,8 @@ const FlightPreferences = ({
                     </div>
                   </div>
                 )}
-                {/* Auto-populated indicator */}
+
+                {/* Auto-populated indicator - Only show if not same city */}
                 {flightData.departureCity &&
                   profileSummary?.hasLocationData &&
                   flightRecommendation?.type !== "same-city" && (
@@ -263,16 +280,17 @@ const FlightPreferences = ({
                       <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm">
                         <FaCheck className="text-xs" />
                         <span>
-                          Auto-populated from your profile:{" "}
-                          {profileSummary.location}
+                          From your profile: {profileSummary.location}
                         </span>
                       </div>
                     </div>
                   )}
+
                 <h4 className="font-medium text-gray-800 dark:text-gray-200 mb-3">
                   Where will you be departing from?
-                </h4>{" "}
-                {/* Departure Region */}
+                </h4>
+
+                {/* Departure Region & City */}
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -287,7 +305,6 @@ const FlightPreferences = ({
                     />
                   </div>
 
-                  {/* Departure City */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       <FaMapMarkerAlt className="inline mr-1" />
@@ -326,58 +343,73 @@ const FlightPreferences = ({
                     )}
                   </div>
                 </div>
-                {/* Contextual Tips */}
-                {contextTips.length > 0 && (
-                  <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <div className="space-y-1">
-                      {contextTips.map((tip, index) => (
-                        <p
-                          key={index}
-                          className="text-xs text-blue-700 dark:text-blue-300"
-                        >
-                          {tip}
-                        </p>
-                      ))}
+
+                {/* Consolidated Airport & Flight Info */}
+                {airportInfo &&
+                  formData?.location &&
+                  flightData.departureCity && (
+                    <div className="mt-3 p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex items-start gap-2">
+                        <FaPlane className="text-emerald-600 dark:text-emerald-400 text-sm mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 space-y-2">
+                          {/* Flight Route */}
+                          <div>
+                            <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                              Flight Route:{" "}
+                              {airportInfo.departure?.code || "---"} →{" "}
+                              {airportInfo.destination?.code || "---"}
+                            </p>
+                          </div>
+
+                          {/* Destination Airport Info */}
+                          {airportInfo.destination && (
+                            <div className="text-xs text-emerald-700 dark:text-emerald-400">
+                              {airportInfo.destination.hasDirectAirport ? (
+                                <p>
+                                  ✈️ Direct flights to{" "}
+                                  <span className="font-medium">
+                                    {formData.location}
+                                  </span>
+                                </p>
+                              ) : (
+                                <>
+                                  <p className="font-medium">
+                                    📍 Nearest: {airportInfo.destination.city} (
+                                    {airportInfo.destination.code})
+                                  </p>
+                                  <p className="text-emerald-600 dark:text-emerald-500 mt-1">
+                                    {airportInfo.destination.travelTime} to{" "}
+                                    {formData.location}
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Key contextual tip - only most important one */}
+                          {contextTips.length > 0 && contextTips[0] && (
+                            <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-1">
+                              {contextTips[0]}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
-                {contextTips.length === 0 && (
-                  <div className="mt-3 text-xs text-gray-600 dark:text-gray-400">
-                    💡 We'll find the best flight options from your departure
-                    city to your destination and include pricing in your
-                    itinerary.
+                  )}
+
+                {/* Fallback helper text */}
+                {!airportInfo && flightData.departureCity && (
+                  <div className="mt-3 text-xs text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                    <span>💡</span>
+                    <span>
+                      We'll find the best flight options and include pricing in
+                      your itinerary.
+                    </span>
                   </div>
                 )}
               </div>
             </div>
           )}
-        </div>
-
-        {/* Flight Benefits */}
-        <div className="brand-card p-5 shadow-lg border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30">
-          <div className="flex items-start gap-4">
-            <div className="bg-gradient-to-br from-emerald-500 to-green-600 dark:from-emerald-600 dark:to-green-700 p-2.5 rounded-full">
-              <FaPlane className="text-white text-lg" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-emerald-900 dark:text-emerald-300 text-base mb-2">
-                Benefits of including flights
-              </h3>
-              <ul className="text-emerald-800 dark:text-emerald-400 text-sm space-y-1 leading-relaxed">
-                <li>• Real-time flight prices and availability</li>
-                <li>• Multiple airline options and recommendations</li>
-                <li>• Integrated into your total trip budget</li>
-                <li>• Direct booking links for convenience</li>
-                <li>• Price level indicators (Low, Fair, High)</li>
-                {profileSummary?.hasLocationData && (
-                  <li>
-                    • 🏠 Using your home location:{" "}
-                    <strong>{profileSummary.location}</strong>
-                  </li>
-                )}
-              </ul>
-            </div>
-          </div>
         </div>
       </div>
     </div>

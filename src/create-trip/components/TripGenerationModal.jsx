@@ -480,22 +480,79 @@ function TripGenerationModal({
 
                 {/* Info Banner */}
                 {!isComplete && (
-                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-l-4 border-amber-400 dark:border-amber-600 rounded-xl p-5">
-                    <div className="flex gap-4">
-                      <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-amber-100 dark:bg-amber-950/50 rounded-full flex items-center justify-center">
-                          <FaExclamationTriangle className="text-amber-600 dark:text-amber-400" />
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-l-4 border-amber-400 dark:border-amber-600 rounded-xl p-5">
+                      <div className="flex gap-4">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 bg-amber-100 dark:bg-amber-950/50 rounded-full flex items-center justify-center">
+                            <FaExclamationTriangle className="text-amber-600 dark:text-amber-400" />
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-amber-900 dark:text-amber-400 mb-1">
+                            Hold Tight!
+                          </h4>
+                          <p className="text-amber-800 dark:text-amber-400/90 text-sm leading-relaxed">
+                            Our AI is personalizing your perfect itinerary. This
+                            usually takes less than a minute. Please keep this
+                            window open.
+                          </p>
                         </div>
                       </div>
-                      <div>
-                        <h4 className="font-bold text-amber-900 dark:text-amber-400 mb-1">
-                          Hold Tight!
-                        </h4>
-                        <p className="text-amber-800 dark:text-amber-400/90 text-sm leading-relaxed">
-                          Our AI is personalizing your perfect itinerary. This
-                          usually takes less than a minute. Please keep this
-                          window open.
-                        </p>
+                    </div>
+
+                    {/* Travel Time Awareness Info */}
+                    <div className="bg-gradient-to-r from-blue-50 to-sky-50 dark:from-blue-950/30 dark:to-sky-950/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-xl p-5">
+                      <div className="flex gap-4">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-950/50 rounded-full flex items-center justify-center">
+                            <FaCompass className="text-blue-600 dark:text-blue-400" />
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-blue-900 dark:text-blue-400 mb-2">
+                            Smart Travel Planning
+                          </h4>
+                          <ul className="text-blue-800 dark:text-blue-400/90 text-xs space-y-1.5 leading-relaxed">
+                            <li className="flex items-start gap-2">
+                              <span className="text-blue-600 dark:text-blue-500 mt-0.5">
+                                •
+                              </span>
+                              <span>
+                                <strong>Day 1:</strong> Light schedule with 2-3
+                                hour arrival buffer (airport → hotel → rest)
+                              </span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-blue-600 dark:text-blue-500 mt-0.5">
+                                •
+                              </span>
+                              <span>
+                                <strong>Last Day:</strong> Morning activities
+                                only with 4-5 hour departure buffer
+                              </span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-blue-600 dark:text-blue-500 mt-0.5">
+                                •
+                              </span>
+                              <span>
+                                <strong>All Days:</strong> Realistic travel
+                                times between activities with traffic
+                                consideration
+                              </span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-blue-600 dark:text-blue-500 mt-0.5">
+                                •
+                              </span>
+                              <span>
+                                <strong>Clustering:</strong> Nearby attractions
+                                grouped together to minimize transit time
+                              </span>
+                            </li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
                   </div>

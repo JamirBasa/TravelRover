@@ -121,50 +121,15 @@ function SpecificRequests({
 
       {/* Request Input */}
       <div className="space-y-4">
-        {/* Context-Aware Info Card - Only show if we have location */}
-        {formData.location ? (
-          <div className="brand-card p-4 shadow-lg border-sky-200 dark:border-sky-800">
-            <div className="flex items-start gap-3">
-              <div className="brand-gradient p-2 rounded-full">
-                <FaLightbulb className="text-white text-base" />
-              </div>
-              <div className="flex-1">
-                <p className="text-gray-700 dark:text-gray-300 text-sm">
-                  List specific places in{" "}
-                  <span className="font-semibold">{formData.location}</span> you
-                  want to visit
-                </p>
-
-                {/* Contextual Tips */}
-                {suggestions.contextualTips.length > 0 && (
-                  <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800">
-                    {suggestions.contextualTips.map((tip, index) => (
-                      <p
-                        key={index}
-                        className="text-xs text-blue-700 dark:text-blue-400 flex items-center gap-2"
-                      >
-                        <FaInfoCircle className="flex-shrink-0" />
-                        <span>{tip}</span>
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="brand-card p-4 shadow-lg border-sky-200 dark:border-sky-800">
-            <div className="flex items-start gap-3">
-              <div className="brand-gradient p-2 rounded-full">
-                <FaLightbulb className="text-white text-base" />
-              </div>
-              <div className="flex-1">
-                <p className="text-gray-700 dark:text-gray-300 text-sm">
-                  💡 Complete the trip details first to get personalized
-                  suggestions here
-                </p>
-              </div>
-            </div>
+        {/* Context-Aware Info Card - SIMPLIFIED */}
+        {formData.location && (
+          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <p className="text-blue-800 dark:text-blue-300 text-sm">
+              💡 List specific places in{" "}
+              <span className="font-semibold">{formData.location}</span> you
+              want to visit (e.g., "Visit Fort Santiago", "Try sisig", "Sunset
+              at Manila Bay")
+            </p>
           </div>
         )}
 
@@ -182,18 +147,8 @@ function SpecificRequests({
             onChange={(e) => onChange(e.target.value)}
           />
 
-          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-            <p className="text-xs text-blue-700 dark:text-blue-400">
-              <span className="font-semibold">💡 Quick Tip:</span> Just write
-              place names (e.g., "Visit Fort Santiago", "Try sisig", "Sunset at
-              Manila Bay"). No need for full addresses - our AI already knows
-              you're visiting{" "}
-              <strong>{formData.location || "your destination"}</strong>!
-            </p>
-          </div>
-
-          {/* Character count */}
-          {value && (
+          {/* Character count - Only show if getting long */}
+          {value && value.length > 300 && (
             <div className="flex items-center justify-between mt-2">
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {value.length} characters
@@ -248,52 +203,39 @@ function SpecificRequests({
           </div>
         )}
 
-        {/* Quick-Add Suggestions - Only show if we have suggestions */}
+        {/* Quick-Add Suggestions - Show top 4 by default */}
         {allSuggestions.length > 0 && formData.location && (
-          <div className="brand-card p-5 shadow-lg border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30">
-            <div className="flex items-start gap-4">
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-emerald-900 dark:text-emerald-300 text-base">
-                    💡 Personalized Suggestions - Click to Add
-                  </h3>
-                  {allSuggestions.length > 6 && (
-                    <button
-                      onClick={() => setShowAllSuggestions(!showAllSuggestions)}
-                      className="text-xs text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-200 font-medium transition-colors cursor-pointer"
-                    >
-                      {showAllSuggestions
-                        ? "Show Less"
-                        : `Show All (${allSuggestions.length})`}
-                    </button>
-                  )}
-                </div>
+          <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-emerald-900 dark:text-emerald-300 text-sm flex items-center gap-2">
+                <FaLightbulb className="text-emerald-600 dark:text-emerald-400" />
+                Suggestions - Click to Add
+              </h3>
+              {allSuggestions.length > 4 && (
+                <button
+                  onClick={() => setShowAllSuggestions(!showAllSuggestions)}
+                  className="text-xs text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-200 font-medium transition-colors cursor-pointer"
+                >
+                  {showAllSuggestions
+                    ? "Show Less"
+                    : `+${allSuggestions.length - 4} more`}
+                </button>
+              )}
+            </div>
 
-                <div className="space-y-2">
-                  {(showAllSuggestions
-                    ? allSuggestions
-                    : allSuggestions.slice(0, 6)
-                  ).map((suggestion, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleAddSuggestion(suggestion)}
-                      className="w-full text-left p-3 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 border border-emerald-200 dark:border-emerald-800 hover:border-emerald-400 dark:hover:border-emerald-600 rounded-lg transition-all text-sm text-emerald-800 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-200 hover:shadow-md group cursor-pointer"
-                    >
-                      <span className="group-hover:font-medium">
-                        {suggestion}
-                      </span>
-                      <span className="ml-2 text-xs text-emerald-600 dark:text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                        ← Click to add
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
-                <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-3 italic">
-                  Click any suggestion to add it to your requests, or type your
-                  own!
-                </p>
-              </div>
+            <div className="space-y-2">
+              {(showAllSuggestions
+                ? allSuggestions
+                : allSuggestions.slice(0, 4)
+              ).map((suggestion, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleAddSuggestion(suggestion)}
+                  className="w-full text-left p-2 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 border border-emerald-200 dark:border-emerald-800 hover:border-emerald-400 dark:hover:border-emerald-600 rounded-lg transition-all text-sm text-emerald-800 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-200 group cursor-pointer"
+                >
+                  {suggestion}
+                </button>
+              ))}
             </div>
           </div>
         )}
