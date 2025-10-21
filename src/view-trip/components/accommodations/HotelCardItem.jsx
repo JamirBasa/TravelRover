@@ -213,72 +213,84 @@ function HotelCardItem({ hotel, onBookHotel }) {
               )}
             </div>
 
-            {(hotel?.amenities || hotel?.description) && (
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {hotel?.amenities && (
-                  <p className="line-clamp-2">
-                    <span className="text-gray-500 dark:text-gray-500">
-                      Amenities:
-                    </span>{" "}
-                    {Array.isArray(hotel.amenities)
-                      ? hotel.amenities.join(", ")
-                      : hotel.amenities}
-                  </p>
-                )}
-                {hotel?.description && !hotel?.amenities && (
-                  <p className="line-clamp-2">{hotel.description}</p>
-                )}
-              </div>
-            )}
+            {/* Always show amenities section for both real and AI-generated hotels */}
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              {hotel?.amenities && (
+                <p className="line-clamp-2">
+                  <span className="text-gray-500 dark:text-gray-500">
+                    Amenities:
+                  </span>{" "}
+                  {Array.isArray(hotel.amenities)
+                    ? hotel.amenities.join(", ")
+                    : hotel.amenities}
+                </p>
+              )}
+              {hotel?.description && !hotel?.amenities && (
+                <p className="line-clamp-2">{hotel.description}</p>
+              )}
+              {!hotel?.amenities && !hotel?.description && (
+                <p className="line-clamp-2 text-gray-400 dark:text-gray-500 italic">
+                  Contact hotel for amenity details
+                </p>
+              )}
+            </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-slate-800">
+              {/* Left side - Price and View Map */}
               <div className="flex items-center gap-3">
-                {/* Only show prices for real hotel data (has place_id from Google Places API) */}
-                {hotel?.place_id &&
-                  (hotel?.pricePerNight || hotel?.priceRange) && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-green-600 dark:text-green-500 font-semibold text-base">
-                        {hotel?.pricePerNight || hotel?.priceRange}
-                      </span>
-                      {hotel?.pricePerNight && (
-                        <span className="text-gray-500 dark:text-gray-400 text-sm">
-                          /night
-                        </span>
-                      )}
-                    </div>
-                  )}
-                {/* Show check prices message for AI-generated hotels */}
-                {!hotel?.place_id && (
-                  <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-sm">
-                    <span>💡</span>
-                    <span className="italic">
-                      Check booking sites for current prices
+                {/* Show prices for both real and AI-generated hotels */}
+                {(hotel?.pricePerNight ||
+                  hotel?.priceRange ||
+                  hotel?.price_range) && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-green-600 dark:text-green-500 font-semibold text-base">
+                      {hotel?.pricePerNight ||
+                        hotel?.priceRange ||
+                        hotel?.price_range}
                     </span>
+                    {hotel?.pricePerNight && (
+                      <span className="text-gray-500 dark:text-gray-400 text-sm">
+                        /night
+                      </span>
+                    )}
                   </div>
                 )}
-              </div>
+                {/* Show check prices message if no price data */}
+                {!hotel?.pricePerNight &&
+                  !hotel?.priceRange &&
+                  !hotel?.price_range && (
+                    <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-sm">
+                      <span>💡</span>
+                      <span className="italic">
+                        Check booking sites for current prices
+                      </span>
+                    </div>
+                  )}
 
-              <div className="flex items-center gap-2">
-                {/* Only show Book Now for real hotel data with place_id */}
-                {onBookHotel && hotel?.place_id && (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onBookHotel(hotel);
-                    }}
-                    className="bg-sky-600 dark:bg-sky-500 hover:bg-sky-700 dark:hover:bg-sky-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Book Now</span>
-                    <span className="text-xs">🔗</span>
-                  </button>
-                )}
                 <div className="flex items-center gap-1 text-sky-600 dark:text-sky-400 font-medium text-sm group-hover:text-sky-700 dark:group-hover:text-sky-300 transition-colors duration-200">
                   <span>View on Map</span>
                   <span className="transform group-hover:translate-x-0.5 transition-transform duration-200">
                     →
                   </span>
                 </div>
+              </div>
+
+              {/* Right side - Book Now button */}
+              <div className="flex items-center gap-2">
+                {/* Always show Book Now when onBookHotel is provided (hotel search enabled) */}
+                {onBookHotel && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onBookHotel(hotel);
+                    }}
+                    className="bg-sky-600 dark:bg-sky-500 hover:bg-sky-700 dark:hover:bg-sky-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1.5 cursor-pointer shadow-sm hover:shadow-md"
+                  >
+                    <span>Book Now</span>
+                    <span className="text-sm">🎫</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
