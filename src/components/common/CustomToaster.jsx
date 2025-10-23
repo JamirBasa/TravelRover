@@ -5,14 +5,15 @@ import { TOAST_CONFIG, TOAST_ICON_STYLES } from "@/utils/constants";
 /**
  * Enhanced Toaster component with modern, glassmorphic design
  * Features:
+ * - Icon positioned on left side for standard notification pattern
  * - Gradient backgrounds with soft colors
- * - Larger, more prominent icons with shadows
  * - Smooth animations and transitions
  * - Brand-consistent sky-blue color scheme
  * - Backdrop blur effect for depth
  */
 const CustomToaster = () => {
   // Create modern icon components with enhanced styling
+  // Gap is controlled by toastOptions.style.gap in constants.js for consistency
   const icons = {
     success: (
       <div className={TOAST_ICON_STYLES.success.className}>

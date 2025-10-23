@@ -56,8 +56,8 @@ const generateMockFlights = (params) => {
   return mockFlights.sort((a, b) => {
     // Sort by price (remove ₱ and commas, then compare)
     const priceA = parseInt(a.price.replace(/₱|,/g, ""));
-    const priceb = parseInt(b.price.replace(/₱|,/g, ""));
-    return priceA - priceb;
+    const priceB = parseInt(b.price.replace(/₱|,/g, ""));
+    return priceA - priceB;
   });
 };
 
@@ -133,57 +133,94 @@ export const FlightAgent = {
   extractAirportCode(location) {
     if (!location) return "MNL";
 
-    // Enhanced airport mapping with more variations and common names
+    // Enhanced airport mapping with expanded city and province coverage
     const airportMap = {
+      // Metro Manila and nearby
       Manila: "MNL",
       "Metro Manila": "MNL",
       "Manila City": "MNL",
-      Cebu: "CEB",
-      "Cebu City": "CEB",
-      Davao: "DVO",
-      "Davao City": "DVO",
-      Palawan: "PPS",
-      "Puerto Princesa": "PPS",
-      "El Nido": "PPS",
-      Coron: "PPS",
-      Boracay: "KLO",
-      Malay: "KLO", 
-      Kalibo: "KLO",
-      Bohol: "TAG",
-      Tagbilaran: "TAG",
-      "Tagbilaran City": "TAG",
-      Siargao: "IAO",
-      "General Luna": "IAO",
-      Clark: "CRK",
+      Quezon: "MNL",
+      "Quezon City": "MNL",
+      Pasay: "MNL",
+      Makati: "MNL",
+      Taguig: "MNL",
+      "San Juan": "MNL",
+      "Las Piñas": "MNL",
+      Caloocan: "MNL",
+      Parañaque: "MNL",
+
+      // Central Luzon
+      Pampanga: "CRK",
       Angeles: "CRK",
       "Angeles City": "CRK",
+      Clark: "CRK",
+      Subic: "SFS",
+      Bulacan: "MNL",
+      Tarlac: "CRK",
+      NuevaEcija: "CRK",
+      Cabanatuan: "CRK",
+
+      // North Luzon (Cordillera + Ilocos)
+      Baguio: "BAG", // ✅ FIXED: Return actual airport code, let flight logic handle routing
+      "Baguio City": "BAG",
+      "La Trinidad": "BAG",
+      Benguet: "BAG",
+      "Mountain Province": "TUG",
+      Ifugao: "TUG",
+      Abra: "LAO",
+      "Ilocos Norte": "LAO",
+      Laoag: "LAO",
+      "Ilocos Sur": "LAO",
+      Vigan: "LAO",
+      Dagupan: "CRK",
+      "San Fernando (La Union)": "CRK",
+
+      // Southern Luzon
+      Laguna: "MNL",
+      "San Pablo": "MNL",
+      Batangas: "BSO",
+      "Batangas City": "BSO",
+      Lucena: "MNL",
+      QuezonProvince: "MNL",
+      Naga: "WNP", // ✅ FIXED: WNP has active service (2x daily to MNL)
+      "Naga City": "WNP",
+      Legazpi: "LGP",
+      "Legazpi City": "LGP",
+      Sorsogon: "DRP",
+
+      // Visayas
+      Cebu: "CEB",
+      "Cebu City": "CEB",
+      Dumaguete: "DGT",
+      "Dumaguete City": "DGT",
       Iloilo: "ILO",
       "Iloilo City": "ILO",
       Bacolod: "BCD",
       "Bacolod City": "BCD",
-      Dumaguete: "DGT",
-      "Dumaguete City": "DGT",
+      Bohol: "TAG",
+      Tagbilaran: "TAG",
+      "Tagbilaran City": "TAG",
+      Kalibo: "KLO",
+      Boracay: "KLO",
+      Roxas: "RXS",
+      "Roxas City": "RXS",
+
+      // Mindanao
+      Davao: "DVO",
+      "Davao City": "DVO",
       Cagayan: "CGY",
       "Cagayan de Oro": "CGY",
       Butuan: "BXU",
       Surigao: "SUG",
+      "City of Mati": "DVO",
       Zamboanga: "ZAM",
-      Laoag: "LAO",
-      "Laoag City": "LAO",
-      Tuguegarao: "TUG",
-      "San Jose": "SJI", // Mindoro
-      Tacloban: "TAC",
-      "Tacloban City": "TAC",
-      Roxas: "RXS",
-      "Roxas City": "RXS",
-      Legazpi: "LGP",
-      "Legazpi City": "LGP",
-      Naga: "WNP",
-      "Naga City": "WNP",
-
+      "Zamboanga City": "ZAM",
+      Cotabato: "CBO",
+      GenSan: "GES",
+      "General Santos": "GES",
     };
 
-    // Clean the location string - handle various formats
+    // Normalize for flexible matching
     const locationLower = location.toLowerCase();
     const city = location.split(",")[0].trim();
     const cityLower = city.toLowerCase();
@@ -195,18 +232,15 @@ export const FlightAgent = {
     // Direct exact matches first
     for (const [key, code] of Object.entries(airportMap)) {
       const keyLower = key.toLowerCase();
-
-      // Check if the key matches the full location or city part
       if (cityLower === keyLower || locationLower.includes(keyLower)) {
         console.log(`✅ Found exact match: ${key} -> ${code}`);
         return code;
       }
     }
 
-    // Partial matches - check if any airport city is contained in the location
+    // Partial matching
     for (const [key, code] of Object.entries(airportMap)) {
       const keyLower = key.toLowerCase();
-
       if (
         cityLower.includes(keyLower) ||
         keyLower.includes(cityLower) ||
@@ -217,6 +251,8 @@ export const FlightAgent = {
       }
     }
 
+    // ✅ REMOVED BAG and WNP from fallback - they should be returned as-is
+    // Only redirect truly inactive/non-existent airports
     console.log(
       `⚠️ No airport code found for "${location}", defaulting to MNL`
     );

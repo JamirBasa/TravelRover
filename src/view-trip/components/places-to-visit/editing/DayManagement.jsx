@@ -183,14 +183,16 @@ function DayManagement({
   return (
     <div className="space-y-4">
       {/* Day Management Controls */}
-      <div className="flex items-center justify-between bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 rounded-lg p-4 shadow-sm">
+      <div className="flex items-center justify-between bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/20 dark:to-blue-950/20 border border-sky-200 dark:border-sky-800 rounded-lg p-4 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="bg-gradient-to-r from-sky-500 to-blue-500 p-2 rounded-lg">
             <Calendar className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-gray-900">Day Management</h3>
-            <p className="text-base font-medium text-sky-700">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              Day Management
+            </h3>
+            <p className="text-base font-medium text-sky-700 dark:text-sky-400">
               {itinerary.length} day{itinerary.length !== 1 ? "s" : ""} planned
             </p>
           </div>
@@ -220,26 +222,26 @@ function DayManagement({
                     key={template.id}
                     className={cn(
                       "p-4 border-2 rounded-lg cursor-pointer transition-all duration-300",
-                      "hover:border-sky-400 hover:shadow-md hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50",
+                      "hover:border-sky-400 hover:shadow-md hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 dark:hover:from-sky-950/20 dark:hover:to-blue-950/20",
                       selectedTemplate?.id === template.id &&
-                        "border-sky-500 bg-gradient-to-r from-sky-50 to-blue-50 shadow-lg"
+                        "border-sky-500 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/20 dark:to-blue-950/20 shadow-lg"
                     )}
                     onClick={() => setSelectedTemplate(template)}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="p-3 bg-gradient-to-r from-sky-100 to-blue-100 rounded-lg">
-                        <Icon className="h-7 w-7 text-sky-600" />
+                      <div className="p-3 bg-gradient-to-r from-sky-100 to-blue-100 dark:from-sky-900/50 dark:to-blue-900/50 rounded-lg">
+                        <Icon className="h-7 w-7 text-sky-600 dark:text-sky-400" />
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-base font-bold text-gray-900 mb-2">
+                        <h4 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-2">
                           {template.name}
                         </h4>
-                        <p className="text-base font-medium text-gray-600 mb-3">
+                        <p className="text-base font-medium text-gray-600 dark:text-gray-400 mb-3">
                           {template.theme}
                         </p>
                         <Badge
                           variant="secondary"
-                          className="text-sm px-2 py-1 font-semibold bg-sky-100 text-sky-700 border-sky-200"
+                          className="text-sm px-2 py-1 font-semibold bg-sky-100 dark:bg-sky-950/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800"
                         >
                           {template.activities.length} activities
                         </Badge>
@@ -284,16 +286,16 @@ function DayManagement({
               {day.day}
             </div>
             <div>
-              <h4 className="text-base font-bold text-gray-900">
+              <h4 className="text-base font-bold text-gray-900 dark:text-gray-100">
                 Day {day.day}
               </h4>
-              <p className="text-base font-medium text-gray-600">
+              <p className="text-base font-medium text-gray-600 dark:text-gray-400">
                 {getDateForDay(day.day) || "Date not set"}
               </p>
             </div>
             <Badge
               variant="outline"
-              className="text-sm px-3 py-1 font-semibold bg-sky-50 text-sky-700 border-sky-200"
+              className="text-sm px-3 py-1 font-semibold bg-sky-50 dark:bg-sky-950/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800"
             >
               {day.plan?.length || 0} activities
             </Badge>
@@ -305,10 +307,12 @@ function DayManagement({
               variant="ghost"
               size="sm"
               onClick={() => onCopyDay(index)}
+              aria-label={`Copy day ${index + 1}`}
               title="Copy day"
-              className="h-10 w-10 p-0"
+              className="h-10 w-10 p-0 cursor-pointer"
             >
-              <Copy className="h-5 w-5" />
+              <Copy className="h-5 w-5" aria-hidden="true" />
+              <span className="sr-only">Copy day</span>
             </Button>
 
             {/* Move Up */}
@@ -317,10 +321,12 @@ function DayManagement({
               size="sm"
               onClick={() => handleMoveDay(index, "up")}
               disabled={index === 0}
+              aria-label={`Move day ${index + 1} up`}
               title="Move up"
-              className="h-10 w-10 p-0"
+              className="h-10 w-10 p-0 cursor-pointer"
             >
-              <ChevronUp className="h-5 w-5" />
+              <ChevronUp className="h-5 w-5" aria-hidden="true" />
+              <span className="sr-only">Move up</span>
             </Button>
 
             {/* Move Down */}
@@ -329,10 +335,12 @@ function DayManagement({
               size="sm"
               onClick={() => handleMoveDay(index, "down")}
               disabled={index === itinerary.length - 1}
+              aria-label={`Move day ${index + 1} down`}
               title="Move down"
-              className="h-10 w-10 p-0"
+              className="h-10 w-10 p-0 cursor-pointer"
             >
-              <ChevronDown className="h-5 w-5" />
+              <ChevronDown className="h-5 w-5" aria-hidden="true" />
+              <span className="sr-only">Move down</span>
             </Button>
 
             {/* Delete Day */}
@@ -344,10 +352,12 @@ function DayManagement({
                 setShowDeleteDialog(true);
               }}
               disabled={itinerary.length <= 1}
+              aria-label={`Delete day ${index + 1}`}
               title="Delete day"
-              className="h-10 w-10 p-0 text-destructive hover:text-destructive"
+              className="h-10 w-10 p-0 text-destructive hover:text-destructive cursor-pointer"
             >
-              <Trash2 className="h-5 w-5" />
+              <Trash2 className="h-5 w-5" aria-hidden="true" />
+              <span className="sr-only">Delete</span>
             </Button>
           </div>
         </div>

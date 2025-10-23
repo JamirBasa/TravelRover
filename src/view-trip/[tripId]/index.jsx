@@ -140,7 +140,7 @@ function ViewTrip() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50/30 via-white to-slate-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50/30 via-white to-slate-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900/80">
       {/* Compact Trip Header - positioned below main header */}
       <TripHeader
         trip={trip}
@@ -165,7 +165,7 @@ function ViewTrip() {
         {/* Development Info (only in dev mode) */}
         {import.meta.env.DEV && (
           <aside
-            className="mt-8 border-t border-gray-100 pt-6"
+            className="mt-8 border-t border-gray-100 dark:border-slate-800 pt-6"
             aria-label="Development metadata"
           >
             <DevMetaData trip={trip} />

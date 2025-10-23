@@ -475,7 +475,13 @@ function OptimizedRouteMap({ itinerary, destination }) {
   // Calculate total travel time and distance
   const totalStats = useMemo(() => {
     if (travelData.length === 0) {
-      return { totalTime: 0, totalDistance: 0, timeText: "Calculating..." };
+      return {
+        totalTime: 0,
+        totalDistance: 0,
+        timeText: "Calculating...",
+        distanceText: "0 km",
+        avgSpeed: "N/A",
+      };
     }
 
     const totalMinutes = travelData.reduce(
@@ -492,11 +498,19 @@ function OptimizedRouteMap({ itinerary, destination }) {
     const timeText = hours > 0 ? `${hours}h ${minutes}m` : `${minutes} minutes`;
     const distanceText = `${(totalMeters / 1000).toFixed(1)} km`;
 
+    // Calculate average speed (km/h)
+    const totalHours = totalMinutes / 60;
+    const totalKm = totalMeters / 1000;
+    const avgSpeedValue = totalHours > 0 ? totalKm / totalHours : 0;
+    const avgSpeed =
+      avgSpeedValue > 0 ? `${avgSpeedValue.toFixed(1)} km/h` : "N/A";
+
     return {
       totalTime: totalMinutes,
       totalDistance: totalMeters,
       timeText,
       distanceText,
+      avgSpeed,
     };
   }, [travelData]);
 
@@ -551,15 +565,15 @@ function OptimizedRouteMap({ itinerary, destination }) {
 
   if (!apiKey) {
     return (
-      <Card className="border-orange-200 bg-orange-50">
+      <Card className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30">
         <CardContent className="p-6">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-500 flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-semibold text-orange-900 mb-1">
+              <h4 className="font-semibold text-orange-900 dark:text-orange-300 mb-1">
                 Map Unavailable
               </h4>
-              <p className="text-sm text-orange-700">
+              <p className="text-sm text-orange-700 dark:text-orange-400">
                 Google Maps API key is not configured. Contact administrator to
                 enable map features.
               </p>
@@ -574,8 +588,8 @@ function OptimizedRouteMap({ itinerary, destination }) {
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center justify-center gap-2 text-gray-500">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+          <div className="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-sky-600 dark:border-sky-500"></div>
             <span>Loading map...</span>
           </div>
         </CardContent>
@@ -593,6 +607,31 @@ function OptimizedRouteMap({ itinerary, destination }) {
         totalStats={totalStats}
         isLoadingRoutes={isLoadingRoutes}
       />
+
+      {/* AI Disclaimer Notice */}
+      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0 mt-0.5">
+            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-amber-900 dark:text-amber-300 text-sm mb-1">
+              AI-Generated Routes & Locations
+            </h4>
+            <p className="text-amber-800 dark:text-amber-400 text-xs leading-relaxed">
+              These routes and locations are AI-generated suggestions. While we
+              strive for accuracy,
+              <strong className="font-semibold">
+                {" "}
+                please verify details
+              </strong>{" "}
+              like addresses, opening hours, and directions before visiting.
+              Travel times are estimates and may vary based on traffic and
+              conditions.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Map Container */}
       <Card ref={mapContainerRef} className="overflow-hidden">
@@ -638,8 +677,10 @@ function OptimizedRouteMap({ itinerary, destination }) {
           {/* Header with Filter */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-blue-600" />
-              <h4 className="font-bold text-gray-900">Location Sequence</h4>
+              <MapPin className="h-5 w-5 text-sky-600 dark:text-sky-500" />
+              <h4 className="font-bold text-gray-900 dark:text-gray-100">
+                Location Sequence
+              </h4>
               <Badge variant="secondary" className="ml-1">
                 {filteredLocations.length}{" "}
                 {filteredLocations.length === 1 ? "stop" : "stops"}
@@ -661,12 +702,12 @@ function OptimizedRouteMap({ itinerary, destination }) {
               {[...Array(5)].map((_, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 animate-pulse"
+                  className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50 animate-pulse"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gray-300 flex-shrink-0"></div>
+                  <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-slate-600 flex-shrink-0"></div>
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-4 bg-gray-300 dark:bg-slate-600 rounded w-3/4"></div>
+                    <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-1/2"></div>
                   </div>
                 </div>
               ))}

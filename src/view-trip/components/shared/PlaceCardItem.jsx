@@ -125,21 +125,21 @@ function PlaceCardItem({ place }) {
 
   return (
     <Link to={generateMapsURL()} target="_blank" className="block group">
-      <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-all duration-300 group-hover:border-blue-300 group-hover:shadow-blue-200/20 relative overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg p-4 sm:p-6 hover:shadow-md transition-all duration-300 group-hover:border-sky-300 dark:group-hover:border-sky-600 group-hover:shadow-sky-200/20 dark:group-hover:shadow-sky-500/10 relative overflow-hidden">
         {/* Enhanced gradient overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 via-indigo-50/0 to-purple-50/0 group-hover:from-blue-50/30 group-hover:via-indigo-50/20 group-hover:to-purple-50/10 transition-all duration-300 pointer-events-none"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-50/0 via-blue-50/0 to-sky-50/0 dark:from-sky-950/0 dark:via-blue-950/0 dark:to-sky-950/0 group-hover:from-sky-50/30 group-hover:via-blue-50/20 group-hover:to-sky-50/10 dark:group-hover:from-sky-950/20 dark:group-hover:via-blue-950/10 dark:group-hover:to-sky-950/5 transition-all duration-300 pointer-events-none"></div>
 
         {/* Decorative corner element */}
-        <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-blue-100/0 to-indigo-200/0 group-hover:from-blue-100/20 group-hover:to-indigo-200/30 rounded-bl-3xl transition-all duration-500"></div>
+        <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-sky-100/0 to-blue-200/0 dark:from-sky-900/0 dark:to-blue-800/0 group-hover:from-sky-100/20 group-hover:to-blue-200/30 dark:group-hover:from-sky-900/20 dark:group-hover:to-blue-800/30 rounded-bl-3xl transition-all duration-500"></div>
 
         <div className="relative">
           <div className="flex gap-4">
             {/* Place Image */}
             <div className="flex-shrink-0">
               {isLoading ? (
-                <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-150 rounded-lg flex items-center justify-center">
+                <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-150 dark:from-slate-800 dark:to-slate-700 rounded-lg flex items-center justify-center">
                   <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-blue-300 border-t-blue-600"></div>
+                    <div className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-sky-300 dark:border-sky-600 border-t-sky-600 dark:border-t-sky-400"></div>
                   </div>
                 </div>
               ) : (
@@ -157,8 +157,10 @@ function PlaceCardItem({ place }) {
               )}
 
               {error && (
-                <div className="w-20 h-20 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200">
-                  <span className="text-gray-400 text-2xl">📍</span>
+                <div className="w-20 h-20 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-slate-600">
+                  <span className="text-gray-400 dark:text-gray-500 text-2xl">
+                    📍
+                  </span>
                 </div>
               )}
             </div>
@@ -167,27 +169,29 @@ function PlaceCardItem({ place }) {
             <div className="flex-1 min-w-0 space-y-2">
               <div>
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-bold text-gray-900 text-lg mb-2 group-hover:text-blue-600 line-clamp-2 leading-tight transition-colors duration-300 flex-1">
+                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg mb-2 group-hover:text-sky-600 dark:group-hover:text-sky-400 line-clamp-2 leading-tight transition-colors duration-300 flex-1">
                     {placeName}
                   </h3>
-                  <div className="ml-3 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors duration-300 flex-shrink-0">
-                    <span className="text-blue-600 text-base">📍</span>
+                  <div className="ml-3 w-8 h-8 bg-sky-100 dark:bg-sky-950/50 rounded-full flex items-center justify-center group-hover:bg-sky-200 dark:group-hover:bg-sky-900/70 transition-colors duration-300 flex-shrink-0">
+                    <span className="text-sky-600 dark:text-sky-400 text-base">
+                      📍
+                    </span>
                   </div>
                 </div>
                 {placeDetails && (
-                  <p className="text-base font-medium text-gray-600 line-clamp-3 leading-relaxed mb-2">
+                  <p className="text-base font-medium text-gray-600 dark:text-gray-400 line-clamp-3 leading-relaxed mb-2">
                     {placeDetails}
                   </p>
                 )}
 
                 {/* Location type indicator */}
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="inline-flex items-center gap-2 bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full text-sm font-semibold">
+                  <span className="inline-flex items-center gap-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-full text-sm font-semibold">
                     <span className="text-base">🎯</span>
                     <span>Tourist Attraction</span>
                   </span>
                   {place?.category && (
-                    <span className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full text-sm font-semibold">
+                    <span className="inline-flex items-center gap-2 bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 px-3 py-1.5 rounded-full text-sm font-semibold">
                       <span className="text-base">📂</span>
                       <span>{place.category}</span>
                     </span>
@@ -198,37 +202,37 @@ function PlaceCardItem({ place }) {
               {/* Badges Container */}
               <div className="flex flex-wrap gap-2">
                 {place?.ticketPricing && (
-                  <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 border border-green-300 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-green-200 transition-colors">
-                    <span className="text-green-600 text-base">💰</span>
+                  <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-950/30 text-green-800 dark:text-green-400 border border-green-300 dark:border-green-800 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors">
+                    <span className="text-green-600 dark:text-green-400 text-base">💰</span>
                     <span>{place.ticketPricing}</span>
                   </div>
                 )}
 
                 {place?.timeTravel && (
-                  <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-800 border border-orange-300 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-orange-200 transition-colors">
-                    <span className="text-orange-600 text-base">⏰</span>
+                  <div className="inline-flex items-center gap-2 bg-orange-100 dark:bg-orange-950/30 text-orange-800 dark:text-orange-400 border border-orange-300 dark:border-orange-800 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors">
+                    <span className="text-orange-600 dark:text-orange-400 text-base">⏰</span>
                     <span>{place.timeTravel}</span>
                   </div>
                 )}
 
                 {place?.rating && (
-                  <div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-800 border border-yellow-300 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-yellow-200 transition-colors">
-                    <span className="text-yellow-600 text-base">⭐</span>
+                  <div className="inline-flex items-center gap-2 bg-yellow-100 dark:bg-yellow-950/30 text-yellow-800 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-800 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-yellow-200 dark:hover:bg-yellow-900/50 transition-colors">
+                    <span className="text-yellow-600 dark:text-yellow-400 text-base">⭐</span>
                     <span>{place.rating}/5</span>
                   </div>
                 )}
               </div>
 
               {/* Enhanced Action indicator */}
-              <div className="flex items-center justify-between pt-2 mt-2 border-t border-gray-100">
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                  <span className="text-blue-500 text-base">🌐</span>
+              <div className="flex items-center justify-between pt-2 mt-2 border-t border-gray-100 dark:border-slate-700">
+                <div className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+                  <span className="text-blue-500 dark:text-blue-400 text-base">🌐</span>
                   <span>Interactive map view</span>
                 </div>
-                <div className="flex items-center gap-2 text-blue-600 font-bold text-sm group-hover:text-blue-700 transition-all duration-200">
+                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-sm group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-all duration-200">
                   <span>Open Maps</span>
-                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors duration-200">
-                    <span className="text-blue-600 text-sm transform group-hover:translate-x-0.5 transition-transform duration-200">
+                  <div className="w-6 h-6 bg-blue-100 dark:bg-blue-950/50 rounded-full flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/70 transition-colors duration-200">
+                    <span className="text-blue-600 dark:text-blue-400 text-sm transform group-hover:translate-x-0.5 transition-transform duration-200">
                       →
                     </span>
                   </div>

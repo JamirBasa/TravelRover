@@ -254,7 +254,9 @@ const UserProfile = () => {
       const updatedUser = { ...user, hasProfile: true };
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
-      toast.success("Your travel profile is now complete. You can start creating personalized trips and receive AI-powered recommendations tailored to your preferences.");
+      toast.success(
+        "Your travel profile is now complete. You can start creating personalized trips and receive AI-powered recommendations tailored to your preferences."
+      );
       navigate("/");
     } catch (error) {
       console.error("Error saving profile:", error);
@@ -402,7 +404,7 @@ const UserProfile = () => {
       {/* Right Side - Form */}
       <div className="w-full lg:w-1/2 flex flex-col">
         {/* Header for mobile */}
-        <div className="lg:hidden bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 text-center">
+        <div className="lg:hidden brand-gradient text-white p-6 text-center">
           <h1 className="text-2xl font-bold mb-2">
             Complete Your Travel Profile
           </h1>
@@ -445,7 +447,7 @@ const UserProfile = () => {
                               ? "bg-green-500 border-green-500 text-white shadow-lg shadow-green-500/30"
                               : isActive
                               ? "brand-gradient border-sky-500 text-white shadow-lg shadow-sky-500/40 scale-110"
-                              : "bg-white border-gray-300 text-gray-400"
+                              : "bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-400 dark:text-gray-500"
                           }`}
                         >
                           {isCompleted ? (
@@ -544,7 +546,7 @@ const UserProfile = () => {
           <div className="flex-1 overflow-y-auto">{renderStepContent()}</div>
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+          <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-slate-700">
             <Button
               variant="outline"
               onClick={prevStep}

@@ -25,6 +25,11 @@ import { formatTripTypes } from "../config/formatUserPreferences";
 import { safeJsonParse } from "../utils/jsonParsers";
 import { getValidationExamples } from "../data/philippineRegions";
 import {
+  validateItinerary,
+  getValidationSuggestion,
+  getNearestAirportInfo,
+} from "../utils/itineraryValidator";
+import {
   FaCalendarAlt,
   FaArrowRight,
   FaArrowLeft,
@@ -40,6 +45,7 @@ import TravelerSelector from "./components/TravelerSelector";
 import SpecificRequests from "./components/SpecificRequests";
 import FlightPreferences from "./components/FlightPreferences";
 import HotelPreferences from "./components/HotelPreferences";
+import ActivityPreferenceSelector from "./components/ActivityPreferenceSelector";
 import ReviewTripStep from "./components/ReviewTripStep";
 import GenerateTripButton from "./components/GenerateTripButton";
 import LoginDialog from "./components/LoginDialog";
@@ -93,6 +99,7 @@ function CreateTrip() {
     budgetLevel: 2,
     priceRange: "",
   });
+  const [activityPreference, setActivityPreference] = useState(2); // Default to moderate pace
   const [openDialog, setOpenDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [flightLoading, setFlightLoading] = useState(false);
@@ -109,6 +116,14 @@ function CreateTrip() {
   useEffect(() => {
     checkUserProfile();
   }, []);
+
+  // Sync activity preference to formData
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      activityPreference,
+    }));
+  }, [activityPreference]);
 
   // Handle searched location from home page
   useEffect(() => {
@@ -672,6 +687,10 @@ function CreateTrip() {
           "{specificRequests}",
           formData?.specificRequests ||
             "No specific requests - create a balanced itinerary"
+        )
+        .replaceAll(
+          "{activityPreference}",
+          formData?.activityPreference || "2"
         );
 
       // Add category-specific focus if selected from home page
@@ -1505,6 +1524,77 @@ Generate general accommodation recommendations without specific pricing or booki
         console.log(`✅ All places validated for ${formData.location}`);
       }
 
+      // 🏨✈️ ITINERARY VALIDATION - Check for hotel returns and airport logistics
+      console.log(
+        "🏨 Validating itinerary structure (hotel returns & airports)..."
+      );
+      const itineraryValidation = validateItinerary(parsedTripData, formData);
+
+      // Log validation results
+      console.log("📋 Itinerary Validation Results:", itineraryValidation);
+
+      // Handle validation errors (critical issues)
+      if (
+        !itineraryValidation.isValid &&
+        itineraryValidation.errors.length > 0
+      ) {
+        console.error(
+          "❌ Itinerary validation failed:",
+          itineraryValidation.errors
+        );
+
+        // Show specific error details to user
+        const errorMessages = itineraryValidation.errors
+          .map((err) => err.message)
+          .join("\n");
+        const suggestion = getValidationSuggestion(itineraryValidation);
+
+        toast.error("Itinerary Validation Failed", {
+          description: `The generated itinerary has critical issues:\n${errorMessages}\n\n${suggestion}`,
+          duration: 10000,
+        });
+
+        // Log for debugging
+        console.warn("🔍 Validation failed for trip:", {
+          destination: formData.location,
+          duration: formData.duration,
+          errors: itineraryValidation.errors,
+          warnings: itineraryValidation.warnings,
+          suggestion: suggestion,
+        });
+
+        // Show retry option to user
+        toast.info("Please Try Again", {
+          description:
+            "Click 'Generate Trip' to create a new itinerary with the correct structure.",
+          duration: 8000,
+        });
+
+        setLoading(false);
+        return; // Stop saving invalid itinerary
+      }
+
+      // Handle validation warnings (non-critical issues)
+      if (itineraryValidation.warnings.length > 0) {
+        console.warn(
+          "⚠️ Itinerary has warnings:",
+          itineraryValidation.warnings
+        );
+
+        // Show warnings but allow saving
+        const warningMessages = itineraryValidation.warnings
+          .slice(0, 3) // Show max 3 warnings
+          .map((warn) => warn.message)
+          .join("\n");
+
+        toast.warning("Itinerary Review Recommended", {
+          description: `Please review these items:\n${warningMessages}`,
+          duration: 7000,
+        });
+      } else {
+        console.log("✅ Itinerary structure validated successfully");
+      }
+
       const tripDocument = {
         userSelection: {
           ...formData,
@@ -1623,6 +1713,10 @@ Generate general accommodation recommendations without specific pricing or booki
       case 2:
         return (
           <div className="space-y-8">
+            <TravelerSelector
+              selectedTravelers={formData?.travelers}
+              onTravelersChange={handleTravelersChange}
+            />
             <BudgetSelector
               value={formData?.budget}
               customValue={customBudget}
@@ -1633,13 +1727,18 @@ Generate general accommodation recommendations without specific pricing or booki
               flightData={flightData} // Pass flight info for cost calculation
               userProfile={userProfile} // Pass profile for budget override detection
             />
-            <TravelerSelector
-              selectedTravelers={formData?.travelers}
-              onTravelersChange={handleTravelersChange}
-            />
           </div>
         );
       case 3:
+        return (
+          <ActivityPreferenceSelector
+            activityPreference={activityPreference}
+            onActivityPreferenceChange={setActivityPreference}
+            formData={formData}
+            userProfile={userProfile}
+          />
+        );
+      case 4:
         return (
           <FlightPreferences
             flightData={flightData}
@@ -1648,7 +1747,7 @@ Generate general accommodation recommendations without specific pricing or booki
             formData={formData}
           />
         );
-      case 4:
+      case 5:
         return (
           <HotelPreferences
             hotelData={hotelData}
@@ -1657,7 +1756,7 @@ Generate general accommodation recommendations without specific pricing or booki
             userProfile={userProfile}
           />
         );
-      case 5:
+      case 6:
         return (
           <ReviewTripStep
             formData={formData}
@@ -1696,15 +1795,15 @@ Generate general accommodation recommendations without specific pricing or booki
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">
               Create Your Perfect Trip
             </h1>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 dark:text-gray-400 text-lg">
               Plan personalized travel experiences tailored just for you
             </p>
           </div>
@@ -1715,17 +1814,17 @@ Generate general accommodation recommendations without specific pricing or booki
               const profileSummary =
                 UserProfileService.getProfileDisplaySummary(userProfile);
               return (
-                <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-5 shadow-sm">
+                <div className="mt-6 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border border-sky-200 dark:border-sky-800 rounded-lg p-5 shadow-sm">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="bg-blue-100 p-3 rounded-full">
-                        <FaUser className="text-blue-600 text-lg" />
+                      <div className="bg-sky-100 dark:bg-sky-900/50 p-3 rounded-full">
+                        <FaUser className="text-sky-600 dark:text-sky-400 text-lg" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-blue-900 text-lg">
+                        <h3 className="font-bold text-sky-900 dark:text-sky-200 text-lg">
                           Welcome back, {profileSummary.name}!
                         </h3>
-                        <p className="text-blue-700 text-sm font-medium mt-1">
+                        <p className="text-sky-700 dark:text-sky-400 text-sm font-medium mt-1">
                           Creating personalized trips based on your preferences:
                         </p>
                         <div className="flex flex-wrap gap-2 mt-2">
@@ -1734,26 +1833,26 @@ Generate general accommodation recommendations without specific pricing or booki
                             .map((typeLabel, index) => (
                               <span
                                 key={index}
-                                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-sky-100 dark:bg-sky-900/50 text-sky-800 dark:text-sky-300"
                               >
                                 {typeLabel}
                               </span>
                             ))}
                           {profileSummary.preferredTripTypes?.length > 2 && (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                               +{profileSummary.preferredTripTypes.length - 2}{" "}
                               more
                             </span>
                           )}
                         </div>
                         {profileSummary.travelStyle && (
-                          <p className="text-blue-600 text-xs mt-2">
+                          <p className="text-sky-600 dark:text-sky-400 text-xs mt-2">
                             <span className="font-medium">Travel Style:</span>{" "}
                             {profileSummary.travelStyle}
                           </p>
                         )}
                         {profileSummary.hasLocationData && (
-                          <p className="text-blue-600 text-xs mt-1">
+                          <p className="text-sky-600 dark:text-sky-400 text-xs mt-1">
                             <span className="font-medium">📍 Home:</span>{" "}
                             {profileSummary.location}
                           </p>
@@ -1770,9 +1869,10 @@ Generate general accommodation recommendations without specific pricing or booki
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Form Container */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 lg:p-8">
+        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6 lg:p-8">
           {/* Progress Steps */}
           <div className="mb-8">
+            {/* Step Circles - Responsive Layout */}
             <div className="flex items-center justify-between mb-6">
               {STEPS.map((step, index) => {
                 const Icon = step.icon;
@@ -1782,24 +1882,26 @@ Generate general accommodation recommendations without specific pricing or booki
                 return (
                   <div key={step.id} className="flex items-center">
                     <div
-                      className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all ${
+                      className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full border-2 transition-all ${
                         isCompleted
-                          ? "bg-green-500 border-green-500 text-white"
+                          ? "bg-green-500 dark:bg-green-600 border-green-500 dark:border-green-600 text-white"
                           : isActive
-                          ? "bg-black border-black text-white"
-                          : "bg-white border-gray-300 text-gray-400"
+                          ? "bg-sky-600 dark:bg-sky-500 border-sky-600 dark:border-sky-500 text-white"
+                          : "bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-400 dark:text-gray-500"
                       }`}
                     >
                       {isCompleted ? (
-                        <FaCheck className="text-sm" />
+                        <FaCheck className="text-[10px] sm:text-xs md:text-sm" />
                       ) : (
-                        <Icon className="text-sm" />
+                        <Icon className="text-[10px] sm:text-xs md:text-sm" />
                       )}
                     </div>
                     {index < STEPS.length - 1 && (
                       <div
-                        className={`hidden sm:block w-16 lg:w-24 h-0.5 mx-3 transition-all ${
-                          isCompleted ? "bg-green-500" : "bg-gray-300"
+                        className={`w-4 sm:w-8 md:w-12 lg:w-16 h-0.5 mx-1 sm:mx-2 md:mx-3 transition-all ${
+                          isCompleted
+                            ? "bg-green-500 dark:bg-green-600"
+                            : "bg-gray-300 dark:bg-slate-600"
                         }`}
                       />
                     )}
@@ -1808,17 +1910,19 @@ Generate general accommodation recommendations without specific pricing or booki
               })}
             </div>
 
+            {/* Step Title and Description */}
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">
                 {STEPS[currentStep - 1].title}
               </h2>
-              <p className="text-gray-600">
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                 {STEPS[currentStep - 1].description}
               </p>
             </div>
 
+            {/* Progress Bar */}
             <Progress value={progress} className="w-full h-3 mb-2" />
-            <div className="text-center text-sm text-gray-500">
+            <div className="text-center text-sm text-gray-500 dark:text-gray-400">
               Step {currentStep} of {STEPS.length}
             </div>
           </div>
@@ -1827,12 +1931,12 @@ Generate general accommodation recommendations without specific pricing or booki
           <div className="mb-12">{renderStepContent()}</div>
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+          <div className="flex justify-between items-center pt-6 border-t border-gray-200 dark:border-slate-700">
             <Button
               variant="outline"
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="flex items-center gap-2 px-8 py-3"
+              className="flex items-center gap-2 px-8 py-3 cursor-pointer border-sky-200 dark:border-sky-700 text-gray-700 dark:text-gray-200 hover:bg-sky-50 dark:hover:bg-sky-950/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FaArrowLeft />
               Previous
@@ -1842,7 +1946,7 @@ Generate general accommodation recommendations without specific pricing or booki
               {currentStep < STEPS.length ? (
                 <Button
                   onClick={nextStep}
-                  className="flex items-center gap-2 bg-black hover:bg-gray-800 px-8 py-3"
+                  className="brand-button cursor-pointer flex items-center gap-2 px-8 py-3"
                 >
                   Next
                   <FaArrowRight />

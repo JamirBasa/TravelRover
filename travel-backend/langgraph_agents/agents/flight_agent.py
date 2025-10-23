@@ -1,5 +1,5 @@
 # langgraph_agents/agents/flight_agent.py
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List
 import asyncio
 from .base_agent import BaseAgent
 from flights.views import FlightSearchView
@@ -7,6 +7,30 @@ from rest_framework.test import APIRequestFactory
 import logging
 
 logger = logging.getLogger(__name__)
+
+# ✅ ADDED: List of Philippine airports with commercial service
+AIRPORTS_WITH_COMMERCIAL_SERVICE = [
+    # International Airports
+    "MNL", "CRK", "CEB", "DVO", "ILO", "KLO", "PPS",
+    
+    # Domestic Airports with scheduled service
+    "BCD", "TAG", "BXU", "CYZ", "CBO", "TAC", "DPL", "DGT", 
+    "GES", "MPH", "OZC", "CGY", "WNP", "PAG", "RXS", "TWT", 
+    "SJI", "SFS", "TUG", "ZAM", "DRP", "BSO", "CYP", "CGM", 
+    "CRM", "CYU", "EUQ", "USU", "JOL", "MBT", "OMC", "SWL", 
+    "IAO", "SUG", "TDG", "TBH", "VRC", "LGP", "LAO"
+]
+
+# ✅ ADDED: Airports with limited or no commercial service
+INACTIVE_AIRPORTS = {
+    "BAG": {
+        "name": "Loakan Airport (Baguio)",
+        "status": "No commercial service (suspended July 2024)",
+        "alternatives": ["CRK", "MNL"],
+        "alternative_names": ["Clark International Airport", "Manila (NAIA)"],
+        "recommendation": "Fly to Clark (CRK) or Manila (MNL), then 3-4 hours by bus to Baguio"
+    }
+}
 
 class FlightAgent(BaseAgent):
     """LangGraph Flight Search Agent"""
@@ -46,6 +70,17 @@ class FlightAgent(BaseAgent):
                     'error': 'Missing required fields: from_airport, to_airport, departure_date',
                     'flights': []
                 }
+            
+            # ✅ ADDED: Validate airport commercial service
+            airport_validation = self._validate_airports(from_airport, to_airport)
+            if not airport_validation['valid']:
+                return {
+                    'success': False,
+                    'error': airport_validation['message'],
+                    'flights': [],
+                    'airport_status': airport_validation,
+                    'alternatives': airport_validation.get('alternatives', [])
+                }
 
             # Use the view's search logic directly
             from django.conf import settings
@@ -80,6 +115,60 @@ class FlightAgent(BaseAgent):
                 'error': str(e),
                 'flights': []
             }
+    
+    def _validate_airports(self, from_airport: str, to_airport: str) -> Dict[str, Any]:
+        """
+        ✅ NEW: Validate if airports have commercial service
+        Returns validation status and alternatives if needed
+        """
+        from_upper = from_airport.upper() if from_airport else ""
+        to_upper = to_airport.upper() if to_airport else ""
+        
+        # Check departure airport
+        if from_upper not in AIRPORTS_WITH_COMMERCIAL_SERVICE:
+            if from_upper in INACTIVE_AIRPORTS:
+                inactive_info = INACTIVE_AIRPORTS[from_upper]
+                return {
+                    'valid': False,
+                    'message': f"{inactive_info['name']} has no commercial flights. {inactive_info['recommendation']}",
+                    'inactive_airport': from_upper,
+                    'airport_type': 'departure',
+                    'alternatives': [
+                        {'code': alt, 'name': name} 
+                        for alt, name in zip(inactive_info['alternatives'], inactive_info['alternative_names'])
+                    ],
+                    'recommendation': inactive_info['recommendation']
+                }
+            else:
+                return {
+                    'valid': False,
+                    'message': f"Departure airport '{from_airport}' not found or has no commercial service",
+                    'airport_type': 'departure'
+                }
+        
+        # Check destination airport
+        if to_upper not in AIRPORTS_WITH_COMMERCIAL_SERVICE:
+            if to_upper in INACTIVE_AIRPORTS:
+                inactive_info = INACTIVE_AIRPORTS[to_upper]
+                return {
+                    'valid': False,
+                    'message': f"{inactive_info['name']} has no commercial flights. {inactive_info['recommendation']}",
+                    'inactive_airport': to_upper,
+                    'airport_type': 'destination',
+                    'alternatives': [
+                        {'code': alt, 'name': name} 
+                        for alt, name in zip(inactive_info['alternatives'], inactive_info['alternative_names'])
+                    ],
+                    'recommendation': inactive_info['recommendation']
+                }
+            else:
+                return {
+                    'valid': False,
+                    'message': f"Destination airport '{to_airport}' not found or has no commercial service",
+                    'airport_type': 'destination'
+                }
+        
+        return {'valid': True, 'message': 'Airports validated successfully'}
     
     def _analyze_flight_options(self, flight_results: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze flight options and add LangGraph intelligence"""

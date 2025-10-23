@@ -3,16 +3,17 @@ import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Sparkles, MapPin, Clock, Users, Star } from "lucide-react";
 
+/**
+ * @deprecated This Hero component is no longer used.
+ * The application now uses the Home page (with HeroSection) as the main landing page.
+ * This file is kept for reference but can be safely deleted.
+ */
 function Hero() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    if (user && user.email) {
-      // User is logged in, redirect to home page
-      navigate("/home");
-    }
+    // Redirect to home page
+    navigate("/", { replace: true });
   }, [navigate]);
 
   const features = [
@@ -148,8 +149,8 @@ function Hero() {
                       </div>
                     ))}
                   </div>
-                  <div className="text-sm text-gray-600">
-                    <span className="font-bold text-2xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-bold text-2xl bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">
                       1,000+
                     </span>
                     <br />
@@ -167,7 +168,7 @@ function Hero() {
                       />
                     ))}
                   </div>
-                  <span className="text-sm font-bold text-gray-800">
+                  <span className="text-sm font-bold text-gray-800 dark:text-gray-200">
                     4.9/5 rating
                   </span>
                 </div>

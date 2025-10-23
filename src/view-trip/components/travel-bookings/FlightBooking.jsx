@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,10 +14,22 @@ import {
   TrendingDown,
   TrendingUp,
   Minus,
+  AlertTriangle,
 } from "lucide-react";
 
+// ✅ ADDED: Airports with no commercial service
+const INACTIVE_AIRPORTS = {
+  BAG: {
+    name: "Baguio (Loakan Airport)",
+    alternatives: ["CRK", "MNL"],
+    alternativeNames: ["Clark", "Manila"],
+    message:
+      "Baguio airport has no commercial flights. Fly to Clark or Manila, then 3-4 hours by bus.",
+  },
+};
+
 function FlightBooking({ trip }) {
-  const [sortBy, setSortBy] = useState("price"); // price, duration, departure
+  const [sortBy, setSortBy] = useState("price");
 
   // Helper function to format flight duration consistently
   const formatDuration = (duration) => {
@@ -52,7 +64,6 @@ function FlightBooking({ trip }) {
             : `${hours}h`
           : `${minutes}m`;
       }
-      // Otherwise, it's likely correct (1h-12h)
       return durationStr;
     }
 
@@ -109,9 +120,6 @@ function FlightBooking({ trip }) {
     const numberMatch = durationStr.match(/^(\d+)$/);
     if (numberMatch) {
       const number = parseInt(numberMatch[1]);
-
-      // Flight duration numbers from APIs are typically in minutes
-      // Convert all raw numbers to proper hour/minute format
       const hours = Math.floor(number / 60);
       const minutes = number % 60;
 
@@ -122,7 +130,6 @@ function FlightBooking({ trip }) {
         : `${minutes}m`;
     }
 
-    // If nothing matches, return cleaned version
     return durationStr || "Not specified";
   };
 
@@ -139,47 +146,63 @@ function FlightBooking({ trip }) {
       return location;
     }
 
+    // ✅ UPDATED: Complete airport map with Baguio
     const airportMap = {
+      // Metro Manila
       Manila: "MNL",
       "Metro Manila": "MNL",
       "Manila City": "MNL",
-      Cebu: "CEB",
-      "Cebu City": "CEB",
-      Davao: "DVO",
-      "Davao City": "DVO",
-      Palawan: "PPS",
-      "Puerto Princesa": "PPS",
-      "El Nido": "PPS",
-      Coron: "PPS",
-      Boracay: "KLO",
-      Kalibo: "KLO",
-      Malay: "KLO",
-      Bohol: "TAG",
-      Tagbilaran: "TAG",
-      "Tagbilaran City": "TAG",
-      Siargao: "IAO",
-      "General Luna": "IAO",
+
+      // Luzon
+      Baguio: "BAG", // ✅ ADDED: Returns BAG (will be handled by validation)
+      "Baguio City": "BAG",
+      Benguet: "BAG",
       Clark: "CRK",
       Angeles: "CRK",
       "Angeles City": "CRK",
-      Iloilo: "ILO",
-      "Iloilo City": "ILO",
-      Bacolod: "BCD",
-      "Bacolod City": "BCD",
-      Zamboanga: "ZAM",
-      Cagayan: "CGY",
-      "Cagayan de Oro": "CGY",
-      Dumaguete: "DGT",
-      "Dumaguete City": "DGT",
-      Butuan: "BXU",
-      Surigao: "SUG",
       Laoag: "LAO",
       Tuguegarao: "TUG",
       Legazpi: "LGP",
       Naga: "WNP",
+
+      // Visayas
+      Cebu: "CEB",
+      "Cebu City": "CEB",
+      Iloilo: "ILO",
+      "Iloilo City": "ILO",
+      Bacolod: "BCD",
+      "Bacolod City": "BCD",
+      Bohol: "TAG",
+      Tagbilaran: "TAG",
+      "Tagbilaran City": "TAG",
+      Boracay: "KLO",
+      Kalibo: "KLO",
+      Malay: "KLO",
+      Dumaguete: "DGT",
+      "Dumaguete City": "DGT",
       Roxas: "RXS",
       Tacloban: "TAC",
       Catarman: "CRM",
+
+      // Mindanao
+      Davao: "DVO",
+      "Davao City": "DVO",
+      Zamboanga: "ZAM",
+      "Zamboanga City": "ZAM",
+      Cagayan: "CGY",
+      "Cagayan de Oro": "CGY",
+      Butuan: "BXU",
+      Surigao: "SUG",
+      Siargao: "IAO",
+      "General Luna": "IAO",
+
+      // Palawan
+      Palawan: "PPS",
+      "Puerto Princesa": "PPS",
+      "El Nido": "PPS",
+      Coron: "PPS",
+
+      // Others
       Dipolog: "DPG",
       Pagadian: "PAG",
       Jolo: "JOL",
@@ -216,13 +239,34 @@ function FlightBooking({ trip }) {
     console.log(
       `⚠️ No airport code found for "${location}", defaulting to MNL`
     );
-    return "MNL"; // Default to Manila
+    return "MNL";
+  };
+
+  // ✅ NEW: Validate if route has commercial flights
+  const validateRoute = (originCode, destinationCode) => {
+    // Check if destination is an inactive airport
+    if (INACTIVE_AIRPORTS[destinationCode]) {
+      return {
+        valid: false,
+        type: "inactive_destination",
+        info: INACTIVE_AIRPORTS[destinationCode],
+      };
+    }
+
+    // Check if origin is an inactive airport
+    if (INACTIVE_AIRPORTS[originCode]) {
+      return {
+        valid: false,
+        type: "inactive_origin",
+        info: INACTIVE_AIRPORTS[originCode],
+      };
+    }
+
+    return { valid: true };
   };
 
   // Helper function to generate Trip.com affiliate booking URL
-  // Based on your provided affiliate parameters
   const generateTripComURL = (options = {}) => {
-    // Debug: Log trip data to see what we're working with
     console.log("🔍 Trip data for URL generation:", {
       tripLocation: trip?.userSelection?.location,
       flightPreferences: trip?.flightPreferences,
@@ -230,7 +274,6 @@ function FlightBooking({ trip }) {
       options: options,
     });
 
-    // Get departure city from flight preferences or user profile
     const departureCity =
       options.origin ||
       trip?.flightPreferences?.departureCity ||
@@ -240,7 +283,6 @@ function FlightBooking({ trip }) {
     const destinationCity =
       options.destination || trip?.userSelection?.location || "Cebu";
 
-    // Extract airport codes from location names
     const originCode = getAirportCode(departureCity);
     const destinationCode = getAirportCode(destinationCity);
 
@@ -251,7 +293,28 @@ function FlightBooking({ trip }) {
       destinationCode,
     });
 
-    // Helper function to parse traveler count from strings like "2 People", "Just Me", etc.
+    // ✅ ADDED: Validate route before generating URL
+    const routeValidation = validateRoute(originCode, destinationCode);
+    if (!routeValidation.valid) {
+      console.warn("⚠️ Invalid route detected:", routeValidation);
+      // For inactive airports, use the first alternative
+      if (routeValidation.info?.alternatives) {
+        const alternativeCode = routeValidation.info.alternatives[0];
+        console.log(`🔄 Using alternative airport: ${alternativeCode}`);
+        return generateTripComURL({
+          ...options,
+          destination:
+            routeValidation.type === "inactive_destination"
+              ? alternativeCode
+              : destinationCity,
+          origin:
+            routeValidation.type === "inactive_origin"
+              ? alternativeCode
+              : departureCity,
+        });
+      }
+    }
+
     const parseTravelerCount = (travelers) => {
       if (!travelers) return "1";
 
@@ -262,20 +325,17 @@ function FlightBooking({ trip }) {
         Friends: "3",
       };
 
-      // If it's a direct mapping, use it
       if (travelerMap[travelers]) {
         return travelerMap[travelers];
       }
 
-      // Extract number from strings like "2 People", "3 adults", etc.
       const match = travelers.toString().match(/(\d+)/);
       return match ? match[1] : "1";
     };
 
-    // Format dates for Trip.com (YYYY-MM-DD)
     const formatDate = (dateStr) => {
       if (!dateStr) return "";
-      const date = new Date(dateStr);
+      const date = new Date(dateStr + "T00:00:00"); // ✅ FIXED: Timezone issue
       return date.toISOString().split("T")[0];
     };
 
@@ -287,44 +347,64 @@ function FlightBooking({ trip }) {
     );
 
     const params = new URLSearchParams({
-      SID: "2209817", // Your Site ID
-      allianceid: "1094387", // Your Alliance ID
-      trip_sub1: "702904c5206a4eb899386a613-621043", // Your tracking sub ID
+      SID: "2209817",
+      allianceid: "1094387",
+      trip_sub1: "702904c5206a4eb899386a613-621043",
       currency: "PHP",
-      acity: destinationCode, // Arrival city (where you arrive/destination)
-      dcity: originCode, // Departure city (where you depart from/origin)
+      acity: destinationCode,
+      dcity: originCode,
       ddate: departDate,
       rdate: returnDate,
       quantity: parseTravelerCount(
         options.adults || trip?.userSelection?.travelers
       ),
-      class: "ys", // Economy class
-      flighttype: returnDate ? "D" : "S", // D = Round trip, S = One way
+      class: "ys",
+      flighttype: returnDate ? "D" : "S",
     });
 
     return `https://www.trip.com/flights/ShowFareFirst/?${params.toString()}`;
   };
 
+  // ✅ NEW: Check if current route involves inactive airports
+  const routeWarning = useMemo(() => {
+    if (
+      !trip?.userSelection?.location ||
+      !trip?.flightPreferences?.departureCity
+    ) {
+      return null;
+    }
+
+    const originCode = getAirportCode(trip.flightPreferences.departureCity);
+    const destinationCode = getAirportCode(trip.userSelection.location);
+    const validation = validateRoute(originCode, destinationCode);
+
+    if (!validation.valid) {
+      return {
+        ...validation,
+        originCode,
+        destinationCode,
+      };
+    }
+
+    return null;
+  }, [trip?.userSelection?.location, trip?.flightPreferences?.departureCity]);
+
   // Error boundary protection
   try {
-    // Early validation of trip data
     if (!trip) {
       console.warn("⚠️ No trip data provided to FlightBooking component");
       throw new Error("No trip data available");
     }
 
-    // Check if we have real flight data
     const hasFlightData = trip?.hasRealFlights && trip?.realFlightData?.success;
     const flights = trip?.realFlightData?.flights || [];
 
-    // Debug: Log flight data structure
     console.log("🛫 Flight data:", {
       hasFlightData,
       flights,
       realFlightData: trip?.realFlightData,
     });
 
-    // Validate flight data structure
     const validFlights = flights
       .filter((flight) => {
         const isValid =
@@ -336,7 +416,6 @@ function FlightBooking({ trip }) {
       })
       .map((flight) => ({
         ...flight,
-        // Ensure all required fields are strings
         name: String(flight.name || "Unknown Airline"),
         price: String(flight.price || "₱0"),
         departure: String(flight.departure || "N/A"),
@@ -345,16 +424,79 @@ function FlightBooking({ trip }) {
         stops: typeof flight.stops === "number" ? flight.stops : 0,
       }));
 
+    // ✅ ADDED: Show warning for inactive airport routes
+    if (routeWarning) {
+      return (
+        <div className="bg-orange-50 dark:bg-orange-950/30 rounded-xl shadow-lg border-2 border-orange-300 dark:border-orange-700 p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/50 rounded-full flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-orange-900 dark:text-orange-100 mb-2">
+                No Direct Flights Available
+              </h3>
+              <p className="text-orange-800 dark:text-orange-200 mb-4">
+                {routeWarning.info.message}
+              </p>
+
+              <div className="bg-white dark:bg-slate-900 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                  ✈️ Recommended Route:
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Plane className="h-4 w-4 text-sky-600" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      <strong>Step 1:</strong> Fly to{" "}
+                      {routeWarning.info.alternativeNames[0]} (
+                      {routeWarning.info.alternatives[0]})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ArrowRight className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      <strong>Step 2:</strong> 3-4 hours by bus to{" "}
+                      {trip.userSelection.location}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {routeWarning.info.alternatives.map((altCode, index) => (
+                  <Button
+                    key={altCode}
+                    onClick={() =>
+                      window.open(
+                        generateTripComURL({ destination: altCode }),
+                        "_blank"
+                      )
+                    }
+                    className="brand-button"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Search Flights to{" "}
+                    {routeWarning.info.alternativeNames[index]}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (!hasFlightData || validFlights.length === 0) {
       return (
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-12 text-center">
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-12 text-center">
           <div className="w-16 h-16 brand-gradient rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <span className="text-2xl text-white">✈️</span>
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
             Flight Booking Available
           </h3>
-          <p className="text-gray-600 text-sm max-w-md mx-auto font-medium mb-4">
+          <p className="text-gray-600 dark:text-gray-400 text-sm max-w-md mx-auto font-medium mb-4">
             Contact our travel partners for the best flight deals to{" "}
             {trip?.userSelection?.location}
           </p>
@@ -381,7 +523,7 @@ function FlightBooking({ trip }) {
       );
     }
 
-    // Sort flights based on selected criteria
+    // Sort flights
     const sortedFlights = [...validFlights].sort((a, b) => {
       switch (sortBy) {
         case "price":
@@ -406,30 +548,24 @@ function FlightBooking({ trip }) {
     });
 
     const handleBookFlight = (flight) => {
-      // Track booking attempt (you can add analytics here)
       console.log("Flight booking attempt:", flight);
-
-      // Generate Trip.com affiliate URL
       const bookingUrl = generateTripComURL();
       console.log("🔗 Generated Trip.com booking URL:", bookingUrl);
-
-      // Open booking URL
       window.open(bookingUrl, "_blank");
     };
 
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
-          {/* Consistent Header Section */}
+        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md border border-gray-100 dark:border-slate-700 overflow-hidden">
+          {/* Header Section */}
           <div className="brand-gradient px-4 sm:px-6 py-4 relative overflow-hidden">
-            {/* Background decoration */}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
-            <div className="absolute bottom-0 left-0 w-16 h-16 bg-white opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
+            <div className="absolute top-0 right-0 w-24 h-24 bg-white dark:bg-white/10 opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
+            <div className="absolute bottom-0 left-0 w-16 h-16 bg-white dark:bg-white/10 opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
 
             <div className="relative">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-lg border border-white/30">
+                  <div className="w-10 h-10 bg-white dark:bg-white/90 rounded-lg flex items-center justify-center shadow-lg border border-white/30">
                     <Plane className="h-5 w-5 text-sky-600" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -460,14 +596,14 @@ function FlightBooking({ trip }) {
           </div>
 
           <div className="p-4 sm:p-6">
-            {/* Sort Options Section */}
+            {/* Sort Options */}
             <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <span>Sort by:</span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="text-sm border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-sky-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-white cursor-pointer"
                 >
                   <option value="price">Price (Low to High)</option>
                   <option value="departure">Departure Time</option>
@@ -485,7 +621,6 @@ function FlightBooking({ trip }) {
                     trip={trip}
                     formatDuration={formatDuration}
                   />
-                  {/* Add separator except for last item */}
                   {index < sortedFlights.length - 1 && (
                     <div className="mt-6 border-b border-gray-100"></div>
                   )}
@@ -493,7 +628,7 @@ function FlightBooking({ trip }) {
               ))}
             </div>
 
-            {/* Compact Helpful tip */}
+            {/* Helpful tip */}
             <div className="mt-4 p-4 bg-gradient-to-r from-sky-50 to-blue-50 rounded-lg border border-sky-200">
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 brand-gradient rounded flex items-center justify-center flex-shrink-0">
@@ -520,24 +655,28 @@ function FlightBooking({ trip }) {
           </div>
         </div>
 
-        {/* Price Alerts & Partner Links - Outside main container */}
+        {/* Price Alerts */}
         {trip?.realFlightData?.price_alerts && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <h4 className="font-medium text-green-900 mb-2 flex items-center gap-2">
+          <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <h4 className="font-medium text-green-900 dark:text-green-400 mb-2 flex items-center gap-2">
               <TrendingDown className="h-4 w-4" />
               Price Insights
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
-                <span className="text-green-700 font-medium">Lowest: </span>
-                <span className="text-green-800">
+                <span className="text-green-700 dark:text-green-400 font-medium">
+                  Lowest:{" "}
+                </span>
+                <span className="text-green-800 dark:text-green-300">
                   ₱
                   {trip.realFlightData.price_alerts.lowest_price?.toLocaleString()}
                 </span>
               </div>
               <div>
-                <span className="text-green-700 font-medium">Average: </span>
-                <span className="text-green-800">
+                <span className="text-green-700 dark:text-green-400 font-medium">
+                  Average:{" "}
+                </span>
+                <span className="text-green-800 dark:text-green-300">
                   ₱
                   {Math.round(
                     trip.realFlightData.price_alerts.average_price
@@ -545,13 +684,15 @@ function FlightBooking({ trip }) {
                 </span>
               </div>
               <div>
-                <span className="text-green-700 font-medium">Trend: </span>
-                <span className="text-green-800 capitalize">
+                <span className="text-green-700 dark:text-green-400 font-medium">
+                  Trend:{" "}
+                </span>
+                <span className="text-green-800 dark:text-green-300 capitalize">
                   {trip.realFlightData.price_alerts.price_trend}
                 </span>
               </div>
             </div>
-            <p className="text-green-700 text-xs mt-2 font-medium">
+            <p className="text-green-700 dark:text-green-400 text-xs mt-2 font-medium">
               💡 {trip.realFlightData.price_alerts.best_booking_time}
             </p>
           </div>
@@ -559,8 +700,8 @@ function FlightBooking({ trip }) {
 
         {/* Alternative Booking Partners */}
         {trip?.realFlightData?.booking_info?.partner_links && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <h4 className="font-medium text-gray-900 mb-3">
+          <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-lg p-4">
+            <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
               Compare Prices on Other Sites
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -572,7 +713,7 @@ function FlightBooking({ trip }) {
                   onClick={() => window.open(url, "_blank")}
                   variant="outline"
                   size="sm"
-                  className="text-xs hover:bg-gray-100"
+                  className="text-xs hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer"
                 >
                   <ExternalLink className="h-3 w-3 mr-1" />
                   {name.charAt(0).toUpperCase() + name.slice(1)}
@@ -626,19 +767,18 @@ function FlightBooking({ trip }) {
 // Individual Flight Card Component
 function FlightCard({ flight, onBook, trip, formatDuration }) {
   return (
-    <div className="border border-gray-200 bg-white rounded-lg transition-all duration-200 hover:shadow-lg hover:border-sky-300 hover:-translate-y-1 group">
-      {/* Main Flight Info */}
+    <div className="border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg transition-all duration-200 hover:shadow-lg hover:border-sky-300 dark:hover:border-sky-600 hover:-translate-y-1 group">
       <div className="p-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           {/* Flight Details */}
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-3">
-              <div className="font-semibold text-gray-900 flex items-center gap-2">
-                <Plane className="h-4 w-4 text-gray-600" />
+              <div className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Plane className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                 {flight.name}
               </div>
               {flight.is_best && (
-                <Badge className="bg-green-100 text-green-800 text-xs">
+                <Badge className="bg-green-100 dark:bg-green-950/30 text-green-800 dark:text-green-400 text-xs">
                   <Star className="h-3 w-3 mr-1" />
                   Best Value
                 </Badge>
@@ -653,30 +793,36 @@ function FlightCard({ flight, onBook, trip, formatDuration }) {
             {/* Flight Times and Route */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
               <div>
-                <div className="text-gray-600 text-xs mb-1">Departure</div>
+                <div className="text-gray-600 dark:text-gray-400 text-xs mb-1">
+                  Departure
+                </div>
                 <div className="font-medium flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-gray-400" />
+                  <Calendar className="h-3 w-3 text-gray-400 dark:text-gray-500" />
                   {flight.departure}
                 </div>
               </div>
               <div>
-                <div className="text-gray-600 text-xs mb-1">Arrival</div>
+                <div className="text-gray-600 dark:text-gray-400 text-xs mb-1">
+                  Arrival
+                </div>
                 <div className="font-medium flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-gray-400" />
+                  <Clock className="h-3 w-3 text-gray-400 dark:text-gray-500" />
                   {flight.arrival}
                 </div>
               </div>
               <div>
-                <div className="text-gray-600 text-xs mb-1">Duration</div>
+                <div className="text-gray-600 dark:text-gray-400 text-xs mb-1">
+                  Duration
+                </div>
                 <div className="font-medium flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-gray-400" />
+                  <Clock className="h-3 w-3 text-gray-400 dark:text-gray-500" />
                   {formatDuration(flight.duration)}
                 </div>
               </div>
             </div>
 
             {/* Flight Features */}
-            <div className="flex items-center gap-4 mt-3 text-xs text-gray-600">
+            <div className="flex items-center gap-4 mt-3 text-xs text-gray-600 dark:text-gray-400">
               <span className="flex items-center gap-1">
                 <Shield className="h-3 w-3" />
                 {flight.stops === 0 ? "Non-stop" : `${flight.stops} stop(s)`}
@@ -694,11 +840,15 @@ function FlightCard({ flight, onBook, trip, formatDuration }) {
           {/* Price and Booking */}
           <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-3 lg:gap-2">
             <div className="text-center sm:text-right lg:text-right flex-1 sm:flex-initial">
-              <div className="text-xs text-gray-600 mb-1">Total Price</div>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                Total Price
+              </div>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-500">
                 {flight.price}
               </div>
-              <div className="text-xs text-gray-500">per person</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                per person
+              </div>
             </div>
 
             <Button

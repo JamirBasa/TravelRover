@@ -19,10 +19,10 @@ const PHILIPPINE_AIRPORTS = {
   // Luzon - Major Airports
   'MNL': { name: 'Ninoy Aquino International Airport', city: 'Manila', region: 'ncr', type: 'international' },
   'CRK': { name: 'Clark International Airport', city: 'Angeles', region: 'r03', type: 'international' },
-  'LAO': { name: 'Laoag International Airport', city: 'Laoag', region: 'r01', type: 'domestic' },
-  'BAG': { name: 'Loakan Airport', city: 'Baguio', region: 'car', type: 'domestic' },
+  'LAO': { name: 'Laoag International Airport', city: 'Laoag', region: 'r01', type: 'international' }, // ✅ FIXED: Changed to international
+  // ❌ REMOVED BAG - No commercial service as of Oct 2025
   'LGP': { name: 'Legazpi Airport', city: 'Legazpi', region: 'r05', type: 'domestic' },
-  'WNP': { name: 'Naga Airport', city: 'Naga', region: 'r05', type: 'domestic' },
+  'WNP': { name: 'Naga Airport', city: 'Naga', region: 'r05', type: 'domestic' }, // ✅ CORRECT: Has 2x daily to MNL
   
   // Visayas - Major Airports
   'CEB': { name: 'Mactan-Cebu International Airport', city: 'Cebu', region: 'r07', type: 'international' },
@@ -47,6 +47,19 @@ const PHILIPPINE_AIRPORTS = {
   'PPS': { name: 'Puerto Princesa International Airport', city: 'Puerto Princesa', region: 'r04b', type: 'international' },
   'USU': { name: 'Francisco B. Reyes Airport', city: 'Coron', region: 'r04b', type: 'domestic' },
   'ENI': { name: 'El Nido Airport', city: 'El Nido', region: 'r04b', type: 'domestic' },
+};
+
+// ✅ NEW: Airports that exist but have NO commercial service
+const INACTIVE_AIRPORTS = {
+  'BAG': {
+    name: 'Loakan Airport',
+    city: 'Baguio',
+    region: 'car',
+    status: 'No commercial service (suspended July 2024)',
+    nearestAlternative: 'CRK',
+    alternativeName: 'Clark International Airport',
+    travelTime: '3-4 hours by land from Clark'
+  }
 };
 
 // Regional cost of living indexes for Philippines (relative to Manila = 100)
@@ -282,7 +295,7 @@ export const estimateFlightCost = (departureLocation, destination, startDate = n
     'ncr-r10': 5000,      // Manila-Cagayan de Oro (₱2,000-3,000 one-way)
     'ncr-r05': 3500,      // Manila-Legazpi (₱1,500-2,000 one-way)
     'ncr-r01': 0,         // Manila-Ilocos (land travel)
-    'ncr-car': 0,         // Manila-Baguio (land travel)
+    'ncr-car': 0,         // Manila-Baguio (land travel) ✅ CORRECT: No flights to Baguio
     'ncr-r03': 0,         // Manila-Central Luzon (land travel)
     'ncr-r04a': 0,        // Manila-CALABARZON (land travel)
     
@@ -478,15 +491,32 @@ export const getDestinationInfo = (destination) => {
  */
 export const findNearestAirport = (cityName, regionCode = null) => {
   if (!cityName) return null;
-  
+
   const cityLower = cityName.toLowerCase();
-  
-  // First, check if the city has its own airport
+
+  // ✅ FIXED: Check if city has inactive airport
+  for (const [code, inactiveInfo] of Object.entries(INACTIVE_AIRPORTS)) {
+    if (cityLower.includes(inactiveInfo.city.toLowerCase())) {
+      const alternative = PHILIPPINE_AIRPORTS[inactiveInfo.nearestAlternative];
+      return {
+        code: inactiveInfo.nearestAlternative,
+        ...alternative,
+        distance: 'Via land transit',
+        travelTime: inactiveInfo.travelTime,
+        hasDirectAirport: false,
+        inactiveAirportCode: code,
+        inactiveAirportStatus: inactiveInfo.status,
+        message: `${inactiveInfo.city} airport (${code}) has no commercial service`,
+        recommendation: `✈️ Fly to ${alternative.city} (${inactiveInfo.nearestAlternative}), then ${inactiveInfo.travelTime}`,
+      };
+    }
+  }
+
+  // Check if city has active airport
   const cityAirport = Object.entries(PHILIPPINE_AIRPORTS).find(([code, airport]) => 
-    airport.city.toLowerCase() === cityLower ||
-    cityLower.includes(airport.city.toLowerCase())
+    airport.city.toLowerCase() === cityLower || cityLower.includes(airport.city.toLowerCase())
   );
-  
+
   if (cityAirport) {
     return {
       code: cityAirport[0],
@@ -551,5 +581,6 @@ export const getAirportRecommendations = (departureCity, destinationCity) => {
     destination,
     needsFlight: departure?.region !== destination?.region,
     route: departure && destination ? `${departure.code} → ${destination.code}` : null,
+    nonstopAvailableFromDeparture: departure?.hasDirectAirport && destination?.hasDirectAirport, // ✅ ADD THIS
   };
 };

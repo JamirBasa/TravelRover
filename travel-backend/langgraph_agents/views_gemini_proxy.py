@@ -114,17 +114,72 @@ def gemini_generate(request):
         ]
         
         # Initialize model
-        model_name = generation_config.get('model', 'gemini-2.0-flash-exp')
+        model_name = generation_config.get('model', 'gemini-2.5-flash')
         model = genai.GenerativeModel(
             model_name=model_name,
             generation_config=config,
             safety_settings=safety_settings
         )
         
-        logger.info(f"🤖 Calling Gemini model: {model_name}")
+        # Enhanced system prompt for travel planning
+        system_context = """
+You are an expert Philippine travel planner generating JSON itineraries. Follow these CRITICAL rules:
+
+🛫 AIRPORT SELECTION (MANDATORY):
+✅ IF destination has direct airport → Use it with proper code
+✅ IF destination has NO direct airport → Recommend NEAREST airport + ground transfer details
+
+PHILIPPINES AIRPORT GUIDE:
+✅ Cities WITH Direct Airports:
+- Manila (MNL), Cebu (CEB), Davao (DVO), Clark (CRK)
+- Puerto Princesa (PPS), Tagbilaran (TAG), Iloilo (ILO)
+- Kalibo (KLO), Caticlan (MPH) for Boracay
+- Busuanga (USU) for Coron, Siargao (IAO)
+
+❌ Cities WITHOUT Direct Airports (Use Nearest + Ground Transfer):
+- Baguio → Manila (MNL) 6hrs or Clark (CRK) 4hrs + bus (₱500-800)
+- El Nido → Puerto Princesa (PPS) + 5-6hr van (₱600-1,200)
+- Sagada → Manila (MNL) + 12hr bus (₱800-1,200)
+- Vigan → Laoag (LAO) + 2hr bus (₱200-400)
+- Camiguin → Cagayan de Oro (CGY) + 2hr ferry (₱500)
+
+🏨 DAILY STRUCTURE (MANDATORY):
+✅ Day 1: Arrival → Hotel Check-in (2:00 PM) → 2-3 activities → Return to hotel (8:00 PM)
+✅ Day 2-N (Middle): Morning → Lunch → Afternoon → Dinner → **Return to hotel (8:00 PM)**
+✅ Last Day: Breakfast → Activity → Hotel Check-out (11:00 AM) → Departure
+
+EVERY MIDDLE DAY MUST END WITH:
+{
+  "time": "8:00 PM",
+  "placeName": "Return to hotel",
+  "placeDetails": "End of day, return to hotel for rest",
+  "ticketPricing": "Free",
+  "timeTravel": "20 minutes"
+}
+
+⚠️ FORBIDDEN:
+❌ NO suggesting direct flights to cities without airports (e.g., "Arrive at Baguio City via flight")
+❌ NO middle days ending without "Return to hotel" activity
+❌ NO activities past 9:00 PM without hotel return
+❌ NO Day 1 without hotel check-in around 2:00 PM
+❌ NO Last Day without hotel check-out around 11:00 AM
+
+Generate realistic, logistically accurate itineraries with proper airport handling and daily hotel returns.
+"""
         
-        # Generate content
-        response = model.generate_content(prompt)
+        # Check if this is a travel itinerary request (contains travel-related keywords)
+        is_travel_request = any(keyword in prompt.lower() for keyword in [
+            'itinerary', 'trip', 'travel', 'destination', 'hotel', 'flight', 
+            'budget', 'travelers', 'places to visit', 'duration'
+        ])
+        
+        # Prepend system context for travel requests
+        enhanced_prompt = f"{system_context}\n\n{prompt}" if is_travel_request else prompt
+        
+        logger.info(f"🤖 Calling Gemini model: {model_name} (Travel context: {is_travel_request})")
+        
+        # Generate content with enhanced prompt
+        response = model.generate_content(enhanced_prompt)
         
         # Calculate execution time
         execution_time = time.time() - start_time
@@ -222,7 +277,7 @@ def gemini_health(request):
         # Test API key with simple request
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            model = genai.GenerativeModel('gemini-2.5-flash')
             
             # Simple test generation
             test_response = model.generate_content("Say 'OK' if you can respond.")
