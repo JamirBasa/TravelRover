@@ -48,80 +48,80 @@ const HotelPreferences = ({
   };
 
   const priceRangeOptions = [
-    { 
-      value: 1, 
+    {
+      value: 1,
       label: HOTEL_CONFIG.PRICE_LEVELS[1],
       description: "Hostels, fan rooms, basic lodging, shared bathrooms",
-      examples: "Backpacker hostels, pension houses, fan rooms"
+      examples: "Backpacker hostels, pension houses, fan rooms",
     },
-    { 
-      value: 2, 
+    {
+      value: 2,
       label: HOTEL_CONFIG.PRICE_LEVELS[2],
       description: "Budget hotels, air-con, private bath, WiFi",
-      examples: "RedDoorz, OYO, budget chains, standard rooms"
+      examples: "RedDoorz, OYO, budget chains, standard rooms",
     },
-    { 
-      value: 3, 
+    {
+      value: 3,
       label: HOTEL_CONFIG.PRICE_LEVELS[3],
       description: "Comfortable hotels, pool, restaurant, good amenities",
-      examples: "Go Hotels, Summit Hotels, 3-star properties"
+      examples: "Go Hotels, Summit Hotels, 3-star properties",
     },
-    { 
-      value: 4, 
+    {
+      value: 4,
       label: HOTEL_CONFIG.PRICE_LEVELS[4],
       description: "Quality hotels, excellent service, business facilities",
-      examples: "Microtel, Quest, Seda Hotels, 4-star properties"
+      examples: "Microtel, Quest, Seda Hotels, 4-star properties",
     },
-    { 
-      value: 5, 
+    {
+      value: 5,
       label: HOTEL_CONFIG.PRICE_LEVELS[5],
       description: "Premium resorts, spa, multiple restaurants, luxury",
-      examples: "Shangri-La, Marco Polo, Dusit Thani, 5-star"
+      examples: "Shangri-La, Marco Polo, Dusit Thani, 5-star",
     },
-    { 
-      value: 6, 
+    {
+      value: 6,
       label: HOTEL_CONFIG.PRICE_LEVELS[6],
       description: "Ultra-luxury resorts, villas, private beaches",
-      examples: "Amanpulo, El Nido Resorts, exclusive properties"
+      examples: "Amanpulo, El Nido Resorts, exclusive properties",
     },
   ];
 
   const accommodationOptions = [
-    { 
-      value: "hotel", 
+    {
+      value: "hotel",
       label: "Hotels",
       icon: "🏨",
-      description: "Standard hotels with room service and facilities"
+      description: "Standard hotels with room service and facilities",
     },
-    { 
-      value: "resort", 
+    {
+      value: "resort",
       label: "Beach/Mountain Resorts",
       icon: "🏖️",
-      description: "Full-service resorts with recreational activities"
+      description: "Full-service resorts with recreational activities",
     },
-    { 
-      value: "hostel", 
+    {
+      value: "hostel",
       label: "Hostels & Backpacker Inns",
       icon: "🛏️",
-      description: "Budget-friendly, shared or private rooms"
+      description: "Budget-friendly, shared or private rooms",
     },
-    { 
-      value: "aparthotel", 
+    {
+      value: "aparthotel",
       label: "Aparthotels/Condotels",
       icon: "🏢",
-      description: "Apartment-style with kitchen facilities"
+      description: "Apartment-style with kitchen facilities",
     },
-    { 
-      value: "guesthouse", 
+    {
+      value: "guesthouse",
       label: "Guesthouses & B&Bs",
       icon: "🏡",
-      description: "Family-run, homely atmosphere with breakfast"
+      description: "Family-run, homely atmosphere with breakfast",
     },
-    { 
-      value: "boutique", 
+    {
+      value: "boutique",
       label: "Boutique Hotels",
       icon: "✨",
-      description: "Unique, stylish, personalized service"
+      description: "Unique, stylish, personalized service",
     },
   ];
 
@@ -129,19 +129,22 @@ const HotelPreferences = ({
   const getAccommodationDates = () => {
     if (formData?.startDate && formData?.endDate) {
       return {
-        checkIn: new Date(formData.startDate).toLocaleDateString('en-US', { 
-          weekday: 'short', 
-          month: 'short', 
-          day: 'numeric',
-          year: 'numeric'
+        checkIn: new Date(formData.startDate).toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
         }),
-        checkOut: new Date(formData.endDate).toLocaleDateString('en-US', { 
-          weekday: 'short', 
-          month: 'short', 
-          day: 'numeric',
-          year: 'numeric'
+        checkOut: new Date(formData.endDate).toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
         }),
-        nights: Math.ceil((new Date(formData.endDate) - new Date(formData.startDate)) / (1000 * 60 * 60 * 24))
+        nights: Math.ceil(
+          (new Date(formData.endDate) - new Date(formData.startDate)) /
+            (1000 * 60 * 60 * 24)
+        ),
       };
     }
     return null;
@@ -287,7 +290,9 @@ const HotelPreferences = ({
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div className="bg-white dark:bg-slate-800 p-2 rounded border border-sky-200 dark:border-sky-700">
-                        <div className="text-gray-500 dark:text-gray-400 text-xs mb-1">Check-in</div>
+                        <div className="text-gray-500 dark:text-gray-400 text-xs mb-1">
+                          Check-in
+                        </div>
                         <div className="font-semibold text-gray-800 dark:text-gray-200">
                           {accommodationDates.checkIn}
                         </div>
@@ -296,7 +301,9 @@ const HotelPreferences = ({
                         </div>
                       </div>
                       <div className="bg-white dark:bg-slate-800 p-2 rounded border border-sky-200 dark:border-sky-700">
-                        <div className="text-gray-500 dark:text-gray-400 text-xs mb-1">Check-out</div>
+                        <div className="text-gray-500 dark:text-gray-400 text-xs mb-1">
+                          Check-out
+                        </div>
                         <div className="font-semibold text-gray-800 dark:text-gray-200">
                           {accommodationDates.checkOut}
                         </div>
@@ -308,7 +315,8 @@ const HotelPreferences = ({
                     <div className="mt-2 text-center">
                       <span className="inline-flex items-center gap-1 text-sky-700 dark:text-sky-400 font-semibold text-sm">
                         <FaHotel className="text-xs" />
-                        {accommodationDates.nights} {accommodationDates.nights === 1 ? 'Night' : 'Nights'}
+                        {accommodationDates.nights}{" "}
+                        {accommodationDates.nights === 1 ? "Night" : "Nights"}
                       </span>
                     </div>
                   </div>
@@ -333,8 +341,8 @@ const HotelPreferences = ({
                           }
                           className={`p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
                             hotelData.preferredType === option.value
-                              ? 'border-orange-500 dark:border-orange-600 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 shadow-md'
-                              : 'border-gray-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-700 hover:bg-gray-50 dark:hover:bg-slate-800/50'
+                              ? "border-orange-500 dark:border-orange-600 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 shadow-md"
+                              : "border-gray-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-700 hover:bg-gray-50 dark:hover:bg-slate-800/50"
                           }`}
                         >
                           <div className="flex items-start gap-3">
@@ -365,13 +373,20 @@ const HotelPreferences = ({
                     <div className="space-y-2">
                       {priceRangeOptions.map((option) => {
                         // Calculate price range for total trip
-                        const priceMatch = HOTEL_CONFIG.PRICE_LEVELS[option.value].match(/₱[\d,]+-[\d,]+/);
-                        let estimatedTotal = 'Contact for pricing';
-                        
+                        const priceMatch =
+                          HOTEL_CONFIG.PRICE_LEVELS[option.value].match(
+                            /₱[\d,]+-[\d,]+/
+                          );
+                        let estimatedTotal = "Contact for pricing";
+
                         if (priceMatch && accommodationDates) {
-                          const prices = priceMatch[0].split('-');
-                          const minPrice = parseInt(prices[0].replace(/[₱,]/g, ''));
-                          const maxPrice = parseInt(prices[1].replace(/[₱,]/g, ''));
+                          const prices = priceMatch[0].split("-");
+                          const minPrice = parseInt(
+                            prices[0].replace(/[₱,]/g, "")
+                          );
+                          const maxPrice = parseInt(
+                            prices[1].replace(/[₱,]/g, "")
+                          );
                           const totalMin = minPrice * accommodationDates.nights;
                           const totalMax = maxPrice * accommodationDates.nights;
                           estimatedTotal = `₱${totalMin.toLocaleString()} - ₱${totalMax.toLocaleString()}`;
@@ -390,8 +405,8 @@ const HotelPreferences = ({
                             }}
                             className={`p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
                               hotelData.budgetLevel === option.value
-                                ? 'border-orange-500 dark:border-orange-600 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 shadow-md'
-                                : 'border-gray-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-700 hover:bg-gray-50 dark:hover:bg-slate-800/50'
+                                ? "border-orange-500 dark:border-orange-600 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 shadow-md"
+                                : "border-gray-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-700 hover:bg-gray-50 dark:hover:bg-slate-800/50"
                             }`}
                           >
                             <div className="flex items-start justify-between gap-3">
@@ -413,7 +428,11 @@ const HotelPreferences = ({
                                 {accommodationDates && priceMatch && (
                                   <div className="mt-2 p-2 bg-sky-50 dark:bg-sky-950/30 rounded border border-sky-200 dark:border-sky-800">
                                     <div className="text-xs text-sky-700 dark:text-sky-400 font-medium">
-                                      💰 Total for {accommodationDates.nights} {accommodationDates.nights === 1 ? 'night' : 'nights'}: {estimatedTotal}
+                                      💰 Total for {accommodationDates.nights}{" "}
+                                      {accommodationDates.nights === 1
+                                        ? "night"
+                                        : "nights"}
+                                      : {estimatedTotal}
                                     </div>
                                   </div>
                                 )}
@@ -427,15 +446,33 @@ const HotelPreferences = ({
                     {/* Budget Helper Info */}
                     <div className="mt-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-800 rounded-lg">
                       <div className="flex items-start gap-2">
-                        <span className="text-green-600 dark:text-green-400 text-sm">💡</span>
+                        <span className="text-green-600 dark:text-green-400 text-sm">
+                          💡
+                        </span>
                         <div className="text-xs text-green-800 dark:text-green-300">
-                          <div className="font-semibold mb-1">Budget-Saving Tips:</div>
+                          <div className="font-semibold mb-1">
+                            Budget-Saving Tips:
+                          </div>
                           <ul className="space-y-0.5 ml-4 list-disc">
-                            <li><strong>₱500-1,500:</strong> Perfect for backpackers, hostels with dorms/fan rooms</li>
-                            <li><strong>₱1,500-3,500:</strong> Best value - clean budget hotels with A/C</li>
-                            <li><strong>₱3,500+:</strong> More comfort and amenities included</li>
-                            <li>Book directly for better rates, check promo codes</li>
-                            <li>Weekday rates are typically 20-30% cheaper than weekends</li>
+                            <li>
+                              <strong>₱500-1,500:</strong> Perfect for
+                              backpackers, hostels with dorms/fan rooms
+                            </li>
+                            <li>
+                              <strong>₱1,500-3,500:</strong> Best value - clean
+                              budget hotels with A/C
+                            </li>
+                            <li>
+                              <strong>₱3,500+:</strong> More comfort and
+                              amenities included
+                            </li>
+                            <li>
+                              Book directly for better rates, check promo codes
+                            </li>
+                            <li>
+                              Weekday rates are typically 20-30% cheaper than
+                              weekends
+                            </li>
                           </ul>
                         </div>
                       </div>
@@ -453,7 +490,9 @@ const HotelPreferences = ({
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600 dark:text-gray-400">Number of guests:</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Number of guests:
+                          </span>
                           <span className="font-semibold text-gray-800 dark:text-gray-200">
                             {formData.travelers}
                           </span>
@@ -461,15 +500,36 @@ const HotelPreferences = ({
                         {formData.startDate && formData.endDate && (
                           <>
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Trip duration:</span>
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Trip duration:
+                              </span>
                               <span className="font-semibold text-gray-800 dark:text-gray-200">
-                                {accommodationDates?.nights} {accommodationDates?.nights === 1 ? 'night' : 'nights'}
+                                {accommodationDates?.nights}{" "}
+                                {accommodationDates?.nights === 1
+                                  ? "night"
+                                  : "nights"}
                               </span>
                             </div>
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Dates:</span>
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Dates:
+                              </span>
                               <span className="font-semibold text-gray-800 dark:text-gray-200">
-                                {new Date(formData.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(formData.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                {new Date(
+                                  formData.startDate
+                                ).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                })}{" "}
+                                -{" "}
+                                {new Date(formData.endDate).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  }
+                                )}
                               </span>
                             </div>
                           </>
@@ -484,12 +544,19 @@ const HotelPreferences = ({
                   <div className="flex items-start gap-2">
                     <FaInfoCircle className="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                     <div className="text-xs text-amber-900 dark:text-amber-300">
-                      <div className="font-semibold mb-1">💡 Accommodation Tips:</div>
+                      <div className="font-semibold mb-1">
+                        💡 Accommodation Tips:
+                      </div>
                       <ul className="space-y-1 ml-4 list-disc">
                         <li>Check-in time is typically 2:00 PM - 3:00 PM</li>
                         <li>Check-out time is usually 11:00 AM - 12:00 PM</li>
-                        <li>Early check-in/late check-out may incur additional charges</li>
-                        <li>Budget prices are per room per night, not per person</li>
+                        <li>
+                          Early check-in/late check-out may incur additional
+                          charges
+                        </li>
+                        <li>
+                          Budget prices are per room per night, not per person
+                        </li>
                         <li>Peak season rates may be 20-50% higher</li>
                       </ul>
                     </div>
@@ -498,7 +565,8 @@ const HotelPreferences = ({
 
                 {/* Search Info */}
                 <div className="mt-3 text-xs text-gray-600 dark:text-gray-400 text-center">
-                  🔍 We'll search for available accommodations matching your preferences in {formData?.location || 'your destination'}
+                  🔍 We'll search for available accommodations matching your
+                  preferences in {formData?.location || "your destination"}
                 </div>
               </div>
             </div>
