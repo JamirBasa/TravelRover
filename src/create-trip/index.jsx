@@ -25,6 +25,11 @@ import { formatTripTypes } from "../config/formatUserPreferences";
 import { safeJsonParse } from "../utils/jsonParsers";
 import { getValidationExamples } from "../data/philippineRegions";
 import {
+  validateItinerary,
+  getValidationSuggestion,
+  getNearestAirportInfo,
+} from "../utils/itineraryValidator";
+import {
   FaCalendarAlt,
   FaArrowRight,
   FaArrowLeft,
@@ -1517,6 +1522,77 @@ Generate general accommodation recommendations without specific pricing or booki
         }
       } else {
         console.log(`✅ All places validated for ${formData.location}`);
+      }
+
+      // 🏨✈️ ITINERARY VALIDATION - Check for hotel returns and airport logistics
+      console.log(
+        "🏨 Validating itinerary structure (hotel returns & airports)..."
+      );
+      const itineraryValidation = validateItinerary(parsedTripData, formData);
+
+      // Log validation results
+      console.log("📋 Itinerary Validation Results:", itineraryValidation);
+
+      // Handle validation errors (critical issues)
+      if (
+        !itineraryValidation.isValid &&
+        itineraryValidation.errors.length > 0
+      ) {
+        console.error(
+          "❌ Itinerary validation failed:",
+          itineraryValidation.errors
+        );
+
+        // Show specific error details to user
+        const errorMessages = itineraryValidation.errors
+          .map((err) => err.message)
+          .join("\n");
+        const suggestion = getValidationSuggestion(itineraryValidation);
+
+        toast.error("Itinerary Validation Failed", {
+          description: `The generated itinerary has critical issues:\n${errorMessages}\n\n${suggestion}`,
+          duration: 10000,
+        });
+
+        // Log for debugging
+        console.warn("🔍 Validation failed for trip:", {
+          destination: formData.location,
+          duration: formData.duration,
+          errors: itineraryValidation.errors,
+          warnings: itineraryValidation.warnings,
+          suggestion: suggestion,
+        });
+
+        // Show retry option to user
+        toast.info("Please Try Again", {
+          description:
+            "Click 'Generate Trip' to create a new itinerary with the correct structure.",
+          duration: 8000,
+        });
+
+        setLoading(false);
+        return; // Stop saving invalid itinerary
+      }
+
+      // Handle validation warnings (non-critical issues)
+      if (itineraryValidation.warnings.length > 0) {
+        console.warn(
+          "⚠️ Itinerary has warnings:",
+          itineraryValidation.warnings
+        );
+
+        // Show warnings but allow saving
+        const warningMessages = itineraryValidation.warnings
+          .slice(0, 3) // Show max 3 warnings
+          .map((warn) => warn.message)
+          .join("\n");
+
+        toast.warning("Itinerary Review Recommended", {
+          description: `Please review these items:\n${warningMessages}`,
+          duration: 7000,
+        });
+      } else {
+        console.log("✅ Itinerary structure validated successfully");
       }
 
       const tripDocument = {

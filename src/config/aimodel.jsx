@@ -179,23 +179,78 @@ CRITICAL REQUIREMENTS:
 
 🚨 TRAVEL TIME & LOGISTICS - ABSOLUTELY CRITICAL:
 
+🛫 AIRPORT & FLIGHT LOGISTICS:
+
+AIRPORT SELECTION RULES:
+✅ ALWAYS check if destination has a DIRECT airport:
+   - If YES: Use the direct airport (fastest, most convenient)
+   - If NO: Recommend the NEAREST major airport with clear ground transfer details
+✅ For destinations WITHOUT direct airports, MUST provide:
+   - Name of nearest major airport with code
+   - Distance from airport to destination
+   - Ground transfer time and cost estimate
+   - Transportation options (bus, van, taxi, private transfer)
+   - EXAMPLE: "No direct flights to El Nido. Fly to Puerto Princesa Airport (PPS), then 5-6 hour van ride to El Nido (₱600-1,200 per person)"
+
+PHILIPPINE AIRPORT REFERENCE GUIDE:
+✅ Major airports WITH commercial flights:
+   - Manila (MNL/NAIA) - National Capital Region
+   - Cebu (CEB/Mactan) - Cebu Province
+   - Clark (CRK) - Pampanga
+   - Davao (DVO) - Davao City
+   - Iloilo (ILO) - Iloilo City
+   - Puerto Princesa (PPS) - Palawan
+   - Tagbilaran (TAG) - Bohol
+   - Kalibo (KLO) - Aklan
+   - Caticlan (MPH) - Malay, Aklan
+   - Bacolod (BCD) - Negros Occidental
+   - Zamboanga (ZAM) - Zamboanga City
+   - General Santos (GES) - South Cotabato
+   - Cagayan de Oro (CGY) - Misamis Oriental
+   - Tacloban (TAC) - Leyte
+   - Busuanga (USU) - Coron, Palawan
+   - Siargao (IAO) - Surigao del Norte
+
+✅ NEAREST AIRPORT RECOMMENDATIONS (for destinations without direct airports):
+   - **El Nido** → Puerto Princesa (PPS) + 5-6 hour van north
+   - **Baguio** → Clark (CRK) 4hrs or Manila (MNL) 6hrs + bus
+   - **Batanes** → Has own airport (Basco Airport - BSO) with limited flights
+   - **Sagada** → Manila (MNL) + 12-hour bus OR Tuguegarao (TUG) + 6-hour van
+   - **Vigan** → Manila (MNL) + 8-hour bus OR Laoag (LAO) + 2-hour bus
+   - **Banaue Rice Terraces** → Manila (MNL) + 9-hour bus
+   - **Camiguin** → Cagayan de Oro (CGY) + 2-hour ferry
+   - **Siquijor** → Dumaguete + ferry OR Tagbilaran (TAG) + ferry
+
+✅ ALWAYS include in Day 1 arrival plan:
+   - Arrival airport name and code
+   - If nearest airport: mention it's NOT a direct flight to destination
+   - Ground transfer details (time, cost, mode)
+   - Realistic arrival time at hotel after all transfers
+
 DAY 1 (ARRIVAL DAY) RULES:
-✅ ADJUST Day 1 activities based on arrival time:
-   - Morning arrival (before 12 PM): 2-3 activities after check-in
-   - Afternoon arrival (12 PM - 4 PM): 1-2 activities maximum
-   - Evening arrival (after 4 PM): Check-in and nearby dinner only
+✅ ADJUST Day 1 activities based on arrival time AND ground transfer:
+   - Direct airport + morning arrival: 2-3 activities after check-in
+   - Direct airport + afternoon arrival: 1-2 activities maximum
+   - Direct airport + evening arrival: Check-in and nearby dinner only
+   - Nearest airport + long transfer (3+ hours): Day 1 = TRAVEL DAY, minimal/no activities
+   - Nearest airport + short transfer (under 2 hours): 1-2 light activities possible
 ✅ ASSUME traveler arrives in the morning/afternoon (unless specified otherwise)
 ✅ FIRST activity MUST BE hotel check-in:
-   - Airport/terminal to hotel transfer: 30-90 minutes depending on traffic
+   - Airport to hotel transfer (direct airport): 30-90 minutes
+   - Airport to hotel transfer (nearest airport): ADD ground transfer time (1-6 hours)
    - Hotel check-in: 15-30 minutes
    - Freshen up and rest: 30-60 minutes
-   - Standard check-in time: 2:00 PM - 3:00 PM
-   - EXAMPLE: "2:00 PM - Hotel Check-in at [Hotel Name]" with details "Check-in, freshen up, and settle into your accommodation"
-✅ START first sightseeing activity NO EARLIER than 2-3 hours after assumed arrival time
-✅ Day 1 should be LIGHTER schedule (2-3 activities max AFTER check-in)
+   - Standard check-in time: 2:00 PM - 3:00 PM (later if long transfer)
+   - EXAMPLE (direct): "2:00 PM - Hotel Check-in at [Hotel Name]"
+   - EXAMPLE (nearest): "10:00 AM - Arrive Puerto Princesa → 5-hour van to El Nido → 3:30 PM Hotel Check-in at [Hotel Name]"
+✅ START first sightseeing activity NO EARLIER than 2-3 hours after hotel check-in
+✅ If LONG ground transfer (3+ hours), Day 1 = travel day, activities: Check-in → Dinner → Return to hotel
+✅ Day 1 should be LIGHTER schedule (2-3 activities max AFTER check-in if direct airport, or NONE if long transfer)
 ✅ Focus on nearby attractions to hotel, minimal travel
 ✅ Include welcome activities: light lunch, city orientation, nearby sights
-✅ MANDATORY Day 1 structure: Hotel Check-in → Rest → Light Activities → Return to Hotel
+✅ MANDATORY Day 1 structure: 
+   - **Direct airport**: Airport Arrival (30-90 min) → Hotel Check-in → Rest → Light Activities → Return to Hotel
+   - **Nearest airport with long transfer**: Airport Arrival → Ground Transfer (3-6 hrs) → Hotel Check-in → Rest/Dinner → Return to Hotel
 
 LAST DAY (DEPARTURE DAY) RULES:
 ✅ ASSUME traveler departs in afternoon/evening (unless specified otherwise)
@@ -204,13 +259,25 @@ LAST DAY (DEPARTURE DAY) RULES:
    - Packing and preparation: 30-60 minutes before check-out
    - MUST include explicit check-out activity in itinerary
    - EXAMPLE: "11:00 AM - Hotel Check-out" with details "Pack belongings, settle bills, check-out from [Hotel Name]"
-✅ MUST factor in post-checkout logistics:
-   - Hotel to airport/terminal transfer: 30-90 minutes
-   - Airport early arrival: 2 hours before DOMESTIC flights, 3-4 hours international
-✅ Activities BEFORE check-out must END by 10:30 AM latest
-✅ Last day should be VERY LIGHT (1-2 activities max BEFORE check-out)
-✅ Focus on: hotel breakfast, quick nearby shopping, hotel-vicinity activities
-✅ MANDATORY Last Day structure: Breakfast → Light Activity → Hotel Check-out → Departure Transfer
+✅ MUST factor in post-checkout logistics (INCLUDING nearest airport transfers):
+   - **Direct airport**: Hotel to airport: 30-90 minutes + 2 hours early arrival = 2.5-3.5 hours total
+   - **Nearest airport with long transfer**: Hotel to airport: Ground transfer time (1-6 hours) + airport transfer + 2 hours early arrival
+   - Airport early arrival: 2 hours before DOMESTIC flights, 3-4 hours before INTERNATIONAL
+   - EXAMPLE (direct): 4:00 PM flight → 2:00 PM airport → 12:30 PM hotel departure → 11:00 AM checkout
+   - EXAMPLE (nearest): 2:00 PM Puerto Princesa flight → 12:00 PM airport → 6:00 AM hotel departure (6-hour ground transfer) → 5:00 AM checkout
+✅ For LONG ground transfers to nearest airport (3+ hours):
+   - Last day = EARLY departure day
+   - MINIMAL/NO activities before checkout
+   - Checkout time adjusted earlier (5-7 AM possible)
+   - Example: "5:00 AM - Early hotel checkout", "5:30 AM - Begin 6-hour transfer to Puerto Princesa Airport"
+✅ Activities BEFORE check-out must END by 10:30 AM latest (ONLY if direct airport)
+✅ Last day should be VERY LIGHT:
+   - Direct airport: 1-2 activities max BEFORE check-out
+   - Nearest airport + long transfer: NO activities, early checkout only
+✅ Focus on: hotel breakfast (if time), quick nearby shopping (only if direct airport), hotel-vicinity activities
+✅ MANDATORY Last Day structure:
+   - **Direct airport**: Breakfast → Light Activity → Hotel Check-out → Airport Transfer → Departure
+   - **Nearest airport + long transfer**: Early Breakfast (or skip) → Hotel Check-out → Long Ground Transfer → Airport → Departure
 ✅ Example Last Day (afternoon flight): 
    "7:30 AM - Breakfast at hotel restaurant", 
    "9:00 AM - Quick souvenir shopping (1 hour, near hotel)", 
@@ -285,20 +352,37 @@ TRANSPORTATION CONSIDERATIONS:
 ACCOMMODATION CHECK-IN/CHECK-OUT REQUIREMENTS:
 ✅ Day 1 MUST start with "Hotel Check-in at [Hotel Name]" as first activity
 ✅ Check-in activity must include hotel name from hotels array
-✅ Standard check-in time: 2:00 PM - 3:00 PM (adjust if early/late arrival specified)
+✅ Standard check-in time: 2:00 PM - 3:00 PM (adjust if early/late arrival specified or long ground transfer)
 ✅ Last day MUST include "Hotel Check-out" activity before departure
-✅ Check-out activity typically at 11:00 AM - 12:00 PM
-✅ All middle days MUST end with "Return to hotel" activity
+✅ Check-out activity typically at 11:00 AM - 12:00 PM (EARLIER if long transfer to nearest airport)
+✅ **CRITICAL**: All middle days MUST end with "Return to hotel" activity between 7:00-9:00 PM
+✅ "Return to hotel" MUST be the FINAL activity of each day (except last day which ends with departure)
 ✅ Check-in details: "Check-in, freshen up, and settle into your accommodation"
 ✅ Check-out details: "Pack belongings, settle bills, check-out from [Hotel Name]"
+✅ Return to hotel details: "End of day, return to [Hotel Name] for rest and overnight stay"
+
+DAILY STRUCTURE VALIDATION:
+✅ EVERY SINGLE DAY must follow this structure:
+   - **Day 1**: Airport/Transfer → Hotel Check-in → Activities → Return to hotel
+   - **Day 2-N (middle days)**: Morning activity → Lunch → Afternoon activity → Dinner → **Return to hotel**
+   - **Last Day**: Breakfast → (Optional activity if time) → Hotel Check-out → Airport Transfer/Departure
+✅ NO day should have activities extending past 9:00 PM without "Return to hotel"
+✅ Travelers sleep at the SAME hotel every night (unless multi-city trip specified)
+✅ Dinner can be the last activity BEFORE "Return to hotel" (e.g., "7:30 PM Dinner" then "9:00 PM Return to hotel")
 ✅ Hotels should be centrally located or near main attractions to minimize daily travel time
 ✅ Mention hotel location advantage in description: "centrally located in Makati", "near major attractions"
 
 
-FORBIDDEN:
+FORBIDDEN - CRITICAL VIOLATIONS:
 - NO Day 1 without hotel check-in as first activity
 - NO Last day without hotel check-out before departure
-- NO middle days without "Return to hotel" as final activity
+- NO middle days without "Return to hotel" as final activity (MANDATORY for every day)
+- NO suggesting direct flights to destinations without airports (recommend nearest airport instead)
+- NO omitting ground transfer details when using nearest airport
+- NO ignoring long transfer times (3-6 hours) in Day 1 or last day planning
+- NO activities extending past 9:00 PM without "Return to hotel"
+- NO overnight activities or late-night venues without hotel return
+- NO multi-hotel stays unless explicitly a multi-city trip
 - NO trailing commas like "property": "value",}
 - NO incomplete objects like {"name": "place",...
 - NO extra characters after final }
@@ -307,6 +391,22 @@ FORBIDDEN:
 - NO activities scheduled after hotel check-out on last day (except departure transfer)
 - NO unrealistic back-to-back schedules without travel time
 - NO missing closing braces or brackets
+
+NEAREST AIRPORT EXAMPLES (What to include in itinerary):
+✅ CORRECT (No direct airport):
+   "destination": "El Nido, Palawan",
+   "arrivalNote": "No direct flights to El Nido. Fly to Puerto Princesa Airport (PPS), then 5-6 hour van transfer.",
+   Day 1, First activity: "10:00 AM - Arrive Puerto Princesa Airport → Van transfer to El Nido (5-6 hours, ₱600-1,200)",
+   Day 1, Second activity: "4:00 PM - Hotel Check-in at [Hotel Name] in El Nido"
+
+✅ CORRECT (Direct airport):
+   "destination": "Cebu City",
+   Day 1, First activity: "2:00 PM - Hotel Check-in at [Hotel Name]",
+   Note in activity: "Arrive Mactan-Cebu Airport (CEB), 30-45 min transfer to hotel"
+
+❌ WRONG (Suggesting direct flights when none exist):
+   "destination": "El Nido",
+   Day 1: "2:00 PM - Arrive El Nido Airport" ← NO SUCH AIRPORT!
 
 EXAMPLE of CORRECT format:
 {

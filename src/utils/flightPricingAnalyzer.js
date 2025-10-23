@@ -13,8 +13,14 @@ export const getDaysUntilDeparture = (startDate) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
-  const departure = new Date(startDate);
-  departure.setHours(0, 0, 0, 0);
+  // ✅ FIXED: Force local midnight to avoid timezone issues
+  const departure = new Date(startDate + 'T00:00:00');
+  
+  // ✅ ADDED: Validate date
+  if (isNaN(departure.getTime())) {
+    console.warn('Invalid date provided to getDaysUntilDeparture:', startDate);
+    return null;
+  }
   
   const diffTime = departure - today;
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -41,21 +47,22 @@ export const getBookingTimingCategory = (daysUntilDeparture) => {
 
 /**
  * Calculate price multiplier based on booking timing
- * Philippine domestic flights pricing dynamics
+ * Philippine domestic flights pricing dynamics (PAL, Cebu Pacific, AirAsia)
  */
 export const getTimingPriceMultiplier = (daysUntilDeparture) => {
   const category = getBookingTimingCategory(daysUntilDeparture);
   
+  // ✅ REFINED: Updated based on Philippine airline behavior
   const multipliers = {
     'past': 0, // Can't book past dates
-    'today': 3.5, // 250% markup - extremely expensive
-    'tomorrow': 3.0, // 200% markup - very expensive
-    'very-last-minute': 2.5, // 150% markup - expensive
-    'last-minute': 2.0, // 100% markup - high prices
-    'short-notice': 1.5, // 50% markup - elevated prices
-    'moderate': 1.2, // 20% markup - slightly higher
-    'good': 1.0, // Normal prices
-    'optimal': 0.85, // 15% discount - best prices
+    'today': 4.0, // 300% markup - extremely expensive
+    'tomorrow': 3.2, // 220% markup - very expensive
+    'very-last-minute': 2.8, // 180% markup - expensive
+    'last-minute': 2.2, // 120% markup - high prices
+    'short-notice': 1.4, // 40% markup - elevated prices
+    'moderate': 1.1, // 10% markup - slightly higher
+    'good': 0.95, // 5% discount - normal prices
+    'optimal': 0.75, // 25% discount - best seat sale prices
   };
   
   return multipliers[category] || 1.0;
@@ -152,8 +159,12 @@ export const getFlexibleDateSuggestions = (startDate, endDate) => {
   if (!startDate || !endDate) return [];
   
   const suggestions = [];
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = new Date(startDate + 'T00:00:00'); // ✅ FIXED: Force local time
+  const end = new Date(endDate + 'T00:00:00'); // ✅ FIXED: Force local time
+  
+  // ✅ ADDED: Validate dates
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return [];
+  
   const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
   
   // Suggest 1 week later
@@ -261,12 +272,13 @@ const getCategoryDescription = (category) => {
  * Get price impact description
  */
 const getPriceImpactDescription = (multiplier) => {
-  if (multiplier >= 3.0) return 'Extremely High Prices';
+  if (multiplier >= 3.5) return 'Extremely High Prices';
   if (multiplier >= 2.5) return 'Very High Prices';
   if (multiplier >= 2.0) return 'High Prices';
   if (multiplier >= 1.5) return 'Elevated Prices';
   if (multiplier >= 1.2) return 'Slightly Higher';
   if (multiplier >= 1.0) return 'Normal Prices';
+  if (multiplier >= 0.9) return 'Good Prices';
   return 'Best Prices';
 };
 
@@ -313,13 +325,13 @@ const getRecommendations = (category, departureCity, destination) => {
     ],
     'good': [
       'Great timing! You have flexibility',
-      'Wait for monthly seat sales',
+      'Wait for monthly seat sales (mid-month)',
       'Book when you find a good price',
       'Consider travel insurance',
     ],
     'optimal': [
       'Perfect timing for best prices!',
-      'Wait for major seat sales',
+      'Wait for Cebu Pacific Piso Fares or AirAsia promos',
       'You have time to find the best deals',
       'Consider booking hotels separately for flexibility',
     ],
@@ -402,14 +414,14 @@ const getTimingTips = (category) => {
       '💡 Consider travel insurance for peace of mind',
     ],
     'good': [
-      '💡 You have time to wait for seat sales (monthly promos)',
-      '💡 Sign up for airline newsletters for exclusive deals',
-      '💡 Book when you find a price 20% below average',
+      '💡 Monthly seat sales happen mid-month - perfect timing!',
+      '💡 Sign up for Cebu Pacific, PAL, AirAsia newsletters',
+      '💡 Book when you find a price 30% below average',
     ],
     'optimal': [
-      '💡 Major seat sales happen quarterly - wait for them!',
+      '💡 Monthly seat sales from all major airlines at this range',
       '💡 Booking 60+ days ahead gives you maximum savings',
-      '💡 You can be selective with flight times and seats',
+      '💡 Cebu Pacific "Piso Fares" are common at 2+ months',
     ],
   };
   
@@ -422,6 +434,10 @@ const getTimingTips = (category) => {
 export const formatDateDisplay = (dateStr) => {
   if (!dateStr) return '';
   const date = new Date(dateStr + 'T00:00:00');
+  
+  // ✅ ADDED: Validate date
+  if (isNaN(date.getTime())) return '';
+  
   return date.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
