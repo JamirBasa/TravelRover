@@ -271,15 +271,41 @@ export const FlightAgent = {
 
   calculateDates(duration) {
     const today = new Date();
-    const departureDate = new Date(today);
-    departureDate.setDate(today.getDate() + 7);
 
-    const returnDate = new Date(departureDate);
-    returnDate.setDate(departureDate.getDate() + parseInt(duration));
+    // Create departure date 7 days from now using local date construction
+    const departureDate = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate() + 7,
+      0,
+      0,
+      0,
+      0
+    );
+
+    // Create return date based on duration
+    const durationDays = parseInt(duration) || 3;
+    const returnDate = new Date(
+      departureDate.getFullYear(),
+      departureDate.getMonth(),
+      departureDate.getDate() + durationDays,
+      0,
+      0,
+      0,
+      0
+    );
+
+    // Format as YYYY-MM-DD without timezone conversion
+    const formatDateLocal = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
 
     return {
-      departure: departureDate.toISOString().split("T")[0],
-      return: returnDate.toISOString().split("T")[0],
+      departure: formatDateLocal(departureDate),
+      return: formatDateLocal(returnDate),
     };
   },
 
