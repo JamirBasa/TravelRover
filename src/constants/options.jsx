@@ -24,7 +24,10 @@ import {
 // API Configuration
 export const API_CONFIG = {
   BASE_URL: "http://localhost:8000/api",
-  TIMEOUT: 120000, // 120 seconds (2 minutes) for GA-First workflow
+  TIMEOUT_SHORT: 45000, // Simple queries
+  TIMEOUT_MEDIUM: 90000, // Standard requests
+  TIMEOUT_LONG: 150000, // Complex itineraries
+  TIMEOUT_MAX: 360000, // Maximum for retries
   RETRY_ATTEMPTS: 3,
 };
 
