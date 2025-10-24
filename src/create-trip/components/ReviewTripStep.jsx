@@ -7,6 +7,8 @@ import {
   FaHotel,
   FaListAlt,
   FaInfoCircle,
+  FaRunning,
+  FaCheckCircle,
 } from "react-icons/fa";
 import {
   calculateDuration,
@@ -46,6 +48,17 @@ const ReviewTripStep = ({
   const getBudgetDisplay = () => {
     if (customBudget) return `${formatCurrency(customBudget)} (Custom)`;
     return formData.budget || "Not selected";
+  };
+
+  const getActivityPaceDisplay = () => {
+    const pace = formData.activityPreference || 2;
+    const paceLabels = {
+      1: "Light Pace (1 activity/day)",
+      2: "Moderate Pace (2 activities/day)",
+      3: "Active Pace (3 activities/day)",
+      4: "Intensive Pace (4 activities/day)",
+    };
+    return paceLabels[pace] || "Moderate Pace (2 activities/day)";
   };
 
   // Calculate smart travel dates
@@ -91,7 +104,7 @@ const ReviewTripStep = ({
           </div>
         </div>
 
-        {/* Travel Dates */}
+        {/* Travel Dates - Simplified */}
         <div className="bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <FaCalendarAlt className="text-green-600 dark:text-green-500 mt-1 flex-shrink-0" />
@@ -100,39 +113,12 @@ const ReviewTripStep = ({
                 Travel Dates
               </h3>
               <p className="text-gray-600 dark:text-gray-400 text-sm">
-                <strong>Start:</strong> {formatDate(formData.startDate)}
-              </p>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
-                <strong>End:</strong> {formatDate(formData.endDate)}
+                {formatDate(formData.startDate)} →{" "}
+                {formatDate(formData.endDate)}
               </p>
               <p className="text-blue-600 dark:text-blue-500 text-sm font-medium mt-1">
-                Duration: {getDuration()}
+                {getDuration()} trip
               </p>
-
-              {/* Smart Date Explanation */}
-              {travelDates && (
-                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <FaInfoCircle className="text-blue-600 dark:text-blue-500 mt-0.5 flex-shrink-0" />
-                    <div className="text-xs text-blue-700 dark:text-blue-400">
-                      <p className="font-semibold mb-1">Travel Timing:</p>
-                      <p>{getDateExplanation(travelDates)}</p>
-                      {travelDates.includesArrivalDay && (
-                        <p className="mt-2 font-semibold">
-                          ✈️ Flying out on {travelDates.flightDepartureDate}
-                        </p>
-                      )}
-                      {travelDates.totalNights !== travelDates.totalDays && (
-                        <p className="mt-1">
-                          🏨 Hotel: {travelDates.totalNights} nights (
-                          {travelDates.hotelCheckInDate} to{" "}
-                          {travelDates.hotelCheckOutDate})
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -167,61 +153,66 @@ const ReviewTripStep = ({
           </div>
         </div>
 
-        {/* Flight Preferences */}
+        {/* Activity Pace */}
         <div className="bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <FaPlane className="text-blue-600 dark:text-blue-500 mt-1 flex-shrink-0" />
+            <FaRunning className="text-purple-600 dark:text-purple-500 mt-1 flex-shrink-0" />
             <div>
               <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-1">
-                Flight Options
+                Activity Pace
               </h3>
-              {flightData.includeFlights ? (
-                <div>
-                  <p className="text-green-600 dark:text-green-500 text-sm font-medium">
-                    ✓ Include flight search
-                  </p>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">
-                    Departing from:{" "}
-                    {flightData.departureCity || "Not specified"}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
-                  No flight search requested
-                </p>
-              )}
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                {getActivityPaceDisplay()}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Hotel Preferences */}
-        <div className="bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <FaHotel className="text-orange-600 dark:text-orange-500 mt-1 flex-shrink-0" />
-            <div>
-              <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-1">
-                Hotel Options
-              </h3>
-              {hotelData?.includeHotels ? (
-                <div>
-                  <p className="text-green-600 dark:text-green-500 text-sm font-medium">
-                    ✓ Include hotel search
-                  </p>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">
-                    Preferred Type: {hotelData.preferredType || "Not specified"}
-                  </p>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">
-                    Budget Range: {hotelData.priceRange || "Not specified"}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
-                  No hotel search requested
-                </p>
-              )}
+        {/* Additional Services - Combined Flight & Hotel */}
+        {(flightData?.includeFlights || hotelData?.includeHotels) && (
+          <div className="bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex gap-2">
+                {flightData?.includeFlights && (
+                  <FaPlane className="text-blue-600 dark:text-blue-500 mt-1 flex-shrink-0" />
+                )}
+                {hotelData?.includeHotels && (
+                  <FaHotel className="text-orange-600 dark:text-orange-500 mt-1 flex-shrink-0" />
+                )}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-2">
+                  Additional Services
+                </h3>
+
+                {/* Flight Info */}
+                {flightData?.includeFlights && (
+                  <div className="mb-3 pb-3 border-b border-gray-200 dark:border-slate-700 last:border-b-0 last:pb-0 last:mb-0">
+                    <p className="text-green-600 dark:text-green-500 text-sm font-medium mb-1">
+                      ✓ Flight Search Included
+                    </p>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">
+                      From: {flightData.departureCity || "Not specified"}
+                    </p>
+                  </div>
+                )}
+
+                {/* Hotel Info */}
+                {hotelData?.includeHotels && (
+                  <div>
+                    <p className="text-green-600 dark:text-green-500 text-sm font-medium mb-1">
+                      ✓ Hotel Search Included
+                    </p>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">
+                      Type: {hotelData.preferredType || "Not specified"} •{" "}
+                      {hotelData.priceRange || "Not specified"}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Special Requests */}
         {formData.specificRequests && (
@@ -240,63 +231,25 @@ const ReviewTripStep = ({
           </div>
         )}
 
-        {/* User Profile Summary */}
-        {userProfile && (
-          <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <h3 className="font-medium text-blue-800 dark:text-blue-300 mb-2">
-              Personalization Based on Your Profile:
-            </h3>
-            <div className="space-y-1 text-blue-700 dark:text-blue-400 text-sm">
-              <p>• Travel Style: {userProfile.travelStyle}</p>
-              <p>
-                • Preferred Trip Types:{" "}
-                {userProfile.preferredTripTypes?.slice(0, 2).join(", ")}
+        {/* Ready to Generate Notice */}
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-2 border-green-200 dark:border-green-800 rounded-lg p-5">
+          <div className="flex items-start gap-3">
+            <div className="bg-gradient-to-br from-green-500 to-emerald-500 dark:from-green-600 dark:to-emerald-600 p-2.5 rounded-full">
+              <FaCheckCircle className="text-white text-lg" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-green-900 dark:text-green-300 text-base mb-2">
+                🎉 Ready to Create Your Itinerary!
+              </h3>
+              <p className="text-green-800 dark:text-green-400 text-sm leading-relaxed">
+                Your personalized {formData.duration}-day itinerary will include
+                activities, dining, and transportation options optimized for
+                your preferences.
+                {(flightData?.includeFlights || hotelData?.includeHotels) &&
+                  " Plus real-time flight and hotel recommendations!"}
               </p>
-              <p>• Accommodation: {userProfile.accommodationPreference}</p>
-              {userProfile.dietaryRestrictions?.length > 0 && (
-                <p>• Dietary: {userProfile.dietaryRestrictions.join(", ")}</p>
-              )}
             </div>
           </div>
-        )}
-
-        {/* LangGraph Multi-Agent Notice */}
-        {(flightData?.includeFlights || hotelData?.includeHotels) && (
-          <div className="bg-sky-50 dark:bg-sky-950/30 border-2 border-sky-200 dark:border-sky-800 rounded-lg p-4">
-            <h3 className="font-medium text-sky-800 dark:text-sky-300 mb-2">
-              🤖 LangGraph Multi-Agent System
-            </h3>
-            <p className="text-sky-700 dark:text-sky-400 text-sm">
-              Our AI agents will work together to find the best options:
-            </p>
-            <ul className="text-sky-700 dark:text-sky-400 text-sm mt-2 space-y-1">
-              {flightData?.includeFlights && (
-                <li>
-                  • ✈️ Flight Agent: Real-time flight search and optimization
-                </li>
-              )}
-              {hotelData?.includeHotels && (
-                <li>
-                  • 🏨 Hotel Agent: Accommodation recommendations and pricing
-                </li>
-              )}
-              <li>• 🎯 Coordinator: Smart optimization and cost analysis</li>
-            </ul>
-          </div>
-        )}
-
-        {/* Generation Notice */}
-        <div className="bg-green-50 dark:bg-green-950/30 border-2 border-green-200 dark:border-green-800 rounded-lg p-4">
-          <h3 className="font-medium text-green-800 dark:text-green-300 mb-2">
-            🎉 Ready to Generate!
-          </h3>
-          <p className="text-green-700 dark:text-green-400 text-sm">
-            Your personalized itinerary will include accommodations, activities,
-            dining recommendations, and transportation options based on your
-            preferences and profile.
-            {(flightData?.includeFlights || hotelData?.includeHotels) &&
-              " Plus real-time flight and hotel data from our AI agents!"}
-          </p>
         </div>
       </div>
     </div>

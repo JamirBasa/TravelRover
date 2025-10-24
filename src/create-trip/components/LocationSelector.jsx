@@ -26,24 +26,6 @@ function LocationSelector({ place, onPlaceChange, isPreFilled }) {
 
       {/* Location Input */}
       <div className="space-y-4">
-        <div className="brand-card p-5 shadow-lg border-sky-200 dark:border-sky-800">
-          <div className="flex items-start gap-4">
-            <div className="brand-gradient p-2.5 rounded-full">
-              <FaGlobe className="text-white text-lg" />
-            </div>
-            <div>
-              <h3 className="font-semibold brand-gradient-text text-base mb-2">
-                City-Level Destination
-              </h3>
-              <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-                {isPreFilled
-                  ? "You can change your city or continue with your selection"
-                  : "Select a city or region. You'll be able to specify exact places you want to visit in a later step for a more personalized itinerary."}
-              </p>
-            </div>
-          </div>
-        </div>
-
         <div>
           <label className="block text-base font-semibold text-gray-800 dark:text-gray-200 mb-3">
             <FaMapMarkerAlt className="inline mr-2 text-sky-500 dark:text-sky-400" />
@@ -57,8 +39,8 @@ function LocationSelector({ place, onPlaceChange, isPreFilled }) {
             restrictToCities={true}
           />
           <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 italic">
-            💡 Tip: Select a city first. You can list specific places you want
-            to visit in the "Specific Requests" step later.
+            💡 Select a city first. You can list specific places you want to
+            visit in a later step.
           </p>
         </div>
 

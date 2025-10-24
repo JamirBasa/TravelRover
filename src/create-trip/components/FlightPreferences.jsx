@@ -18,7 +18,9 @@ import { UserProfileService } from "../../services/userProfileService";
 import {
   getFlightRecommendationMessage,
   getFlightContextTips,
+  getAirportStatus, // Import the new function
 } from "../../utils/flightRecommendations";
+import { getAirportRecommendations } from "../../utils/budgetEstimator";
 
 const FlightPreferences = ({
   flightData,
@@ -30,7 +32,22 @@ const FlightPreferences = ({
   const profileSummary =
     UserProfileService.getProfileDisplaySummary(userProfile);
 
-  // Get smart flight recommendations
+  // Get airport recommendations for intelligent routing
+  const airportInfo = useMemo(() => {
+    if (
+      !flightData.includeFlights ||
+      !flightData.departureCity ||
+      !formData?.location
+    )
+      return null;
+
+    return getAirportRecommendations(
+      flightData.departureCity,
+      formData.location
+    );
+  }, [flightData.includeFlights, flightData.departureCity, formData?.location]);
+
+  // Get smart flight recommendations - PASS AIRPORT CODE
   const flightRecommendation = useMemo(() => {
     if (!flightData.includeFlights) return null;
 
@@ -40,6 +57,7 @@ const FlightPreferences = ({
       startDate: formData?.startDate,
       endDate: formData?.endDate,
       includeFlights: flightData.includeFlights,
+      destinationAirportCode: airportInfo?.destination?.code, // ✅ ADD THIS
     });
   }, [
     flightData.includeFlights,
@@ -47,9 +65,10 @@ const FlightPreferences = ({
     formData?.location,
     formData?.startDate,
     formData?.endDate,
+    airportInfo?.destination?.code, // ✅ ADD THIS DEPENDENCY
   ]);
 
-  // Get contextual tips
+  // Get contextual tips - PASS AIRPORT CODE
   const contextTips = useMemo(() => {
     if (!flightData.includeFlights || !flightData.departureCity) return [];
 
@@ -59,6 +78,7 @@ const FlightPreferences = ({
       startDate: formData?.startDate,
       endDate: formData?.endDate,
       duration: formData?.duration,
+      destinationAirportCode: airportInfo?.destination?.code, // ✅ ADD THIS
     });
   }, [
     flightData.includeFlights,
@@ -67,7 +87,14 @@ const FlightPreferences = ({
     formData?.startDate,
     formData?.endDate,
     formData?.duration,
+    airportInfo?.destination?.code, // ✅ ADD THIS DEPENDENCY
   ]);
+
+  // ✅ ADD: Check if destination airport has service
+  const destinationAirportStatus = useMemo(() => {
+    if (!airportInfo?.destination?.code) return null;
+    return getAirportStatus(airportInfo.destination.code);
+  }, [airportInfo?.destination?.code]);
 
   // Auto-populate when flights are enabled and we have profile data
   React.useEffect(() => {
@@ -232,14 +259,25 @@ const FlightPreferences = ({
                     className={`mb-3 p-3 rounded-lg border ${
                       flightRecommendation.type === "same-city"
                         ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800"
+                        : flightRecommendation.type === "limited-service" ||
+                          flightRecommendation.type === "no-direct-flights"
+                        ? "bg-orange-50 dark:bg-orange-950/30 border-orange-300 dark:border-orange-800"
                         : flightRecommendation.type === "remote-destination"
                         ? "bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800"
                         : "bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-800"
                     }`}
                   >
                     <div className="flex items-start gap-2">
-                      {flightRecommendation.type === "same-city" ? (
-                        <FaExclamationTriangle className="text-amber-600 dark:text-amber-400 text-sm mt-0.5 flex-shrink-0" />
+                      {flightRecommendation.type === "same-city" ||
+                      flightRecommendation.type === "limited-service" ||
+                      flightRecommendation.type === "no-direct-flights" ? (
+                        <FaExclamationTriangle
+                          className={`text-sm mt-0.5 flex-shrink-0 ${
+                            flightRecommendation.type === "same-city"
+                              ? "text-amber-600 dark:text-amber-400"
+                              : "text-orange-600 dark:text-orange-400"
+                          }`}
+                        />
                       ) : (
                         <FaInfoCircle className="text-blue-600 dark:text-blue-400 text-sm mt-0.5 flex-shrink-0" />
                       )}
@@ -247,6 +285,9 @@ const FlightPreferences = ({
                         className={`text-sm ${
                           flightRecommendation.type === "same-city"
                             ? "text-amber-800 dark:text-amber-300"
+                            : flightRecommendation.type === "limited-service" ||
+                              flightRecommendation.type === "no-direct-flights"
+                            ? "text-orange-800 dark:text-orange-300"
                             : "text-blue-800 dark:text-blue-300"
                         }`}
                       >
@@ -255,7 +296,8 @@ const FlightPreferences = ({
                     </div>
                   </div>
                 )}
-                {/* Auto-populated indicator */}
+
+                {/* Auto-populated indicator - Only show if not same city */}
                 {flightData.departureCity &&
                   profileSummary?.hasLocationData &&
                   flightRecommendation?.type !== "same-city" && (
@@ -263,16 +305,17 @@ const FlightPreferences = ({
                       <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm">
                         <FaCheck className="text-xs" />
                         <span>
-                          Auto-populated from your profile:{" "}
-                          {profileSummary.location}
+                          From your profile: {profileSummary.location}
                         </span>
                       </div>
                     </div>
                   )}
+
                 <h4 className="font-medium text-gray-800 dark:text-gray-200 mb-3">
                   Where will you be departing from?
-                </h4>{" "}
-                {/* Departure Region */}
+                </h4>
+
+                {/* Departure Region & City */}
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -287,7 +330,6 @@ const FlightPreferences = ({
                     />
                   </div>
 
-                  {/* Departure City */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       <FaMapMarkerAlt className="inline mr-1" />
@@ -326,58 +368,65 @@ const FlightPreferences = ({
                     )}
                   </div>
                 </div>
-                {/* Contextual Tips */}
-                {contextTips.length > 0 && (
-                  <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <div className="space-y-1">
-                      {contextTips.map((tip, index) => (
-                        <p
-                          key={index}
-                          className="text-xs text-blue-700 dark:text-blue-300"
-                        >
-                          {tip}
-                        </p>
-                      ))}
+
+                {/* ✅ UPDATED: Only show airport info if destination has commercial service */}
+                {airportInfo &&
+                  formData?.location &&
+                  flightData.departureCity &&
+                  destinationAirportStatus?.hasService && ( // ✅ ADD THIS CHECK
+                    <div className="mt-3 p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex items-start gap-2">
+                        <FaPlane className="text-emerald-600 dark:text-emerald-400 text-sm mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 space-y-2">
+                          {/* Flight Route */}
+                          <div>
+                            <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                              Flight Route:{" "}
+                              {airportInfo.departure?.code || "---"} →{" "}
+                              {airportInfo.destination?.code || "---"}
+                            </p>
+                          </div>
+
+                          {/* Destination Airport Info */}
+                          {airportInfo.destination && (
+                            <div className="text-xs text-emerald-700 dark:text-emerald-400">
+                              {airportInfo?.nonstopAvailableFromDeparture ? (
+                                <p>
+                                  ✈️ Nonstop available to{" "}
+                                  <span className="font-medium">
+                                    {formData.location}
+                                  </span>
+                                </p>
+                              ) : (
+                                <p>
+                                  🧭 Direct flight to{" "}
+                                  <span className="font-medium">
+                                    {airportInfo.destination.city} (
+                                    {airportInfo.destination.code})
+                                  </span>
+                                  . Connection may be required.
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
-                {contextTips.length === 0 && (
-                  <div className="mt-3 text-xs text-gray-600 dark:text-gray-400">
-                    💡 We'll find the best flight options from your departure
-                    city to your destination and include pricing in your
-                    itinerary.
+                  )}
+
+                {/* Fallback helper text */}
+                {!airportInfo && flightData.departureCity && (
+                  <div className="mt-3 text-xs text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                    <span>💡</span>
+                    <span>
+                      We'll find the best flight options and include pricing in
+                      your itinerary.
+                    </span>
                   </div>
                 )}
               </div>
             </div>
           )}
-        </div>
-
-        {/* Flight Benefits */}
-        <div className="brand-card p-5 shadow-lg border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30">
-          <div className="flex items-start gap-4">
-            <div className="bg-gradient-to-br from-emerald-500 to-green-600 dark:from-emerald-600 dark:to-green-700 p-2.5 rounded-full">
-              <FaPlane className="text-white text-lg" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-emerald-900 dark:text-emerald-300 text-base mb-2">
-                Benefits of including flights
-              </h3>
-              <ul className="text-emerald-800 dark:text-emerald-400 text-sm space-y-1 leading-relaxed">
-                <li>• Real-time flight prices and availability</li>
-                <li>• Multiple airline options and recommendations</li>
-                <li>• Integrated into your total trip budget</li>
-                <li>• Direct booking links for convenience</li>
-                <li>• Price level indicators (Low, Fair, High)</li>
-                {profileSummary?.hasLocationData && (
-                  <li>
-                    • 🏠 Using your home location:{" "}
-                    <strong>{profileSummary.location}</strong>
-                  </li>
-                )}
-              </ul>
-            </div>
-          </div>
         </div>
       </div>
     </div>

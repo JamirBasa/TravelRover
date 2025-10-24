@@ -38,6 +38,24 @@ function TabbedTripView({ trip, onTripUpdate }) {
       ),
     },
     {
+      id: "hotels",
+      label: "Hotels",
+      icon: <Hotel className="h-4 w-4" />,
+      component: <Hotels trip={trip} />,
+    },
+    ...(trip?.hasRealFlights ||
+    trip?.realFlightData?.success ||
+    trip?.flightResults?.success
+      ? [
+          {
+            id: "flights",
+            label: "Flights",
+            icon: <Plane className="h-4 w-4" />,
+            component: <FlightBooking trip={trip} />,
+          },
+        ]
+      : []),
+    {
       id: "itinerary",
       label: "Itinerary",
       icon: <Calendar className="h-4 w-4" />,
@@ -57,24 +75,6 @@ function TabbedTripView({ trip, onTripUpdate }) {
         />
       ),
     },
-    {
-      id: "hotels",
-      label: "Hotels",
-      icon: <Hotel className="h-4 w-4" />,
-      component: <Hotels trip={trip} />,
-    },
-    ...(trip?.hasRealFlights ||
-    trip?.realFlightData?.success ||
-    trip?.flightResults?.success
-      ? [
-          {
-            id: "flights",
-            label: "Flights",
-            icon: <Plane className="h-4 w-4" />,
-            component: <FlightBooking trip={trip} />,
-          },
-        ]
-      : []),
     {
       id: "tips",
       label: "Travel Tips",
