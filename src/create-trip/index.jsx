@@ -119,6 +119,12 @@ function CreateTrip() {
 
   // Sync activity preference to formData
   useEffect(() => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+}, [currentStep]);
+  useEffect(() => {
     setFormData((prev) => ({
       ...prev,
       activityPreference,
