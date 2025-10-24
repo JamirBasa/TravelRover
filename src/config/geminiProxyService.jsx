@@ -1,8 +1,6 @@
 /**
- * Gemini AI Proxy Service
- *
- * Uses backend proxy endpoint to secure API key while maintaining
- * all frontend prompt building logic and flexibility
+ * Gemini AI Proxy Service - UPDATED VERSION
+ * Fixed timeout issues for large itinerary generation
  */
 
 import axios from "axios";
@@ -11,22 +9,37 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 export class GeminiProxyService {
+  // Timeout constants - INCREASED for large prompts
+  static TIMEOUT_SHORT = 60000; // 60s
+  static TIMEOUT_MEDIUM = 120000; // 120s (2min)
+  static TIMEOUT_LONG = 180000; // 180s (3min)
+  static TIMEOUT_EXTRA_LONG = 300000; // 300s (5min)
+
   /**
-   * Generate content using backend Gemini proxy
-   *
-   * @param {string} prompt - Enhanced prompt built by frontend
-   * @param {Object} options - Generation options
-   * @returns {Promise<Object>} AI response
+   * Determine timeout based on prompt size
+   */
+  static getOptimalTimeout(prompt) {
+    const length = prompt.length;
+
+    if (length < 5000) return this.TIMEOUT_SHORT;
+    if (length < 10000) return this.TIMEOUT_MEDIUM;
+    if (length < 15000) return this.TIMEOUT_LONG;
+    return this.TIMEOUT_EXTRA_LONG;
+  }
+
+  /**
+   * Generate content with smart timeout
    */
   static async generateContent(prompt, options = {}) {
     const {
       schema = null,
       generationConfig = {},
-      timeout = 60000, // 60 seconds
+      timeout = this.getOptimalTimeout(prompt), // AUTO-CALCULATE
     } = options;
 
     console.log("🤖 Calling Gemini proxy endpoint...");
     console.log("📝 Prompt length:", prompt.length, "characters");
+    console.log("⏱️ Using timeout:", timeout / 1000, "seconds");
 
     try {
       const startTime = Date.now();
@@ -40,12 +53,12 @@ export class GeminiProxyService {
             temperature: generationConfig.temperature || 0.2,
             topP: generationConfig.topP || 0.9,
             topK: generationConfig.topK || 20,
-            maxOutputTokens: generationConfig.maxOutputTokens || 8192,
-            model: generationConfig.model || "gemini-2.0-flash-exp",
+            maxOutputTokens: 16384,
+            model: generationConfig.model || "gemini-2.5-flash",
           },
         },
         {
-          timeout,
+          timeout, // Using calculated timeout
           headers: {
             "Content-Type": "application/json",
           },
@@ -55,9 +68,7 @@ export class GeminiProxyService {
       const executionTime = Date.now() - startTime;
 
       if (response.data.success) {
-        console.log(`✅ Gemini proxy completed in ${executionTime}ms`);
-        console.log("📊 Metadata:", response.data.metadata);
-
+        console.log(`✅ Completed in ${(executionTime / 1000).toFixed(2)}s`);
         return {
           success: true,
           data: response.data.data,
@@ -68,7 +79,7 @@ export class GeminiProxyService {
           },
         };
       } else {
-        console.error("❌ Gemini proxy returned error:", response.data.error);
+        console.error("❌ Error:", response.data.error);
         return {
           success: false,
           error: response.data.error,
@@ -76,58 +87,51 @@ export class GeminiProxyService {
         };
       }
     } catch (error) {
-      console.error("❌ Gemini proxy request failed:", error);
+      console.error("❌ Request failed:", error);
 
-      // Handle timeout
       if (error.code === "ECONNABORTED") {
         return {
           success: false,
-          error: "Request timed out. Please try again.",
+          error: `Timeout after ${
+            timeout / 1000
+          }s. Try reducing itinerary complexity.`,
           errorType: "timeout",
         };
       }
 
-      // Handle network errors
-      if (error.response) {
-        // Server responded with error
+      if (error.code === "ERR_NETWORK") {
         return {
           success: false,
           error:
-            error.response.data?.error ||
-            "Server error occurred. Please try again.",
-          errorType: error.response.data?.error_type || "server_error",
-          statusCode: error.response.status,
-        };
-      } else if (error.request) {
-        // Request made but no response
-        return {
-          success: false,
-          error: "Unable to connect to server. Please check your connection.",
+            "Backend server not running. Start with: python manage.py runserver",
           errorType: "network_error",
         };
-      } else {
-        // Error in request setup
+      }
+
+      if (error.response) {
         return {
           success: false,
-          error: error.message || "An unexpected error occurred.",
-          errorType: "client_error",
+          error: error.response.data?.error || `Server error: ${error.message}`,
+          errorType: error.response.data?.error_type || "server_error",
         };
       }
+
+      return {
+        success: false,
+        error: error.message || "Unknown error occurred",
+        errorType: "client_error",
+      };
     }
   }
 
   /**
-   * Check health of Gemini proxy endpoint
-   *
-   * @returns {Promise<Object>} Health status
+   * Health check
    */
   static async checkHealth() {
     try {
       const response = await axios.get(
         `${API_BASE_URL}/api/langgraph/gemini/health/`,
-        {
-          timeout: 10000, // 10 seconds
-        }
+        { timeout: 10000 }
       );
 
       return {
@@ -136,7 +140,6 @@ export class GeminiProxyService {
         ...response.data,
       };
     } catch (error) {
-      console.error("❌ Gemini proxy health check failed:", error);
       return {
         success: false,
         status: "unhealthy",
@@ -146,23 +149,18 @@ export class GeminiProxyService {
   }
 
   /**
-   * Generate with retry logic
-   *
-   * @param {string} prompt - Enhanced prompt
-   * @param {Object} options - Generation options
-   * @param {number} maxRetries - Maximum retry attempts
-   * @returns {Promise<Object>} AI response
+   * Generate with retry
    */
   static async generateWithRetry(prompt, options = {}, maxRetries = 2) {
     let lastError = null;
+    const baseTimeout = options.timeout || this.getOptimalTimeout(prompt);
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       if (attempt > 0) {
-        console.log(`🔄 Retry attempt ${attempt}/${maxRetries}...`);
-        // Wait before retry (exponential backoff)
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, attempt) * 1000)
-        );
+        console.log(`🔄 Retry ${attempt}/${maxRetries}...`);
+        // Increase timeout on retry
+        options.timeout = baseTimeout + attempt * 60000; // +60s per retry
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
 
       const result = await this.generateContent(prompt, options);
@@ -173,20 +171,23 @@ export class GeminiProxyService {
 
       lastError = result;
 
-      // Don't retry on validation errors
-      if (result.errorType === "validation_error") {
+      // Don't retry these errors
+      const noRetry = ["validation_error", "network_error", "max_tokens"];
+      if (noRetry.includes(result.errorType)) {
         break;
       }
     }
 
-    // All retries failed
-    return lastError;
+    return {
+      ...lastError,
+      attemptsExhausted: true,
+      totalAttempts: maxRetries + 1,
+    };
   }
 }
 
 /**
- * Legacy compatibility wrapper
- * Mimics the old chatSession.sendMessage() API
+ * Legacy wrapper
  */
 export class GeminiProxyChatSession {
   constructor(generationConfig = {}) {
@@ -194,20 +195,18 @@ export class GeminiProxyChatSession {
   }
 
   async sendMessage(prompt) {
-    const result = await GeminiProxyService.generateContent(prompt, {
+    const result = await GeminiProxyService.generateWithRetry(prompt, {
       schema: this.generationConfig.responseSchema,
       generationConfig: this.generationConfig,
     });
 
     if (!result.success) {
-      throw new Error(result.error || "Gemini generation failed");
+      throw new Error(result.error || "Generation failed");
     }
 
-    // Mimic old API response structure
     return {
       response: {
         text: () => {
-          // If data is already parsed JSON, stringify it
           if (typeof result.data === "object") {
             return JSON.stringify(result.data);
           }
