@@ -85,7 +85,7 @@ def gemini_generate(request):
             'temperature': generation_config.get('temperature', 0.2),
             'top_p': generation_config.get('topP', 0.9),
             'top_k': generation_config.get('topK', 20),
-            'max_output_tokens': generation_config.get('maxOutputTokens', 8192),
+            'max_output_tokens': 16384,
         }
         
         # Add response schema if provided
@@ -184,8 +184,130 @@ Generate realistic, logistically accurate itineraries with proper airport handli
         # Calculate execution time
         execution_time = time.time() - start_time
         
-        # Extract response text
-        response_text = response.text
+        # ============================================================
+        # CRITICAL FIX: Check finish_reason BEFORE accessing response.text
+        # ============================================================
+        
+        # Check candidates exist
+        if not response.candidates:
+            logger.error("❌ No candidates returned in response")
+            return Response({
+                'success': False,
+                'error': 'No response candidates returned from Gemini',
+                'error_type': 'api_error',
+                'metadata': {
+                    'execution_time': execution_time,
+                    'timestamp': time.time()
+                }
+            }, status=500)
+        
+        # Get first candidate
+        candidate = response.candidates[0]
+        finish_reason = candidate.finish_reason
+        
+        # Log finish reason for debugging
+        logger.info(f"📊 Finish reason: {finish_reason}")
+        
+        # Handle different finish reasons
+        # FinishReason enum values: 1=STOP, 2=MAX_TOKENS, 3=SAFETY, 4=RECITATION
+        if finish_reason == 2:  # MAX_TOKENS
+            logger.error(f"❌ Response hit MAX_TOKENS limit. Prompt: {len(prompt)} chars")
+            
+            # Try to get partial response if available
+            partial_text = ""
+            try:
+                if candidate.content and candidate.content.parts:
+                    partial_text = candidate.content.parts[0].text
+            except:
+                pass
+            
+            return Response({
+                'success': False,
+                'error': f'Response hit MAX_TOKENS limit. Increase maxOutputTokens (currently {config["max_output_tokens"]}) or reduce prompt size.',
+                'error_type': 'max_tokens',
+                'partial_response': partial_text if partial_text else None,
+                'metadata': {
+                    'execution_time': execution_time,
+                    'finish_reason': 'MAX_TOKENS',
+                    'prompt_length': len(prompt),
+                    'max_output_tokens': config['max_output_tokens'],
+                    'timestamp': time.time()
+                }
+            }, status=400)
+        
+        elif finish_reason == 3:  # SAFETY
+            logger.warning("⚠️ Response blocked by safety filters")
+            
+            # Extract safety ratings
+            safety_ratings = []
+            try:
+                if candidate.safety_ratings:
+                    safety_ratings = [
+                        {
+                            'category': rating.category.name if hasattr(rating.category, 'name') else str(rating.category),
+                            'probability': rating.probability.name if hasattr(rating.probability, 'name') else str(rating.probability)
+                        }
+                        for rating in candidate.safety_ratings
+                    ]
+            except Exception as e:
+                logger.warning(f"Could not extract safety ratings: {str(e)}")
+            
+            return Response({
+                'success': False,
+                'error': 'Response blocked by safety filters. Content may violate safety guidelines.',
+                'error_type': 'safety_filter',
+                'safety_ratings': safety_ratings,
+                'metadata': {
+                    'execution_time': execution_time,
+                    'finish_reason': 'SAFETY',
+                    'timestamp': time.time()
+                }
+            }, status=400)
+        
+        elif finish_reason == 4:  # RECITATION
+            logger.warning("⚠️ Response blocked due to recitation concerns")
+            return Response({
+                'success': False,
+                'error': 'Response blocked due to potential copyright/recitation concerns.',
+                'error_type': 'recitation',
+                'metadata': {
+                    'execution_time': execution_time,
+                    'finish_reason': 'RECITATION',
+                    'timestamp': time.time()
+                }
+            }, status=400)
+        
+        elif finish_reason != 1:  # Not STOP (1) - unexpected finish reason
+            logger.error(f"❌ Unexpected finish_reason: {finish_reason}")
+            return Response({
+                'success': False,
+                'error': f'Unexpected finish reason: {finish_reason}',
+                'error_type': 'api_error',
+                'metadata': {
+                    'execution_time': execution_time,
+                    'finish_reason': finish_reason,
+                    'timestamp': time.time()
+                }
+            }, status=500)
+        
+        # Only access response.text if finish_reason is STOP (1)
+        try:
+            response_text = response.text
+        except Exception as e:
+            logger.error(f"❌ Failed to extract response text: {str(e)}")
+            # Fallback: try to extract from parts
+            try:
+                response_text = candidate.content.parts[0].text
+            except:
+                return Response({
+                    'success': False,
+                    'error': f'Failed to extract response text: {str(e)}',
+                    'error_type': 'parsing_error',
+                    'metadata': {
+                        'execution_time': execution_time,
+                        'timestamp': time.time()
+                    }
+                }, status=500)
         
         logger.info(f"✅ Gemini generation completed in {execution_time:.2f}s")
         logger.info(f"📊 Response length: {len(response_text)} chars")
@@ -207,6 +329,7 @@ Generate realistic, logistically accurate itineraries with proper airport handli
             'prompt_length': len(prompt),
             'response_length': len(response_text),
             'is_valid_json': is_valid_json,
+            'finish_reason': 'STOP',
             'timestamp': time.time()
         }
         
@@ -219,6 +342,14 @@ Generate realistic, logistically accurate itineraries with proper airport handli
                     'total_token_count': response.usage_metadata.total_token_count,
                 }
                 logger.info(f"📊 Token usage: {metadata['usage']['total_token_count']} total tokens")
+                
+                # Add warning if approaching token limit (90% of max)
+                if metadata['usage']['candidates_token_count'] >= config['max_output_tokens'] * 0.9:
+                    logger.warning(
+                        f"⚠️ Response used {metadata['usage']['candidates_token_count']} tokens, "
+                        f"approaching limit of {config['max_output_tokens']}"
+                    )
+                    
         except Exception as e:
             logger.warning(f"Could not extract usage metadata: {str(e)}")
         
