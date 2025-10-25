@@ -59,6 +59,7 @@ function TravelerSelector({ selectedTravelers, onTravelersChange }) {
   const [showCounter, setShowCounter] = useState(false);
 
   // Parse initial value if provided
+  // Also update when selectedTravelers changes externally (e.g., from profile auto-population)
   useEffect(() => {
     if (selectedTravelers) {
       const match = selectedTravelers.match(/(\d+)/);
@@ -80,16 +81,7 @@ function TravelerSelector({ selectedTravelers, onTravelersChange }) {
         }
       }
     }
-  }, []);
-
-  const handleCustomCountChange = (value) => {
-    setCustomCount(value);
-    if (value && parseInt(value) > 0) {
-      const count = parseInt(value);
-      const label = count === 1 ? "1 Person" : `${count} People`;
-      onTravelersChange(label);
-    }
-  };
+  }, [selectedTravelers]); // Now responds to prop changes
 
   const handlePresetSelect = (option) => {
     setSelectedOption(option.id);

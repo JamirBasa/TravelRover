@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { Input } from "../../components/ui/input";
 import Select from "../../components/ui/select";
 import {
@@ -23,9 +23,17 @@ const HotelPreferences = ({
   const profileSummary =
     UserProfileService.getProfileDisplaySummary(userProfile);
 
+  // Track if auto-population has already happened
+  const hasAutoPopulated = React.useRef(false);
+
   // Auto-populate hotel preferences when enabled using centralized service
+  // Only runs ONCE when hotels are first enabled
   useEffect(() => {
-    if (UserProfileService.shouldAutoPopulateHotels(userProfile, hotelData)) {
+    if (
+      hotelData.includeHotels &&
+      !hasAutoPopulated.current &&
+      UserProfileService.shouldAutoPopulateHotels(userProfile, hotelData)
+    ) {
       const autoPopulatedData = UserProfileService.autoPopulateHotelData(
         userProfile,
         hotelData
@@ -35,17 +43,26 @@ const HotelPreferences = ({
         "🏨 Auto-populating hotel preferences from centralized service"
       );
       onHotelDataChange(autoPopulatedData);
-    }
-  }, [hotelData.includeHotels, userProfile]);
+      hasAutoPopulated.current = true;
+    } else if (
+      hotelData.includeHotels &&
+      !hasAutoPopulated.current &&
+      !hotelData.preferredType
+    ) {
+      // Set smart defaults if no profile data available
+      const defaultHotelData = {
+        ...hotelData,
+        preferredType: "hotel", // Default to standard hotels
+        budgetLevel: hotelData.budgetLevel || 2, // Default to budget-friendly
+        priceRange: HOTEL_CONFIG.PRICE_LEVELS[hotelData.budgetLevel || 2],
+      };
 
-  const handlePriceRangeChange = (e) => {
-    const level = parseInt(e.target.value);
-    onHotelDataChange({
-      ...hotelData,
-      budgetLevel: level,
-      priceRange: HOTEL_CONFIG.PRICE_LEVELS[level],
-    });
-  };
+      console.log("🏨 Setting default hotel preferences (no profile data)");
+      onHotelDataChange(defaultHotelData);
+      hasAutoPopulated.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hotelData.includeHotels]);
 
   const priceRangeOptions = [
     {
@@ -189,18 +206,9 @@ const HotelPreferences = ({
         <div className="space-y-4">
           <div
             onClick={() => {
-              const isEnabled = !hotelData.includeHotels;
-
               onHotelDataChange({
                 ...hotelData,
-                includeHotels: isEnabled,
-                // Auto-populate when enabling hotels using centralized service
-                ...(isEnabled
-                  ? UserProfileService.autoPopulateHotelData(userProfile, {
-                      ...hotelData,
-                      includeHotels: isEnabled,
-                    })
-                  : {}),
+                includeHotels: !hotelData.includeHotels,
               });
             }}
             className={`brand-card p-5 cursor-pointer transition-all duration-200 border-2 hover:shadow-lg ${

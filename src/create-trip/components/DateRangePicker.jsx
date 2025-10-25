@@ -1,6 +1,6 @@
 // src/create-trip/components/DateRangePicker.jsx
 // SIMPLIFIED VERSION - Reduced information overload
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import {
   FaCalendarAlt,
@@ -13,7 +13,7 @@ import {
   FaChevronUp,
 } from "react-icons/fa";
 import {
-  calculateDuration,
+  // calculateDuration, // Calculated inline now
   getMinDate,
   getMinEndDate,
 } from "../../constants/options";
@@ -64,7 +64,8 @@ function DateRangePicker({
     if (onDurationChange && duration >= 0) {
       onDurationChange(duration);
     }
-  }, [duration]); // Only duration in deps, not onDurationChange
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duration]); // Only duration in deps, onDurationChange is stable from parent useCallback
 
   const travelDateInfo = useMemo(() => {
     if (!startDate || !endDate || !destination) return null;

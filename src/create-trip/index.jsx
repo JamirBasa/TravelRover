@@ -25,6 +25,10 @@ import {
   getValidationSuggestion,
 } from "../utils/itineraryValidator";
 import { autoFixItinerary } from "../utils/itineraryAutoFix";
+import {
+  validateHotelData,
+  getHotelSearchParams, // For future hotel API integration
+} from "../utils/hotelValidation";
 import { FaArrowRight, FaArrowLeft, FaUser, FaCheck } from "react-icons/fa";
 
 // Import components
@@ -47,7 +51,6 @@ import {
   shouldIncludeFlights,
   shouldIncludeHotels,
   validateFlightData,
-  validateHotelData,
   getActiveServices,
   sanitizeTripPreferences,
 } from "../utils/tripPreferences";
@@ -415,12 +418,20 @@ function CreateTrip() {
       }
 
       case 5: {
-        const hotelValidation = validateHotelData(hotelData);
+        const hotelValidation = validateHotelData(hotelData, formData);
         if (!hotelValidation.isValid) {
           toast.error("Hotel preferences incomplete", {
             description: hotelValidation.errors[0],
           });
           return false;
+        }
+        // Show warnings if any
+        if (hotelValidation.warnings && hotelValidation.warnings.length > 0) {
+          hotelValidation.warnings.forEach((warning) => {
+            toast.warning("Hotel Search Notice", {
+              description: warning,
+            });
+          });
         }
         break;
       }
