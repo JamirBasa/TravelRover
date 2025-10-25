@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import {
@@ -9,6 +9,10 @@ import {
   MapPin,
   Calendar,
   Users,
+  Plane,
+  Hotel,
+  Sparkles,
+  DollarSign,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -18,22 +22,106 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { googlePlacesService } from "@/services/GooglePlacesService";
 
 function TripCard({ trip, onDelete }) {
   const [isLoading, setIsLoading] = useState(true);
+  const [imageUrl, setImageUrl] = useState(null);
   const navigate = useNavigate();
+
+  // Fetch destination image from Google Places
+  useEffect(() => {
+    const fetchDestinationImage = async () => {
+      const location = trip.userSelection?.location;
+      if (!location) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Try to get image from stored photoUrl first
+        if (trip.userSelection?.photoUrl) {
+          setImageUrl(trip.userSelection.photoUrl);
+          return;
+        }
+
+        // Search for the destination using Google Places
+        console.log(`🔍 Fetching image for: ${location}`);
+        const places = await googlePlacesService.searchPlaces(location);
+
+        if (places && places.length > 0) {
+          const place = places[0];
+
+          // Get photo URL if available
+          if (place.photos && place.photos.length > 0) {
+            const photoReference = place.photos[0].photo_reference;
+            const photoUrl = googlePlacesService.getPhotoUrl(
+              photoReference,
+              800
+            );
+
+            if (photoUrl) {
+              console.log(`✅ Found Google Places image for ${location}`);
+              setImageUrl(photoUrl);
+              return;
+            }
+          }
+        }
+
+        console.log(
+          `⚠️ No Google Places image found for ${location}, using fallback`
+        );
+      } catch (error) {
+        console.error("❌ Error fetching destination image:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDestinationImage();
+  }, [trip.userSelection?.location, trip.userSelection?.photoUrl]);
+
+  // Helper function to format date ranges
+  const formatDateRange = () => {
+    const { startDate, endDate } = trip.userSelection || {};
+
+    if (!startDate || !endDate) return null;
+
+    try {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      const formatOptions = { month: "short", day: "numeric" };
+      const startFormatted = start.toLocaleDateString("en-US", formatOptions);
+      const endFormatted = end.toLocaleDateString("en-US", formatOptions);
+
+      // Add year if different from current year
+      const currentYear = new Date().getFullYear();
+      const startYear = start.getFullYear();
+      const yearSuffix = startYear !== currentYear ? `, ${startYear}` : "";
+
+      return `${startFormatted} - ${endFormatted}${yearSuffix}`;
+    } catch {
+      return null;
+    }
+  };
 
   // Helper function to get trip highlights with correct data structure
   const getTripHighlights = () => {
     const highlights = [];
 
     // Check accommodations
-    if (trip.tripData?.tripData?.accommodations?.length > 0) {
-      highlights.push(
-        `${trip.tripData.tripData.accommodations.length} hotel${
-          trip.tripData.tripData.accommodations.length > 1 ? "s" : ""
-        }`
-      );
+    const accommodationsCount =
+      trip.tripData?.tripData?.accommodations?.length || 0;
+    if (accommodationsCount > 0) {
+      highlights.push({
+        icon: Hotel,
+        text: `${accommodationsCount} hotel${
+          accommodationsCount > 1 ? "s" : ""
+        }`,
+        color: "text-purple-600 dark:text-purple-400",
+        bg: "bg-purple-50 dark:bg-purple-950/50",
+      });
     }
 
     // Check activities in itinerary
@@ -44,22 +132,40 @@ function TripCard({ trip, onDelete }) {
       ) || 0;
 
     if (totalActivities > 0) {
-      highlights.push(`${totalActivities} activities`);
+      highlights.push({
+        icon: Sparkles,
+        text: `${totalActivities} activities`,
+        color: "text-blue-600 dark:text-blue-400",
+        bg: "bg-blue-50 dark:bg-blue-950/50",
+      });
     }
 
-    return highlights.slice(0, 2); // Show max 2 highlights
+    // Check if flights are included
+    if (
+      trip.tripData?.tripData?.flights &&
+      Object.keys(trip.tripData.tripData.flights).length > 0
+    ) {
+      highlights.push({
+        icon: Plane,
+        text: "Flights included",
+        color: "text-sky-600 dark:text-sky-400",
+        bg: "bg-sky-50 dark:bg-sky-950/50",
+      });
+    }
+
+    return highlights.slice(0, 3); // Show max 3 highlights
   };
 
   const highlights = getTripHighlights();
+  const dateRange = formatDateRange();
 
   const handleImageLoad = () => {
     setIsLoading(false);
   };
 
   const handleImageError = (e) => {
-    e.target.src = `https://via.placeholder.com/400x300/e3f2fd/1976d2?text=${encodeURIComponent(
-      trip.userSelection?.location || "Trip"
-    )}`;
+    // Use a reliable fallback image instead of placeholder service
+    e.target.src = `https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&h=300&fit=crop&q=80`;
     setIsLoading(false);
   };
 
@@ -79,13 +185,7 @@ function TripCard({ trip, onDelete }) {
 
   const handleDeleteTrip = (e) => {
     e.stopPropagation();
-    if (
-      window.confirm(
-        `Are you sure you want to delete this trip to ${trip.userSelection?.location}?`
-      )
-    ) {
-      onDelete(trip.id);
-    }
+    onDelete(trip);
   };
 
   return (
@@ -139,8 +239,9 @@ function TripCard({ trip, onDelete }) {
         ) : null}
         <img
           src={
+            imageUrl ||
             trip.userSelection?.photoUrl ||
-            "https://via.placeholder.com/400x300"
+            "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&h=300&fit=crop&q=80"
           }
           alt={trip.userSelection?.location || "Trip destination"}
           className={`w-full h-48 object-cover transition-opacity duration-300 ${
@@ -153,8 +254,9 @@ function TripCard({ trip, onDelete }) {
 
       {/* Enhanced Trip Summary */}
       <div className="p-5">
+        {/* Destination Title */}
         <h3 className="font-bold text-lg mb-2 text-gray-800 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-sky-400 transition-colors duration-200 flex items-center gap-2 overflow-hidden">
-          <span className="text-base flex-shrink-0">📍</span>
+          <MapPin className="h-5 w-5 flex-shrink-0 text-blue-500 dark:text-sky-400" />
           <span
             className="truncate cursor-pointer"
             style={{
@@ -168,6 +270,14 @@ function TripCard({ trip, onDelete }) {
             {trip.userSelection?.location || "Unknown Destination"}
           </span>
         </h3>
+
+        {/* Travel Dates */}
+        {dateRange && (
+          <div className="flex items-center gap-2 mb-3 text-sm text-gray-600 dark:text-gray-400">
+            <Calendar className="h-4 w-4 flex-shrink-0" />
+            <span className="font-medium">{dateRange}</span>
+          </div>
+        )}
 
         {/* Show AI-generated trip summary if available */}
         {trip.tripData?.trip_summary && (
@@ -185,30 +295,49 @@ function TripCard({ trip, onDelete }) {
           </p>
         )}
 
-        {/* Trip details */}
-        <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 leading-relaxed flex items-start gap-2">
-          <span className="text-xs mt-0.5 flex-shrink-0">🗓️</span>
-          <span>
-            {trip.userSelection?.duration || "Multi"} day trip with{" "}
-            {trip.userSelection?.budget?.toLowerCase() || "flexible"} budget
-            {trip.userSelection?.travelers &&
-              trip.userSelection.travelers !== "Just Me" && (
-                <span> for {trip.userSelection.travelers.toLowerCase()}</span>
-              )}
-          </span>
-        </p>
+        {/* Trip details - Duration, Budget, Travelers */}
+        <div className="flex flex-wrap items-center gap-3 mb-3 text-sm">
+          {/* Duration */}
+          {trip.userSelection?.duration && (
+            <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+              <Calendar className="h-3.5 w-3.5" />
+              <span>{trip.userSelection.duration} days</span>
+            </div>
+          )}
+
+          {/* Budget */}
+          {trip.userSelection?.budget && (
+            <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+              <DollarSign className="h-3.5 w-3.5" />
+              <span>{trip.userSelection.budget}</span>
+            </div>
+          )}
+
+          {/* Travelers */}
+          {trip.userSelection?.travelers &&
+            trip.userSelection.travelers !== "Just Me" && (
+              <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                <Users className="h-3.5 w-3.5" />
+                <span>{trip.userSelection.travelers}</span>
+              </div>
+            )}
+        </div>
 
         {/* Show trip highlights */}
         {highlights.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-3">
-            {highlights.map((highlight, index) => (
-              <span
-                key={index}
-                className="bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 px-2 py-1 rounded-full text-xs"
-              >
-                {highlight}
-              </span>
-            ))}
+          <div className="flex flex-wrap gap-2">
+            {highlights.map((highlight, index) => {
+              const IconComponent = highlight.icon;
+              return (
+                <div
+                  key={index}
+                  className={`${highlight.bg} ${highlight.color} px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5`}
+                >
+                  <IconComponent className="h-3.5 w-3.5" />
+                  <span>{highlight.text}</span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
