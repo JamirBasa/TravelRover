@@ -186,7 +186,7 @@ export class GeminiProxyService {
             temperature: generationConfig.temperature || 0.2,
             topP: generationConfig.topP || 0.9,
             topK: generationConfig.topK || 20,
-            maxOutputTokens: 16384,
+            maxOutputTokens: 32768,
             model: generationConfig.model || "gemini-2.5-flash",
           },
         },

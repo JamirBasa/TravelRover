@@ -26,8 +26,8 @@ import { safeJsonParse } from "../utils/jsonParsers";
 import { getValidationExamples } from "../data/philippineRegions";
 import {
   validateItinerary,
+  validateActivityCount,
   getValidationSuggestion,
-  getNearestAirportInfo,
 } from "../utils/itineraryValidator";
 import {
   FaCalendarAlt,
@@ -119,6 +119,10 @@ function CreateTrip() {
 
   // Sync activity preference to formData
   useEffect(() => {
+    console.log(
+      "🎯 Syncing activityPreference to formData:",
+      activityPreference
+    );
     setFormData((prev) => ({
       ...prev,
       activityPreference,
@@ -911,12 +915,20 @@ ${
 - Total nights: ${travelDates.totalNights}
 
 📋 ACTIVITY PLANNING GUIDANCE:
-${getActivityGuidance(travelDates)
-  .map(
-    (guide) =>
-      `Day ${guide.day}: ${guide.timing} - ${guide.note} (Pace: ${guide.recommendedPace})`
-  )
-  .join("\n")}
+${(() => {
+  console.log(
+    "🎯 About to call getActivityGuidance with activityPreference:",
+    activityPreference
+  );
+  const guidance = getActivityGuidance(travelDates, activityPreference);
+  console.log("🎯 getActivityGuidance returned:", guidance);
+  return guidance
+    .map(
+      (guide) =>
+        `Day ${guide.day}: ${guide.timing} - ${guide.note} (Pace: ${guide.recommendedPace})`
+    )
+    .join("\n");
+})()}
 
 CRITICAL ITINERARY INSTRUCTIONS:
 - Last day (${travelDates.flightReturnDate}) activities can run until evening
@@ -1530,8 +1542,16 @@ Generate general accommodation recommendations without specific pricing or booki
       );
       const itineraryValidation = validateItinerary(parsedTripData, formData);
 
+      // 🏃 ACTIVITY COUNT VALIDATION - Check activity pacing matches user preference
+      console.log("🏃 Validating activity count per day...");
+      const activityValidation = validateActivityCount(
+        parsedTripData,
+        formData
+      );
+
       // Log validation results
       console.log("📋 Itinerary Validation Results:", itineraryValidation);
+      console.log("🏃 Activity Count Validation Results:", activityValidation);
 
       // Handle validation errors (critical issues)
       if (
@@ -1567,6 +1587,42 @@ Generate general accommodation recommendations without specific pricing or booki
         toast.info("Please Try Again", {
           description:
             "Click 'Generate Trip' to create a new itinerary with the correct structure.",
+          duration: 8000,
+        });
+
+        setLoading(false);
+        return; // Stop saving invalid itinerary
+      }
+
+      // Handle activity count validation errors
+      if (!activityValidation.isValid && activityValidation.errors.length > 0) {
+        console.error(
+          "❌ Activity count validation failed:",
+          activityValidation.errors
+        );
+
+        // Show specific error details to user
+        const errorMessages = activityValidation.errors
+          .map((err) => err.message)
+          .join("\n");
+
+        toast.error("Activity Pace Validation Failed", {
+          description: `The itinerary doesn't match your selected activity pace (${activityValidation.activityPreference} activities/day):\n${errorMessages}\n\nPlease try generating again.`,
+          duration: 10000,
+        });
+
+        // Log for debugging
+        console.warn("🔍 Activity count validation failed for trip:", {
+          destination: formData.location,
+          activityPreference: activityValidation.activityPreference,
+          totalDays: activityValidation.totalDays,
+          errors: activityValidation.errors,
+        });
+
+        // Show retry option to user
+        toast.info("Please Try Again", {
+          description:
+            "Click 'Generate Trip' to create a new itinerary that matches your activity pace preference.",
           duration: 8000,
         });
 

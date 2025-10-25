@@ -269,51 +269,66 @@ export const getDateExplanation = (dateInfo) => {
 };
 
 /**
- * Get activity planning guidance based on dates
+ * Get activity planning guidance based on dates and user preference
  * @param {Object} dateInfo - Result from calculateTravelDates
+ * @param {number} activityPreference - User's selected activity pace (1-4)
  * @returns {Array} Day-by-day activity recommendations
  */
-export const getActivityGuidance = (dateInfo) => {
+export const getActivityGuidance = (dateInfo, activityPreference = 2) => {
+  console.log("🎯 getActivityGuidance called with activityPreference:", activityPreference);
   const guidance = [];
-  const { activitiesStartDate, activitiesEndDate, totalNights, travelInfo } = dateInfo;
+  const { activitiesStartDate, activitiesEndDate, travelInfo } = dateInfo;
 
   const startDate = new Date(activitiesStartDate);
   const endDate = new Date(activitiesEndDate);
-  
+
   // Calculate actual activity days (not including checkout day)
   const activityDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
-  // Day 1 guidance
+  // Map activity preference to pace string
+  const getPaceFromPreference = (preference) => {
+    switch (preference) {
+      case 1: return "light";      // 1 activity per day
+      case 2: return "moderate";   // 2 activities per day
+      case 3: return "active";     // 3 activities per day
+      case 4: return "intensive";  // 4 activities per day
+      default: return "moderate";  // Default fallback
+    }
+  };
+
+  const userPace = getPaceFromPreference(activityPreference);
+
+  // Day 1 guidance - adjust based on travel timing but respect user pace
   if (travelInfo.isDomesticShort) {
     guidance.push({
       day: 1,
       timing: "Afternoon/Evening",
       note: "Arrive by noon - plan light activities for first afternoon",
-      recommendedPace: "relaxed",
+      recommendedPace: "light", // Always light for domestic short trips
     });
   } else if (travelInfo.isInternational || travelInfo.needsBufferDay) {
     guidance.push({
       day: 1,
       timing: "Full Day",
       note: "Full day of activities - you arrived yesterday",
-      recommendedPace: "active",
+      recommendedPace: activityPreference === 1 ? "light" : "moderate", // Max 2 activities for arrival day
     });
   } else {
     guidance.push({
       day: 1,
       timing: "Full Day",
       note: "Full day of activities",
-      recommendedPace: "active",
+      recommendedPace: activityPreference === 1 ? "light" : "moderate", // Max 2 activities for arrival day
     });
   }
 
-  // Middle days - full activities
+  // Middle days - use user's selected pace
   for (let i = 2; i < activityDays; i++) {
     guidance.push({
       day: i,
       timing: "Full Day",
       note: "Full day of activities",
-      recommendedPace: "active",
+      recommendedPace: userPace,
     });
   }
 
@@ -323,7 +338,7 @@ export const getActivityGuidance = (dateInfo) => {
       day: activityDays,
       timing: "Full Day",
       note: "Final day of activities - hotel checkout is tomorrow morning",
-      recommendedPace: "active",
+      recommendedPace: "light", // Max 1 activity for departure day
     });
   }
 

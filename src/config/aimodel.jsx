@@ -29,7 +29,7 @@ const generationConfig = {
   temperature: 0.3, // Balanced for consistency and creativity
   topP: 0.9,
   topK: 20,
-  maxOutputTokens: 16384,
+  maxOutputTokens: 32768,
   responseMimeType: "application/json",
   responseSchema: {
     type: "object",

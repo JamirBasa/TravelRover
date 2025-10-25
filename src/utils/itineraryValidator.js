@@ -28,11 +28,86 @@ const NEAREST_AIRPORT_INFO = {
 };
 
 /**
- * Validate itinerary structure and logistics
+ * Validate and fix activity count per day based on user preference
  * @param {Object} tripData - AI-generated trip data
  * @param {Object} formData - User's form data
- * @returns {Object} { isValid: boolean, errors: string[], warnings: string[] }
+ * @returns {Object} { isValid: boolean, errors: string[], warnings: string[], fixedItinerary?: Object[] }
  */
+export const validateActivityCount = (tripData, formData) => {
+  const errors = [];
+  const warnings = [];
+  const itinerary = tripData?.itinerary || [];
+  const activityPreference = parseInt(formData?.activityPreference) || 2;
+  const totalDays = itinerary.length;
+
+  itinerary.forEach((day, index) => {
+    const dayNum = day.day || index + 1;
+    const isFirstDay = dayNum === 1;
+    const isLastDay = dayNum === totalDays;
+    const isMiddleDay = !isFirstDay && !isLastDay;
+
+    // Parse activities from plan array or planText
+    let activities = [];
+    if (Array.isArray(day.plan)) {
+      activities = day.plan;
+    } else if (day.planText) {
+      activities = day.planText.split('|').map(a => a.trim());
+    }
+
+    // Count main activities (exclude meals, transit, hotel check-in/out)
+    const mainActivities = activities.filter(activity => {
+      const text = typeof activity === 'string'
+        ? activity.toLowerCase()
+        : (activity?.placeName || '').toLowerCase();
+
+      // Exclude meals
+      if (text.includes('breakfast') || text.includes('lunch') || text.includes('dinner') ||
+          text.includes('meal') || text.includes('snack') || text.includes('coffee break')) {
+        return false;
+      }
+
+      // Exclude transit and hotel operations
+      if (text.includes('transfer') || text.includes('arrive') || text.includes('depart') ||
+          text.includes('check-in') || text.includes('check in') || text.includes('check-out') ||
+          text.includes('check out') || text.includes('return to hotel') ||
+          text.includes('hotel return') || text.includes('back to hotel') ||
+          text.includes('bus to') || text.includes('flight to') ||
+          text.includes('taxi') || text.includes('grab') || text.includes('jeepney')) {
+        return false;
+      }
+
+      return true;
+    });
+
+    const activityCount = mainActivities.length;
+
+    // Validate activity count based on day type and user preference
+    if (isFirstDay) {
+      if (activityCount > 2) {
+        errors.push(`Day ${dayNum} (Arrival): Has ${activityCount} activities, maximum allowed is 2`);
+      }
+    } else if (isMiddleDay) {
+      if (activityCount !== activityPreference) {
+        errors.push(`Day ${dayNum} (Middle): Has ${activityCount} activities, should be exactly ${activityPreference}`);
+      }
+    } else if (isLastDay) {
+      if (activityCount > 1) {
+        errors.push(`Day ${dayNum} (Departure): Has ${activityCount} activities, maximum allowed is 1`);
+      }
+    }
+
+    // Log activity count for debugging
+    console.log(`Day ${dayNum}: ${activityCount} main activities (${mainActivities.length} total activities parsed)`);
+  });
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings,
+    activityPreference,
+    totalDays,
+  };
+};
 export const validateItinerary = (tripData, formData) => {
   const errors = [];
   const warnings = [];
@@ -225,6 +300,7 @@ export const getNearestAirportInfo = (destination) => {
 
 export default {
   validateItinerary,
+  validateActivityCount,
   getValidationSuggestion,
   getNearestAirportInfo,
   CITIES_WITHOUT_AIRPORTS,
