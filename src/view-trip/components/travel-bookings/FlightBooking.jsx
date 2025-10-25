@@ -335,8 +335,23 @@ function FlightBooking({ trip }) {
 
     const formatDate = (dateStr) => {
       if (!dateStr) return "";
-      const date = new Date(dateStr + "T00:00:00"); // ✅ FIXED: Timezone issue
-      return date.toISOString().split("T")[0];
+
+      // If already in YYYY-MM-DD format, return as-is
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return dateStr;
+      }
+
+      // Parse as local date without timezone conversion
+      const [year, month, day] = dateStr.split("-").map(Number);
+      const date = new Date(year, month - 1, day);
+
+      if (isNaN(date.getTime())) return "";
+
+      const yearStr = date.getFullYear();
+      const monthStr = String(date.getMonth() + 1).padStart(2, "0");
+      const dayStr = String(date.getDate()).padStart(2, "0");
+
+      return `${yearStr}-${monthStr}-${dayStr}`;
     };
 
     const departDate = formatDate(

@@ -1,6 +1,9 @@
 # langgraph_agents/agents/flight_agent.py
+
 from typing import Dict, Any, Optional, List
 import asyncio
+from datetime import datetime
+import pytz
 from .base_agent import BaseAgent
 from flights.views import FlightSearchView
 from rest_framework.test import APIRequestFactory
@@ -32,11 +35,98 @@ INACTIVE_AIRPORTS = {
     }
 }
 
+# ✅ NEW: Philippine timezone constant
+PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
+
+
 class FlightAgent(BaseAgent):
     """LangGraph Flight Search Agent"""
     
     def __init__(self, session_id: str):
         super().__init__(session_id, 'flight')
+    
+    def _validate_and_normalize_dates(self, departure_date: str, return_date: Optional[str] = None) -> Dict[str, Any]:
+        """
+        ✅ NEW: Validate and normalize dates to Philippine timezone
+        Ensures dates are in YYYY-MM-DD format and prevents timezone issues
+        """
+        try:
+            # Validate departure date format
+            if not departure_date:
+                return {
+                    'valid': False,
+                    'error': 'Departure date is required'
+                }
+            
+            # Parse departure date (expects YYYY-MM-DD format)
+            try:
+                departure_parts = departure_date.split('-')
+                if len(departure_parts) != 3:
+                    raise ValueError("Invalid date format")
+                
+                year, month, day = map(int, departure_parts)
+                
+                # Create timezone-aware datetime in Philippine time
+                departure_dt = PHILIPPINES_TZ.localize(
+                    datetime(year, month, day, 0, 0, 0)
+                )
+                
+                # Validate departure is not in the past
+                now_ph = datetime.now(PHILIPPINES_TZ).replace(hour=0, minute=0, second=0, microsecond=0)
+                if departure_dt < now_ph:
+                    return {
+                        'valid': False,
+                        'error': f'Departure date {departure_date} is in the past'
+                    }
+                
+            except (ValueError, IndexError) as e:
+                return {
+                    'valid': False,
+                    'error': f'Invalid departure date format. Expected YYYY-MM-DD, got: {departure_date}'
+                }
+            
+            # Validate return date if provided
+            return_dt = None
+            if return_date:
+                try:
+                    return_parts = return_date.split('-')
+                    if len(return_parts) != 3:
+                        raise ValueError("Invalid date format")
+                    
+                    ret_year, ret_month, ret_day = map(int, return_parts)
+                    return_dt = PHILIPPINES_TZ.localize(
+                        datetime(ret_year, ret_month, ret_day, 0, 0, 0)
+                    )
+                    
+                    # Validate return date is after departure
+                    if return_dt < departure_dt:
+                        return {
+                            'valid': False,
+                            'error': f'Return date {return_date} must be after departure date {departure_date}'
+                        }
+                    
+                except (ValueError, IndexError) as e:
+                    return {
+                        'valid': False,
+                        'error': f'Invalid return date format. Expected YYYY-MM-DD, got: {return_date}'
+                    }
+            
+            # Return normalized dates (keep in YYYY-MM-DD format)
+            return {
+                'valid': True,
+                'departure_date': departure_date,  # Keep original format
+                'return_date': return_date,
+                'departure_datetime': departure_dt,
+                'return_datetime': return_dt,
+                'timezone': 'Asia/Manila'
+            }
+            
+        except Exception as e:
+            logger.error(f"Date validation error: {e}")
+            return {
+                'valid': False,
+                'error': f'Date validation failed: {str(e)}'
+            }
     
     async def _execute_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Execute flight search using existing Django flight search logic"""
@@ -71,7 +161,21 @@ class FlightAgent(BaseAgent):
                     'flights': []
                 }
             
-            # ✅ ADDED: Validate airport commercial service
+            # ✅ NEW: Validate dates and timezone
+            date_validation = self._validate_and_normalize_dates(departure_date, return_date)
+            if not date_validation['valid']:
+                return {
+                    'success': False,
+                    'error': date_validation['error'],
+                    'flights': [],
+                    'date_validation': date_validation
+                }
+            
+            # Use validated dates
+            departure_date = date_validation['departure_date']
+            return_date = date_validation['return_date']
+            
+            # ✅ EXISTING: Validate airport commercial service
             airport_validation = self._validate_airports(from_airport, to_airport)
             if not airport_validation['valid']:
                 return {
@@ -91,7 +195,7 @@ class FlightAgent(BaseAgent):
                 flight_results = view.fallback_response(from_airport, to_airport, trip_type)
             else:
                 try:
-                    # Search flights using SerpAPI
+                    # Search flights using SerpAPI with validated dates
                     flight_results = view.search_flights_serpapi(
                         from_airport, to_airport, departure_date, return_date, adults, trip_type
                     )
@@ -104,6 +208,12 @@ class FlightAgent(BaseAgent):
             # Enhance results with LangGraph-specific analysis
             if flight_results.get('success'):
                 enhanced_results = self._analyze_flight_options(flight_results)
+                # Add date validation info to results
+                enhanced_results['date_validation'] = {
+                    'timezone': 'Asia/Manila (UTC+8)',
+                    'departure_date': departure_date,
+                    'return_date': return_date
+                }
                 return enhanced_results
             else:
                 return flight_results
@@ -118,7 +228,7 @@ class FlightAgent(BaseAgent):
     
     def _validate_airports(self, from_airport: str, to_airport: str) -> Dict[str, Any]:
         """
-        ✅ NEW: Validate if airports have commercial service
+        ✅ EXISTING: Validate if airports have commercial service
         Returns validation status and alternatives if needed
         """
         from_upper = from_airport.upper() if from_airport else ""

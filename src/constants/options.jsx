@@ -24,7 +24,10 @@ import {
 // API Configuration
 export const API_CONFIG = {
   BASE_URL: "http://localhost:8000/api",
-  TIMEOUT: 120000, // 120 seconds (2 minutes) for GA-First workflow
+  TIMEOUT_SHORT: 45000, // Simple queries
+  TIMEOUT_MEDIUM: 90000, // Standard requests
+  TIMEOUT_LONG: 150000, // Complex itineraries
+  TIMEOUT_MAX: 360000, // Maximum for retries
   RETRY_ATTEMPTS: 3,
 };
 
@@ -552,10 +555,28 @@ If user selected 4 activities/day for a 5-day trip:
 - Day 1 (Arrival): 1-2 activities (max)
 - Days 2-4 (Middle): EXACTLY 4 activities each
 - Day 5 (Departure): 0-1 activities (max)
-   - Last day (Departure): 2-3 hours
-✅ Don't exceed 10 hours total scheduled time per day
 
-PLACE DETAILS ENHANCEMENTS:
+🚨 CRITICAL ACTIVITY COUNT ENFORCEMENT:
+- COUNT ONLY MAIN ATTRACTIONS/ACTIVITIES (exclude meals, transit, hotel check-in/out)
+- Day 1: MAXIMUM 2 activities total (NEVER more than 2, even if user selected 3 or 4 activities/day)
+- Middle Days: EXACTLY {activityPreference} activities per day (NO MORE, NO LESS)
+- Last Day: MAXIMUM 1 activity total (NEVER more than 1)
+- If you generate 3+ activities for Day 1, the itinerary will be REJECTED
+- If you generate 2+ activities for Last Day, the itinerary will be REJECTED
+- If you generate wrong number of activities for middle days, the itinerary will be REJECTED
+- Meals and transit time DO NOT count toward activity limits
+
+ACTIVITY COUNT VALIDATION WILL FAIL IF:
+- Day 1 has more than 2 main activities
+- Any middle day has different count than {activityPreference}
+- Last day has more than 1 main activity
+
+EXAMPLE FOR ACTIVE PACE (3 activities/day):
+- Day 1: 1-2 activities (NOT 3!)
+- Days 2-6: EXACTLY 3 activities each
+- Day 7: 0-1 activities (NOT 3!)
+
+CRITICAL JSON REQUIREMENTS:
 ✅ Always mention distance/time from hotel or previous location:
    - "15-minute taxi ride from hotel"
    - "Walking distance from previous location"
@@ -566,11 +587,11 @@ PLACE DETAILS ENHANCEMENTS:
    - "Walking distance through pedestrian mall"
 
 CRITICAL JSON REQUIREMENTS:
-- Return ONLY valid JSON - no markdown, no extra text, no code blocks
+- Return ONLY complete, valid JSON - no markdown, no extra text, no code blocks
 - NO trailing commas before } or ]
 - Complete all objects and arrays properly
 - Use real coordinates and PHP pricing
-- 3-4 hotels, 2-4 activities/day, 5-8 attractions
+- Activity count: STRICTLY follow the activity preference rules above (Day 1: 1-2 max, Middle days: EXACTLY {activityPreference}, Last day: 0-1 max)
 - Budget levels: Budget ₱2-8K, Moderate ₱8-20K, Luxury ₱20K+
 - Descriptions under 80 chars
 - Must include: tripName, destination, hotels, itinerary, placesToVisit

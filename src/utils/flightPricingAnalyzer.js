@@ -6,17 +6,19 @@
 
 /**
  * Calculate days until departure
+ * ✅ FIXED: Timezone-safe date parsing
  */
 export const getDaysUntilDeparture = (startDate) => {
   if (!startDate) return null;
   
+  // Parse date as local date without timezone conversion
+  const [year, month, day] = startDate.split('-').map(Number);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
-  // ✅ FIXED: Force local midnight to avoid timezone issues
-  const departure = new Date(startDate + 'T00:00:00');
+  const departure = new Date(year, month - 1, day, 0, 0, 0, 0);
   
-  // ✅ ADDED: Validate date
+  // Validate date
   if (isNaN(departure.getTime())) {
     console.warn('Invalid date provided to getDaysUntilDeparture:', startDate);
     return null;
@@ -33,36 +35,33 @@ export const getDaysUntilDeparture = (startDate) => {
  */
 export const getBookingTimingCategory = (daysUntilDeparture) => {
   if (daysUntilDeparture === null) return null;
-  
   if (daysUntilDeparture < 0) return 'past';
   if (daysUntilDeparture === 0) return 'today';
   if (daysUntilDeparture === 1) return 'tomorrow';
-  if (daysUntilDeparture <= 3) return 'very-last-minute'; // 2-3 days
-  if (daysUntilDeparture <= 7) return 'last-minute'; // 4-7 days
-  if (daysUntilDeparture <= 14) return 'short-notice'; // 8-14 days
-  if (daysUntilDeparture <= 30) return 'moderate'; // 15-30 days
-  if (daysUntilDeparture <= 60) return 'good'; // 31-60 days
-  return 'optimal'; // 60+ days
+  if (daysUntilDeparture <= 3) return 'very-last-minute';
+  if (daysUntilDeparture <= 7) return 'last-minute';
+  if (daysUntilDeparture <= 14) return 'short-notice';
+  if (daysUntilDeparture <= 30) return 'moderate';
+  if (daysUntilDeparture <= 60) return 'good';
+  return 'optimal';
 };
 
 /**
  * Calculate price multiplier based on booking timing
- * Philippine domestic flights pricing dynamics (PAL, Cebu Pacific, AirAsia)
  */
 export const getTimingPriceMultiplier = (daysUntilDeparture) => {
   const category = getBookingTimingCategory(daysUntilDeparture);
   
-  // ✅ REFINED: Updated based on Philippine airline behavior
   const multipliers = {
-    'past': 0, // Can't book past dates
-    'today': 4.0, // 300% markup - extremely expensive
-    'tomorrow': 3.2, // 220% markup - very expensive
-    'very-last-minute': 2.8, // 180% markup - expensive
-    'last-minute': 2.2, // 120% markup - high prices
-    'short-notice': 1.4, // 40% markup - elevated prices
-    'moderate': 1.1, // 10% markup - slightly higher
-    'good': 0.95, // 5% discount - normal prices
-    'optimal': 0.75, // 25% discount - best seat sale prices
+    'past': 0,
+    'today': 4.0,
+    'tomorrow': 3.2,
+    'very-last-minute': 2.8,
+    'last-minute': 2.2,
+    'short-notice': 1.4,
+    'moderate': 1.1,
+    'good': 0.95,
+    'optimal': 0.75,
   };
   
   return multipliers[category] || 1.0;
@@ -154,63 +153,75 @@ export const calculateTimingAdjustedFlightCost = (baseCost, daysUntilDeparture) 
 
 /**
  * Get flexible date suggestions (cheaper alternatives)
+ * ✅ FIXED: Timezone-safe date calculations
  */
 export const getFlexibleDateSuggestions = (startDate, endDate) => {
   if (!startDate || !endDate) return [];
   
   const suggestions = [];
-  const start = new Date(startDate + 'T00:00:00'); // ✅ FIXED: Force local time
-  const end = new Date(endDate + 'T00:00:00'); // ✅ FIXED: Force local time
   
-  // ✅ ADDED: Validate dates
+  // Parse dates as local dates
+  const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+  const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+  
+  const start = new Date(startYear, startMonth - 1, startDay);
+  const end = new Date(endYear, endMonth - 1, endDay);
+  
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return [];
   
   const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
   
-  // Suggest 1 week later
+  // Helper to format date properly
+  const formatDateLocal = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  // 1 week later
   const oneWeekLater = new Date(start);
   oneWeekLater.setDate(oneWeekLater.getDate() + 7);
   const oneWeekEnd = new Date(oneWeekLater);
   oneWeekEnd.setDate(oneWeekEnd.getDate() + duration - 1);
   
   suggestions.push({
-    label: '+1 Week Later',
-    startDate: oneWeekLater.toISOString().split('T')[0],
-    endDate: oneWeekEnd.toISOString().split('T')[0],
+    label: "+1 Week Later",
+    startDate: formatDateLocal(oneWeekLater),
+    endDate: formatDateLocal(oneWeekEnd),
     savingsPercent: 20,
-    reason: 'More time to find deals'
+    reason: "More time to find deals"
   });
   
-  // Suggest 2 weeks later
+  // 2 weeks later
   const twoWeeksLater = new Date(start);
   twoWeeksLater.setDate(twoWeeksLater.getDate() + 14);
   const twoWeeksEnd = new Date(twoWeeksLater);
   twoWeeksEnd.setDate(twoWeeksEnd.getDate() + duration - 1);
   
   suggestions.push({
-    label: '+2 Weeks Later',
-    startDate: twoWeeksLater.toISOString().split('T')[0],
-    endDate: twoWeeksEnd.toISOString().split('T')[0],
+    label: "+2 Weeks Later",
+    startDate: formatDateLocal(twoWeeksLater),
+    endDate: formatDateLocal(twoWeeksEnd),
     savingsPercent: 35,
-    reason: 'Optimal booking window'
+    reason: "Optimal booking window"
   });
   
-  // Suggest weekday vs weekend
-  const startDay = start.getDay();
-  if (startDay === 0 || startDay === 6) { // Weekend
+  // Weekday alternative
+  const startDayOfWeek = start.getDay();
+  if (startDayOfWeek === 0 || startDayOfWeek === 6) { // Weekend
     const weekdayStart = new Date(start);
-    // Move to next Tuesday (usually cheapest)
-    const daysToAdd = startDay === 0 ? 2 : 3; // Sunday -> Tuesday, Saturday -> Tuesday
+    const daysToAdd = startDayOfWeek === 0 ? 2 : 3; // Sunday->Tuesday, Saturday->Tuesday
     weekdayStart.setDate(weekdayStart.getDate() + daysToAdd);
     const weekdayEnd = new Date(weekdayStart);
     weekdayEnd.setDate(weekdayEnd.getDate() + duration - 1);
     
     suggestions.push({
-      label: 'Weekday Travel',
-      startDate: weekdayStart.toISOString().split('T')[0],
-      endDate: weekdayEnd.toISOString().split('T')[0],
+      label: "Weekday Travel",
+      startDate: formatDateLocal(weekdayStart),
+      endDate: formatDateLocal(weekdayEnd),
       savingsPercent: 15,
-      reason: 'Weekday flights are cheaper'
+      reason: "Weekday flights are cheaper"
     });
   }
   
@@ -228,7 +239,6 @@ export const getBookingAdvice = (startDate, endDate, includeFlights, departureCi
   
   const { daysUntilDeparture, category, priceMultiplier, seatAvailability, isLastMinute } = analysis;
   
-  // Generate advice based on timing
   const advice = {
     timing: {
       daysUntil: daysUntilDeparture,
@@ -250,9 +260,6 @@ export const getBookingAdvice = (startDate, endDate, includeFlights, departureCi
   return advice;
 };
 
-/**
- * Get category description
- */
 const getCategoryDescription = (category) => {
   const descriptions = {
     'today': 'Departing Today',
@@ -264,13 +271,9 @@ const getCategoryDescription = (category) => {
     'good': '1-2 Months Away',
     'optimal': '2+ Months Away',
   };
-  
   return descriptions[category] || 'Unknown';
 };
 
-/**
- * Get price impact description
- */
 const getPriceImpactDescription = (multiplier) => {
   if (multiplier >= 3.5) return 'Extremely High Prices';
   if (multiplier >= 2.5) return 'Very High Prices';
@@ -282,9 +285,6 @@ const getPriceImpactDescription = (multiplier) => {
   return 'Best Prices';
 };
 
-/**
- * Get recommendations based on timing
- */
 const getRecommendations = (category, departureCity, destination) => {
   const baseRecommendations = {
     'today': [
@@ -340,9 +340,6 @@ const getRecommendations = (category, departureCity, destination) => {
   return baseRecommendations[category] || [];
 };
 
-/**
- * Get warnings based on timing
- */
 const getWarnings = (category, multiplier) => {
   const warnings = [];
   
@@ -378,9 +375,6 @@ const getWarnings = (category, multiplier) => {
   return warnings;
 };
 
-/**
- * Get timing-specific tips
- */
 const getTimingTips = (category) => {
   const tips = {
     'today': [
@@ -430,12 +424,14 @@ const getTimingTips = (category) => {
 
 /**
  * Format date for display
+ * ✅ FIXED: Timezone-safe date formatting
  */
 export const formatDateDisplay = (dateStr) => {
   if (!dateStr) return '';
-  const date = new Date(dateStr + 'T00:00:00');
   
-  // ✅ ADDED: Validate date
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  
   if (isNaN(date.getTime())) return '';
   
   return date.toLocaleDateString('en-US', {

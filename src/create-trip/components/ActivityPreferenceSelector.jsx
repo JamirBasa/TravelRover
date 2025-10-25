@@ -95,7 +95,14 @@ const ActivityPreferenceSelector = ({
                   ? `border-sky-500 dark:border-sky-600 bg-gradient-to-r ${option.bgGradient}`
                   : "border-gray-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-700"
               }`}
-              onClick={() => onActivityPreferenceChange(option.value)}
+              onClick={() => {
+                console.log(
+                  "🎯 ActivityPreferenceSelector: User selected option",
+                  option.value,
+                  option.label
+                );
+                onActivityPreferenceChange(option.value);
+              }}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
