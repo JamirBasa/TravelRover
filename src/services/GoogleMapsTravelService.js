@@ -78,6 +78,7 @@ class GoogleMapsTravelService {
   }
 
   // Get travel time between multiple locations with caching and rate limiting
+  // eslint-disable-next-line no-unused-vars
   async getTravelTimes(locations, travelMode = 'DRIVING') {
     // Use AI-powered fallback as primary method
     // Google's legacy Directions API requires special enablement
@@ -200,6 +201,7 @@ class GoogleMapsTravelService {
   }
 
   // Get route directions with waypoints
+  // eslint-disable-next-line no-unused-vars
   async getRouteDirections(locations, travelMode = 'DRIVING') {
     // Skip route directions - requires enabled Directions API
     // Map markers and travel times work without this

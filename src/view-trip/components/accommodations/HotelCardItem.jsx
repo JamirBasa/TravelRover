@@ -202,7 +202,7 @@ function HotelCardItem({ hotel, onBookHotel }) {
                     </span>
                   )}
                   {/* Google Places Data Badge */}
-                  {hotel?.dataSource === 'google_places_api' && (
+                  {hotel?.dataSource === "google_places_api" && (
                     <span className="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-0.5 mt-0.5">
                       <span>✓</span>
                       <span>Verified</span>
@@ -243,7 +243,7 @@ function HotelCardItem({ hotel, onBookHotel }) {
                         Amenities
                       </h5>
                       {/* Data Source Badge */}
-                      {hotel?.dataSource === 'google_places_api' && (
+                      {hotel?.dataSource === "google_places_api" && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">
                           <span className="text-xs">✓</span>
                           <span>Real Data</span>
