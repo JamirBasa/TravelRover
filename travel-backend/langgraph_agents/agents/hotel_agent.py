@@ -131,6 +131,8 @@ class HotelAgent(BaseAgent):
                 'name': hotel_data.get('name'),
                 'hotelName': hotel_data.get('name'),  # Add hotelName field for frontend compatibility
                 'rating': hotel_data.get('rating', 4.0),
+                'user_ratings_total': hotel_data.get('user_ratings_total', 0),
+                'reviews_count': hotel_data.get('user_ratings_total', 0),  # Alternative field name
                 'price_level': hotel_data.get('price_level', 2),
                 'address': hotel_data.get('vicinity'),
                 'hotelAddress': hotel_data.get('vicinity'),  # Add hotelAddress for frontend compatibility

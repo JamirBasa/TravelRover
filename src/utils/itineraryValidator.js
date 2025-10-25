@@ -3,6 +3,8 @@
  * Validates generated itineraries for critical travel requirements
  */
 
+import { classifyActivities, getActivityConstraints } from './activityClassifier';
+
 // Cities without direct airports (require nearest airport recommendations)
 const CITIES_WITHOUT_AIRPORTS = [
   'baguio',
@@ -44,7 +46,6 @@ export const validateActivityCount = (tripData, formData) => {
     const dayNum = day.day || index + 1;
     const isFirstDay = dayNum === 1;
     const isLastDay = dayNum === totalDays;
-    const isMiddleDay = !isFirstDay && !isLastDay;
 
     // Parse activities from plan array or planText
     let activities = [];
@@ -54,50 +55,39 @@ export const validateActivityCount = (tripData, formData) => {
       activities = day.planText.split('|').map(a => a.trim());
     }
 
-    // Count main activities (exclude meals, transit, hotel check-in/out)
-    const mainActivities = activities.filter(activity => {
-      const text = typeof activity === 'string'
-        ? activity.toLowerCase()
-        : (activity?.placeName || '').toLowerCase();
+    // Use unified activity classification from shared utility
+    const { activityCount } = classifyActivities(activities);
 
-      // Exclude meals
-      if (text.includes('breakfast') || text.includes('lunch') || text.includes('dinner') ||
-          text.includes('meal') || text.includes('snack') || text.includes('coffee break')) {
-        return false;
-      }
+    // Get constraints based on day type (arrival, middle, departure)
+    const constraints = getActivityConstraints(isFirstDay, isLastDay, activityPreference);
 
-      // Exclude transit and hotel operations
-      if (text.includes('transfer') || text.includes('arrive') || text.includes('depart') ||
-          text.includes('check-in') || text.includes('check in') || text.includes('check-out') ||
-          text.includes('check out') || text.includes('return to hotel') ||
-          text.includes('hotel return') || text.includes('back to hotel') ||
-          text.includes('bus to') || text.includes('flight to') ||
-          text.includes('taxi') || text.includes('grab') || text.includes('jeepney')) {
-        return false;
-      }
-
-      return true;
-    });
-
-    const activityCount = mainActivities.length;
-
-    // Validate activity count based on day type and user preference
-    if (isFirstDay) {
-      if (activityCount > 2) {
-        errors.push(`Day ${dayNum} (Arrival): Has ${activityCount} activities, maximum allowed is 2`);
-      }
-    } else if (isMiddleDay) {
-      if (activityCount !== activityPreference) {
-        errors.push(`Day ${dayNum} (Middle): Has ${activityCount} activities, should be exactly ${activityPreference}`);
-      }
-    } else if (isLastDay) {
-      if (activityCount > 1) {
-        errors.push(`Day ${dayNum} (Departure): Has ${activityCount} activities, maximum allowed is 1`);
-      }
+    // Validate against constraints
+    if (activityCount > constraints.max) {
+      errors.push({
+        day: dayNum,
+        message: `Day ${dayNum} (${isFirstDay ? 'Arrival' : isLastDay ? 'Departure' : 'Middle'}): Has ${activityCount} activities, maximum allowed is ${constraints.max}`,
+      });
+    } else if (activityCount < constraints.min && !isFirstDay && !isLastDay) {
+      errors.push({
+        day: dayNum,
+        message: `Day ${dayNum} (Middle): Has ${activityCount} activities, minimum expected is ${constraints.min}`,
+      });
+    } else if (activityCount === 0 && isFirstDay) {
+      warnings.push(`Day ${dayNum} (Arrival): No main activities scheduled`);
     }
 
     // Log activity count for debugging
-    console.log(`Day ${dayNum}: ${activityCount} main activities (${mainActivities.length} total activities parsed)`);
+    console.log(
+      `Day ${dayNum} (${
+        isFirstDay ? "Arrival" : isLastDay ? "Departure" : "Middle"
+      }): ${activityCount} main activities (expected: ${
+        isFirstDay
+          ? `${constraints.min}-${constraints.max}`
+          : isLastDay
+          ? `${constraints.min}-${constraints.max}`
+          : `${constraints.min}-${constraints.max}`
+      })`
+    );
   });
 
   return {
