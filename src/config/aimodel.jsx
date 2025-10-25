@@ -64,12 +64,28 @@ const generationConfig = {
             hotelAddress: { type: "string" },
             pricePerNight: { type: "string" },
             description: { type: "string" },
+            amenities: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                "List of hotel amenities (e.g., WiFi, Pool, Gym, Restaurant, Spa, Air Conditioning, Parking)",
+            },
+            rating: {
+              type: "number",
+              description: "Hotel star rating (1-5 stars)",
+            },
+            reviews_count: {
+              type: "number",
+              description: "Approximate number of reviews",
+            },
           },
           required: [
             "hotelName",
             "hotelAddress",
             "pricePerNight",
             "description",
+            "amenities",
+            "rating",
           ],
         },
       },
@@ -312,7 +328,17 @@ TRAVEL TIME BETWEEN ACTIVITIES (ALL DAYS):
    - To suburbs/outskirts: 60-120 minutes
    - PEAK HOURS TO AVOID: 7-9 AM, 5-7 PM weekdays
 ✅ Account for Manila/major city traffic: add 30-50% buffer time
-✅ Include travel time in timeTravel field: "30 minutes travel + 2 hours visit"
+✅ **CRITICAL**: timeTravel field MUST follow one of these formats:
+   - With transport mode: "[number] [minutes/hours] by [transport] from [origin]"
+     * Example: "15 minutes by taxi from city center"
+     * Example: "30 minutes by jeepney from hotel"
+     * Example: "45 minutes by bus from Burnham Park"
+   - Walking distance: "Walking distance from [origin]"
+     * Example: "Walking distance from hotel"
+     * Example: "Walking distance from Burnham Park"
+   - Simple time: "[number] [minutes/hours] from [origin]"
+     * Example: "20 minutes from hotel"
+   - Common transport modes: taxi, jeepney, bus, tricycle, van, car, walking
 ✅ Don't schedule activities back-to-back without transit time
 ✅ Example: "10:00 AM - Location A", "1:00 PM - Location B" (allows 1hr visit + 2hr gap)
 
@@ -324,10 +350,21 @@ ACTIVITY DURATION GUIDELINES:
    - Beach/nature activities: 2-3 hours
    - Quick photo stops: 15-30 minutes
 
-REALISTIC DAILY SCHEDULES:
-✅ Day 1 (Arrival): 2-3 activities, light schedule
-✅ Middle Days: 3-4 activities, full but not rushed
-✅ Last Day (Departure): 1-2 activities, very light
+REALISTIC DAILY SCHEDULES & ACTIVITY COUNT:
+✅ **CRITICAL**: Respect user's activity pace preference (activityPreference parameter)
+✅ Main activities = Tourist attractions/sights (NOT meals, check-ins, returns, transit)
+✅ Day 1 (Arrival): 1-2 MAIN activities max (light schedule due to travel fatigue)
+✅ Middle Days: Match user's activityPreference ± 1 activity
+   - If user wants 2 activities/day: Schedule 1-3 main tourist attractions per middle day
+   - If user wants 3 activities/day: Schedule 2-4 main tourist attractions per middle day
+   - If user wants 4 activities/day: Schedule 3-5 main tourist attractions per middle day
+✅ Last Day (Departure): 0-1 MAIN activity (very light, mostly checkout/travel)
+✅ **DO NOT COUNT** these as "main activities":
+   - Hotel check-in/check-out
+   - Return to hotel
+   - Meals (breakfast, lunch, dinner)
+   - Transit/transfers
+   - Rest periods
 ✅ Include meal times as EXPLICIT activities when not included in hotel:
    - Breakfast: 7:30-9:00 AM (often included in hotel package)
    - Lunch: 12:00-1:30 PM (mandatory, budget ₱200-500 per person)
@@ -418,10 +455,31 @@ EXAMPLE of CORRECT format:
   "currency": "PHP",
   "hotels": [
     {
-      "hotelName": "Sample Hotel",
-      "hotelAddress": "123 Street, Manila",
-      "pricePerNight": "₱3,500",
-      "description": "Modern hotel with great amenities"
+      "hotelName": "Manila Grand Hotel",
+      "hotelAddress": "123 Roxas Boulevard, Manila",
+      "pricePerNight": "₱5,500",
+      "description": "Luxury hotel with stunning bay views and premium amenities",
+      "amenities": ["WiFi", "Pool", "Gym", "Restaurant", "Spa", "Bar", "Room Service", "24/7 Front Desk"],
+      "rating": 4.7,
+      "reviews_count": 2150
+    },
+    {
+      "hotelName": "City Center Inn",
+      "hotelAddress": "456 Ermita Street, Manila",
+      "pricePerNight": "₱3,200",
+      "description": "Modern mid-range hotel in the heart of the city",
+      "amenities": ["WiFi", "Restaurant", "Air Conditioning", "24/7 Front Desk", "Free Breakfast"],
+      "rating": 4.3,
+      "reviews_count": 850
+    },
+    {
+      "hotelName": "Budget Stay Manila",
+      "hotelAddress": "789 Malate Avenue, Manila",
+      "pricePerNight": "₱1,800",
+      "description": "Clean and affordable accommodation for budget travelers",
+      "amenities": ["WiFi", "Air Conditioning", "24/7 Front Desk"],
+      "rating": 4.0,
+      "reviews_count": 420
     }
   ],
   "itinerary": [

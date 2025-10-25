@@ -33,9 +33,10 @@ function Hotels({ trip }) {
   }, []);
 
   // ========================================
-  // GET HOTELS DATA
+  // GET HOTELS DATA (Real + AI)
   // ========================================
   const getHotelsData = useCallback(() => {
+    // Get AI-generated hotels from trip data
     const possiblePaths = [
       trip?.tripData?.hotels,
       trip?.tripData?.accommodations,
@@ -43,8 +44,32 @@ function Hotels({ trip }) {
       trip?.tripData?.tripData?.accommodations,
     ];
 
-    const hotelsRaw = possiblePaths.find((path) => path !== undefined) || [];
-    return parseDataArray(hotelsRaw, "hotels");
+    const aiHotelsRaw = possiblePaths.find((path) => path !== undefined) || [];
+    const aiHotels = parseDataArray(aiHotelsRaw, "hotels");
+
+    // Get real hotels from LangGraph results
+    const realHotelsRaw = trip?.realHotelData?.hotels || [];
+    const realHotels = parseDataArray(realHotelsRaw, "real hotels");
+
+    console.log(
+      `🏨 Hotels found - Real: ${realHotels.length}, AI: ${aiHotels.length}`
+    );
+
+    // Mark hotels with their source
+    const markedRealHotels = realHotels.map((hotel) => ({
+      ...hotel,
+      source: "real",
+      isRealHotel: true,
+    }));
+
+    const markedAiHotels = aiHotels.map((hotel) => ({
+      ...hotel,
+      source: "ai",
+      isRealHotel: false,
+    }));
+
+    // Return real hotels first, then AI hotels
+    return [...markedRealHotels, ...markedAiHotels];
   }, [trip, parseDataArray]);
 
   // ========================================
@@ -130,24 +155,37 @@ function Hotels({ trip }) {
   }, []);
 
   // ========================================
-  // SORT HOTELS BY PRICE (MEMOIZED)
+  // SORT HOTELS BY SOURCE & PRICE (MEMOIZED)
   // ========================================
   const hotels = useMemo(() => {
-    return [...verifiedHotels].sort((a, b) => {
+    // Separate real and AI hotels
+    const realHotels = verifiedHotels.filter((h) => h.isRealHotel);
+    const aiHotels = verifiedHotels.filter((h) => !h.isRealHotel);
+
+    // Sort each group by price
+    const sortByPrice = (a, b) => {
       const priceA = extractPrice(a);
       const priceB = extractPrice(b);
       if (priceA === 0 && priceB === 0) return 0;
       if (priceA === 0) return 1;
       if (priceB === 0) return -1;
       return priceA - priceB;
-    });
+    };
+
+    return {
+      realHotels: realHotels.sort(sortByPrice),
+      aiHotels: aiHotels.sort(sortByPrice),
+      allHotels: [...realHotels, ...aiHotels].sort(sortByPrice),
+    };
   }, [verifiedHotels, extractPrice]);
 
   // ========================================
   // CALCULATE AVERAGE PRICE (MEMOIZED)
   // ========================================
   const avgPrice = useMemo(() => {
-    const hotelsWithPrices = hotels.filter((hotel) => extractPrice(hotel) > 0);
+    const hotelsWithPrices = hotels.allHotels.filter(
+      (hotel) => extractPrice(hotel) > 0
+    );
     return hotelsWithPrices.length > 0
       ? hotelsWithPrices.reduce((sum, hotel) => sum + extractPrice(hotel), 0) /
           hotelsWithPrices.length
@@ -207,6 +245,7 @@ function Hotels({ trip }) {
 
       return finalUrl;
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [trip?.userSelection]
   );
 
@@ -296,7 +335,7 @@ function Hotels({ trip }) {
   // ========================================
   // EMPTY STATE
   // ========================================
-  if (!hotels || hotels.length === 0) {
+  if (!hotels || hotels.allHotels.length === 0) {
     return (
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-12 text-center">
         <div className="w-16 h-16 bg-sky-100 dark:bg-sky-950/50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -368,9 +407,23 @@ function Hotels({ trip }) {
                   </h2>
                   <p className="text-white/90 text-xs flex items-center gap-2 flex-wrap">
                     <span>🏨</span>
-                    <span>{hotels.length} accommodations found</span>
-                    <span>•</span>
-                    <span>💰 Sorted: Lowest to Highest Price</span>
+                    <span>{hotels.allHotels.length} accommodations found</span>
+                    {hotels.realHotels.length > 0 && (
+                      <>
+                        <span>•</span>
+                        <span className="bg-white/20 px-2 py-0.5 rounded">
+                          {hotels.realHotels.length} real hotels
+                        </span>
+                      </>
+                    )}
+                    {hotels.aiHotels.length > 0 && (
+                      <>
+                        <span>•</span>
+                        <span className="bg-white/20 px-2 py-0.5 rounded">
+                          {hotels.aiHotels.length} AI suggestions
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -390,23 +443,81 @@ function Hotels({ trip }) {
         </div>
 
         {/* Hotels List */}
-        <div className="p-4 sm:p-6 bg-gray-50 dark:bg-slate-950">
-          <div className="grid gap-6">
-            {hotels.map((hotel, index) => (
-              <div
-                key={hotel?.hotel_id || hotel?.id || `hotel-${index}`}
-                className="group"
-              >
-                <HotelCardItem hotel={hotel} onBookHotel={handleBookHotel} />
-                {index < hotels.length - 1 && (
-                  <div className="mt-6 border-b border-gray-100 dark:border-slate-800"></div>
-                )}
+        <div className="p-4 sm:p-6 bg-gray-50 dark:bg-slate-950 space-y-8">
+          {/* Real Hotels Section (Google Places API) */}
+          {hotels.realHotels.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="bg-green-100 dark:bg-green-950/50 px-3 py-1.5 rounded-full">
+                  <span className="text-green-700 dark:text-green-400 text-sm font-semibold flex items-center gap-1.5">
+                    <span>✓</span>
+                    <span>Verified Hotels</span>
+                  </span>
+                </div>
+                <span className="text-gray-500 dark:text-gray-400 text-xs">
+                  Live data from Google Places
+                </span>
               </div>
-            ))}
-          </div>
+
+              <div className="grid gap-6">
+                {hotels.realHotels.map((hotel, index) => (
+                  <div
+                    key={hotel?.hotel_id || hotel?.id || `real-hotel-${index}`}
+                    className="group"
+                  >
+                    <HotelCardItem
+                      hotel={hotel}
+                      onBookHotel={handleBookHotel}
+                    />
+                    {index < hotels.realHotels.length - 1 && (
+                      <div className="mt-6 border-b border-gray-100 dark:border-slate-800"></div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* AI Generated Hotels Section */}
+          {hotels.aiHotels.length > 0 && (
+            <div>
+              {hotels.realHotels.length > 0 && (
+                <div className="border-t-2 border-dashed border-gray-200 dark:border-slate-700 mb-6 pt-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="bg-sky-100 dark:bg-sky-950/50 px-3 py-1.5 rounded-full">
+                      <span className="text-sky-700 dark:text-sky-400 text-sm font-semibold flex items-center gap-1.5">
+                        <span>✨</span>
+                        <span>AI Recommendations</span>
+                      </span>
+                    </div>
+                    <span className="text-gray-500 dark:text-gray-400 text-xs">
+                      Alternative options & hidden gems
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid gap-6">
+                {hotels.aiHotels.map((hotel, index) => (
+                  <div
+                    key={hotel?.hotel_id || hotel?.id || `ai-hotel-${index}`}
+                    className="group"
+                  >
+                    <HotelCardItem
+                      hotel={hotel}
+                      onBookHotel={handleBookHotel}
+                    />
+                    {index < hotels.aiHotels.length - 1 && (
+                      <div className="mt-6 border-b border-gray-100 dark:border-slate-800"></div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Booking Tips */}
-          <div className="mt-6 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 rounded-lg p-4 border border-sky-200 dark:border-sky-800 shadow-sm">
+          <div className="mt-8 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 rounded-lg p-4 border border-sky-200 dark:border-sky-800 shadow-sm">
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 bg-sky-100 dark:bg-sky-950/50 rounded flex items-center justify-center flex-shrink-0 mt-0.5">
                 <span className="text-sky-600 dark:text-sky-400 text-xs">

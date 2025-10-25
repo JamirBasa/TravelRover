@@ -3,9 +3,7 @@ import { APIProvider, Map } from "@vis.gl/react-google-maps";
 import { MapPin, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { googleMapsTravelService } from "@/services/GoogleMapsTravelService";
 import {
-  RouteStatistics,
   GeocodingLoadingOverlay,
   MapMarkers,
   LocationInfoWindow,
@@ -23,14 +21,10 @@ import {
  * - 🗺️ Interactive navigation
  * - 🎯 Auto-center and bounds fitting
  */
-function OptimizedRouteMap({ itinerary, destination }) {
+function OptimizedRouteMap({ itinerary, destination, trip }) {
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [travelData, setTravelData] = useState([]);
-  const [routePolyline, setRoutePolyline] = useState(null);
-  const [daySpecificTravelData, setDaySpecificTravelData] = useState(null);
   const [mapCenter, setMapCenter] = useState(null);
-  const [mapZoom, setMapZoom] = useState(13);
-  const [isLoadingRoutes, setIsLoadingRoutes] = useState(false);
+  const [mapZoom] = useState(13);
   const [geocodedLocations, setGeocodedLocations] = useState([]);
   const [selectedDay, setSelectedDay] = useState("all");
   const [isGeocoding, setIsGeocoding] = useState(false);
@@ -42,21 +36,69 @@ function OptimizedRouteMap({ itinerary, destination }) {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const mapContainerRef = React.useRef(null);
 
+  // Extract recommended hotel name from trip data
+  const recommendedHotelName = useMemo(() => {
+    if (!trip?.tripData) return null;
+
+    // Try multiple possible paths for hotel data
+    const possiblePaths = [
+      trip?.tripData?.hotels,
+      trip?.tripData?.accommodations,
+      trip?.tripData?.tripData?.hotels,
+      trip?.tripData?.tripData?.accommodations,
+    ];
+
+    for (const path of possiblePaths) {
+      if (path) {
+        let hotels = [];
+
+        // Parse if it's a string
+        if (typeof path === "string") {
+          try {
+            hotels = JSON.parse(path);
+          } catch {
+            console.warn("Failed to parse hotels data");
+            continue;
+          }
+        } else if (Array.isArray(path)) {
+          hotels = path;
+        } else if (typeof path === "object") {
+          hotels = [path];
+        }
+
+        // Get first hotel name
+        if (hotels.length > 0) {
+          const firstHotel = hotels[0];
+          const hotelName =
+            firstHotel?.name || firstHotel?.hotelName || firstHotel?.hotel_name;
+
+          if (hotelName) {
+            console.log("🏨 Extracted recommended hotel:", hotelName);
+            return hotelName;
+          }
+        }
+      }
+    }
+
+    console.log("⚠️ No recommended hotel found in trip data");
+    return null;
+  }, [trip]);
+
   // Helper to parse itinerary - handles multiple formats
   const parseItinerary = (data) => {
     if (typeof data === "string") {
       try {
         const parsed = JSON.parse(data);
         return Array.isArray(parsed) ? parsed : [parsed];
-      } catch (e) {
+      } catch {
         try {
           const fixedData = data.replace(/\}\s*,\s*\{/g, "},{");
           const wrappedData = fixedData.startsWith("[")
             ? fixedData
             : `[${fixedData}]`;
           return JSON.parse(wrappedData);
-        } catch (e2) {
-          console.error("Failed to parse itinerary:", e2);
+        } catch {
+          console.error("Failed to parse itinerary");
           console.log("Raw itinerary data:", data.substring(0, 500));
           return [];
         }
@@ -71,7 +113,7 @@ function OptimizedRouteMap({ itinerary, destination }) {
 
     const activities = planText.split("|").map((activity) => activity.trim());
     return activities
-      .map((activityText, index) => {
+      .map((activityText) => {
         const parenthesesMatch = activityText.match(/\(([^)]+)\)$/);
         let price = "N/A";
         let duration = "Varies";
@@ -151,7 +193,6 @@ function OptimizedRouteMap({ itinerary, destination }) {
     }
 
     const locations = [];
-    const transportSegments = [];
     parsedItinerary.forEach((day, dayIndex) => {
       let activities = [];
 
@@ -160,7 +201,7 @@ function OptimizedRouteMap({ itinerary, destination }) {
       } else if (typeof day.plan === "string") {
         try {
           activities = JSON.parse(day.plan);
-        } catch (e) {
+        } catch {
           activities = parsePlanText(day.plan);
         }
       } else {
@@ -168,8 +209,27 @@ function OptimizedRouteMap({ itinerary, destination }) {
       }
 
       activities.forEach((activity, activityIndex) => {
-        const placeName =
+        let placeName =
           activity.placeName || activity.place || activity.location;
+
+        // Check if this is a "return to hotel" activity
+        const isReturnToHotel =
+          placeName &&
+          (/return.*hotel/i.test(placeName) ||
+            /back.*hotel/i.test(placeName) ||
+            /hotel.*return/i.test(placeName));
+
+        // If it's a return to hotel, replace with actual hotel name
+        if (isReturnToHotel && recommendedHotelName) {
+          console.log(
+            `🏨 Found "return to hotel" activity, replacing with: ${recommendedHotelName}`
+          );
+          placeName = recommendedHotelName;
+          // Update the activity details to show it's a return
+          activity.placeDetails = `Return to hotel - ${
+            activity.placeDetails || "End of day activities"
+          }`;
+        }
 
         const excludePatterns = [
           /^Activity$/i,
@@ -180,9 +240,11 @@ function OptimizedRouteMap({ itinerary, destination }) {
           /^Shopping$/i,
         ];
 
-        const shouldExclude = excludePatterns.some(
-          (pattern) => placeName && pattern.test(placeName.trim())
-        );
+        const shouldExclude =
+          !isReturnToHotel &&
+          excludePatterns.some(
+            (pattern) => placeName && pattern.test(placeName.trim())
+          );
 
         if (placeName && !shouldExclude && placeName.length > 3) {
           locations.push({
@@ -197,6 +259,7 @@ function OptimizedRouteMap({ itinerary, destination }) {
             duration: activity.timeTravel || activity.duration || "Varies",
             coordinates:
               activity.geoCoordinates || activity.coordinates || null,
+            isReturnToHotel: isReturnToHotel,
           });
         }
       });
@@ -207,7 +270,7 @@ function OptimizedRouteMap({ itinerary, destination }) {
       locations.slice(0, 3)
     );
     return locations;
-  }, [itinerary]);
+  }, [itinerary, recommendedHotelName]);
 
   // Get unique days from itinerary
   const uniqueDays = useMemo(() => {
@@ -319,6 +382,7 @@ function OptimizedRouteMap({ itinerary, destination }) {
     };
 
     geocodeLocations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allLocations.length, apiKey]);
 
   // Calculate center of all locations
@@ -364,82 +428,8 @@ function OptimizedRouteMap({ itinerary, destination }) {
     return { lat: 14.5995, lng: 120.9842 };
   }, [allLocations, destination, apiKey]);
 
-  // Fetch travel data and optimize route
-  useEffect(() => {
-    const fetchTravelData = async () => {
-      if (allLocations.length < 2) return;
-
-      setIsLoadingRoutes(true);
-
-      try {
-        console.log("🚗 Fetching travel data using TravelRouteService...");
-
-        const locationNames = allLocations.map((loc) => loc.name);
-        console.log("📍 Location names:", locationNames);
-
-        const travelTimes = await googleMapsTravelService.getTravelTimes(
-          locationNames,
-          "AUTO"
-        );
-
-        console.log("✅ Travel times received:", travelTimes);
-        setTravelData(travelTimes);
-
-        const routeData = await googleMapsTravelService.getRouteDirections(
-          locationNames,
-          "AUTO"
-        );
-
-        if (routeData) {
-          setRoutePolyline(routeData.polyline);
-        }
-      } catch (error) {
-        console.error("Error fetching travel data:", error);
-      } finally {
-        setIsLoadingRoutes(false);
-      }
-    };
-
-    fetchTravelData();
-  }, [allLocations]);
-
-  // Fetch day-specific travel data when filtering
-  useEffect(() => {
-    const fetchDayTravelData = async () => {
-      if (selectedDay === "all" || filteredLocations.length < 2) {
-        setDaySpecificTravelData(null);
-        return;
-      }
-
-      setIsLoadingRoutes(true);
-
-      try {
-        const locationNames = filteredLocations.map((loc) => loc.name);
-        console.log(
-          `📅 Fetching day-specific travel data for Day ${selectedDay}:`,
-          locationNames
-        );
-
-        const dayTravelTimes = await googleMapsTravelService.getTravelTimes(
-          locationNames,
-          "AUTO"
-        );
-
-        console.log(
-          `✅ Fetched travel times for Day ${selectedDay}:`,
-          dayTravelTimes
-        );
-        setDaySpecificTravelData(dayTravelTimes);
-      } catch (error) {
-        console.error("Error fetching day travel data:", error);
-        setDaySpecificTravelData(null);
-      } finally {
-        setIsLoadingRoutes(false);
-      }
-    };
-
-    fetchDayTravelData();
-  }, [selectedDay, filteredLocations]);
+  // Note: We no longer fetch Google Maps travel data
+  // Instead, we use the travel time provided by Gemini AI in the itinerary
 
   // Initialize map center
   useEffect(() => {
@@ -451,65 +441,137 @@ function OptimizedRouteMap({ itinerary, destination }) {
     initCenter();
   }, [calculateCenter]);
 
-  // Calculate total travel time and distance
-  const totalStats = useMemo(() => {
-    const dataToUse =
-      selectedDay === "all" ? travelData : daySpecificTravelData || [];
+  // Get travel info from Gemini's itinerary data (between consecutive locations)
+  const getTravelInfo = useCallback(
+    (fromIndex, toIndex) => {
+      // Get the destination location (where we're traveling TO)
+      const toLocation = filteredLocations[toIndex];
 
-    if (dataToUse.length === 0) {
-      return {
-        totalTime: 0,
-        totalDistance: 0,
-        timeText: "Calculating...",
-        distanceText: "0 km",
-        avgSpeed: "N/A",
-      };
-    }
+      if (!toLocation || !toLocation.duration) {
+        return null;
+      }
 
-    // Filter out very short travel segments (less than 5km) as they represent
-    // local movement within the same area, not actual travel between locations
-    const meaningfulTravelSegments = dataToUse.filter(
-      (travel) => travel.distanceValue >= 5000 // 5km minimum
-    );
+      // Gemini's timeTravel field contains descriptive travel information
+      // Real formats from Gemini:
+      // - "15 minutes by taxi from city center"
+      // - "Walking distance from Burnham Park"
+      // - "30 minutes by jeepney from city center"
+      const durationText = toLocation.duration;
 
-    if (meaningfulTravelSegments.length === 0) {
-      return {
-        totalTime: 0,
-        totalDistance: 0,
-        timeText: "No significant travel",
-        distanceText: "Local area only",
-        avgSpeed: "N/A",
-      };
-    }
+      // Pattern 1: Extract time with transport mode (e.g., "15 minutes by taxi")
+      const timeWithTransport = durationText.match(
+        /(\d+)\s*(minutes?|hours?|min|mins|hr|hrs|h)\s*by\s*(\w+)/i
+      );
 
-    const totalMinutes = meaningfulTravelSegments.reduce(
-      (sum, travel) => sum + travel.durationValue / 60,
-      0
-    );
-    const totalMeters = meaningfulTravelSegments.reduce(
-      (sum, travel) => sum + travel.distanceValue,
-      0
-    );
+      if (timeWithTransport) {
+        const value = parseInt(timeWithTransport[1]);
+        const unit = timeWithTransport[2].toLowerCase();
+        const transport = timeWithTransport[3].toLowerCase();
 
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = Math.round(totalMinutes % 60);
-    const timeText = hours > 0 ? `${hours}h ${minutes}m` : `${minutes} minutes`;
-    const distanceText = `${(totalMeters / 1000).toFixed(1)} km`;
+        let displayDuration;
+        if (unit.startsWith("h")) {
+          displayDuration = value === 1 ? "1 hour" : `${value} hours`;
+        } else {
+          displayDuration = value === 1 ? "1 minute" : `${value} minutes`;
+        }
 
-    const totalHours = totalMinutes / 60;
-    const totalKm = totalMeters / 1000;
-    const avgSpeedValue = totalHours > 0 ? totalKm / totalHours : 0;
-    const avgSpeed =
-      avgSpeedValue > 0 ? `${avgSpeedValue.toFixed(1)} km/h` : "N/A";
+        // Map transport modes to emojis
+        const transportIcons = {
+          taxi: "🚕",
+          jeepney: "🚌",
+          bus: "🚌",
+          car: "🚗",
+          van: "🚐",
+          tricycle: "🛺",
+          walking: "🚶",
+          walk: "🚶",
+        };
 
-    return {
-      totalTime: totalMinutes,
-      totalDistance: totalMeters,
-      timeText,
-      distanceText,
-      avgSpeed,
-    };
-  }, [travelData, daySpecificTravelData, selectedDay]);
+        return {
+          duration: displayDuration,
+          transport: transport,
+          transportIcon: transportIcons[transport] || "🚗",
+          rawText: durationText,
+          source: "AI recommendation",
+        };
+      }
+
+      // Pattern 2: Walking distance (e.g., "Walking distance from Burnham Park")
+      const walkingDistance = durationText.match(/walking\s+distance/i);
+      if (walkingDistance) {
+        return {
+          duration: "Walking distance",
+          transport: "walking",
+          transportIcon: "🚶",
+          rawText: durationText,
+          source: "AI recommendation",
+        };
+      }
+
+      // Pattern 3: Just time without transport (e.g., "30 minutes from city center")
+      const timeOnly = durationText.match(
+        /(\d+)\s*(minutes?|hours?|min|mins|hr|hrs|h)/i
+      );
+      if (timeOnly) {
+        const value = parseInt(timeOnly[1]);
+        const unit = timeOnly[2].toLowerCase();
+
+        let displayDuration;
+        if (unit.startsWith("h")) {
+          displayDuration = value === 1 ? "1 hour" : `${value} hours`;
+        } else {
+          displayDuration = value === 1 ? "1 minute" : `${value} minutes`;
+        }
+
+        return {
+          duration: displayDuration,
+          transport: "various",
+          transportIcon: "🚶",
+          rawText: durationText,
+          source: "AI recommendation",
+        };
+      }
+
+      // Pattern 4: Old format compatibility "30 minutes travel + 2 hours visit"
+      const oldFormat = durationText.match(
+        /(\d+)\s*(minutes?|hours?|min|mins|hr|hrs|h)\s*travel/i
+      );
+      if (oldFormat) {
+        const value = parseInt(oldFormat[1]);
+        const unit = oldFormat[2].toLowerCase();
+
+        let displayDuration;
+        if (unit.startsWith("h")) {
+          displayDuration = value === 1 ? "1 hour" : `${value} hours`;
+        } else {
+          displayDuration = value === 1 ? "1 minute" : `${value} minutes`;
+        }
+
+        return {
+          duration: displayDuration,
+          transport: "various",
+          transportIcon: "🚗",
+          rawText: durationText,
+          source: "AI recommendation",
+        };
+      }
+
+      // If no pattern matches but there's duration text, show it as-is
+      if (durationText && durationText.trim().length > 0) {
+        return {
+          duration: durationText,
+          transport: "various",
+          transportIcon: "🚶",
+          rawText: durationText,
+          source: "AI recommendation",
+        };
+      }
+
+      // If no travel info, don't show connector
+      return null;
+    },
+    [filteredLocations]
+  );
 
   // Get marker color based on day
   const getMarkerColor = (day) => {
@@ -547,44 +609,6 @@ function OptimizedRouteMap({ itinerary, destination }) {
     setSelectedLocation(location);
   }, []);
 
-  const getTravelInfo = useCallback(
-    (fromIndex, toIndex) => {
-      const dataToUse =
-        selectedDay === "all"
-          ? travelData
-          : daySpecificTravelData || travelData;
-
-      if (fromIndex < 0 || toIndex >= dataToUse.length) return null;
-
-      const rawInfo = dataToUse[fromIndex];
-
-      if (!rawInfo) return null;
-
-      // ✅ AFTER: Only filter very local movements
-      if (rawInfo.distanceValue < 1000) {
-        // 1km instead of 2km
-        return null;
-      }
-
-      // Use the travel data from TravelRouteService directly
-      // The service already provides accurate data from bus routes or Google Directions API
-      return {
-        ...rawInfo,
-        transport:
-          rawInfo.travelMode === "BUS" ? "bus" : rawInfo.transport || "driving",
-        isEstimated: false,
-        isAdjusted: false,
-        operators: rawInfo.operators,
-        fare: rawInfo.fare,
-        frequency: rawInfo.frequency,
-        service: rawInfo.service,
-        notes: rawInfo.notes,
-        source: rawInfo.source,
-      };
-    },
-    [travelData, daySpecificTravelData, selectedDay]
-  );
-
   if (!apiKey) {
     return (
       <Card className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30">
@@ -621,15 +645,6 @@ function OptimizedRouteMap({ itinerary, destination }) {
 
   return (
     <div className="space-y-4">
-      {/* Route Statistics */}
-      <RouteStatistics
-        filteredLocations={filteredLocations}
-        geocodedLocations={geocodedLocations}
-        selectedDay={selectedDay}
-        totalStats={totalStats}
-        isLoadingRoutes={isLoadingRoutes}
-      />
-
       {/* AI Disclaimer Notice */}
       <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
         <div className="flex items-start gap-3">

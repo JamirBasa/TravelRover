@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, Clock, Navigation, ArrowDown } from "lucide-react";
+import { MapPin, Clock, ArrowDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { isValidDuration, isValidPricing } from "./locationDataValidator";
 
@@ -48,9 +48,19 @@ export function LocationSequenceList({
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                  <h5 className="font-semibold text-gray-900 dark:text-gray-100 text-base leading-tight">
-                    {location.name}
-                  </h5>
+                  <div className="flex items-center gap-2 flex-1">
+                    <h5 className="font-semibold text-gray-900 dark:text-gray-100 text-base leading-tight">
+                      {location.name}
+                    </h5>
+                    {location.isReturnToHotel && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs py-0 px-2 h-5 bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400"
+                      >
+                        🏨 Return
+                      </Badge>
+                    )}
+                  </div>
                   <MapPin
                     className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0 
                                    group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors"
@@ -125,39 +135,11 @@ export function LocationSequenceList({
 
 /**
  * TravelTimeConnector Component
- * Shows travel time and distance between consecutive locations with adjustment warnings
+ * Shows AI-recommended travel time between consecutive locations
  */
 function TravelTimeConnector({ travelInfo }) {
-  // Transport icon mapping
-  const getTransportIcon = (transport) => {
-    switch (transport) {
-      case "bus":
-        return "🚌";
-      case "ferry":
-        return "⛴️";
-      case "ro-ro ferry":
-        return "🚢";
-      case "flight":
-        return "✈️";
-      case "van":
-        return "🚐";
-      case "tricycle/van":
-        return "🛺";
-      case "car/bus":
-        return "🚗";
-      case "bus + boat":
-        return "🚌⛵";
-      case "bus + ferry":
-        return "🚌⛴️";
-      case "train":
-        return "🚆";
-      default:
-        return "🚗";
-    }
-  };
-
-  const transportIcon = getTransportIcon(travelInfo.transport || "driving");
-  const isAdjusted = travelInfo.isAdjusted || false;
+  // Use the transport icon from parsed data, or default to walking
+  const icon = travelInfo.transportIcon || "🚶";
 
   return (
     <div className="flex items-center gap-3 my-2 ml-5">
@@ -167,41 +149,19 @@ function TravelTimeConnector({ travelInfo }) {
           className="w-px h-3 bg-gradient-to-b from-transparent 
                       via-sky-300 to-sky-400 dark:via-sky-600 dark:to-sky-700"
         ></div>
-        <div className="text-base leading-none">{transportIcon}</div>
+        <div className="text-base leading-none">{icon}</div>
         <div
           className="w-px h-3 bg-gradient-to-b from-sky-400 
                       via-sky-300 to-transparent dark:from-sky-700 dark:via-sky-600"
         ></div>
       </div>
 
-      {/* Travel info card - different styling if adjusted */}
-      <div
-        className={`flex-1 flex flex-col gap-1.5 py-2 px-3 rounded-lg border
-          ${
-            isAdjusted
-              ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800"
-              : "bg-sky-50 dark:bg-sky-950/30 border-sky-100 dark:border-sky-800"
-          }`}
-      >
-        {/* Main travel info row */}
+      {/* Travel info card */}
+      <div className="flex-1 flex flex-col gap-1.5 py-2 px-3 rounded-lg border bg-sky-50 dark:bg-sky-950/30 border-sky-100 dark:border-sky-800">
+        {/* Main travel info */}
         <div className="flex items-center gap-3 text-xs text-gray-700 dark:text-gray-300">
-          <ArrowDown
-            className={`h-3.5 w-3.5 ${
-              isAdjusted
-                ? "text-amber-600 dark:text-amber-500"
-                : "text-sky-600 dark:text-sky-500"
-            }`}
-          />
+          <ArrowDown className="h-3.5 w-3.5 text-sky-600 dark:text-sky-500" />
 
-          {/* Distance */}
-          {travelInfo.distance && (
-            <div className="flex items-center gap-1.5">
-              <Navigation className="h-3.5 w-3.5 text-green-600 dark:text-green-500" />
-              <span className="font-medium">{travelInfo.distance}</span>
-            </div>
-          )}
-
-          {/* Duration */}
           {travelInfo.duration && (
             <div className="flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5 text-blue-600 dark:text-blue-500" />
@@ -209,60 +169,25 @@ function TravelTimeConnector({ travelInfo }) {
             </div>
           )}
 
-          {/* Transport badge (only for non-driving) */}
-          {travelInfo.transport && travelInfo.transport !== "driving" && (
+          {/* Transport mode badge (if not 'various') */}
+          {travelInfo.transport && travelInfo.transport !== "various" && (
             <Badge variant="outline" className="text-xs py-0 px-2 h-5 gap-1">
-              {transportIcon} {travelInfo.transport}
+              {icon} {travelInfo.transport}
             </Badge>
           )}
         </div>
 
-        {/* Bus route details (if available) */}
-        {travelInfo.operators && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-gray-600 dark:text-gray-400 font-medium">Operator:</span>
-            <Badge variant="outline" className="text-xs py-0 px-2 h-5 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
-              🚌 {travelInfo.operators}
-            </Badge>
+        {/* Full description if available */}
+        {travelInfo.rawText && travelInfo.rawText !== travelInfo.duration && (
+          <div className="text-xs text-gray-600 dark:text-gray-400 italic">
+            {travelInfo.rawText}
           </div>
         )}
 
-        {/* Fare information */}
-        {travelInfo.fare && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-gray-600 dark:text-gray-400 font-medium">Fare:</span>
-            <span className="text-green-700 dark:text-green-400 font-semibold">₱{travelInfo.fare}</span>
-          </div>
-        )}
-
-        {/* Service frequency */}
-        {travelInfo.frequency && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-gray-600 dark:text-gray-400 font-medium">Frequency:</span>
-            <span className="text-purple-700 dark:text-purple-400">{travelInfo.frequency}</span>
-          </div>
-        )}
-
-        {/* Additional service notes */}
-        {travelInfo.service && (
-          <div className="flex items-start gap-2 text-xs mt-1">
-            <span className="text-gray-600 dark:text-gray-400 font-medium flex-shrink-0">Service:</span>
-            <span className="text-gray-700 dark:text-gray-300">{travelInfo.service}</span>
-          </div>
-        )}
-
-        {/* Route notes */}
-        {travelInfo.notes && (
-          <div className="flex items-start gap-2 text-xs mt-1">
-            <span className="text-gray-600 dark:text-gray-400 font-medium flex-shrink-0">Notes:</span>
-            <span className="text-amber-700 dark:text-amber-400 italic">{travelInfo.notes}</span>
-          </div>
-        )}
-
-        {/* Data source indicator */}
+        {/* AI source indicator */}
         {travelInfo.source && (
-          <div className="flex items-center gap-2 text-xs mt-1">
-            <span className="text-gray-500 dark:text-gray-500">Source: {travelInfo.source}</span>
+          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500">
+            <span>📍 {travelInfo.source}</span>
           </div>
         )}
       </div>
