@@ -8,11 +8,6 @@ import {
 function Hotels({ trip }) {
   const [verifiedHotels, setVerifiedHotels] = useState([]);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [verificationStats, setVerificationStats] = useState({
-    total: 0,
-    verified: 0,
-    unverified: 0,
-  });
 
   // ========================================
   // PARSE DATA ARRAY UTILITY
@@ -33,9 +28,15 @@ function Hotels({ trip }) {
   }, []);
 
   // ========================================
-  // GET HOTELS DATA
+  // GET HOTELS DATA (Real + AI)
   // ========================================
   const getHotelsData = useCallback(() => {
+    // Debug: Log the entire trip structure
+    console.log("🔍 DEBUG: Full trip object:", trip);
+    console.log("🔍 DEBUG: trip.tripData:", trip?.tripData);
+    console.log("🔍 DEBUG: trip.realHotelData:", trip?.realHotelData);
+
+    // Get AI-generated hotels from trip data
     const possiblePaths = [
       trip?.tripData?.hotels,
       trip?.tripData?.accommodations,
@@ -43,8 +44,118 @@ function Hotels({ trip }) {
       trip?.tripData?.tripData?.accommodations,
     ];
 
-    const hotelsRaw = possiblePaths.find((path) => path !== undefined) || [];
-    return parseDataArray(hotelsRaw, "hotels");
+    console.log("🔍 DEBUG: Possible paths:", possiblePaths);
+
+    const aiHotelsRaw = possiblePaths.find((path) => path !== undefined) || [];
+    const aiHotels = parseDataArray(aiHotelsRaw, "hotels");
+
+    // Get real hotels from LangGraph results
+    // Firebase may store this as a JSON string, so we need to handle that case
+    let realHotelsRaw = trip?.realHotelData?.hotels || [];
+
+    // If it's a string, try to parse it
+    if (typeof realHotelsRaw === "string" && realHotelsRaw.trim()) {
+      try {
+        // First, try to parse as-is
+        const parsed = JSON.parse(realHotelsRaw);
+
+        if (Array.isArray(parsed)) {
+          realHotelsRaw = parsed;
+          console.log(
+            `🔧 Parsed ${parsed.length} hotels from JSON array string`
+          );
+        } else if (typeof parsed === "object") {
+          realHotelsRaw = [parsed];
+          console.log("🔧 Parsed single hotel from JSON object string");
+        }
+      } catch (error) {
+        // If direct parsing fails, try wrapping in brackets (malformed JSON case)
+        console.warn(
+          "⚠️  Initial JSON parse failed, trying alternative format:",
+          error.message
+        );
+        try {
+          const wrappedParsed = JSON.parse(`[${realHotelsRaw}]`);
+          if (Array.isArray(wrappedParsed)) {
+            realHotelsRaw = wrappedParsed;
+            console.log(
+              `🔧 Parsed ${wrappedParsed.length} hotels from malformed JSON (added brackets)`
+            );
+          }
+        } catch (error2) {
+          console.error(
+            "❌ Failed to parse realHotelData.hotels string after all attempts:",
+            error2
+          );
+          console.error(
+            "Raw string (first 500 chars):",
+            realHotelsRaw.substring(0, 500)
+          );
+          realHotelsRaw = [];
+        }
+      }
+    }
+
+    const realHotels = parseDataArray(realHotelsRaw, "real hotels");
+
+    console.log(
+      `🏨 Hotels found - Real: ${realHotels.length}, AI: ${aiHotels.length}`
+    );
+    console.log("🔍 DEBUG: AI Hotels:", aiHotels);
+    console.log("🔍 DEBUG: Real Hotels:", realHotels);
+
+    // ========================================
+    // PRIORITY LOGIC: Real Hotels vs AI Hotels
+    // ========================================
+    const hotelSearchRequested = trip?.hotelSearchRequested || false;
+    const hasRealHotels = trip?.hasRealHotels || false;
+
+    let finalRealHotels = realHotels;
+    let finalAiHotels = aiHotels;
+
+    // CASE 1: User did NOT request hotel search → Show ONLY AI hotels
+    if (!hotelSearchRequested) {
+      console.log(
+        `ℹ️ Hotel search not requested - Showing ${aiHotels.length} AI-generated hotels from tripData.hotels`
+      );
+      finalRealHotels = []; // Don't show real hotels section
+      finalAiHotels = aiHotels; // Show AI hotels
+    }
+    // CASE 2: User requested hotel search AND real hotels available → Show ONLY real hotels
+    else if (hotelSearchRequested && hasRealHotels && realHotels.length > 0) {
+      console.log(
+        `✅ User requested hotel search - Showing ONLY ${realHotels.length} verified real hotels (hiding ${aiHotels.length} AI recommendations)`
+      );
+      finalAiHotels = []; // Hide AI hotels - user wants real data
+      finalRealHotels = realHotels; // Show real hotels
+    }
+    // CASE 3: User requested hotel search BUT real hotels failed → Show AI hotels as fallback
+    else if (
+      hotelSearchRequested &&
+      (!hasRealHotels || realHotels.length === 0)
+    ) {
+      console.log(
+        `⚠️ Real hotel search requested but failed/empty - Showing ${aiHotels.length} AI recommendations as fallback`
+      );
+      finalRealHotels = []; // Don't show empty real section
+      finalAiHotels = aiHotels; // Show AI fallback
+    }
+
+    // Mark hotels with their source
+    const markedRealHotels = finalRealHotels.map((hotel) => ({
+      ...hotel,
+      source: "real",
+      isRealHotel: true,
+    }));
+
+    const markedAiHotels = finalAiHotels.map((hotel) => ({
+      ...hotel,
+      source: "ai",
+      isRealHotel: false,
+    }));
+
+    // Return real hotels first, then AI hotels
+    return [...markedRealHotels, ...markedAiHotels];
   }, [trip, parseDataArray]);
 
   // ========================================
@@ -96,11 +207,6 @@ function Hotels({ trip }) {
     const unverifiedCount = verified.filter((h) => !h.verified).length;
 
     setVerifiedHotels(verified);
-    setVerificationStats({
-      total: verified.length,
-      verified: verifiedCount,
-      unverified: unverifiedCount,
-    });
     setIsVerifying(false);
 
     console.log("📊 Verification complete:", {
@@ -130,24 +236,48 @@ function Hotels({ trip }) {
   }, []);
 
   // ========================================
-  // SORT HOTELS BY PRICE (MEMOIZED)
+  // SORT HOTELS BY SOURCE & PRICE (MEMOIZED)
   // ========================================
   const hotels = useMemo(() => {
-    return [...verifiedHotels].sort((a, b) => {
+    // Separate real and AI hotels
+    const realHotels = verifiedHotels.filter((h) => h.isRealHotel);
+    const aiHotels = verifiedHotels.filter((h) => !h.isRealHotel);
+
+    // Sort each group by price (lowest to highest)
+    const sortByPrice = (a, b) => {
       const priceA = extractPrice(a);
       const priceB = extractPrice(b);
       if (priceA === 0 && priceB === 0) return 0;
-      if (priceA === 0) return 1;
+      if (priceA === 0) return 1; // Hotels without price go to end
       if (priceB === 0) return -1;
-      return priceA - priceB;
-    });
+      return priceA - priceB; // Ascending order (lowest first)
+    };
+
+    const sortedRealHotels = realHotels.sort(sortByPrice);
+    const sortedAiHotels = aiHotels.sort(sortByPrice);
+    const allSorted = [...realHotels, ...aiHotels].sort(sortByPrice);
+
+    // ✅ LIMIT TO TOP 5 BEST VALUE HOTELS (lowest prices)
+    const MAX_HOTELS_TO_SHOW = 5;
+
+    return {
+      realHotels: sortedRealHotels.slice(0, MAX_HOTELS_TO_SHOW),
+      aiHotels: sortedAiHotels.slice(0, MAX_HOTELS_TO_SHOW),
+      allHotels: allSorted.slice(0, MAX_HOTELS_TO_SHOW),
+      // Store original counts for display
+      totalRealHotels: realHotels.length,
+      totalAiHotels: aiHotels.length,
+      totalAllHotels: allSorted.length,
+    };
   }, [verifiedHotels, extractPrice]);
 
   // ========================================
   // CALCULATE AVERAGE PRICE (MEMOIZED)
   // ========================================
   const avgPrice = useMemo(() => {
-    const hotelsWithPrices = hotels.filter((hotel) => extractPrice(hotel) > 0);
+    const hotelsWithPrices = hotels.allHotels.filter(
+      (hotel) => extractPrice(hotel) > 0
+    );
     return hotelsWithPrices.length > 0
       ? hotelsWithPrices.reduce((sum, hotel) => sum + extractPrice(hotel), 0) /
           hotelsWithPrices.length
@@ -207,6 +337,7 @@ function Hotels({ trip }) {
 
       return finalUrl;
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [trip?.userSelection]
   );
 
@@ -296,7 +427,27 @@ function Hotels({ trip }) {
   // ========================================
   // EMPTY STATE
   // ========================================
-  if (!hotels || hotels.length === 0) {
+  if (!hotels || hotels.allHotels.length === 0) {
+    const hotelSearchRequested = trip?.hotelSearchRequested || false;
+    const hasRealHotels = trip?.hasRealHotels || false;
+
+    // 🔍 DEBUG: Log detailed empty state analysis
+    console.log("🏨 EMPTY STATE ANALYSIS:", {
+      hotelSearchRequested,
+      hasRealHotels,
+      realHotelDataExists: !!trip?.realHotelData,
+      realHotelDataType: typeof trip?.realHotelData?.hotels,
+      realHotelDataIsString: typeof trip?.realHotelData?.hotels === "string",
+      realHotelDataLength: trip?.realHotelData?.hotels?.length || 0,
+      aiHotelsExists: !!trip?.tripData?.hotels,
+      aiHotelsType: typeof trip?.tripData?.hotels,
+      aiHotelsCount: Array.isArray(trip?.tripData?.hotels)
+        ? trip.tripData.hotels.length
+        : 0,
+      verifiedHotelsCount: verifiedHotels.length,
+      allHotelsCount: hotels?.allHotels?.length || 0,
+    });
+
     return (
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-12 text-center">
         <div className="w-16 h-16 bg-sky-100 dark:bg-sky-950/50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -305,9 +456,42 @@ function Hotels({ trip }) {
         <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
           No Hotels Found
         </h3>
-        <p className="text-gray-600 dark:text-gray-400 text-sm max-w-md mx-auto">
-          We're still finding the perfect accommodations for your trip.
-        </p>
+
+        {!hotelSearchRequested ? (
+          <div className="text-gray-600 dark:text-gray-400 text-sm max-w-md mx-auto space-y-3">
+            <p>Hotel search was not enabled when this trip was created.</p>
+            <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+              <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-2">
+                💡 Want hotel recommendations?
+              </p>
+              <p className="text-xs text-blue-700 dark:text-blue-400">
+                Create a new trip and enable "Include Hotel Search" in Step 5 to
+                get personalized hotel recommendations.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="text-gray-600 dark:text-gray-400 text-sm max-w-md mx-auto space-y-3">
+            <p>We couldn't find hotels for this destination.</p>
+            {hasRealHotels && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Real hotel data was requested but couldn't be retrieved. This
+                may be due to API limitations or the destination not being in
+                our database.
+              </p>
+            )}
+            <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-2">
+                🔍 Troubleshooting
+              </p>
+              <ul className="text-xs text-amber-700 dark:text-amber-400 text-left space-y-1">
+                <li>• Check browser console for error messages</li>
+                <li>• Try regenerating the trip</li>
+                <li>• Search for hotels manually on Agoda or Booking.com</li>
+              </ul>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -317,39 +501,6 @@ function Hotels({ trip }) {
   // ========================================
   return (
     <div className="space-y-6">
-      {/* Verification Status Banner */}
-      {verificationStats.total > 0 && (
-        <div
-          className={`rounded-lg p-4 border ${
-            verificationStats.verified === verificationStats.total
-              ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800"
-              : "bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800"
-          }`}
-        >
-          <div className="flex items-start gap-3">
-            <span className="text-lg">
-              {verificationStats.verified === verificationStats.total
-                ? "✅"
-                : "⚠️"}
-            </span>
-            <div className="flex-1">
-              <h4 className="font-semibold text-sm mb-1">
-                Hotel Verification Complete
-              </h4>
-              <p className="text-xs opacity-80">
-                {verificationStats.verified} / {verificationStats.total} hotels
-                verified against database
-                {verificationStats.unverified > 0 && (
-                  <span className="ml-2 text-orange-600 dark:text-orange-400">
-                    ({verificationStats.unverified} unverified)
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md border border-gray-100 dark:border-slate-700 overflow-hidden">
         {/* Header Section */}
         <div className="brand-gradient px-4 sm:px-6 py-4 relative overflow-hidden">
@@ -364,13 +515,26 @@ function Hotels({ trip }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h2 className="text-xl font-bold text-white mb-1">
-                    Available Hotels
+                    {hotels.realHotels.length > 0
+                      ? "Best Value Hotels"
+                      : "Hotel Recommendations"}
                   </h2>
                   <p className="text-white/90 text-xs flex items-center gap-2 flex-wrap">
-                    <span>🏨</span>
-                    <span>{hotels.length} accommodations found</span>
-                    <span>•</span>
-                    <span>💰 Sorted: Lowest to Highest Price</span>
+                    {hotels.realHotels.length > 0 ? (
+                      <>
+                        <span>Top {hotels.allHotels.length} most affordable options</span>
+                        {hotels.totalAllHotels > hotels.allHotels.length && (
+                          <>
+                            <span>•</span>
+                            <span>{hotels.totalAllHotels} hotels found</span>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <span>{hotels.allHotels.length} carefully selected for your trip</span>
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -390,23 +554,144 @@ function Hotels({ trip }) {
         </div>
 
         {/* Hotels List */}
-        <div className="p-4 sm:p-6 bg-gray-50 dark:bg-slate-950">
-          <div className="grid gap-6">
-            {hotels.map((hotel, index) => (
-              <div
-                key={hotel?.hotel_id || hotel?.id || `hotel-${index}`}
-                className="group"
-              >
-                <HotelCardItem hotel={hotel} onBookHotel={handleBookHotel} />
-                {index < hotels.length - 1 && (
-                  <div className="mt-6 border-b border-gray-100 dark:border-slate-800"></div>
-                )}
+        <div className="p-4 sm:p-6 bg-gray-50 dark:bg-slate-950 space-y-8">
+          {/* Real Hotels Section (Google Places API) */}
+          {hotels.realHotels.length > 0 && (
+            <div>
+              <div className="grid gap-6">
+                {hotels.realHotels.map((hotel, index) => (
+                  <div
+                    key={hotel?.hotel_id || hotel?.id || `real-hotel-${index}`}
+                    className="group relative"
+                  >
+                    {/* Rank Badge */}
+                    <div className="absolute -top-3 -left-3 z-10">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg ${
+                          index === 0
+                            ? "bg-gradient-to-br from-amber-400 to-amber-600"
+                            : index === 1
+                            ? "bg-gradient-to-br from-gray-300 to-gray-500"
+                            : index === 2
+                            ? "bg-gradient-to-br from-orange-400 to-orange-600"
+                            : "brand-gradient"
+                        }`}
+                      >
+                        #{index + 1}
+                      </div>
+                    </div>
+                    <HotelCardItem
+                      hotel={hotel}
+                      onBookHotel={handleBookHotel}
+                    />
+                    {index < hotels.realHotels.length - 1 && (
+                      <div className="mt-6 border-b border-gray-100 dark:border-slate-800"></div>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {/* AI Generated Hotels Section */}
+          {hotels.aiHotels.length > 0 && (
+            <div>
+              {/* Show divider only if real hotels exist above */}
+              {hotels.realHotels.length > 0 && (
+                <div className="border-t-2 border-dashed border-gray-200 dark:border-slate-700 mb-6 pt-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="bg-sky-100 dark:bg-sky-950/50 px-3 py-1.5 rounded-full">
+                      <span className="text-sky-700 dark:text-sky-400 text-sm font-semibold flex items-center gap-1.5">
+                        <span>✨</span>
+                        <span>AI Recommendations</span>
+                      </span>
+                    </div>
+                    <span className="text-gray-500 dark:text-gray-400 text-xs">
+                      Alternative options & hidden gems
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Show warning only if hotel search was requested but failed */}
+              {hotels.realHotels.length === 0 && trip?.hotelSearchRequested && (
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="bg-amber-100 dark:bg-amber-950/50 px-3 py-1.5 rounded-full">
+                      <span className="text-amber-700 dark:text-amber-400 text-sm font-semibold flex items-center gap-1.5">
+                        <span>✨</span>
+                        <span>AI Recommendations</span>
+                      </span>
+                    </div>
+                    <span className="text-amber-600 dark:text-amber-400 text-xs">
+                      Real hotel data unavailable - using AI suggestions
+                    </span>
+                  </div>
+                  <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 border border-amber-200 dark:border-amber-800 mb-4">
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                      💡 <strong>Note:</strong> These are AI-generated
+                      recommendations. For real-time availability and pricing,
+                      click "Book Hotel" to search on Agoda.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Show simple header if hotel search was NOT requested (normal AI hotels) */}
+              {hotels.realHotels.length === 0 &&
+                !trip?.hotelSearchRequested && (
+                  <div className="mb-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="bg-sky-100 dark:bg-sky-950/50 px-3 py-1.5 rounded-full">
+                        <span className="text-sky-700 dark:text-sky-400 text-sm font-semibold flex items-center gap-1.5">
+                          <span>🏨</span>
+                          <span>Recommended Hotels</span>
+                        </span>
+                      </div>
+                      <span className="text-gray-500 dark:text-gray-400 text-xs">
+                        Curated by AI • Sorted by best value
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+              <div className="grid gap-6">
+                {hotels.aiHotels.map((hotel, index) => (
+                  <div
+                    key={hotel?.hotel_id || hotel?.id || `ai-hotel-${index}`}
+                    className="group relative"
+                  >
+                    {/* Rank Badge */}
+                    <div className="absolute -top-3 -left-3 z-10">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg ${
+                          index === 0
+                            ? "bg-gradient-to-br from-amber-400 to-amber-600"
+                            : index === 1
+                            ? "bg-gradient-to-br from-gray-300 to-gray-500"
+                            : index === 2
+                            ? "bg-gradient-to-br from-orange-400 to-orange-600"
+                            : "brand-gradient"
+                        }`}
+                      >
+                        #{index + 1}
+                      </div>
+                    </div>
+                    <HotelCardItem
+                      hotel={hotel}
+                      onBookHotel={handleBookHotel}
+                    />
+                    {index < hotels.aiHotels.length - 1 && (
+                      <div className="mt-6 border-b border-gray-100 dark:border-slate-800"></div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Booking Tips */}
-          <div className="mt-6 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 rounded-lg p-4 border border-sky-200 dark:border-sky-800 shadow-sm">
+          <div className="mt-8 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 rounded-lg p-4 border border-sky-200 dark:border-sky-800 shadow-sm">
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 bg-sky-100 dark:bg-sky-950/50 rounded flex items-center justify-center flex-shrink-0 mt-0.5">
                 <span className="text-sky-600 dark:text-sky-400 text-xs">

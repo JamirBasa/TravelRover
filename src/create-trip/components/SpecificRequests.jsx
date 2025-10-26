@@ -64,14 +64,19 @@ function SpecificRequests({
     [context]
   );
 
-  // Validate requests against context
+  // Validate requests against context with debouncing for performance
   useEffect(() => {
-    if (value) {
-      const validationResult = validateSpecificRequests(value, context);
-      setValidation(validationResult);
-    } else {
-      setValidation({ valid: true, warnings: [] });
-    }
+    // Debounce validation to avoid running on every keystroke
+    const timeoutId = setTimeout(() => {
+      if (value) {
+        const validationResult = validateSpecificRequests(value, context);
+        setValidation(validationResult);
+      } else {
+        setValidation({ valid: true, warnings: [] });
+      }
+    }, 500); // Wait 500ms after user stops typing
+
+    return () => clearTimeout(timeoutId);
   }, [value, context]);
 
   // Combine all suggestions for display

@@ -14,6 +14,7 @@ function cleanJSON(jsonStr) {
   let cleaned = jsonStr.trim();
   
   // Remove control characters and non-printable chars
+  // eslint-disable-next-line no-control-regex
   cleaned = cleaned.replace(/[\u0000-\u001f\u007f-\u009f]/g, '');
   
   // Fix trailing commas before closing braces/brackets
@@ -182,7 +183,7 @@ export const parseDataArray = (data, fieldName = "data") => {
                 console.log(`✅ Successfully parsed ${arrayParsed.length} objects using array wrapping`);
                 return arrayParsed;
               }
-            } catch (wrapError) {
+            } catch {
               console.log(`Array wrapping failed, falling back to manual parsing`);
             }
           }

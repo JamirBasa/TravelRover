@@ -44,12 +44,11 @@ const BudgetSelector = ({
       return null;
     }
 
-    // Parse travelers count
-    let travelerCount = 1;
-    if (formData.travelers) {
-      const match = formData.travelers.match(/(\d+)/);
-      if (match) travelerCount = parseInt(match[1]);
-    }
+    // Parse travelers count (handle both integer and legacy string formats)
+    const travelerCount =
+      typeof formData.travelers === "number"
+        ? formData.travelers
+        : parseInt(formData.travelers, 10) || 1;
 
     return getBudgetRecommendations({
       destination: formData.location,
@@ -296,7 +295,13 @@ const BudgetSelector = ({
                   <span>
                     {" "}
                     for{" "}
-                    <span className="font-semibold">{formData.travelers}</span>
+                    <span className="font-semibold">
+                      {typeof formData.travelers === "number"
+                        ? `${formData.travelers} ${
+                            formData.travelers === 1 ? "Person" : "People"
+                          }`
+                        : formData.travelers}
+                    </span>
                   </span>
                 )}
                 {flightData.includeFlights && flightData.departureCity && (
@@ -369,21 +374,19 @@ const BudgetSelector = ({
                             total
                           </span>
                         </p>
-                        {formData.travelers &&
-                          formData.travelers !== "Just Me" &&
-                          formData.travelers !== "1 Person" && (
-                            <>
-                              <span className="text-gray-400 dark:text-gray-600">
-                                •
+                        {formData.travelers && formData.travelers > 1 && (
+                          <>
+                            <span className="text-gray-400 dark:text-gray-600">
+                              •
+                            </span>
+                            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                              {estimate.perPerson}{" "}
+                              <span className="font-normal text-gray-600 dark:text-gray-400">
+                                per person
                               </span>
-                              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                                {estimate.perPerson}{" "}
-                                <span className="font-normal text-gray-600 dark:text-gray-400">
-                                  per person
-                                </span>
-                              </p>
-                            </>
-                          )}
+                            </p>
+                          </>
+                        )}
                         {estimate.perDay && formData.duration && (
                           <>
                             <span className="text-gray-400 dark:text-gray-600">

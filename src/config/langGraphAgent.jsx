@@ -8,7 +8,7 @@ import { API_CONFIG } from "../constants/options";
 export class LangGraphTravelAgent {
   constructor() {
     this.baseUrl = `${API_CONFIG.BASE_URL}/langgraph`;
-    this.timeout = API_CONFIG.TIMEOUT;
+    this.timeout = API_CONFIG.TIMEOUT_MAX; // Use maximum timeout for complex LangGraph operations
   }
 
   /**
@@ -26,15 +26,24 @@ export class LangGraphTravelAgent {
       // Prepare request data for Django API
       const requestData = this.prepareRequestData(tripParams);
 
-      // Call Django LangGraph API
-      const response = await fetch(`${this.baseUrl}/execute/`, {
+      // Create a promise that races between fetch and timeout
+      const fetchPromise = fetch(`${this.baseUrl}/execute/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestData),
-        signal: AbortSignal.timeout(this.timeout),
       });
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Request timeout after ${this.timeout}ms`)),
+          this.timeout
+        )
+      );
+
+      // Race between fetch and timeout
+      const response = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (!response.ok) {
         throw new Error(
@@ -59,15 +68,17 @@ export class LangGraphTravelAgent {
     } catch (error) {
       console.error("❌ LangGraph Django orchestration failed:", error);
 
+      const errorMessage = error.message || "Unknown error occurred";
+
       // Return error result instead of fallback
       return {
         success: false,
-        error: error.message,
-        flights: { success: false, flights: [], error: error.message },
-        hotels: { success: false, hotels: [], error: error.message },
+        error: errorMessage,
+        flights: { success: false, flights: [], error: errorMessage },
+        hotels: { success: false, hotels: [], error: errorMessage },
         merged_data: null,
         optimized_plan: null,
-        errors: [{ agent: "coordinator", error: error.message }],
+        errors: [{ agent: "coordinator", error: errorMessage }],
       };
     }
   }
@@ -159,17 +170,22 @@ export class LangGraphTravelAgent {
       },
 
       // Extract route optimization results
-      route_optimization: results.route_optimization ? {
-        applied: results.route_optimization.applied || false,
-        efficiency_score: results.route_optimization.efficiency_score || 0,
-        total_travel_time_minutes: results.route_optimization.total_travel_time_minutes || 0,
-        optimization_summary: results.route_optimization.optimization_summary || {},
-        recommendations: results.route_optimization.recommendations || [],
-        error: results.route_optimization.error
-      } : null,
+      route_optimization: results.route_optimization
+        ? {
+            applied: results.route_optimization.applied || false,
+            efficiency_score: results.route_optimization.efficiency_score || 0,
+            total_travel_time_minutes:
+              results.route_optimization.total_travel_time_minutes || 0,
+            optimization_summary:
+              results.route_optimization.optimization_summary || {},
+            recommendations: results.route_optimization.recommendations || [],
+            error: results.route_optimization.error,
+          }
+        : null,
 
       // Extract optimized itinerary (enhanced with route data)
-      optimized_itinerary: results.optimized_itinerary || results.itinerary_data,
+      optimized_itinerary:
+        results.optimized_itinerary || results.itinerary_data,
 
       // Error handling
       errors: results.agent_errors || [],

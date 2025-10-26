@@ -3,6 +3,8 @@
  * Validates generated itineraries for critical travel requirements
  */
 
+import { classifyActivities, getActivityConstraints } from './activityClassifier';
+
 // Cities without direct airports (require nearest airport recommendations)
 const CITIES_WITHOUT_AIRPORTS = [
   'baguio',
@@ -28,11 +30,74 @@ const NEAREST_AIRPORT_INFO = {
 };
 
 /**
- * Validate itinerary structure and logistics
+ * Validate and fix activity count per day based on user preference
  * @param {Object} tripData - AI-generated trip data
  * @param {Object} formData - User's form data
- * @returns {Object} { isValid: boolean, errors: string[], warnings: string[] }
+ * @returns {Object} { isValid: boolean, errors: string[], warnings: string[], fixedItinerary?: Object[] }
  */
+export const validateActivityCount = (tripData, formData) => {
+  const errors = [];
+  const warnings = [];
+  const itinerary = tripData?.itinerary || [];
+  const activityPreference = parseInt(formData?.activityPreference) || 2;
+  const totalDays = itinerary.length;
+
+  itinerary.forEach((day, index) => {
+    const dayNum = day.day || index + 1;
+    const isFirstDay = dayNum === 1;
+    const isLastDay = dayNum === totalDays;
+
+    // Parse activities from plan array or planText
+    let activities = [];
+    if (Array.isArray(day.plan)) {
+      activities = day.plan;
+    } else if (day.planText) {
+      activities = day.planText.split('|').map(a => a.trim());
+    }
+
+    // Use unified activity classification from shared utility
+    const { activityCount } = classifyActivities(activities);
+
+    // Get constraints based on day type (arrival, middle, departure)
+    const constraints = getActivityConstraints(isFirstDay, isLastDay, activityPreference);
+
+    // Validate against constraints
+    if (activityCount > constraints.max) {
+      errors.push({
+        day: dayNum,
+        message: `Day ${dayNum} (${isFirstDay ? 'Arrival' : isLastDay ? 'Departure' : 'Middle'}): Has ${activityCount} activities, maximum allowed is ${constraints.max}`,
+      });
+    } else if (activityCount < constraints.min && !isFirstDay && !isLastDay) {
+      errors.push({
+        day: dayNum,
+        message: `Day ${dayNum} (Middle): Has ${activityCount} activities, minimum expected is ${constraints.min}`,
+      });
+    } else if (activityCount === 0 && isFirstDay) {
+      warnings.push(`Day ${dayNum} (Arrival): No main activities scheduled`);
+    }
+
+    // Log activity count for debugging
+    console.log(
+      `Day ${dayNum} (${
+        isFirstDay ? "Arrival" : isLastDay ? "Departure" : "Middle"
+      }): ${activityCount} main activities (expected: ${
+        isFirstDay
+          ? `${constraints.min}-${constraints.max}`
+          : isLastDay
+          ? `${constraints.min}-${constraints.max}`
+          : `${constraints.min}-${constraints.max}`
+      })`
+    );
+  });
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings,
+    activityPreference,
+    totalDays,
+  };
+};
 export const validateItinerary = (tripData, formData) => {
   const errors = [];
   const warnings = [];
@@ -225,6 +290,7 @@ export const getNearestAirportInfo = (destination) => {
 
 export default {
   validateItinerary,
+  validateActivityCount,
   getValidationSuggestion,
   getNearestAirportInfo,
   CITIES_WITHOUT_AIRPORTS,

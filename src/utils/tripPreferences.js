@@ -24,7 +24,9 @@ export const shouldIncludeFlights = (flightData) => {
 export const shouldIncludeHotels = (hotelData) => {
   return Boolean(
     hotelData?.includeHotels && 
-    hotelData?.preferredType
+    hotelData?.preferredType &&
+    hotelData?.budgetLevel >= 1 && 
+    hotelData?.budgetLevel <= 6
   );
 };
 
@@ -61,22 +63,28 @@ export const validateFlightData = (flightData) => {
  */
 export const validateHotelData = (hotelData) => {
   const errors = [];
+  const warnings = [];
   
   if (!hotelData?.includeHotels) {
-    return { isValid: true, errors: [] }; // Not required if not selected
+    return { isValid: true, errors: [], warnings: [] }; // Not required if not selected
   }
   
   if (!hotelData.preferredType) {
     errors.push("Accommodation type is required for hotel search");
   }
   
-  if (!hotelData.budgetLevel || hotelData.budgetLevel < 1 || hotelData.budgetLevel > 4) {
-    errors.push("Valid budget level is required for hotel search");
+  if (!hotelData.budgetLevel || hotelData.budgetLevel < 1 || hotelData.budgetLevel > 6) {
+    errors.push("Valid budget level (1-6) is required for hotel search");
+  }
+  
+  if (!hotelData.priceRange) {
+    warnings.push("Price range not set, using default budget level");
   }
   
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
+    warnings
   };
 };
 

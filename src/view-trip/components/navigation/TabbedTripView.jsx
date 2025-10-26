@@ -71,7 +71,7 @@ function TabbedTripView({ trip, onTripUpdate }) {
           destination={
             trip?.userSelection?.location || trip?.tripData?.destination
           }
-          tripData={trip?.tripData}
+          trip={trip}
         />
       ),
     },
