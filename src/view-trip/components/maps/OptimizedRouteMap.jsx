@@ -444,8 +444,14 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
   // Get travel info from Gemini's itinerary data (between consecutive locations)
   const getTravelInfo = useCallback(
     (fromIndex, toIndex) => {
-      // Get the destination location (where we're traveling TO)
+      // Get both locations to check if they're on the same day
+      const fromLocation = filteredLocations[fromIndex];
       const toLocation = filteredLocations[toIndex];
+
+      // 🚫 Don't show travel time if locations are on different days
+      if (!fromLocation || !toLocation || fromLocation.day !== toLocation.day) {
+        return null;
+      }
 
       if (!toLocation || !toLocation.duration) {
         return null;

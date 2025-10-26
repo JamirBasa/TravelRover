@@ -277,7 +277,6 @@ export class GeminiProxyService {
 
     // Estimate based on historical data and complexity
     const detectedType = requestType || this.detectRequestType(prompt);
-    const baseEstimate = this.getBaseEstimate(detectedType);
 
     return {
       estimatedSeconds: Math.round((timeout / 1000) * 0.7), // 70% of timeout as estimate

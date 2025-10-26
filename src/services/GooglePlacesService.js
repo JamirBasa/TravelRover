@@ -105,6 +105,13 @@ class GooglePlacesService {
       return [];
     }
 
+    // Check cache first
+    const cacheKey = `search_${query}_${location}`;
+    if (this.cache.has(cacheKey)) {
+      console.log(`💾 Cache hit for search: ${query}`);
+      return this.cache.get(cacheKey);
+    }
+
     try {
       const searchQuery = location ? `${query} in ${location}` : query;
       const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${this.apiKey}`;
@@ -113,7 +120,7 @@ class GooglePlacesService {
       const data = await response.json();
 
       if (data.status === 'OK' && data.results?.length > 0) {
-        return data.results.map(place => ({
+        const results = data.results.map(place => ({
           place_id: place.place_id,
           name: place.name,
           rating: place.rating,
@@ -127,8 +134,15 @@ class GooglePlacesService {
           photos: place.photos,
           source: 'google_places_search'
         }));
+
+        // Cache the results
+        this.cache.set(cacheKey, results);
+        console.log(`✅ Cached search results for: ${query}`);
+        return results;
       }
 
+      // Cache empty results to avoid repeated failed searches
+      this.cache.set(cacheKey, []);
       return [];
     } catch (error) {
       console.error('❌ Places Search API error:', error);
@@ -144,6 +158,13 @@ class GooglePlacesService {
       return [];
     }
 
+    // Check cache first
+    const cacheKey = `nearby_${coordinates.lat}_${coordinates.lng}_${radius}_${type}`;
+    if (this.cache.has(cacheKey)) {
+      console.log(`💾 Cache hit for nearby places at: ${coordinates.lat}, ${coordinates.lng}`);
+      return this.cache.get(cacheKey);
+    }
+
     try {
       const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${coordinates.lat},${coordinates.lng}&radius=${radius}&type=${type}&key=${this.apiKey}`;
       
@@ -151,7 +172,7 @@ class GooglePlacesService {
       const data = await response.json();
 
       if (data.status === 'OK' && data.results?.length > 0) {
-        return data.results.map(place => ({
+        const results = data.results.map(place => ({
           place_id: place.place_id,
           name: place.name,
           rating: place.rating || 4.0,
@@ -165,8 +186,15 @@ class GooglePlacesService {
           photos: place.photos,
           source: 'google_nearby_search'
         }));
+
+        // Cache the results
+        this.cache.set(cacheKey, results);
+        console.log(`✅ Cached nearby places for: ${coordinates.lat}, ${coordinates.lng}`);
+        return results;
       }
 
+      // Cache empty results
+      this.cache.set(cacheKey, []);
       return [];
     } catch (error) {
       console.error('❌ Nearby Places API error:', error);

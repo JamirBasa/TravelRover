@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { Input } from "../../components/ui/input";
 import Select from "../../components/ui/select";
 import {
@@ -23,9 +23,17 @@ const HotelPreferences = ({
   const profileSummary =
     UserProfileService.getProfileDisplaySummary(userProfile);
 
+  // Track if auto-population has already happened
+  const hasAutoPopulated = React.useRef(false);
+
   // Auto-populate hotel preferences when enabled using centralized service
+  // Only runs ONCE when hotels are first enabled
   useEffect(() => {
-    if (UserProfileService.shouldAutoPopulateHotels(userProfile, hotelData)) {
+    if (
+      hotelData.includeHotels &&
+      !hasAutoPopulated.current &&
+      UserProfileService.shouldAutoPopulateHotels(userProfile, hotelData)
+    ) {
       const autoPopulatedData = UserProfileService.autoPopulateHotelData(
         userProfile,
         hotelData
@@ -35,17 +43,26 @@ const HotelPreferences = ({
         "🏨 Auto-populating hotel preferences from centralized service"
       );
       onHotelDataChange(autoPopulatedData);
-    }
-  }, [hotelData.includeHotels, userProfile]);
+      hasAutoPopulated.current = true;
+    } else if (
+      hotelData.includeHotels &&
+      !hasAutoPopulated.current &&
+      !hotelData.preferredType
+    ) {
+      // Set smart defaults if no profile data available
+      const defaultHotelData = {
+        ...hotelData,
+        preferredType: "hotel", // Default to standard hotels
+        budgetLevel: hotelData.budgetLevel || 2, // Default to budget-friendly
+        priceRange: HOTEL_CONFIG.PRICE_LEVELS[hotelData.budgetLevel || 2],
+      };
 
-  const handlePriceRangeChange = (e) => {
-    const level = parseInt(e.target.value);
-    onHotelDataChange({
-      ...hotelData,
-      budgetLevel: level,
-      priceRange: HOTEL_CONFIG.PRICE_LEVELS[level],
-    });
-  };
+      console.log("🏨 Setting default hotel preferences (no profile data)");
+      onHotelDataChange(defaultHotelData);
+      hasAutoPopulated.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hotelData.includeHotels]);
 
   const priceRangeOptions = [
     {
@@ -152,6 +169,40 @@ const HotelPreferences = ({
 
   const accommodationDates = getAccommodationDates();
 
+  // Check for missing required data
+  const missingRequirements = [];
+  if (hotelData.includeHotels) {
+    if (!formData?.startDate || !formData?.endDate) {
+      missingRequirements.push({
+        field: "Travel Dates",
+        message: "Please set your trip dates in Step 2",
+        icon: "📅",
+      });
+    }
+
+    // Parse travelers (handle both integer and legacy string formats)
+    const travelersCount =
+      typeof formData?.travelers === "number"
+        ? formData.travelers
+        : parseInt(formData?.travelers, 10) || 0;
+
+    // Debug logging
+    console.log("🔍 HotelPreferences - Travelers Debug:", {
+      raw: formData?.travelers,
+      type: typeof formData?.travelers,
+      parsed: travelersCount,
+      isValid: travelersCount >= 1,
+    });
+
+    if (travelersCount < 1) {
+      missingRequirements.push({
+        field: "Number of Travelers",
+        message: "Please specify the number of guests in Step 3",
+        icon: "👥",
+      });
+    }
+  }
+
   return (
     <div className="max-w-2xl mx-auto">
       {/* Main Question */}
@@ -189,18 +240,9 @@ const HotelPreferences = ({
         <div className="space-y-4">
           <div
             onClick={() => {
-              const isEnabled = !hotelData.includeHotels;
-
               onHotelDataChange({
                 ...hotelData,
-                includeHotels: isEnabled,
-                // Auto-populate when enabling hotels using centralized service
-                ...(isEnabled
-                  ? UserProfileService.autoPopulateHotelData(userProfile, {
-                      ...hotelData,
-                      includeHotels: isEnabled,
-                    })
-                  : {}),
+                includeHotels: !hotelData.includeHotels,
               });
             }}
             className={`brand-card p-5 cursor-pointer transition-all duration-200 border-2 hover:shadow-lg ${
@@ -259,6 +301,42 @@ const HotelPreferences = ({
 
           {hotelData.includeHotels && (
             <div className="ml-7 pl-4 border-l-2 border-orange-200 dark:border-orange-800 space-y-4">
+              {/* Missing Requirements Alert */}
+              {missingRequirements.length > 0 && (
+                <div className="bg-red-50 dark:bg-red-950/30 border-2 border-red-300 dark:border-red-800 rounded-lg p-4 animate-pulse">
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">⚠️</div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-red-800 dark:text-red-300 mb-2">
+                        Missing Required Information
+                      </h4>
+                      <p className="text-sm text-red-700 dark:text-red-400 mb-3">
+                        Please complete the following before proceeding with
+                        hotel search:
+                      </p>
+                      <ul className="space-y-2">
+                        {missingRequirements.map((req, index) => (
+                          <li
+                            key={index}
+                            className="flex items-center gap-2 text-sm bg-white dark:bg-slate-900 p-2 rounded border border-red-200 dark:border-red-800"
+                          >
+                            <span className="text-lg">{req.icon}</span>
+                            <div>
+                              <span className="font-semibold text-red-800 dark:text-red-300">
+                                {req.field}:
+                              </span>
+                              <span className="text-red-700 dark:text-red-400 ml-1">
+                                {req.message}
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-lg">
                 {/* Auto-populated indicator */}
                 {hotelData.preferredType &&
@@ -494,7 +572,11 @@ const HotelPreferences = ({
                             Number of guests:
                           </span>
                           <span className="font-semibold text-gray-800 dark:text-gray-200">
-                            {formData.travelers}
+                            {typeof formData.travelers === "number"
+                              ? `${formData.travelers} ${
+                                  formData.travelers === 1 ? "Person" : "People"
+                                }`
+                              : formData.travelers}
                           </span>
                         </div>
                         {formData.startDate && formData.endDate && (

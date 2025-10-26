@@ -10,6 +10,9 @@
 // Validators
 export * from './validators';
 
+// Hotel Validation
+export * from './hotelValidation';
+
 // Formatters
 export * from './formatters';
 

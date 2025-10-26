@@ -611,9 +611,11 @@ export const generateItineraryWithRetry = async (userInput, maxRetries = 3) => {
         );
         if (attempt < maxRetries) {
           // Retry with validation feedback
-          const feedbackPrompt = `Previous response had issues: ${validation.errors.join(
-            ", "
-          )}. Please regenerate following ALL rules strictly.`;
+          console.log(
+            `Validation feedback: Previous response had issues: ${validation.errors.join(
+              ", "
+            )}. Retrying with strict validation...`
+          );
           continue;
         }
         throw new Error(`Validation failed: ${validation.errors.join(", ")}`);

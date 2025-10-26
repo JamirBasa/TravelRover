@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Input } from "../../components/ui/input";
 import Select from "../../components/ui/select";
 import {
@@ -17,7 +17,7 @@ import { useMemo } from "react";
 import { UserProfileService } from "../../services/userProfileService";
 import {
   getFlightRecommendationMessage,
-  getFlightContextTips,
+  // getFlightContextTips, // TODO: Re-enable when contextual tips UI is implemented
   getAirportStatus, // Import the new function
 } from "../../utils/flightRecommendations";
 import { getAirportRecommendations } from "../../utils/budgetEstimator";
@@ -31,6 +31,9 @@ const FlightPreferences = ({
   // Get profile summary for consistent display
   const profileSummary =
     UserProfileService.getProfileDisplaySummary(userProfile);
+
+  // Track if auto-population has already happened
+  const hasAutoPopulated = React.useRef(false);
 
   // Get airport recommendations for intelligent routing
   const airportInfo = useMemo(() => {
@@ -69,6 +72,8 @@ const FlightPreferences = ({
   ]);
 
   // Get contextual tips - PASS AIRPORT CODE
+  // TODO: Re-enable when contextual tips UI is implemented
+  /*
   const contextTips = useMemo(() => {
     if (!flightData.includeFlights || !flightData.departureCity) return [];
 
@@ -78,7 +83,7 @@ const FlightPreferences = ({
       startDate: formData?.startDate,
       endDate: formData?.endDate,
       duration: formData?.duration,
-      destinationAirportCode: airportInfo?.destination?.code, // ✅ ADD THIS
+      destinationAirportCode: airportInfo?.destination?.code,
     });
   }, [
     flightData.includeFlights,
@@ -87,8 +92,9 @@ const FlightPreferences = ({
     formData?.startDate,
     formData?.endDate,
     formData?.duration,
-    airportInfo?.destination?.code, // ✅ ADD THIS DEPENDENCY
+    airportInfo?.destination?.code,
   ]);
+  */
 
   // ✅ ADD: Check if destination airport has service
   const destinationAirportStatus = useMemo(() => {
@@ -97,8 +103,13 @@ const FlightPreferences = ({
   }, [airportInfo?.destination?.code]);
 
   // Auto-populate when flights are enabled and we have profile data
+  // Only runs ONCE when flights are first enabled
   React.useEffect(() => {
-    if (UserProfileService.shouldAutoPopulateFlights(userProfile, flightData)) {
+    if (
+      flightData.includeFlights &&
+      !hasAutoPopulated.current &&
+      UserProfileService.shouldAutoPopulateFlights(userProfile, flightData)
+    ) {
       const autoPopulatedData = UserProfileService.autoPopulateFlightData(
         userProfile,
         flightData
@@ -106,8 +117,10 @@ const FlightPreferences = ({
 
       console.log("✈️ Auto-populating flight data from centralized service");
       onFlightDataChange(autoPopulatedData);
+      hasAutoPopulated.current = true;
     }
-  }, [flightData.includeFlights, userProfile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flightData.includeFlights]);
 
   const regionOptions = useMemo(() => {
     return getRegionsByCountry("PH").map((region) => ({
