@@ -65,61 +65,62 @@ function TripOverviewStats({
         <div
           className={`grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8`}
         >
-          <div className="text-center">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3">
+          <div className="text-center group cursor-default">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3 transition-all duration-300 group-hover:bg-white/35 group-hover:scale-110">
               <span className="text-3xl sm:text-4xl">📅</span>
             </div>
-            <div className={`text-2xl sm:text-3xl font-bold text-white mb-2`}>
+            <div
+              className={`text-2xl sm:text-3xl font-bold text-white mb-2 transition-all duration-300 group-hover:scale-105`}
+            >
               {itineraryLength}
             </div>
             <div
               className={`text-base sm:text-lg text-white dark:text-blue-100 font-semibold leading-tight`}
             >
-              Days
+              {itineraryLength === 1 ? "Day" : "Days"}
             </div>
           </div>
 
-          <div className="text-center">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3">
+          <div className="text-center group cursor-default">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3 transition-all duration-300 group-hover:bg-white/35 group-hover:scale-110">
               <span className="text-3xl sm:text-4xl">🎯</span>
             </div>
-            <div className={`text-2xl sm:text-3xl font-bold text-white mb-2`}>
+            <div
+              className={`text-2xl sm:text-3xl font-bold text-white mb-2 transition-all duration-300 group-hover:scale-105`}
+            >
               {placesToVisitLength}
             </div>
             <div
               className={`text-base sm:text-lg text-white dark:text-blue-100 font-semibold leading-tight`}
             >
-              Must-See Places
+              Must-See {placesToVisitLength === 1 ? "Place" : "Places"}
             </div>
           </div>
 
-          <div className="text-center">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3">
+          <div className="text-center group cursor-default">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3 transition-all duration-300 group-hover:bg-white/35 group-hover:scale-110">
               <span className="text-3xl sm:text-4xl">⚡</span>
             </div>
-            <div className={`text-2xl sm:text-3xl font-bold text-white mb-2`}>
+            <div
+              className={`text-2xl sm:text-3xl font-bold text-white mb-2 transition-all duration-300 group-hover:scale-105`}
+            >
               {activitiesCount}
             </div>
             <div
               className={`text-base sm:text-lg text-white dark:text-blue-100 font-semibold leading-tight`}
             >
-              Exciting Activities
+              {activitiesCount === 1 ? "Activity" : "Activities"}
             </div>
           </div>
 
           {budgetInfo.total > 0 && (
-            <div className="text-center">
-              <div
-                className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3"
-                title={`Activities: ${formatCurrency(
-                  budgetInfo.breakdown.activities
-                )} | Hotels: ${formatCurrency(
-                  budgetInfo.breakdown.hotels
-                )} | Flights: ${formatCurrency(budgetInfo.breakdown.flights)}`}
-              >
+            <div className="text-center group cursor-default">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3 transition-all duration-300 group-hover:bg-white/35 group-hover:scale-110 group-hover:rotate-12">
                 <span className="text-3xl sm:text-4xl">💰</span>
               </div>
-              <div className={`text-xl sm:text-2xl font-bold text-white mb-2`}>
+              <div
+                className={`text-xl sm:text-2xl font-bold text-white mb-2 transition-all duration-300 group-hover:scale-105`}
+              >
                 {formatCurrency(budgetInfo.total)}
               </div>
               <div
@@ -132,31 +133,24 @@ function TripOverviewStats({
         </div>
 
         {/* Trip Highlights */}
-        <div className="mt-6 pt-6 border-t border-white border-opacity-20 dark:border-opacity-10">
+        <div className="mt-6 pt-6 border-t border-white/20 dark:border-white/10">
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-            <div className="flex items-center gap-2.5 bg-white/95 dark:bg-slate-800/90 text-gray-800 dark:text-gray-100 rounded-full px-5 py-2.5 text-sm sm:text-base font-semibold shadow-sm">
+            <div className="flex items-center gap-2.5 bg-white/95 dark:bg-slate-800/90 text-gray-800 dark:text-gray-100 rounded-full px-5 py-2.5 text-sm sm:text-base font-semibold shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300">
               <span className="text-lg sm:text-xl">🌟</span>
               <span>AI-Optimized</span>
             </div>
             {budgetInfo.total > 0 && (
-              <div
-                className="flex items-center gap-2.5 bg-white/95 dark:bg-slate-800/90 text-gray-800 dark:text-gray-100 rounded-full px-5 py-2.5 text-sm sm:text-base font-semibold shadow-sm"
-                title={`Activities: ${formatCurrency(
-                  budgetInfo.breakdown.activities
-                )} | Hotels: ${formatCurrency(
-                  budgetInfo.breakdown.hotels
-                )} | Flights: ${formatCurrency(budgetInfo.breakdown.flights)}`}
-              >
+              <div className="flex items-center gap-2.5 bg-white/95 dark:bg-slate-800/90 text-gray-800 dark:text-gray-100 rounded-full px-5 py-2.5 text-sm sm:text-base font-semibold shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300">
                 <span className="text-lg sm:text-xl">💰</span>
                 <span>Estimated Cost</span>
               </div>
             )}
-            <div className="flex items-center gap-2.5 bg-white/95 dark:bg-slate-800/90 text-gray-800 dark:text-gray-100 rounded-full px-5 py-2.5 text-sm sm:text-base font-semibold shadow-sm">
+            <div className="flex items-center gap-2.5 bg-white/95 dark:bg-slate-800/90 text-gray-800 dark:text-gray-100 rounded-full px-5 py-2.5 text-sm sm:text-base font-semibold shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300">
               <span className="text-lg sm:text-xl">📍</span>
               <span>Local Insights</span>
             </div>
             {trip?.hasRealFlights && (
-              <div className="flex items-center gap-2.5 bg-white/95 dark:bg-slate-800/90 text-gray-800 dark:text-gray-100 rounded-full px-5 py-2.5 text-sm sm:text-base font-semibold shadow-sm">
+              <div className="flex items-center gap-2.5 bg-green-100/95 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full px-5 py-2.5 text-sm sm:text-base font-semibold shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300 border border-green-300 dark:border-green-700">
                 <span className="text-lg sm:text-xl">✈️</span>
                 <span>Live Flights</span>
               </div>

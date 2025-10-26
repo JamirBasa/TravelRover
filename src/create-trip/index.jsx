@@ -418,6 +418,14 @@ function CreateTrip() {
       }
 
       case 5: {
+        // Debug: Check formData before validation
+        console.log("🔍 Step 5 - formData before hotel validation:", {
+          travelers: formData.travelers,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          fullFormData: formData,
+        });
+
         const hotelValidation = validateHotelData(hotelData, formData);
         if (!hotelValidation.isValid) {
           toast.error("Hotel preferences incomplete", {
@@ -489,7 +497,7 @@ function CreateTrip() {
 
     try {
       const flightValidation = validateFlightData(flightData);
-      const hotelValidation = validateHotelData(hotelData);
+      const hotelValidation = validateHotelData(hotelData, formData); // ✅ Pass formData here!
       const activeServices = getActiveServices(flightData, hotelData);
 
       if (!flightValidation.isValid) {
@@ -606,7 +614,12 @@ function CreateTrip() {
       const enhancedPrompt = buildOptimizedPrompt({
         location: formData?.location,
         duration: `${formData?.duration} days`,
-        travelers: `${formData?.travelers} Person`,
+        travelers:
+          typeof formData?.travelers === "number"
+            ? `${formData.travelers} ${
+                formData.travelers === 1 ? "Person" : "People"
+              }`
+            : formData?.travelers,
         budget: customBudget ? `Custom: ₱${customBudget}` : formData?.budget,
         activityPreference: formData?.activityPreference || "2",
         userProfile: userProfile,

@@ -14,16 +14,17 @@ import { HOTEL_CONFIG } from "../constants/options";
 export function validateHotelData(hotelData, formData) {
   const errors = [];
 
+  // If hotels not included, skip all validation
   if (!hotelData.includeHotels) {
     return { isValid: true, errors: [], warnings: [] };
   }
 
-  // Validate accommodation type
+  // Validate accommodation type (required)
   if (!hotelData.preferredType || hotelData.preferredType.trim() === "") {
     errors.push("Please select an accommodation type");
   }
 
-  // Validate budget level
+  // Validate budget level (required)
   if (
     !hotelData.budgetLevel ||
     hotelData.budgetLevel < 1 ||
@@ -32,24 +33,22 @@ export function validateHotelData(hotelData, formData) {
     errors.push("Please select a valid budget range");
   }
 
-  // Validate dates are present if hotels enabled
+  // Enhanced date validation with better error messages
   if (!formData?.startDate || !formData?.endDate) {
-    errors.push("Trip dates are required for hotel search");
-  }
-
-  // Validate date logic
-  if (formData?.startDate && formData?.endDate) {
+    errors.push("Trip dates are required for hotel search. Please go back to Step 2 to set your travel dates.");
+  } else {
+    // Validate date logic only if dates exist
     const startDate = new Date(formData.startDate);
     const endDate = new Date(formData.endDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     if (startDate < today) {
-      errors.push("Check-in date cannot be in the past");
+      errors.push("Check-in date cannot be in the past. Please update your travel dates in Step 2.");
     }
 
     if (endDate <= startDate) {
-      errors.push("Check-out date must be after check-in date");
+      errors.push("Check-out date must be after check-in date. Please update your dates in Step 2.");
     }
 
     const nights = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
@@ -58,9 +57,22 @@ export function validateHotelData(hotelData, formData) {
     }
   }
 
-  // Validate travelers count
-  if (!formData?.travelers || formData.travelers < 1) {
-    errors.push("Number of travelers is required");
+  // Enhanced travelers validation with better error message
+  // formData.travelers should now be an integer
+  const travelersCount = typeof formData?.travelers === 'number' 
+    ? formData.travelers 
+    : parseInt(formData?.travelers, 10) || 0;
+  
+  // Debug logging
+  console.log('🔍 validateHotelData - Travelers Debug:', {
+    raw: formData?.travelers,
+    type: typeof formData?.travelers,
+    parsed: travelersCount,
+    isValid: travelersCount >= 1
+  });
+  
+  if (travelersCount < 1) {
+    errors.push("Number of travelers is required for hotel search. Please go back to Step 3 to set the number of guests.");
   }
 
   const warnings = [];
@@ -76,8 +88,8 @@ export function validateHotelData(hotelData, formData) {
     }
   }
 
-  // Warn about large group bookings
-  if (formData?.travelers > 4) {
+  // Warn about large group bookings (use extracted count)
+  if (travelersCount > 4) {
     warnings.push(
       "Large group detected: Consider booking multiple rooms or contacting hotels directly"
     );
@@ -114,10 +126,15 @@ export function mapToGooglePlacesTypes(accommodationType) {
  * Calculate realistic hotel budget estimate
  * @param {number} budgetLevel - Budget level (1-6)
  * @param {number} nights - Number of nights
- * @param {number} travelers - Number of travelers
+ * @param {number} travelers - Number of travelers (integer)
  * @returns {object} - { min, max, perNight, total, currency }
  */
 export function calculateHotelBudget(budgetLevel, nights, travelers = 1) {
+  // Parse travelers to ensure it's a number (for backward compatibility)
+  const travelersCount = typeof travelers === 'number' 
+    ? travelers 
+    : parseInt(travelers, 10) || 1;
+
   // Base price ranges per night (in PHP)
   const priceRanges = {
     1: { min: 500, max: 1500 },
@@ -135,7 +152,7 @@ export function calculateHotelBudget(budgetLevel, nights, travelers = 1) {
   const totalMax = range.max * nights;
 
   // Room calculation (assuming 2 travelers per room)
-  const roomsNeeded = Math.ceil(travelers / 2);
+  const roomsNeeded = Math.ceil(travelersCount / 2);
   const adjustedMin = totalMin * roomsNeeded;
   const adjustedMax = totalMax * roomsNeeded;
 
@@ -145,7 +162,7 @@ export function calculateHotelBudget(budgetLevel, nights, travelers = 1) {
     totalMin: adjustedMin,
     totalMax: adjustedMax,
     nights,
-    travelers,
+    travelers: travelersCount,
     roomsNeeded,
     currency: "PHP",
     formatted: {
@@ -162,12 +179,17 @@ export function calculateHotelBudget(budgetLevel, nights, travelers = 1) {
  * @returns {object} - Formatted parameters for hotel search APIs
  */
 export function getHotelSearchParams(hotelData, formData) {
+  // Parse travelers to ensure it's a number (for backward compatibility)
+  const travelersCount = typeof formData.travelers === 'number' 
+    ? formData.travelers 
+    : parseInt(formData.travelers, 10) || 1;
+
   return {
     destination: formData.location,
     checkInDate: formData.startDate,
     checkOutDate: formData.endDate,
-    guests: formData.travelers || 1,
-    rooms: Math.ceil((formData.travelers || 1) / 2),
+    guests: travelersCount,
+    rooms: Math.ceil(travelersCount / 2),
     priceLevel: mapToGooglePriceLevel(hotelData.budgetLevel),
     types: mapToGooglePlacesTypes(hotelData.preferredType),
     budgetRange: HOTEL_CONFIG.PRICE_LEVELS[hotelData.budgetLevel],
@@ -185,6 +207,11 @@ export function formatHotelDisplay(hotelData, formData) {
   if (!hotelData.includeHotels) {
     return null;
   }
+
+  // Parse travelers to ensure it's a number (for backward compatibility)
+  const travelersCount = typeof formData.travelers === 'number' 
+    ? formData.travelers 
+    : parseInt(formData.travelers, 10) || 1;
 
   const nights = formData.startDate && formData.endDate
     ? Math.ceil(
@@ -209,7 +236,7 @@ export function formatHotelDisplay(hotelData, formData) {
     checkOut: formData.endDate
       ? new Date(formData.endDate).toLocaleDateString()
       : "Not set",
-    guests: formData.travelers || 1,
+    guests: travelersCount,
     estimatedCost: budget.formatted.total,
   };
 }

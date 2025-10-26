@@ -62,23 +62,29 @@ function TravelerSelector({ selectedTravelers, onTravelersChange }) {
   // Also update when selectedTravelers changes externally (e.g., from profile auto-population)
   useEffect(() => {
     if (selectedTravelers) {
-      const match = selectedTravelers.match(/(\d+)/);
-      if (match) {
-        const count = parseInt(match[1]);
-        // Find matching preset option
-        const matchingOption = TRAVELER_OPTIONS.find(
-          (opt) => opt.count === count
-        );
-        if (matchingOption) {
-          setSelectedOption(matchingOption.id);
-          setCustomCount(count);
-          setShowCounter(false);
-        } else {
-          // Custom count not in presets
-          setSelectedOption(null);
-          setCustomCount(count);
-          setShowCounter(true);
-        }
+      // Handle both integer and string formats for backward compatibility
+      let count;
+      if (typeof selectedTravelers === "number") {
+        count = selectedTravelers;
+      } else {
+        // Parse string format like "1 Person" or "2 People"
+        const match = String(selectedTravelers).match(/(\d+)/);
+        count = match ? parseInt(match[1], 10) : 1;
+      }
+
+      // Find matching preset option
+      const matchingOption = TRAVELER_OPTIONS.find(
+        (opt) => opt.count === count
+      );
+      if (matchingOption) {
+        setSelectedOption(matchingOption.id);
+        setCustomCount(count);
+        setShowCounter(false);
+      } else {
+        // Custom count not in presets
+        setSelectedOption(null);
+        setCustomCount(count);
+        setShowCounter(true);
       }
     }
   }, [selectedTravelers]); // Now responds to prop changes
@@ -87,15 +93,15 @@ function TravelerSelector({ selectedTravelers, onTravelersChange }) {
     setSelectedOption(option.id);
     setCustomCount(option.count);
     setShowCounter(false);
-    const label = option.count === 1 ? "1 Person" : `${option.count} People`;
-    onTravelersChange(label);
+    // Store as integer, not string
+    onTravelersChange(option.count);
   };
 
   const handleCounterChange = (delta) => {
     const newCount = Math.max(1, Math.min(50, customCount + delta));
     setCustomCount(newCount);
-    const label = newCount === 1 ? "1 Person" : `${newCount} People`;
-    onTravelersChange(label);
+    // Store as integer, not string
+    onTravelersChange(newCount);
 
     // Don't auto-switch - let user stay in custom mode
     // They can manually click a preset if they want
@@ -124,8 +130,8 @@ function TravelerSelector({ selectedTravelers, onTravelersChange }) {
     }
 
     setCustomCount(startCount);
-    const label = startCount === 1 ? "1 Person" : `${startCount} People`;
-    onTravelersChange(label);
+    // Store as integer, not string
+    onTravelersChange(startCount);
   };
 
   return (

@@ -13,6 +13,7 @@ import {
   Hotel,
   Sparkles,
   DollarSign,
+  Clock,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -24,12 +25,117 @@ import {
 import { Button } from "@/components/ui/button";
 import { googlePlacesService } from "@/services/GooglePlacesService";
 
+// Google Places Image Cache Service with localStorage persistence
+const GooglePlacesImageCache = {
+  cache: new Map(),
+  CACHE_PREFIX: "travelrover_gp_img_",
+  CACHE_DURATION: 30 * 24 * 60 * 60 * 1000, // 30 days (photos don't change often)
+
+  getCached(location) {
+    // Check in-memory cache first (fastest, 0 API calls)
+    if (this.cache.has(location)) {
+      console.log(`💾 Memory cache hit: ${location}`);
+      return this.cache.get(location);
+    }
+
+    // Check localStorage cache (persistent, 0 API calls)
+    try {
+      const cached = localStorage.getItem(this.CACHE_PREFIX + location);
+      if (cached) {
+        const data = JSON.parse(cached);
+        // Check if cache is still valid (30 days)
+        if (Date.now() - data.timestamp < this.CACHE_DURATION) {
+          // Store in memory cache for faster subsequent access
+          this.cache.set(location, data.url);
+          console.log(`💾 LocalStorage cache hit: ${location}`);
+          return data.url;
+        } else {
+          // Cache expired, remove it
+          localStorage.removeItem(this.CACHE_PREFIX + location);
+          console.log(`⏰ Cache expired for: ${location}`);
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error reading cache:", error);
+    }
+    return null;
+  },
+
+  setCache(location, url) {
+    // Store in memory cache
+    this.cache.set(location, url);
+
+    // Store in localStorage for persistence
+    try {
+      localStorage.setItem(
+        this.CACHE_PREFIX + location,
+        JSON.stringify({
+          url,
+          timestamp: Date.now(),
+        })
+      );
+      console.log(`✅ Cached Google Places image for: ${location}`);
+    } catch (error) {
+      console.error("❌ Error setting cache:", error);
+      // If localStorage is full, clear old entries
+      if (error.name === "QuotaExceededError") {
+        this.clearOldestEntries();
+        // Try again
+        try {
+          localStorage.setItem(
+            this.CACHE_PREFIX + location,
+            JSON.stringify({ url, timestamp: Date.now() })
+          );
+        } catch (retryError) {
+          console.error("❌ Failed to cache after cleanup:", retryError);
+        }
+      }
+    }
+  },
+
+  clearOldestEntries() {
+    // Get all cache entries
+    const entries = [];
+    const keys = Object.keys(localStorage);
+    keys.forEach((key) => {
+      if (key.startsWith(this.CACHE_PREFIX)) {
+        try {
+          const data = JSON.parse(localStorage.getItem(key));
+          entries.push({ key, timestamp: data.timestamp });
+        } catch {
+          // Remove invalid entries
+          localStorage.removeItem(key);
+        }
+      }
+    });
+
+    // Sort by timestamp and remove oldest 25%
+    entries.sort((a, b) => a.timestamp - b.timestamp);
+    const toRemove = Math.ceil(entries.length * 0.25);
+    entries.slice(0, toRemove).forEach((entry) => {
+      localStorage.removeItem(entry.key);
+    });
+    console.log(`🧹 Cleared ${toRemove} old cache entries`);
+  },
+
+  clearCache() {
+    this.cache.clear();
+    const keys = Object.keys(localStorage);
+    keys.forEach((key) => {
+      if (key.startsWith(this.CACHE_PREFIX)) {
+        localStorage.removeItem(key);
+      }
+    });
+    console.log("🧹 Google Places image cache cleared");
+  },
+};
+
 function TripCard({ trip, onDelete }) {
   const [isLoading, setIsLoading] = useState(true);
   const [imageUrl, setImageUrl] = useState(null);
   const navigate = useNavigate();
 
-  // Fetch destination image from Google Places
+  // Fetch destination image from Google Places with caching
   useEffect(() => {
     const fetchDestinationImage = async () => {
       const location = trip.userSelection?.location;
@@ -39,14 +145,25 @@ function TripCard({ trip, onDelete }) {
       }
 
       try {
-        // Try to get image from stored photoUrl first
+        // PRIORITY 1: Use stored photoUrl (instant, 0 API calls)
         if (trip.userSelection?.photoUrl) {
+          console.log(`✅ Using stored photo for ${location}`);
           setImageUrl(trip.userSelection.photoUrl);
+          setIsLoading(false);
           return;
         }
 
-        // Search for the destination using Google Places
-        console.log(`🔍 Fetching image for: ${location}`);
+        // PRIORITY 2: Check cache (instant, 0 API calls)
+        const cachedUrl = GooglePlacesImageCache.getCached(location);
+        if (cachedUrl) {
+          setImageUrl(cachedUrl);
+          setIsLoading(false);
+          return;
+        }
+
+        // PRIORITY 3: Fetch from Google Places API (1 request)
+        // Note: googlePlacesService has its own internal cache for search results
+        console.log(`🔍 Fetching Google Places image for: ${location}`);
         const places = await googlePlacesService.searchPlaces(location);
 
         if (places && places.length > 0) {
@@ -62,7 +179,11 @@ function TripCard({ trip, onDelete }) {
 
             if (photoUrl) {
               console.log(`✅ Found Google Places image for ${location}`);
+
+              // Cache the photo URL for future use (30 days)
+              GooglePlacesImageCache.setCache(location, photoUrl);
               setImageUrl(photoUrl);
+              setIsLoading(false);
               return;
             }
           }
@@ -102,6 +223,44 @@ function TripCard({ trip, onDelete }) {
 
       return `${startFormatted} - ${endFormatted}${yearSuffix}`;
     } catch {
+      return null;
+    }
+  };
+
+  // Helper function to format creation date
+  const formatCreationDate = () => {
+    if (!trip.createdAt) return null;
+
+    try {
+      // Handle both Firestore timestamp and regular date
+      const date = trip.createdAt?.toDate
+        ? trip.createdAt.toDate()
+        : new Date(trip.createdAt);
+
+      const now = new Date();
+      const diffInMs = now - date;
+      const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+      const diffInDays = Math.floor(diffInHours / 24);
+
+      // Show relative time for recent trips
+      if (diffInHours < 1) {
+        return "Created just now";
+      } else if (diffInHours < 24) {
+        return `Created ${diffInHours} hour${diffInHours > 1 ? "s" : ""} ago`;
+      } else if (diffInDays < 7) {
+        return `Created ${diffInDays} day${diffInDays > 1 ? "s" : ""} ago`;
+      } else {
+        // Show actual date for older trips
+        const formatOptions = {
+          month: "short",
+          day: "numeric",
+          year:
+            date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+        };
+        return `Created ${date.toLocaleDateString("en-US", formatOptions)}`;
+      }
+    } catch (error) {
+      console.error("Error formatting creation date:", error);
       return null;
     }
   };
@@ -158,6 +317,7 @@ function TripCard({ trip, onDelete }) {
 
   const highlights = getTripHighlights();
   const dateRange = formatDateRange();
+  const creationDate = formatCreationDate();
 
   const handleImageLoad = () => {
     setIsLoading(false);
@@ -276,6 +436,14 @@ function TripCard({ trip, onDelete }) {
           <div className="flex items-center gap-2 mb-3 text-sm text-gray-600 dark:text-gray-400">
             <Calendar className="h-4 w-4 flex-shrink-0" />
             <span className="font-medium">{dateRange}</span>
+          </div>
+        )}
+
+        {/* Creation Date */}
+        {creationDate && (
+          <div className="flex items-center gap-2 mb-3 text-xs text-gray-500 dark:text-gray-500">
+            <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+            <span>{creationDate}</span>
           </div>
         )}
 
