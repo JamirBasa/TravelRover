@@ -115,7 +115,7 @@ function TripOverviewStats({
 
           {budgetInfo.total > 0 && (
             <div className="text-center group cursor-default">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3 transition-all duration-300 group-hover:bg-white/35 group-hover:scale-110 group-hover:rotate-12">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3 transition-all duration-300 group-hover:bg-white/35 group-hover:scale-110">
                 <span className="text-3xl sm:text-4xl">💰</span>
               </div>
               <div

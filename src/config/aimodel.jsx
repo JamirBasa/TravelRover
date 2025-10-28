@@ -138,6 +138,58 @@ const generationConfig = {
           ],
         },
       },
+      dailyCosts: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            day: { type: "integer" },
+            breakdown: {
+              type: "object",
+              properties: {
+                accommodation: { type: "number" },
+                meals: { type: "number" },
+                activities: { type: "number" },
+                transport: { type: "number" },
+                subtotal: { type: "number" },
+              },
+              required: [
+                "accommodation",
+                "meals",
+                "activities",
+                "transport",
+                "subtotal",
+              ],
+            },
+          },
+          required: ["day", "breakdown"],
+        },
+      },
+      grandTotal: {
+        type: "number",
+        description: "Sum of all daily costs - MUST NOT EXCEED user budget",
+      },
+      budgetCompliance: {
+        type: "object",
+        properties: {
+          userBudget: { type: "number" },
+          totalCost: { type: "number" },
+          remaining: { type: "number" },
+          withinBudget: { type: "boolean" },
+        },
+        required: ["userBudget", "totalCost", "remaining", "withinBudget"],
+      },
+      missingPrices: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "List of items with uncertain pricing (₱???) - can be non-empty if prices need confirmation",
+      },
+      pricingNotes: {
+        type: "string",
+        description:
+          "Source of pricing data and any pricing assumptions or warnings",
+      },
     },
     required: [
       "tripName",
@@ -149,6 +201,11 @@ const generationConfig = {
       "hotels",
       "itinerary",
       "placesToVisit",
+      "dailyCosts",
+      "grandTotal",
+      "budgetCompliance",
+      "missingPrices",
+      "pricingNotes",
     ],
   },
 };

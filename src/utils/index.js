@@ -13,6 +13,9 @@ export * from './validators';
 // Hotel Validation
 export * from './hotelValidation';
 
+// Budget Compliance
+export * from './budgetCompliance';
+
 // Formatters
 export * from './formatters';
 
