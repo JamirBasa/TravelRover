@@ -1,11 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { SelectBudgetOptions } from "../../constants/options";
-import { FaInfoCircle, FaCalculator, FaMapMarkerAlt } from "react-icons/fa";
-import {
-  getBudgetRecommendations,
-  getDestinationInfo,
-} from "../../utils/budgetEstimator";
+import { getBudgetRecommendations } from "../../utils/budgetEstimator";
 
 const BudgetSelector = ({
   value,
@@ -19,7 +15,6 @@ const BudgetSelector = ({
   userProfile = {}, // Add userProfile prop
 }) => {
   const [showCustom, setShowCustom] = useState(!!customValue); // Show custom if there's already a custom value
-  const [showEstimates, setShowEstimates] = useState(false);
 
   // Detect budget override
   const profileBudget = userProfile?.budgetRange;
@@ -65,12 +60,6 @@ const BudgetSelector = ({
     formData.startDate,
     flightData,
   ]);
-
-  // Get destination info for display
-  const destinationInfo = useMemo(() => {
-    if (!formData.location) return null;
-    return getDestinationInfo(formData.location);
-  }, [formData.location]);
 
   // Calculate minimum required budget based on estimates
   const minimumBudget = useMemo(() => {
@@ -147,174 +136,6 @@ const BudgetSelector = ({
       </div>
 
       <div className="space-y-4">
-        {/* Smart Budget Estimates - Shows when location & duration are selected */}
-        {budgetEstimates && destinationInfo && (
-          <div className="brand-card p-5 shadow-lg border-sky-200 dark:border-sky-800 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="brand-gradient p-2 rounded-full">
-                  <FaCalculator className="text-white text-sm" />
-                </div>
-                <h3 className="font-semibold text-sky-800 dark:text-sky-300 text-base">
-                  💡 Estimated Budget for {formData.location}
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowEstimates(!showEstimates)}
-                className="text-sky-600 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-300 text-sm font-medium transition-colors cursor-pointer"
-              >
-                {showEstimates ? "Hide Details" : "Show Breakdown"}
-              </button>
-            </div>
-
-            {/* Price Level Indicator */}
-            <div className="flex items-center gap-2 mb-4 p-3 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg border border-sky-200 dark:border-sky-700">
-              <FaMapMarkerAlt className="text-sky-600 dark:text-sky-400" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                <span className="font-semibold">{formData.location}</span> is a{" "}
-                <span className="font-bold text-sky-700 dark:text-sky-400">
-                  {destinationInfo.priceLevel}
-                </span>{" "}
-                price destination
-                {flightData.includeFlights && flightData.departureCity && (
-                  <span>
-                    {" "}
-                    • Flights from{" "}
-                    <span className="font-semibold">
-                      {flightData.departureCity}
-                    </span>
-                  </span>
-                )}
-              </span>
-            </div>
-
-            {/* Quick Estimates */}
-            <div className="grid grid-cols-3 gap-3 mb-3">
-              <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg p-3 border border-sky-200 dark:border-sky-700 hover:shadow-md transition-shadow">
-                <div className="text-xs text-sky-600 dark:text-sky-400 font-medium mb-1">
-                  Budget
-                </div>
-                <div className="text-base font-bold text-sky-900 dark:text-sky-300">
-                  {budgetEstimates.budget.range}
-                </div>
-                <div className="text-xs text-sky-600 dark:text-sky-400 mt-1">
-                  {budgetEstimates.budget.perPerson}/person
-                </div>
-              </div>
-              <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg p-3 border border-sky-200 dark:border-sky-700 hover:shadow-md transition-shadow">
-                <div className="text-xs text-sky-600 dark:text-sky-400 font-medium mb-1">
-                  Moderate
-                </div>
-                <div className="text-base font-bold text-sky-900 dark:text-sky-300">
-                  {budgetEstimates.moderate.range}
-                </div>
-                <div className="text-xs text-sky-600 dark:text-sky-400 mt-1">
-                  {budgetEstimates.moderate.perPerson}/person
-                </div>
-              </div>
-              <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg p-3 border border-sky-200 dark:border-sky-700 hover:shadow-md transition-shadow">
-                <div className="text-xs text-sky-600 dark:text-sky-400 font-medium mb-1">
-                  Luxury
-                </div>
-                <div className="text-base font-bold text-sky-900 dark:text-sky-300">
-                  {budgetEstimates.luxury.range}
-                </div>
-                <div className="text-xs text-sky-600 dark:text-sky-400 mt-1">
-                  {budgetEstimates.luxury.perPerson}/person
-                </div>
-              </div>
-            </div>
-
-            {/* Detailed Breakdown - Expandable */}
-            {showEstimates && (
-              <div className="mt-4 space-y-3">
-                {Object.entries(budgetEstimates).map(([level, data]) => (
-                  <div
-                    key={level}
-                    className="bg-white/70 dark:bg-slate-800/70 rounded-lg p-4 border border-sky-200 dark:border-sky-700"
-                  >
-                    <div className="font-semibold text-sky-900 dark:text-sky-300 capitalize mb-2 text-sm">
-                      {level}
-                    </div>
-                    <div className="text-xs text-gray-700 dark:text-gray-300 space-y-1">
-                      <p className="flex justify-between">
-                        <span>• Accommodation:</span>
-                        <span className="font-semibold">
-                          ₱{data.breakdown.accommodation.toLocaleString()}
-                        </span>
-                      </p>
-                      <p className="flex justify-between">
-                        <span>• Food & Dining:</span>
-                        <span className="font-semibold">
-                          ₱{data.breakdown.food.toLocaleString()}
-                        </span>
-                      </p>
-                      <p className="flex justify-between">
-                        <span>• Activities:</span>
-                        <span className="font-semibold">
-                          ₱{data.breakdown.activities.toLocaleString()}
-                        </span>
-                      </p>
-                      <p className="flex justify-between">
-                        <span>• Local Transport:</span>
-                        <span className="font-semibold">
-                          ₱{data.breakdown.transport.toLocaleString()}
-                        </span>
-                      </p>
-                      {data.breakdown.flights > 0 && (
-                        <p className="flex justify-between border-t border-sky-100 dark:border-sky-800 pt-1 mt-1">
-                          <span>• ✈️ Flights:</span>
-                          <span className="font-semibold">
-                            ₱{data.breakdown.flights.toLocaleString()}
-                          </span>
-                        </p>
-                      )}
-                      <p className="flex justify-between">
-                        <span>• Miscellaneous:</span>
-                        <span className="font-semibold">
-                          ₱{data.breakdown.miscellaneous.toLocaleString()}
-                        </span>
-                      </p>
-                    </div>
-                    <p className="text-xs text-sky-600 dark:text-sky-400 italic mt-2 pt-2 border-t border-sky-100 dark:border-sky-800">
-                      {data.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Info Note */}
-            <div className="mt-3 flex items-start gap-2 p-3 bg-sky-100/50 dark:bg-sky-950/30 rounded-lg">
-              <span className="text-sky-600 dark:text-sky-400">ℹ️</span>
-              <p className="text-xs text-sky-700 dark:text-sky-300">
-                Estimates based on{" "}
-                <span className="font-semibold">{formData.duration} days</span>{" "}
-                in <span className="font-semibold">{formData.location}</span>
-                {formData.travelers && (
-                  <span>
-                    {" "}
-                    for{" "}
-                    <span className="font-semibold">
-                      {typeof formData.travelers === "number"
-                        ? `${formData.travelers} ${
-                            formData.travelers === 1 ? "Person" : "People"
-                          }`
-                        : formData.travelers}
-                    </span>
-                  </span>
-                )}
-                {flightData.includeFlights && flightData.departureCity && (
-                  <span>
-                    {" "}
-                    (includes flights from {flightData.departureCity})
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* Preset budget options - Enhanced with estimates */}
         <div className="space-y-3">
           {SelectBudgetOptions.map((option) => {

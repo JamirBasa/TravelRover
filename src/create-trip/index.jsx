@@ -29,6 +29,11 @@ import {
   validateHotelData,
   getHotelSearchParams, // For future hotel API integration
 } from "../utils/hotelValidation";
+import {
+  calculateBudgetAmount,
+  validateBudgetCompliance,
+  detectUnrealisticPricing,
+} from "../utils/budgetCompliance";
 import { FaArrowRight, FaArrowLeft, FaUser, FaCheck } from "react-icons/fa";
 
 // Import components
@@ -44,6 +49,7 @@ import ReviewTripStep from "./components/ReviewTripStep";
 import GenerateTripButton from "./components/GenerateTripButton";
 import LoginDialog from "./components/LoginDialog";
 import TripGenerationModal from "./components/TripGenerationModal";
+import FloatingBudgetEstimate from "./components/FloatingBudgetEstimate";
 import { ProfileLoading, ErrorState } from "../components/common/LoadingStates";
 import { LangGraphTravelAgent } from "../config/langGraphAgent";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -612,6 +618,10 @@ function CreateTrip() {
         }`;
       }
 
+      // 💰 Calculate numeric budget amount for enforcement
+      const budgetAmount = calculateBudgetAmount(formData.budget, customBudget);
+      console.log(`💰 Budget cap enforced: ₱${budgetAmount.toLocaleString()}`);
+
       const enhancedPrompt = buildOptimizedPrompt({
         location: formData?.location,
         duration: `${formData?.duration} days`,
@@ -622,6 +632,7 @@ function CreateTrip() {
               }`
             : formData?.travelers,
         budget: customBudget ? `Custom: ₱${customBudget}` : formData?.budget,
+        budgetAmount: `₱${budgetAmount.toLocaleString()}`, // 🔥 NEW: Explicit budget cap
         activityPreference: formData?.activityPreference || "2",
         userProfile: userProfile,
         dateInfo: travelDates,
@@ -679,6 +690,58 @@ function CreateTrip() {
           if (validationError) {
             throw new Error(validationError);
           }
+
+          // 💰 Validate budget compliance
+          const budgetValidation = validateBudgetCompliance(testParse);
+          if (!budgetValidation.isValid) {
+            console.error(
+              "❌ Budget validation failed:",
+              budgetValidation.errors
+            );
+            throw new Error(
+              `Budget compliance check failed: ${budgetValidation.errors.join(
+                "; "
+              )}`
+            );
+          }
+
+          // ⚠️ Check for warnings (unrealistic pricing, missing data)
+          if (
+            budgetValidation.warnings &&
+            budgetValidation.warnings.length > 0
+          ) {
+            console.warn(
+              "⚠️ Budget validation warnings:",
+              budgetValidation.warnings
+            );
+            budgetValidation.warnings.forEach((warning) => {
+              toast.warning("Pricing Notice", {
+                description: warning,
+                duration: 5000,
+              });
+            });
+          }
+
+          // 🔍 Detect unrealistic pricing patterns
+          const pricingCheck = detectUnrealisticPricing(testParse);
+          if (pricingCheck.hasIssues) {
+            console.warn("⚠️ Pricing issues detected:", pricingCheck.issues);
+            pricingCheck.issues.forEach((issue) => {
+              toast.warning("Pricing Alert", {
+                description: issue,
+                duration: 5000,
+              });
+            });
+          }
+
+          console.log("✅ Budget compliance validated:", {
+            totalCost: testParse.budgetCompliance?.totalCost,
+            userBudget: testParse.budgetCompliance?.userBudget,
+            remaining: testParse.budgetCompliance?.remaining,
+            withinBudget: testParse.budgetCompliance?.withinBudget,
+            uncertainPrices: testParse.missingPrices?.length || 0,
+            pricingSource: testParse.pricingNotes,
+          });
 
           aiResponseText = cleanedResponse;
           console.log(`✅ AI Generation successful on attempt ${attempt}`);
@@ -1173,14 +1236,23 @@ function CreateTrip() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
+      {/* Floating Budget Estimate - Appears after destination & duration are selected */}
+      {formData.location && formData.duration && currentStep >= 2 ? (
+        <FloatingBudgetEstimate
+          formData={formData}
+          flightData={flightData}
+          hotelData={hotelData}
+        />
+      ) : null}
+
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 dark:text-gray-100 mb-2">
               Create Your Perfect Trip
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 text-lg">
+            <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-400">
               Plan personalized travel experiences tailored just for you
             </p>
           </div>
@@ -1191,17 +1263,17 @@ function CreateTrip() {
               const profileSummary =
                 UserProfileService.getProfileDisplaySummary(userProfile);
               return (
-                <div className="mt-6 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border border-sky-200 dark:border-sky-800 rounded-lg p-5 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-sky-100 dark:bg-sky-900/50 p-3 rounded-full">
-                        <FaUser className="text-sky-600 dark:text-sky-400 text-lg" />
+                <div className="mt-4 sm:mt-6 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border border-sky-200 dark:border-sky-800 rounded-lg p-4 sm:p-5 shadow-sm">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                    <div className="flex items-start sm:items-center gap-3 sm:gap-4 w-full">
+                      <div className="bg-sky-100 dark:bg-sky-900/50 p-2 sm:p-3 rounded-full flex-shrink-0">
+                        <FaUser className="text-sky-600 dark:text-sky-400 text-base sm:text-lg" />
                       </div>
-                      <div>
-                        <h3 className="font-bold text-sky-900 dark:text-sky-200 text-lg">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-sky-900 dark:text-sky-200 text-base sm:text-lg truncate">
                           Welcome back, {profileSummary.name}!
                         </h3>
-                        <p className="text-sky-700 dark:text-sky-400 text-sm font-medium mt-1">
+                        <p className="text-sky-700 dark:text-sky-400 text-xs sm:text-sm font-medium mt-1">
                           Creating personalized trips based on your preferences:
                         </p>
                         <div className="flex flex-wrap gap-2 mt-2">
@@ -1210,13 +1282,13 @@ function CreateTrip() {
                             .map((typeLabel, index) => (
                               <span
                                 key={index}
-                                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-sky-100 dark:bg-sky-900/50 text-sky-800 dark:text-sky-300"
+                                className="inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-sky-100 dark:bg-sky-900/50 text-sky-800 dark:text-sky-300"
                               >
                                 {typeLabel}
                               </span>
                             ))}
                           {profileSummary.preferredTripTypes?.length > 2 && (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                            <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                               +{profileSummary.preferredTripTypes.length - 2}{" "}
                               more
                             </span>
@@ -1229,7 +1301,7 @@ function CreateTrip() {
                           </p>
                         )}
                         {profileSummary.hasLocationData && (
-                          <p className="text-sky-600 dark:text-sky-400 text-xs mt-1">
+                          <p className="text-sky-600 dark:text-sky-400 text-xs mt-1 truncate">
                             <span className="font-medium">📍 Home:</span>{" "}
                             {profileSummary.location}
                           </p>
@@ -1244,20 +1316,29 @@ function CreateTrip() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div
+        className={`mx-auto px-4 sm:px-6 py-8 transition-all duration-300 ${
+          formData.location && formData.duration && currentStep >= 2
+            ? "max-w-4xl lg:mr-[22rem] xl:mr-[24rem]" // Add right margin when budget estimate is visible
+            : "max-w-4xl"
+        }`}
+      >
         {/* Form Container */}
-        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6 lg:p-8">
+        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-6 lg:p-8">
           {/* Progress Steps */}
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             {/* Step Circles - Responsive Layout */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4 sm:mb-6 overflow-x-auto pb-2">
               {STEPS.map((step, index) => {
                 const Icon = step.icon;
                 const isActive = currentStep === step.id;
                 const isCompleted = currentStep > step.id;
 
                 return (
-                  <div key={step.id} className="flex items-center">
+                  <div
+                    key={step.id}
+                    className="flex items-center flex-shrink-0"
+                  >
                     <div
                       className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full border-2 transition-all ${
                         isCompleted
@@ -1275,7 +1356,7 @@ function CreateTrip() {
                     </div>
                     {index < STEPS.length - 1 && (
                       <div
-                        className={`w-4 sm:w-8 md:w-12 lg:w-16 h-0.5 mx-1 sm:mx-2 md:mx-3 transition-all ${
+                        className={`w-3 sm:w-6 md:w-10 lg:w-14 h-0.5 mx-0.5 sm:mx-1 md:mx-2 transition-all ${
                           isCompleted
                             ? "bg-green-500 dark:bg-green-600"
                             : "bg-gray-300 dark:bg-slate-600"
@@ -1288,42 +1369,48 @@ function CreateTrip() {
             </div>
 
             {/* Step Title and Description */}
-            <div className="text-center mb-6">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">
+            <div className="text-center mb-4 sm:mb-6 px-2">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">
                 {STEPS[currentStep - 1].title}
               </h2>
-              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+              <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400">
                 {STEPS[currentStep - 1].description}
               </p>
             </div>
 
             {/* Progress Bar */}
-            <Progress value={progress} className="w-full h-3 mb-2" />
-            <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+            <Progress value={progress} className="w-full h-2 sm:h-3 mb-2" />
+            <div className="text-center text-xs sm:text-sm text-gray-500 dark:text-gray-400">
               Step {currentStep} of {STEPS.length}
             </div>
           </div>
 
           {/* Step Content */}
-          <div className="mb-12">{renderStepContent()}</div>
+          <div className="mb-8 sm:mb-12">{renderStepContent()}</div>
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-between items-center pt-6 border-t border-gray-200 dark:border-slate-700">
+          {/* Navigation Buttons - Extra padding on mobile when budget estimate is visible */}
+          <div
+            className={`flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-0 pt-6 border-t border-gray-200 dark:border-slate-700 ${
+              formData.location && formData.duration && currentStep >= 2
+                ? "pb-32 sm:pb-24 lg:pb-0" // Extra bottom padding on mobile for floating estimate
+                : "pb-4 sm:pb-0"
+            }`}
+          >
             <Button
               variant="outline"
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="flex items-center gap-2 px-8 py-3 cursor-pointer border-sky-200 dark:border-sky-700 text-gray-700 dark:text-gray-200 hover:bg-sky-50 dark:hover:bg-sky-950/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 w-full sm:w-auto cursor-pointer border-sky-200 dark:border-sky-700 text-gray-700 dark:text-gray-200 hover:bg-sky-50 dark:hover:bg-sky-950/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FaArrowLeft />
               Previous
             </Button>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 w-full sm:w-auto">
               {currentStep < STEPS.length ? (
                 <Button
                   onClick={nextStep}
-                  className="brand-button cursor-pointer flex items-center gap-2 px-8 py-3"
+                  className="brand-button cursor-pointer flex items-center justify-center gap-2 px-6 sm:px-8 py-3 w-full sm:w-auto"
                 >
                   Next
                   <FaArrowRight />

@@ -68,14 +68,143 @@ export const AI_PROMPT_OPTIMIZED = `Generate travel itinerary JSON for {location
    • Each itinerary entry needs: time, placeName, placeDetails, ticketPricing, timeTravel, geoCoordinates
    • Each hotel needs: hotelName, hotelAddress, pricePerNight, description, amenities (array), rating (1-5), reviews_count
 
-5. REQUIRED ITINERARY ELEMENTS
+5. BUDGET ENFORCEMENT (CRITICAL) 🚨 MANDATORY
+   USER BUDGET CAP: {budgetAmount}
+   
+   ⚠️ ZERO TOLERANCE POLICY - PLAN WILL BE REJECTED IF:
+   • ANY line item has missing or "varies" or "FREE" without numeric value
+   • Total cost exceeds {budgetAmount}
+   • Daily totals are not calculated
+   • Grand total is not provided
+   • Prices are generic/unrealistic for current Philippines market
+   
+   🇵🇭 ACTUAL FILIPINO PRICING REQUIREMENTS (2025 rates):
+   
+   REGIONAL PRICE MULTIPLIERS (Manila baseline = 1.0x):
+   • METRO MANILA: Makati/BGC (1.4-1.5x higher), Quezon City (1.1x), Manila proper (1.0x baseline)
+   • CORDILLERA (Baguio, Sagada): 0.6-0.75x (cooler climate, lower costs than Manila)
+   • CENTRAL VISAYAS (Cebu): 0.9-1.1x (comparable to Manila)
+   • MINDANAO (Davao): 0.7-0.9x (generally cheaper than Manila)
+   • ISLAND DESTINATIONS: Palawan/El Nido (0.8x base, luxury resorts +50%), Boracay (1.3x tourist premium)
+   
+   EXAMPLES:
+   • Mid-Range hotel in Manila: ₱2,000/night → Baguio: ₱1,200/night (0.6x)
+   • Mid-Range hotel in Manila: ₱2,000/night → Makati: ₱2,800/night (1.4x)
+   • Meal in Manila: ₱300 → Cebu: ₱270 (0.9x) | BGC: ₱420 (1.4x)
+   ⚠️ ALWAYS adjust base prices by destination multiplier
+   
+   ACCOMMODATION (per night) - MANILA BASELINE:
+   • Budget hostels/guesthouses: ₱800-1,500 (Baguio: ₱480-900, Makati: ₱1,120-2,100)
+   • Mid-range hotels (3-star): ₱1,500-3,000 (Baguio: ₱900-1,800, Makati: ₱2,100-4,200)
+   • Upscale hotels (4-star): ₱3,000-5,000 (Baguio: ₱1,800-3,000, Makati: ₱4,200-7,000)
+   • Luxury hotels (5-star): ₱5,000-15,000+ (Baguio: ₱3,000-9,000, BGC: ₱7,500-22,500)
+   • Airbnb/homestays: ₱1,200-3,500 (Baguio: ₱720-2,100, Makati: ₱1,680-4,900)
+   ⚠️ Never use prices below regional minimum (e.g., Baguio ≥₱480 budget, Makati ≥₱1,120)
+   
+   TRANSPORTATION (actual current fares):
+   • Jeepney (city): ₱13-20 base fare
+   • Bus (city): ₱15-25
+   • Provincial bus (per 100km): ₱150-300
+   • Long-distance bus (Manila-Baguio): ₱450-650
+   • Long-distance bus (Manila-Cebu ferry): ₱1,200-2,000
+   • Tricycle (short): ₱20-50
+   • Taxi (flagdown): ₱40 + ₱13.50/km
+   • Grab/taxi (airport to city): ₱200-500
+   • Domestic flights: ₱1,500-5,000 (budget), ₱3,000-8,000 (full-service)
+   • Ferry (short routes): ₱200-800
+   • Ferry (Manila-Mindoro): ₱800-1,500
+   ⚠️ Use actual distance-based calculation, never flat generic rates
+   
+   MEALS (per person, 2025 prices):
+   • Carinderia/street food: ₱50-120
+   • Fast food (Jollibee, McDonald's): ₱150-250
+   • Casual dining: ₱250-500
+   • Mid-range restaurant: ₱400-800
+   • Fine dining: ₱800-2,000+
+   • Hotel breakfast buffet: ₱500-1,200
+   ⚠️ Budget travelers: ₱150-300/meal | Moderate: ₱300-600/meal | Luxury: ₱600-1,500/meal
+   
+   ATTRACTIONS (actual entrance fees):
+   • National parks: ₱0-100 (many free)
+   • Museums (government): ₱50-150
+   • Historical sites: ₱50-200
+   • Theme parks (Enchanted Kingdom): ₱800-1,200
+   • Water parks: ₱500-1,000
+   • Island hopping tours: ₱800-2,500
+   • Scuba diving: ₱2,500-4,500
+   • Zip-lining: ₱300-800
+   • Hiking (guides): ₱500-1,500
+   • City tours: ₱500-1,500
+   ⚠️ Research actual 2025 prices, many heritage sites are FREE or under ₱100
+   
+   REQUIRED PRICING FORMAT:
+   • ALL prices MUST be numeric in PHP (₱): "₱150" or "₱1,500-2,000" (with range)
+   • ticketPricing examples: "₱500", "₱200-350", "₱0 (free)", "₱800 per person"
+   • Transport costs: Include in timeTravel (e.g., "30 min by jeepney (₱15)")
+   • Meals: Specify cost per person (e.g., "₱250-400 per person")
+   • FREE items: Write "₱0 (free)" NOT "Free" or "No charge"
+   • UNCERTAIN prices: Write "₱??? (needs confirmation)" and flag in missingPrices array
+   
+   ⚠️ PRICING VERIFICATION RULES:
+   1. NEVER invent generic prices (e.g., ₱100, ₱200, ₱500 for everything)
+   2. NEVER underestimate major expenses (hotels, long-distance travel)
+   3. ALWAYS use upper bound of ranges for budget safety
+   4. If actual price is unknown: Use "₱??? (needs confirmation)" + add to missingPrices[]
+   5. Popular tourist destinations: Use current 2025 published rates
+   6. Include ALL expense categories: accommodation, meals (3x/day), activities, transport
+   7. Transport between cities: Calculate based on actual distance and mode
+   
+   MANDATORY COST BREAKDOWN:
+   Add these fields to root JSON:
+   • "dailyCosts": [{"day": 1, "breakdown": {"accommodation": ₱X, "meals": ₱X, "activities": ₱X, "transport": ₱X, "subtotal": ₱X}}, ...]
+   • "grandTotal": ₱XXXX (sum of all dailyCosts.subtotal)
+   • "budgetCompliance": {"userBudget": ₱XXXX, "totalCost": ₱XXXX, "remaining": ₱XXXX, "withinBudget": true/false}
+   • "missingPrices": [] (List any items with "₱???" or uncertain pricing - if empty, all prices confirmed)
+   • "pricingNotes": "Source of prices: Official 2025 rates from [destination] tourism board / Recent traveler reports / Estimated based on similar destinations"
+   
+   COST CALCULATION RULES:
+   1. Sum ALL costs from itinerary items (attractions, meals, transport)
+   2. Add accommodation cost per night × number of nights
+   3. Include all transport between locations (jeepney, taxi, bus, etc.) - calculate based on actual distance
+   4. If item range (e.g., ₱200-350), use UPPER bound for budget safety
+   5. If cost "per person", multiply by {travelers} count
+   6. Include 3 meals per day (breakfast, lunch, dinner) with realistic prices
+   7. Never omit major expense categories (accommodation, meals, main transport)
+   8. If price genuinely unknown after research: Use "₱??? (needs confirmation)" and add to missingPrices[]
+   
+   AUTO-SUBSTITUTION PROTOCOL:
+   If initial plan exceeds budget:
+   • Replace expensive hotels with budget alternatives (₱1,500-2,500 range)
+   • Swap paid attractions with free/cheaper alternatives (₱0-100 range)
+   • Reduce meal budgets (use carinderias ₱80-150 instead of restaurants ₱400-800)
+   • Use public transport (jeepney ₱15-25, bus ₱150-300) instead of taxis (₱300-800)
+   • Use actual current prices for substitutions, never generic estimates
+   • Reduce activity count if necessary while maintaining quality experience
+   • NEVER return a plan that exceeds {budgetAmount}
+   • If budget is too low for destination, flag this in pricingNotes
+   
+   VALIDATION CHECKLIST (Execute before returning JSON):
+   ✓ Every itinerary item has numeric ticketPricing using 2025 Filipino market rates
+   ✓ Every meal has cost estimate (₱50-150 budget | ₱250-500 moderate | ₱600-1,500 luxury)
+   ✓ Every transport has cost in timeTravel calculated from actual distance/mode
+   ✓ Hotel rates match actual 2025 market prices (₱800-1,500 budget | ₱1,500-3,000 mid | ₱3,000-5,000 upscale)
+   ✓ Bus fares match actual provincial rates (₱150-300 per 100km)
+   ✓ No generic or repeated placeholder prices (₱100, ₱200, ₱500)
+   ✓ dailyCosts array matches number of days
+   ✓ grandTotal = sum of all dailyCosts.subtotal
+   ✓ budgetCompliance.withinBudget = true
+   ✓ missingPrices array lists any "₱???" items (can be non-empty if prices uncertain)
+   ✓ grandTotal ≤ {budgetAmount}
+   ✓ pricingNotes explains source of pricing data
 
-5. REQUIRED ITINERARY ELEMENTS
+6. REQUIRED ITINERARY ELEMENTS
+
+6. REQUIRED ITINERARY ELEMENTS
    • Arrival activities: "Arrival at [Airport Name]", "Check-in at Hotel", "Rest & Freshen Up"
    • Departure activities: "Check-out from Hotel", "Departure to [Airport Name]"
-   • Transport info: Always include timeTravel with transport type (Bus, Jeepney, Taxi, Grab, etc.)
-   • Meals: Include breakfast, lunch, dinner with restaurant suggestions or hotel dining
-   • Example: "15 min by bus from hotel" or "30 min by taxi from Manila Airport"
+   • Transport info: Always include timeTravel with transport type AND COST (e.g., "15 min by jeepney (₱15) from hotel")
+   • Meals: Include breakfast, lunch, dinner with restaurant suggestions AND COST (e.g., "₱250-350 per person")
+   • All costs must be included in budget calculations
 
 📊 TRIP CONTEXT
 Dates: {travelDates}
@@ -110,7 +239,7 @@ Before submitting your JSON response, count the activities for each day:
 - Each hotel MUST include: hotelName, hotelAddress, pricePerNight, description, amenities (array of 5-8 items), rating (1-5), reviews_count
 - Example amenities: WiFi, Pool, Gym, Restaurant, Spa, Bar, Room Service, Air Conditioning, Free Breakfast, Parking
 
-Generate complete JSON: {"tripName":"...","destination":"{location}","hotels":[...],"itinerary":[...],"placesToVisit":[...]}`;
+Generate complete JSON: {"tripName":"...","destination":"{location}","hotels":[...],"itinerary":[...],"placesToVisit":[...],"dailyCosts":[{"day":1,"breakdown":{"accommodation":0,"meals":0,"activities":0,"transport":0,"subtotal":0}}],"grandTotal":0,"budgetCompliance":{"userBudget":0,"totalCost":0,"remaining":0,"withinBudget":true},"missingPrices":[],"pricingNotes":"Prices based on actual 2025 Filipino market rates"}`;
 
 /**
  * CONDENSED USER PROFILE TEMPLATE
@@ -197,6 +326,7 @@ export const buildOptimizedPrompt = ({
   duration,
   travelers,
   budget,
+  budgetAmount, // Numeric budget cap
   activityPreference,
   userProfile,
   dateInfo,
@@ -208,6 +338,7 @@ export const buildOptimizedPrompt = ({
     .replace("{duration}", duration)
     .replace("{travelers}", travelers)
     .replace("{budget}", budget)
+    .replace(/{budgetAmount}/g, budgetAmount || "₱50,000") // Replace all instances
     .replace("{activityPreference}", activityPreference)
     .replace("{userName}", userProfile?.fullName || "Traveler")
     .replace("{userHomeLocation}", userProfile?.homeLocation || "Philippines")
