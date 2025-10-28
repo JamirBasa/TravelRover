@@ -15,17 +15,13 @@ import {
   formatCurrency,
   DATE_CONFIG,
 } from "../../constants/options";
-import {
-  calculateTravelDates,
-  getDateExplanation,
-} from "../../utils/travelDateManager";
 
 const ReviewTripStep = ({
   formData,
   customBudget,
   flightData,
   hotelData,
-  userProfile,
+  // userProfile, // Reserved for future profile-based features
   place,
 }) => {
   // Use centralized formatting functions
@@ -61,18 +57,8 @@ const ReviewTripStep = ({
     return paceLabels[pace] || "Moderate Pace (2 activities/day)";
   };
 
-  // Calculate smart travel dates
-  const travelDates =
-    formData.startDate && formData.endDate
-      ? calculateTravelDates({
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-          includeFlights: flightData?.includeFlights,
-          departureCity: flightData?.departureCity,
-          destination: formData.location,
-          travelers: formData.travelers,
-        })
-      : null;
+  // Note: Smart travel dates calculation removed - reserved for future feature
+  // const travelDates = calculateTravelDates({ ... });
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -192,8 +178,15 @@ const ReviewTripStep = ({
                       ✓ Flight Search Included
                     </p>
                     <p className="text-gray-600 dark:text-gray-400 text-sm">
-                      From: {flightData.departureCity || "Not specified"}
+                      From:{" "}
+                      {flightData.departureCity ||
+                        "Please specify departure city"}
                     </p>
+                    {!flightData.departureCity && (
+                      <p className="text-amber-600 dark:text-amber-400 text-xs mt-1">
+                        ⚠️ Departure city required for flight search
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -204,9 +197,20 @@ const ReviewTripStep = ({
                       ✓ Hotel Search Included
                     </p>
                     <p className="text-gray-600 dark:text-gray-400 text-sm">
-                      Type: {hotelData.preferredType || "Not specified"} •{" "}
-                      {hotelData.priceRange || "Not specified"}
+                      Type:{" "}
+                      {hotelData.preferredType
+                        ? hotelData.preferredType.charAt(0).toUpperCase() +
+                          hotelData.preferredType.slice(1)
+                        : "Standard Hotels"}{" "}
+                      •{" "}
+                      {hotelData.priceRange ||
+                        `Budget Level ${hotelData.budgetLevel || 2}`}
                     </p>
+                    {(!hotelData.preferredType || !hotelData.priceRange) && (
+                      <p className="text-amber-600 dark:text-amber-400 text-xs mt-1">
+                        ⚠️ Using default hotel preferences
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

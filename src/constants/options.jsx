@@ -627,6 +627,25 @@ export const HOTEL_CONFIG = {
     5: "Luxury (₱15,000-30,000)",
     6: "Ultra-Luxury (₱30,000+)",
   },
+  // Google Places API uses 0-4 price level scale
+  // Map our 1-6 scale to Google's 0-4 scale
+  GOOGLE_PRICE_LEVEL_MAP: {
+    1: 0, // Budget → Free/Inexpensive
+    2: 1, // Economy → Inexpensive
+    3: 2, // Moderate → Moderate
+    4: 3, // Upscale → Expensive
+    5: 4, // Luxury → Very Expensive
+    6: 4, // Ultra-Luxury → Very Expensive
+  },
+  // Accommodation type mapping to Google Places types
+  ACCOMMODATION_TYPE_MAP: {
+    hotel: ["lodging", "hotel"],
+    resort: ["resort_hotel", "spa"],
+    hostel: ["lodging"], // Filter by price level
+    aparthotel: ["lodging"],
+    guesthouse: ["lodging", "guest_house"],
+    boutique: ["lodging"], // Filter by rating
+  },
   PRICE_DESCRIPTIONS: {
     1: "Basic hostels, backpacker inns, fan rooms, shared facilities",
     2: "Budget hotels, air-con rooms, private bath, basic amenities",

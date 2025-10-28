@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Filter, Calendar, Users, DollarSign, Check } from "lucide-react";
 
@@ -48,7 +52,7 @@ function FilterPopover({ filters, setFilters, clearFilters, userTrips }) {
           className={`flex items-center gap-2 cursor-pointer ${
             hasActiveFilters
               ? "bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400"
-              : "border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300"
+              : "border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800"
           }`}
         >
           <Filter className="h-4 w-4" />
@@ -193,7 +197,13 @@ function FilterPopover({ filters, setFilters, clearFilters, userTrips }) {
               </div>
 
               <div className="space-y-2 max-h-32 overflow-y-auto">
-                {[...new Set(userTrips.map((trip) => trip.userSelection?.travelers).filter(Boolean))].map((traveler) => {
+                {[
+                  ...new Set(
+                    userTrips
+                      .map((trip) => trip.userSelection?.travelers)
+                      .filter(Boolean)
+                  ),
+                ].map((traveler) => {
                   const count = getFilterCount("travelers", traveler);
                   const isActive = filters.travelers === traveler;
 
