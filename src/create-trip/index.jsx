@@ -112,6 +112,7 @@ function CreateTrip() {
       "🎯 Syncing activityPreference to formData:",
       activityPreference
     );
+
     setFormData((prev) => ({
       ...prev,
       activityPreference,
