@@ -12,6 +12,7 @@ import {
 } from "react-icons/fa";
 import { HOTEL_CONFIG } from "../../constants/options";
 import { UserProfileService } from "../../services/userProfileService";
+import { adjustPriceForCity } from "../../utils/budgetCompliance";
 
 const HotelPreferences = ({
   hotelData,
@@ -168,6 +169,56 @@ const HotelPreferences = ({
   };
 
   const accommodationDates = getAccommodationDates();
+
+  // Helper function to parse and adjust hotel prices by destination
+  const getRegionalHotelPricing = (priceLevel, destination) => {
+    // Extract base prices from HOTEL_CONFIG (Manila baseline)
+    const priceMatch = priceLevel.match(/₱([\d,]+)-([\d,]+)/);
+
+    if (!priceMatch) {
+      return null; // Return null if no valid price format
+    }
+
+    const minPrice = parseInt(priceMatch[1].replace(/,/g, ""));
+    const maxPrice = parseInt(priceMatch[2].replace(/,/g, ""));
+
+    // If no destination, return baseline Manila prices with indicator
+    if (!destination) {
+      return {
+        minPerNight: minPrice,
+        maxPerNight: maxPrice,
+        multiplier: 1.0,
+        location: "Manila (Baseline)",
+        isBaseline: true,
+        perNightRange: `₱${minPrice.toLocaleString()} - ₱${maxPrice.toLocaleString()}`,
+        getTotalRange: (nights) => {
+          const totalMin = minPrice * nights;
+          const totalMax = maxPrice * nights;
+          return `₱${totalMin.toLocaleString()} - ₱${totalMax.toLocaleString()}`;
+        },
+      };
+    }
+
+    // Adjust prices for destination using regional multipliers
+    const adjustedMin = adjustPriceForCity(minPrice, destination);
+    const adjustedMax = adjustPriceForCity(maxPrice, destination);
+
+    return {
+      minPerNight: adjustedMin.adjustedPrice,
+      maxPerNight: adjustedMax.adjustedPrice,
+      multiplier: adjustedMin.multiplier,
+      location: adjustedMin.location,
+      isBaseline: false,
+      // Format per-night range
+      perNightRange: `₱${adjustedMin.adjustedPrice.toLocaleString()} - ₱${adjustedMax.adjustedPrice.toLocaleString()}`,
+      // Calculate total for trip duration
+      getTotalRange: (nights) => {
+        const totalMin = adjustedMin.adjustedPrice * nights;
+        const totalMax = adjustedMax.adjustedPrice * nights;
+        return `₱${totalMin.toLocaleString()} - ₱${totalMax.toLocaleString()}`;
+      },
+    };
+  };
 
   // Check for missing required data
   const missingRequirements = [];
@@ -447,28 +498,36 @@ const HotelPreferences = ({
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       <FaStar className="inline mr-1" />
                       Budget Range (Per Night)
+                      {formData?.location && (
+                        <span className="ml-2 text-xs text-sky-600 dark:text-sky-400 font-normal">
+                          • Prices adjusted for {formData.location}
+                        </span>
+                      )}
                     </label>
+
+                    {/* Show warning if no destination selected */}
+                    {!formData?.location && (
+                      <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <span className="text-amber-600 dark:text-amber-400">
+                            ⚠️
+                          </span>
+                          <p className="text-xs text-amber-800 dark:text-amber-300">
+                            <strong>Showing Manila baseline prices.</strong>{" "}
+                            Select your destination in Step 1 to see adjusted
+                            pricing for your specific location.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       {priceRangeOptions.map((option) => {
-                        // Calculate price range for total trip
-                        const priceMatch =
-                          HOTEL_CONFIG.PRICE_LEVELS[option.value].match(
-                            /₱[\d,]+-[\d,]+/
-                          );
-                        let estimatedTotal = "Contact for pricing";
-
-                        if (priceMatch && accommodationDates) {
-                          const prices = priceMatch[0].split("-");
-                          const minPrice = parseInt(
-                            prices[0].replace(/[₱,]/g, "")
-                          );
-                          const maxPrice = parseInt(
-                            prices[1].replace(/[₱,]/g, "")
-                          );
-                          const totalMin = minPrice * accommodationDates.nights;
-                          const totalMax = maxPrice * accommodationDates.nights;
-                          estimatedTotal = `₱${totalMin.toLocaleString()} - ₱${totalMax.toLocaleString()}`;
-                        }
+                        // Get regional pricing for this hotel level
+                        const regionalPricing = getRegionalHotelPricing(
+                          HOTEL_CONFIG.PRICE_LEVELS[option.value],
+                          formData?.location
+                        );
 
                         return (
                           <div
@@ -489,28 +548,76 @@ const HotelPreferences = ({
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <div className="font-semibold text-gray-800 dark:text-gray-200">
+                                {/* Header with title and checkmark */}
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="font-semibold text-base text-gray-800 dark:text-gray-200">
                                     {option.label}
                                   </div>
                                   {hotelData.budgetLevel === option.value && (
-                                    <FaCheck className="text-orange-500 dark:text-orange-400" />
+                                    <FaCheck className="text-orange-500 dark:text-orange-400 flex-shrink-0" />
                                   )}
                                 </div>
-                                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+
+                                {/* Regional multiplier badge - Only show if adjusted */}
+                                {regionalPricing &&
+                                  !regionalPricing.isBaseline &&
+                                  regionalPricing.multiplier !== 1.0 && (
+                                    <div className="mb-2">
+                                      <span
+                                        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-semibold ${
+                                          regionalPricing.multiplier < 1.0
+                                            ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400"
+                                            : "bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400"
+                                        }`}
+                                      >
+                                        {regionalPricing.multiplier < 1.0
+                                          ? "💰 Cheaper"
+                                          : "💸 Premium"}{" "}
+                                        in {regionalPricing.location}
+                                        <span className="text-xs opacity-75">
+                                          ({regionalPricing.multiplier}x)
+                                        </span>
+                                      </span>
+                                    </div>
+                                  )}
+
+                                {/* Per-night pricing - BOLD and CLEAR */}
+                                {regionalPricing && (
+                                  <div className="mb-2 p-2 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/40 dark:to-blue-950/40 rounded-lg border border-sky-200 dark:border-sky-700">
+                                    <div className="text-xs text-sky-600 dark:text-sky-400 font-medium mb-0.5">
+                                      Per Night Rate:
+                                    </div>
+                                    <div className="text-lg font-bold text-sky-900 dark:text-sky-300">
+                                      {regionalPricing.perNightRange}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Description */}
+                                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                                   {option.description}
                                 </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-500 mt-1 italic">
+
+                                {/* Examples */}
+                                <div className="text-xs text-gray-500 dark:text-gray-500 italic mb-2">
                                   Examples: {option.examples}
                                 </div>
-                                {accommodationDates && priceMatch && (
-                                  <div className="mt-2 p-2 bg-sky-50 dark:bg-sky-950/30 rounded border border-sky-200 dark:border-sky-800">
-                                    <div className="text-xs text-sky-700 dark:text-sky-400 font-medium">
-                                      💰 Total for {accommodationDates.nights}{" "}
+
+                                {/* Total trip cost - BOLD and PROMINENT */}
+                                {accommodationDates && regionalPricing && (
+                                  <div className="p-2.5 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/40 dark:to-green-950/40 rounded-lg border-2 border-emerald-300 dark:border-emerald-700">
+                                    <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-0.5">
+                                      Total Trip Cost (
+                                      {accommodationDates.nights}{" "}
                                       {accommodationDates.nights === 1
                                         ? "night"
                                         : "nights"}
-                                      : {estimatedTotal}
+                                      ):
+                                    </div>
+                                    <div className="text-base font-bold text-emerald-900 dark:text-emerald-300">
+                                      {regionalPricing.getTotalRange(
+                                        accommodationDates.nights
+                                      )}
                                     </div>
                                   </div>
                                 )}
@@ -529,27 +636,41 @@ const HotelPreferences = ({
                         </span>
                         <div className="text-xs text-green-800 dark:text-green-300">
                           <div className="font-semibold mb-1">
-                            Budget-Saving Tips:
+                            Budget-Saving Tips
+                            {formData?.location
+                              ? ` for ${formData.location}`
+                              : ""}
+                            :
                           </div>
                           <ul className="space-y-0.5 ml-4 list-disc">
                             <li>
-                              <strong>₱500-1,500:</strong> Perfect for
-                              backpackers, hostels with dorms/fan rooms
+                              Prices shown are adjusted for{" "}
+                              <strong>
+                                {formData?.location || "your destination"}
+                              </strong>
                             </li>
                             <li>
-                              <strong>₱1,500-3,500:</strong> Best value - clean
-                              budget hotels with A/C
+                              <strong>Budget (₱500-1,500):</strong> Backpackers,
+                              hostels, fan rooms
                             </li>
                             <li>
-                              <strong>₱3,500+:</strong> More comfort and
-                              amenities included
+                              <strong>Mid-Range (₱1,500-3,500):</strong> Best
+                              value - clean hotels with A/C
                             </li>
                             <li>
-                              Book directly for better rates, check promo codes
+                              <strong>Upscale (₱3,500+):</strong> Premium
+                              comfort and amenities
+                            </li>
+                            <li>
+                              Book directly or compare prices across platforms
                             </li>
                             <li>
                               Weekday rates are typically 20-30% cheaper than
                               weekends
+                            </li>
+                            <li>
+                              Off-peak season can save you 30-50% on
+                              accommodation
                             </li>
                           </ul>
                         </div>

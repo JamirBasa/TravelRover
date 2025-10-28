@@ -80,21 +80,31 @@ export const calculateActivitiesCost = (itinerary) => {
 
 /**
  * Calculate total cost from hotels
+ * Note: Hotels array typically contains OPTIONS, not all selected hotels
+ * We use the first/recommended hotel or calculate average for estimation
  */
 export const calculateHotelsCost = (hotels, numNights = 1) => {
-  if (!Array.isArray(hotels)) {
+  if (!Array.isArray(hotels) || hotels.length === 0) {
     return 0;
   }
   
-  let total = 0;
+  // Strategy: Use the first hotel (usually the recommended/selected one)
+  // The AI typically puts the best match or selected hotel first
+  const selectedHotel = hotels[0];
   
-  hotels.forEach((hotel) => {
-    const pricePerNight = parsePrice(hotel?.pricePerNight);
-    const hotelTotal = pricePerNight * numNights;
-    total += hotelTotal;
+  const pricePerNight = parsePrice(selectedHotel?.pricePerNight);
+  const hotelTotal = pricePerNight * numNights;
+  
+  console.log('🏨 [Budget Calculator] Hotel cost calculation:', {
+    totalHotelsInArray: hotels.length,
+    usingHotel: selectedHotel?.hotelName || 'Unknown',
+    pricePerNight,
+    numNights,
+    total: hotelTotal,
+    note: 'Using first hotel from array (recommended/selected)'
   });
   
-  return total;
+  return hotelTotal;
 };
 
 /**
