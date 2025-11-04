@@ -522,7 +522,9 @@ function Hotels({ trip }) {
                   <p className="text-white/90 text-xs flex items-center gap-2 flex-wrap">
                     {hotels.realHotels.length > 0 ? (
                       <>
-                        <span>Top {hotels.allHotels.length} most affordable options</span>
+                        <span>
+                          Top {hotels.allHotels.length} most affordable options
+                        </span>
                         {hotels.totalAllHotels > hotels.allHotels.length && (
                           <>
                             <span>•</span>
@@ -532,7 +534,10 @@ function Hotels({ trip }) {
                       </>
                     ) : (
                       <>
-                        <span>{hotels.allHotels.length} carefully selected for your trip</span>
+                        <span>
+                          {hotels.allHotels.length} carefully selected for your
+                          trip
+                        </span>
                       </>
                     )}
                   </p>
@@ -580,6 +585,17 @@ function Hotels({ trip }) {
                         #{index + 1}
                       </div>
                     </div>
+
+                    {/* 🆕 Primary Check-in Badge for first hotel */}
+                    {index === 0 && (
+                      <div className="absolute -top-3 -right-3 z-10">
+                        <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+                          <span>✓</span>
+                          <span>Day 1 Check-in</span>
+                        </div>
+                      </div>
+                    )}
+
                     <HotelCardItem
                       hotel={hotel}
                       onBookHotel={handleBookHotel}
@@ -656,36 +672,53 @@ function Hotels({ trip }) {
                 )}
 
               <div className="grid gap-6">
-                {hotels.aiHotels.map((hotel, index) => (
-                  <div
-                    key={hotel?.hotel_id || hotel?.id || `ai-hotel-${index}`}
-                    className="group relative"
-                  >
-                    {/* Rank Badge */}
-                    <div className="absolute -top-3 -left-3 z-10">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg ${
-                          index === 0
-                            ? "bg-gradient-to-br from-amber-400 to-amber-600"
-                            : index === 1
-                            ? "bg-gradient-to-br from-gray-300 to-gray-500"
-                            : index === 2
-                            ? "bg-gradient-to-br from-orange-400 to-orange-600"
-                            : "brand-gradient"
-                        }`}
-                      >
-                        #{index + 1}
+                {hotels.aiHotels.map((hotel, index) => {
+                  // Calculate actual index (if real hotels exist, AI hotels start after them)
+                  const isFirstOverall =
+                    hotels.realHotels.length === 0 && index === 0;
+
+                  return (
+                    <div
+                      key={hotel?.hotel_id || hotel?.id || `ai-hotel-${index}`}
+                      className="group relative"
+                    >
+                      {/* Rank Badge */}
+                      <div className="absolute -top-3 -left-3 z-10">
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg ${
+                            index === 0
+                              ? "bg-gradient-to-br from-amber-400 to-amber-600"
+                              : index === 1
+                              ? "bg-gradient-to-br from-gray-300 to-gray-500"
+                              : index === 2
+                              ? "bg-gradient-to-br from-orange-400 to-orange-600"
+                              : "brand-gradient"
+                          }`}
+                        >
+                          #{index + 1}
+                        </div>
                       </div>
+
+                      {/* 🆕 Primary Check-in Badge for first hotel (when no real hotels) */}
+                      {isFirstOverall && (
+                        <div className="absolute -top-3 -right-3 z-10">
+                          <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+                            <span>✓</span>
+                            <span>Day 1 Check-in</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <HotelCardItem
+                        hotel={hotel}
+                        onBookHotel={handleBookHotel}
+                      />
+                      {index < hotels.aiHotels.length - 1 && (
+                        <div className="mt-6 border-b border-gray-100 dark:border-slate-800"></div>
+                      )}
                     </div>
-                    <HotelCardItem
-                      hotel={hotel}
-                      onBookHotel={handleBookHotel}
-                    />
-                    {index < hotels.aiHotels.length - 1 && (
-                      <div className="mt-6 border-b border-gray-100 dark:border-slate-800"></div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

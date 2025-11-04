@@ -18,9 +18,6 @@ hotelsData.forEach(hotel => {
   hotelNameIndex.get(normalizedName).push(hotel);
 });
 
-console.log(`🏨 Loaded ${localHotelMap.size.toLocaleString()} hotels into local cache`);
-console.log(`📇 Indexed ${hotelNameIndex.size.toLocaleString()} unique hotel names`);
-
 // ========================================
 // FETCH REAL HOTEL DATA FROM GOOGLE PLACES
 // ========================================
@@ -33,7 +30,7 @@ console.log(`📇 Indexed ${hotelNameIndex.size.toLocaleString()} unique hotel n
  */
 async function fetchRealHotelData(hotelName, location = "Philippines") {
   try {
-    console.log(`🔍 Fetching real data for: ${hotelName}`);
+    // console.log(`🔍 Fetching real data for: ${hotelName}`);
     
     // Create search query with location context
     let searchQuery = hotelName;
@@ -44,7 +41,7 @@ async function fetchRealHotelData(hotelName, location = "Philippines") {
     const response = await GetPlaceDetails({ textQuery: searchQuery });
     
     if (!response?.data?.places || response.data.places.length === 0) {
-      console.warn(`⚠️ No Google Places data found for: ${hotelName}`);
+      // console.warn(`⚠️ No Google Places data found for: ${hotelName}`);
       return null;
     }
 
@@ -56,11 +53,11 @@ async function fetchRealHotelData(hotelName, location = "Philippines") {
     // Extract reviews data
     const reviewsData = extractReviewsData(placeData);
     
-    console.log(`✅ Fetched real data for ${hotelName}:`, {
-      amenities: amenities.length,
-      rating: reviewsData.rating,
-      reviews_count: reviewsData.reviews_count
-    });
+    // console.log(`✅ Fetched real data for ${hotelName}:`, {
+    //   amenities: amenities.length,
+    //   rating: reviewsData.rating,
+    //   reviews_count: reviewsData.reviews_count
+    // });
     
     return {
       amenities,
@@ -76,7 +73,7 @@ async function fetchRealHotelData(hotelName, location = "Philippines") {
       phoneNumber: placeData.nationalPhoneNumber || placeData.internationalPhoneNumber,
     };
   } catch (error) {
-    console.error(`❌ Error fetching Google Places data for ${hotelName}:`, error.message);
+    // console.error(`❌ Error fetching Google Places data for ${hotelName}:`, error.message);
     return null;
   }
 }
@@ -175,35 +172,35 @@ function extractReviewsData(placeData) {
 // ========================================
 
 export async function verifySingleHotel(hotel) {
-  console.log("\n🔍 ========== VERIFYING HOTEL ==========");
-  console.log("📥 Input Data:", JSON.stringify(hotel, null, 2));
+  // console.log("\n🔍 ========== VERIFYING HOTEL ==========");
+  // console.log("📥 Input Data:", JSON.stringify(hotel, null, 2));
   
   // Extract hotel ID and name with flexible parsing
   const hotelId = extractHotelId(hotel);
   const hotelName = extractHotelName(hotel);
   
-  console.log(`🆔 Extracted ID: ${hotelId || "NOT FOUND"}`);
-  console.log(`📝 Extracted Name: ${hotelName || "NOT FOUND"}`);
+  // console.log(`🆔 Extracted ID: ${hotelId || "NOT FOUND"}`);
+  // console.log(`📝 Extracted Name: ${hotelName || "NOT FOUND"}`);
   
   // Strategy 1: Try ID lookup first (most accurate)
   if (hotelId) {
     const idMatch = getHotelById(hotelId);
     if (idMatch) {
-      console.log("✅ VERIFIED BY ID:", idMatch.hotel_name);
+      // console.log("✅ VERIFIED BY ID:", idMatch.hotel_name);
       const result = await createSuccessResult(idMatch, hotel, 1.0, 'ID Match');
       return result;
     }
-    console.log("⚠️  ID not found in database");
+    // console.log("⚠️  ID not found in database");
   }
   
   // Strategy 2: Name-based verification (fallback)
   if (hotelName) {
-    console.log("🔍 Attempting name-based search...");
+    // console.log("🔍 Attempting name-based search...");
     
     // Try exact normalized match first
     const exactMatch = tryExactNameMatch(hotelName);
     if (exactMatch) {
-      console.log(`✅ EXACT NAME MATCH: ${exactMatch.hotel_name}`);
+      // console.log(`✅ EXACT NAME MATCH: ${exactMatch.hotel_name}`);
       const result = await createSuccessResult(exactMatch, hotel, 1.0, 'Exact Name Match');
       return result;
     }
@@ -214,9 +211,9 @@ export async function verifySingleHotel(hotel) {
       const bestMatch = fuzzyMatches[0];
       const similarity = bestMatch.similarity;
       
-      console.log(`✅ FUZZY NAME MATCH: ${bestMatch.hotel_name}`);
-      console.log(`   Similarity: ${(similarity * 100).toFixed(1)}%`);
-      console.log(`   Database ID: ${bestMatch.hotel_id}`);
+      // console.log(`✅ FUZZY NAME MATCH: ${bestMatch.hotel_name}`);
+      // console.log(`   Similarity: ${(similarity * 100).toFixed(1)}%`);
+      // console.log(`   Database ID: ${bestMatch.hotel_id}`);
       
       const result = await createSuccessResult(
         bestMatch, 
@@ -227,7 +224,7 @@ export async function verifySingleHotel(hotel) {
       return result;
     }
     
-    console.log("❌ No name matches found");
+    // console.log("❌ No name matches found");
   }
   
   // Strategy 3: Failed - provide diagnostics
@@ -239,21 +236,17 @@ export async function verifySingleHotel(hotel) {
 // ========================================
 
 async function createSuccessResult(matchedHotel, originalHotel, score, method) {
-  // 🌟 FETCH REAL DATA FROM GOOGLE PLACES API
-  const hotelName = matchedHotel.hotel_name;
-  const location = originalHotel.hotelAddress || originalHotel.address || 'Philippines';
-  
-  console.log(`🔍 Enriching hotel data from Google Places API...`);
-  const realData = await fetchRealHotelData(hotelName, location);
-  
-  if (realData) {
-    console.log(`✅ Successfully enriched with real data:`, {
-      amenities: realData.amenities?.length || 0,
-      rating: realData.rating,
-      reviews: realData.reviews_count
-    });
-  }
-  
+  // const hotelName = matchedHotel.hotel_name;
+  // const location = originalHotel.hotelAddress || originalHotel.address || 'Philippines';
+  // console.log(`🔍 Enriching hotel data from Google Places API...`);
+  const realData = await fetchRealHotelData(matchedHotel.hotel_name, originalHotel.hotelAddress || originalHotel.address || 'Philippines');
+  // if (realData) {
+  //   console.log(`✅ Successfully enriched with real data:`, {
+  //     amenities: realData.amenities?.length || 0,
+  //     rating: realData.rating,
+  //     reviews: realData.reviews_count
+  //   });
+  // }
   return {
     verified: true,
     matchScore: score,
@@ -306,12 +299,11 @@ async function createSuccessResult(matchedHotel, originalHotel, score, method) {
 }
 
 function createFailureResult(hotel, hotelId, hotelName) {
-  console.log("❌ VERIFICATION FAILED");
-  console.log("📊 Diagnostic Info:");
-  console.log(`   - Has ID: ${!!hotelId}`);
-  console.log(`   - Has Name: ${!!hotelName}`);
-  console.log(`   - Fields: ${Object.keys(hotel).join(', ')}`);
-  
+  // console.log("❌ VERIFICATION FAILED");
+  // console.log("📊 Diagnostic Info:");
+  // console.log(`   - Has ID: ${!!hotelId}`);
+  // console.log(`   - Has Name: ${!!hotelName}`);
+  // console.log(`   - Fields: ${Object.keys(hotel).join(', ')}`);
   return {
     verified: false,
     reason: 'Hotel not found in database',
@@ -419,10 +411,10 @@ export function searchHotelsByName(hotelName) {
   // Sort by similarity (highest first)
   matches.sort((a, b) => b.similarity - a.similarity);
   
-  console.log(`🔍 Found ${matches.length} matches above 65% similarity`);
-  if (matches.length > 0) {
-    console.log(`   Best match: ${matches[0].hotel_name} (${(matches[0].similarity * 100).toFixed(1)}%)`);
-  }
+  // console.log(`🔍 Found ${matches.length} matches above 65% similarity`);
+  // if (matches.length > 0) {
+  //   console.log(`   Best match: ${matches[0].hotel_name} (${(matches[0].similarity * 100).toFixed(1)}%)`);
+  // }
   
   return matches.slice(0, 5); // Return top 5 matches
 }

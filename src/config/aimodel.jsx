@@ -26,9 +26,9 @@ const genAI = USE_PROXY ? null : new GoogleGenerativeAI(apiKey);
 
 // Ultra-strict generation config for maximum JSON reliability
 const generationConfig = {
-  temperature: 0.3, // Balanced for consistency and creativity
-  topP: 0.9,
-  topK: 20,
+  temperature: 0.2, // ✅ REDUCED from 0.3 (faster, more consistent)
+  topP: 0.85, // ✅ REDUCED from 0.9 (less exploration)
+  topK: 15, // ✅ REDUCED from 20 (faster token selection)
   maxOutputTokens: 32768,
   responseMimeType: "application/json",
   responseSchema: {

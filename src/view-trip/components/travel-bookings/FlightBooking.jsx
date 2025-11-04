@@ -16,20 +16,115 @@ import {
   Minus,
   AlertTriangle,
 } from "lucide-react";
+import { getLimitedServiceInfo } from "@/utils/flightRecommendations";
 
-// ✅ ADDED: Airports with no commercial service
-const INACTIVE_AIRPORTS = {
-  BAG: {
-    name: "Baguio (Loakan Airport)",
-    alternatives: ["CRK", "MNL"],
-    alternativeNames: ["Clark", "Manila"],
-    message:
-      "Baguio airport has no commercial flights. Fly to Clark or Manila, then 3-4 hours by bus.",
-  },
+// ✅ CENTRALIZED: Import airport data from single source of truth
+// Convert LIMITED_SERVICE_AIRPORTS format to component-specific format
+const createInactiveAirportsMap = () => {
+  const map = {};
+
+  // Get all limited service airport codes
+  const limitedServiceCodes = [
+    "BAG",
+    "VIG",
+    "SAG",
+    "BAN",
+    "PAG",
+    "HUN", // Northern Luzon
+    "SFE",
+    "ANC", // Central Luzon
+    "LGZ",
+    "DAR",
+    "CAL",
+    "DON",
+    "MSB", // Bicol
+    "SJO",
+    "PUG", // Mindoro
+    "ELN",
+    "COR",
+    "SAB",
+    "BAL", // Palawan
+    "BOR",
+    "GIM",
+    "ANT", // Panay
+    "DUM",
+    "SIQ",
+    "DAU", // Negros
+    "PAN",
+    "CHO",
+    "AMO", // Bohol
+    "BANT",
+    "MAL",
+    "OSL",
+    "MOA", // Cebu
+    "TUB",
+    "SOH",
+    "KAL", // Leyte/Samar
+    "CAM",
+    "BUK",
+    "ILG", // Mindanao North
+    "GLE",
+    "BUR",
+    "BIS",
+    "BRI", // Caraga
+    "SAM",
+    "MAT",
+    "TBL", // Davao
+    "SAN",
+    "BAS", // Zamboanga
+    "TAW",
+    "SIT", // Sulu/Tawi-Tawi
+  ];
+
+  limitedServiceCodes.forEach((code) => {
+    const info = getLimitedServiceInfo(code);
+    if (info) {
+      map[code] = {
+        name: info.name,
+        alternatives: info.alternatives,
+        alternativeNames: info.alternativeNames,
+        transport: info.transport,
+        travelTime: info.travelTime,
+        message: `${info.name} has no commercial flights. ${info.recommendation}`,
+        recommendation: info.recommendation,
+        notes: info.notes,
+      };
+    }
+  });
+
+  return map;
 };
+
+const INACTIVE_AIRPORTS = createInactiveAirportsMap();
 
 function FlightBooking({ trip }) {
   const [sortBy, setSortBy] = useState("price");
+
+  // ✅ NEW: Client-side price validation helper
+  const validateFlightPrice = (priceStr) => {
+    try {
+      const numericPrice = parseFloat(
+        (priceStr || "0").toString().replace(/[₱,]/g, "")
+      );
+
+      // Basic validation
+      if (isNaN(numericPrice) || numericPrice <= 0) {
+        return { valid: false, error: "Invalid price" };
+      }
+
+      // Range validation (₱500 - ₱100,000)
+      if (numericPrice < 500) {
+        return { valid: false, error: "Price too low" };
+      }
+      if (numericPrice > 100000) {
+        return { valid: false, error: "Price unusually high" };
+      }
+
+      return { valid: true, price: numericPrice };
+    } catch {
+      return { valid: false, error: "Price validation error" };
+    }
+  };
 
   // Helper function to format flight duration consistently
   const formatDuration = (duration) => {
@@ -420,14 +515,30 @@ function FlightBooking({ trip }) {
       realFlightData: trip?.realFlightData,
     });
 
+    // ✅ NEW: Validate and filter flights with price validation
     const validFlights = flights
       .filter((flight) => {
-        const isValid =
+        // Check basic structure
+        const hasBasicStructure =
           flight && typeof flight === "object" && flight.name && flight.price;
-        if (!isValid) {
-          console.warn("⚠️ Invalid flight data:", flight);
+
+        if (!hasBasicStructure) {
+          console.warn("⚠️ Invalid flight structure:", flight);
+          return false;
         }
-        return isValid;
+
+        // Validate price
+        const priceValidation = validateFlightPrice(flight.price);
+
+        if (!priceValidation.valid) {
+          console.warn(
+            `⚠️ Invalid flight price for ${flight.name}: ${flight.price}`,
+            priceValidation.error
+          );
+          return false;
+        }
+
+        return true;
       })
       .map((flight) => ({
         ...flight,
@@ -439,8 +550,16 @@ function FlightBooking({ trip }) {
         stops: typeof flight.stops === "number" ? flight.stops : 0,
       }));
 
-    // ✅ ADDED: Show warning for inactive airport routes
+    // ✅ NEW: Extract data quality metrics
+    const dataQualityScore = trip?.realFlightData?.data_quality_score;
+    const validationSummary = trip?.realFlightData?.validation_summary;
+
+    // ✅ IMPROVED: Show appropriate warning based on route type
     if (routeWarning) {
+      const isOriginInactive = routeWarning.type === "inactive_origin";
+      const isDestinationInactive =
+        routeWarning.type === "inactive_destination";
+
       return (
         <div className="bg-orange-50 dark:bg-orange-950/30 rounded-xl shadow-lg border-2 border-orange-300 dark:border-orange-700 p-6">
           <div className="flex items-start gap-4">
@@ -449,32 +568,83 @@ function FlightBooking({ trip }) {
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-bold text-orange-900 dark:text-orange-100 mb-2">
-                No Direct Flights Available
+                {isOriginInactive
+                  ? `No Airport in ${routeWarning.info.name}`
+                  : "No Direct Flights Available"}
               </h3>
               <p className="text-orange-800 dark:text-orange-200 mb-4">
                 {routeWarning.info.message}
               </p>
 
               <div className="bg-white dark:bg-slate-900 rounded-lg p-4 mb-4">
-                <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                  ✈️ Recommended Route:
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                  {isOriginInactive ? "🚌" : "✈️"} Recommended Route:
                 </h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Plane className="h-4 w-4 text-sky-600" />
-                    <span className="text-gray-700 dark:text-gray-300">
-                      <strong>Step 1:</strong> Fly to{" "}
-                      {routeWarning.info.alternativeNames[0]} (
-                      {routeWarning.info.alternatives[0]})
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ArrowRight className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-700 dark:text-gray-300">
-                      <strong>Step 2:</strong> 3-4 hours by bus to{" "}
-                      {trip.userSelection.location}
-                    </span>
-                  </div>
+                <div className="space-y-2.5 text-sm">
+                  {isOriginInactive ? (
+                    // Origin city has no airport - need ground transport first
+                    <>
+                      <div className="flex items-start gap-2">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center text-xs font-bold text-orange-700 dark:text-orange-300">
+                          1
+                        </span>
+                        <span className="text-gray-700 dark:text-gray-300 flex-1">
+                          Take {routeWarning.info.transport} from{" "}
+                          {routeWarning.info.name} to{" "}
+                          {routeWarning.info.alternativeNames[0]} (
+                          {routeWarning.info.travelTime})
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center text-xs font-bold text-sky-700 dark:text-sky-300">
+                          2
+                        </span>
+                        <span className="text-gray-700 dark:text-gray-300 flex-1">
+                          Fly from {routeWarning.info.alternativeNames[0]} to{" "}
+                          {trip?.userSelection?.location}
+                        </span>
+                      </div>
+                      {routeWarning.info.recommendation && (
+                        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700">
+                          <p className="text-xs text-gray-600 dark:text-gray-400">
+                            💡 <span className="font-semibold">Tip:</span>{" "}
+                            {routeWarning.info.recommendation}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    // Destination has no airport
+                    <>
+                      <div className="flex items-start gap-2">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center text-xs font-bold text-sky-700 dark:text-sky-300">
+                          1
+                        </span>
+                        <span className="text-gray-700 dark:text-gray-300 flex-1">
+                          Fly to {routeWarning.info.alternativeNames[0]} (
+                          {routeWarning.info.alternatives[0]})
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center text-xs font-bold text-orange-700 dark:text-orange-300">
+                          2
+                        </span>
+                        <span className="text-gray-700 dark:text-gray-300 flex-1">
+                          Take {routeWarning.info.transport} to{" "}
+                          {trip?.userSelection?.location} (
+                          {routeWarning.info.travelTime})
+                        </span>
+                      </div>
+                      {routeWarning.info.recommendation && (
+                        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700">
+                          <p className="text-xs text-gray-600 dark:text-gray-400">
+                            💡 <span className="font-semibold">Tip:</span>{" "}
+                            {routeWarning.info.recommendation}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -484,14 +654,17 @@ function FlightBooking({ trip }) {
                     key={altCode}
                     onClick={() =>
                       window.open(
-                        generateTripComURL({ destination: altCode }),
+                        generateTripComURL({
+                          [isOriginInactive ? "origin" : "destination"]:
+                            altCode,
+                        }),
                         "_blank"
                       )
                     }
-                    className="brand-button"
+                    className="brand-button cursor-pointer"
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
-                    Search Flights to{" "}
+                    Search Flights {isOriginInactive ? "from" : "to"}{" "}
                     {routeWarning.info.alternativeNames[index]}
                   </Button>
                 ))}
@@ -504,35 +677,39 @@ function FlightBooking({ trip }) {
 
     if (!hasFlightData || validFlights.length === 0) {
       return (
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-12 text-center">
-          <div className="w-16 h-16 brand-gradient rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-            <span className="text-2xl text-white">✈️</span>
-          </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
-            Flight Booking Available
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 text-sm max-w-md mx-auto font-medium mb-4">
-            Contact our travel partners for the best flight deals to{" "}
-            {trip?.userSelection?.location}
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Button
-              onClick={() => window.open(generateTripComURL(), "_blank")}
-              className="brand-button"
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Search on Trip.com
-            </Button>
-            <Button
-              onClick={() =>
-                window.open("https://www.agoda.com/flights", "_blank")
-              }
-              variant="outline"
-              className="border-sky-500 text-sky-600 hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50"
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Book on Agoda
-            </Button>
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+          <div className="p-8 sm:p-12 text-center">
+            <div className="w-20 h-20 brand-gradient rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <span className="text-3xl">✈️</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+              Flight Booking Available
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base max-w-md mx-auto mb-8 leading-relaxed">
+              Contact our travel partners for the best flight deals to{" "}
+              <span className="font-semibold text-sky-600 dark:text-sky-400">
+                {trip?.userSelection?.location}
+              </span>
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md mx-auto">
+              <Button
+                onClick={() => window.open(generateTripComURL(), "_blank")}
+                className="brand-button cursor-pointer h-12 text-base font-semibold"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Search on Trip.com
+              </Button>
+              <Button
+                onClick={() =>
+                  window.open("https://www.agoda.com/flights", "_blank")
+                }
+                variant="outline"
+                className="border-2 border-sky-500 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/30 h-12 text-base font-semibold cursor-pointer transition-all"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Book on Agoda
+              </Button>
+            </div>
           </div>
         </div>
       );
@@ -571,97 +748,183 @@ function FlightBooking({ trip }) {
 
     return (
       <div className="space-y-6">
-        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md border border-gray-100 dark:border-slate-700 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
           {/* Header Section */}
-          <div className="brand-gradient px-4 sm:px-6 py-4 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-white dark:bg-white/10 opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
-            <div className="absolute bottom-0 left-0 w-16 h-16 bg-white dark:bg-white/10 opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
+          <div className="brand-gradient px-5 sm:px-8 py-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white dark:bg-white/10 opacity-5 rounded-full -translate-y-6 translate-x-6"></div>
+            <div className="absolute bottom-0 left-0 w-20 h-20 bg-white dark:bg-white/10 opacity-5 rounded-full translate-y-4 -translate-x-4"></div>
 
             <div className="relative">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white dark:bg-white/90 rounded-lg flex items-center justify-center shadow-lg border border-white/30">
-                    <Plane className="h-5 w-5 text-sky-600" />
+              <div className="flex items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white dark:bg-white/90 rounded-xl flex items-center justify-center shadow-lg border border-white/30 flex-shrink-0">
+                    <Plane className="h-6 w-6 sm:h-7 sm:w-7 text-sky-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-xl font-bold text-white mb-1 break-words">
+                    <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight">
                       Available Flights
                     </h2>
-                    <p className="text-sky-100 text-xs flex items-center gap-2 flex-wrap">
-                      <span>✈️</span>
-                      <span>
-                        {validFlights.length} flights available for your journey
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sky-100 text-xs sm:text-sm">
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-base">✈️</span>
+                        <span className="font-medium">
+                          {validFlights.length}{" "}
+                          {validFlights.length === 1 ? "flight" : "flights"}{" "}
+                          available
+                        </span>
                       </span>
-                      <span>•</span>
-                      <span>🎯 Real-time prices</span>
-                    </p>
+                      <span className="hidden sm:inline">•</span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-base">🎯</span>
+                        <span>Real-time prices</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="hidden sm:flex items-center gap-3 text-white">
-                  <div className="text-center">
-                    <div className="text-base font-bold">
+                <div className="hidden lg:flex items-center gap-4">
+                  <div className="text-right bg-white/10 rounded-lg px-4 py-2 backdrop-blur-sm">
+                    <div className="text-2xl font-bold text-white">
                       {validFlights.length}
                     </div>
-                    <div className="text-xs text-sky-100">Flights</div>
+                    <div className="text-xs text-sky-100 font-medium">
+                      Total Flights
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="p-4 sm:p-6">
+          <div className="p-5 sm:p-8">
+            {/* ✅ NEW: Data Quality Indicator */}
+            {dataQualityScore !== undefined && dataQualityScore < 100 && (
+              <div className="mb-6 bg-amber-50 dark:bg-amber-950/30 border-l-4 border-amber-400 dark:border-amber-600 rounded-lg p-4 sm:p-5 shadow-sm">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/50 rounded-full flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-amber-900 dark:text-amber-300 mb-2 text-sm sm:text-base">
+                      Data Quality Notice
+                    </h4>
+                    <p className="text-sm text-amber-800 dark:text-amber-400 mb-3 leading-relaxed">
+                      Some flight data has been filtered or corrected. Quality
+                      score:{" "}
+                      <span className="font-bold">
+                        {Math.round(dataQualityScore)}%
+                      </span>
+                    </p>
+                    {validationSummary?.invalid_flights > 0 && (
+                      <p className="text-xs text-amber-700 dark:text-amber-500 mb-2">
+                        {validationSummary.invalid_flights} flight(s) removed
+                        due to invalid pricing data.
+                      </p>
+                    )}
+                    {validationSummary?.price_anomalies?.length > 0 && (
+                      <details className="text-xs text-amber-700 dark:text-amber-500">
+                        <summary className="cursor-pointer font-medium mb-1 hover:text-amber-900 dark:hover:text-amber-300">
+                          View {validationSummary.price_anomalies.length} price
+                          anomalies detected
+                        </summary>
+                        <ul className="ml-4 space-y-1 mt-2">
+                          {validationSummary.price_anomalies
+                            .slice(0, 5)
+                            .map((anomaly, idx) => (
+                              <li key={idx} className="text-xs">
+                                • {anomaly.flight}: {anomaly.price} -{" "}
+                                {anomaly.reason}
+                              </li>
+                            ))}
+                          {validationSummary.price_anomalies.length > 5 && (
+                            <li className="text-xs italic">
+                              ... and{" "}
+                              {validationSummary.price_anomalies.length - 5}{" "}
+                              more
+                            </li>
+                          )}
+                        </ul>
+                      </details>
+                    )}
+                    {validationSummary?.price_statistics && (
+                      <div className="mt-2 text-xs text-amber-700 dark:text-amber-500 grid grid-cols-3 gap-2">
+                        <div>
+                          <span className="font-medium">Avg:</span> ₱
+                          {Math.round(
+                            validationSummary.price_statistics.average
+                          ).toLocaleString()}
+                        </div>
+                        <div>
+                          <span className="font-medium">Min:</span> ₱
+                          {validationSummary.price_statistics.min.toLocaleString()}
+                        </div>
+                        <div>
+                          <span className="font-medium">Max:</span> ₱
+                          {validationSummary.price_statistics.max.toLocaleString()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Sort Options */}
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                <span>Sort by:</span>
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-gray-100 dark:border-slate-700">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Sort by:
+                </span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="text-sm border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-sky-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-white cursor-pointer"
+                  className="text-sm border-2 border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-600 focus:border-sky-500 dark:focus:border-sky-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white cursor-pointer font-medium transition-all hover:border-sky-400 dark:hover:border-sky-500"
                 >
-                  <option value="price">Price (Low to High)</option>
-                  <option value="departure">Departure Time</option>
-                  <option value="duration">Flight Duration</option>
+                  <option value="price">💰 Price (Low to High)</option>
+                  <option value="departure">🕐 Departure Time</option>
+                  <option value="duration">⏱️ Flight Duration</option>
                 </select>
+              </div>
+              <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium">
+                Showing {sortedFlights.length}{" "}
+                {sortedFlights.length === 1 ? "result" : "results"}
               </div>
             </div>
 
-            <div className="grid gap-6">
+            <div className="space-y-4 sm:space-y-5">
               {sortedFlights.map((flight, index) => (
-                <div key={index}>
-                  <FlightCard
-                    flight={flight}
-                    onBook={() => handleBookFlight(flight)}
-                    trip={trip}
-                    formatDuration={formatDuration}
-                  />
-                  {index < sortedFlights.length - 1 && (
-                    <div className="mt-6 border-b border-gray-100"></div>
-                  )}
-                </div>
+                <FlightCard
+                  key={index}
+                  flight={flight}
+                  onBook={() => handleBookFlight(flight)}
+                  trip={trip}
+                  formatDuration={formatDuration}
+                />
               ))}
             </div>
 
             {/* Helpful tip */}
-            <div className="mt-4 p-4 bg-gradient-to-r from-sky-50 to-blue-50 rounded-lg border border-sky-200">
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 brand-gradient rounded flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-xs">💡</span>
+            <div className="mt-8 p-5 sm:p-6 bg-gradient-to-br from-sky-50 via-blue-50 to-sky-50 dark:from-sky-950/30 dark:via-blue-950/30 dark:to-sky-950/30 rounded-xl border border-sky-200 dark:border-sky-800 shadow-sm">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 brand-gradient rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
+                  <span className="text-white text-lg">💡</span>
                 </div>
-                <div>
-                  <h4 className="font-semibold brand-gradient-text mb-1">
+                <div className="flex-1">
+                  <h4 className="font-bold brand-gradient-text mb-2 text-base sm:text-lg">
                     Flight Booking Tips
                   </h4>
-                  <div className="text-sky-700 text-sm space-y-2">
+                  <div className="text-sky-800 dark:text-sky-300 text-sm space-y-2.5 leading-relaxed">
                     <p>
                       Prices shown are current estimates and may change. You'll
                       be redirected to our trusted booking partners for secure
-                      transactions and the best available rates!
+                      transactions and the best available rates.
                     </p>
-                    <p className="text-xs">
-                      <strong>Duration:</strong> Scheduled flight time from
-                      takeoff to landing, excluding ground time.
+                    <p className="text-xs sm:text-sm">
+                      <strong className="font-semibold">
+                        Flight Duration:
+                      </strong>{" "}
+                      Scheduled time from takeoff to landing, excluding ground
+                      time and boarding.
                     </p>
                   </div>
                 </div>
@@ -672,54 +935,61 @@ function FlightBooking({ trip }) {
 
         {/* Price Alerts */}
         {trip?.realFlightData?.price_alerts && (
-          <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4">
-            <h4 className="font-medium text-green-900 dark:text-green-400 mb-2 flex items-center gap-2">
-              <TrendingDown className="h-4 w-4" />
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-l-4 border-green-500 dark:border-green-600 rounded-xl p-5 sm:p-6 shadow-sm">
+            <h4 className="font-bold text-green-900 dark:text-green-400 mb-4 flex items-center gap-2 text-base sm:text-lg">
+              <div className="w-8 h-8 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center">
+                <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5" />
+              </div>
               Price Insights
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div>
-                <span className="text-green-700 dark:text-green-400 font-medium">
-                  Lowest:{" "}
-                </span>
-                <span className="text-green-800 dark:text-green-300">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div className="bg-white dark:bg-slate-900/50 rounded-lg p-3 sm:p-4 border border-green-200 dark:border-green-800">
+                <div className="text-xs sm:text-sm text-green-700 dark:text-green-400 font-medium mb-1">
+                  Lowest Price
+                </div>
+                <div className="text-lg sm:text-xl font-bold text-green-900 dark:text-green-300">
                   ₱
                   {trip.realFlightData.price_alerts.lowest_price?.toLocaleString()}
-                </span>
+                </div>
               </div>
-              <div>
-                <span className="text-green-700 dark:text-green-400 font-medium">
-                  Average:{" "}
-                </span>
-                <span className="text-green-800 dark:text-green-300">
+              <div className="bg-white dark:bg-slate-900/50 rounded-lg p-3 sm:p-4 border border-green-200 dark:border-green-800">
+                <div className="text-xs sm:text-sm text-green-700 dark:text-green-400 font-medium mb-1">
+                  Average Price
+                </div>
+                <div className="text-lg sm:text-xl font-bold text-green-900 dark:text-green-300">
                   ₱
                   {Math.round(
                     trip.realFlightData.price_alerts.average_price
                   )?.toLocaleString()}
-                </span>
+                </div>
               </div>
-              <div>
-                <span className="text-green-700 dark:text-green-400 font-medium">
-                  Trend:{" "}
-                </span>
-                <span className="text-green-800 dark:text-green-300 capitalize">
+              <div className="bg-white dark:bg-slate-900/50 rounded-lg p-3 sm:p-4 border border-green-200 dark:border-green-800">
+                <div className="text-xs sm:text-sm text-green-700 dark:text-green-400 font-medium mb-1">
+                  Price Trend
+                </div>
+                <div className="text-lg sm:text-xl font-bold text-green-900 dark:text-green-300 capitalize">
                   {trip.realFlightData.price_alerts.price_trend}
-                </span>
+                </div>
               </div>
             </div>
-            <p className="text-green-700 dark:text-green-400 text-xs mt-2 font-medium">
-              💡 {trip.realFlightData.price_alerts.best_booking_time}
-            </p>
+            <div className="bg-white dark:bg-slate-900/50 rounded-lg p-3 sm:p-4 border border-green-200 dark:border-green-800">
+              <p className="text-green-800 dark:text-green-300 text-sm font-medium flex items-start gap-2">
+                <span className="text-base flex-shrink-0">💡</span>
+                <span>
+                  {trip.realFlightData.price_alerts.best_booking_time}
+                </span>
+              </p>
+            </div>
           </div>
         )}
-
         {/* Alternative Booking Partners */}
         {trip?.realFlightData?.booking_info?.partner_links && (
-          <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-lg p-4">
-            <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
+          <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl p-5 sm:p-6 shadow-sm">
+            <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4 text-base sm:text-lg flex items-center gap-2">
+              <span className="text-lg">🔍</span>
               Compare Prices on Other Sites
             </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {Object.entries(
                 trip.realFlightData.booking_info.partner_links
               ).map(([name, url]) => (
@@ -727,10 +997,9 @@ function FlightBooking({ trip }) {
                   key={name}
                   onClick={() => window.open(url, "_blank")}
                   variant="outline"
-                  size="sm"
-                  className="text-xs hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer"
+                  className="text-sm font-medium hover:bg-white dark:hover:bg-slate-700 hover:border-sky-400 dark:hover:border-sky-600 cursor-pointer transition-all h-11 border-2"
                 >
-                  <ExternalLink className="h-3 w-3 mr-1" />
+                  <ExternalLink className="h-3.5 w-3.5 mr-2" />
                   {name.charAt(0).toUpperCase() + name.slice(1)}
                 </Button>
               ))}
@@ -782,97 +1051,107 @@ function FlightBooking({ trip }) {
 // Individual Flight Card Component
 function FlightCard({ flight, onBook, trip, formatDuration }) {
   return (
-    <div className="border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg transition-all duration-200 hover:shadow-lg hover:border-sky-300 dark:hover:border-sky-600 hover:-translate-y-1 group">
-      <div className="p-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div className="border-2 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-xl transition-all duration-300 hover:shadow-2xl hover:border-sky-400 dark:hover:border-sky-500 hover:-translate-y-0.5 group overflow-hidden">
+      <div className="p-5 sm:p-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 sm:gap-6">
           {/* Flight Details */}
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                <Plane className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                {flight.name}
+          <div className="flex-1 min-w-0">
+            {/* Airline Name and Badges */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <div className="flex items-center gap-2.5 mr-2">
+                <div className="w-9 h-9 bg-sky-100 dark:bg-sky-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Plane className="h-4.5 w-4.5 text-sky-600 dark:text-sky-400" />
+                </div>
+                <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base sm:text-lg">
+                  {flight.name}
+                </h3>
               </div>
               {flight.is_best && (
-                <Badge className="bg-green-100 dark:bg-green-950/30 text-green-800 dark:text-green-400 text-xs">
-                  <Star className="h-3 w-3 mr-1" />
+                <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-950/50 dark:to-emerald-950/50 text-green-800 dark:text-green-400 text-xs font-semibold px-2.5 py-1 border border-green-300 dark:border-green-700">
+                  <Star className="h-3 w-3 mr-1 fill-current" />
                   Best Value
                 </Badge>
               )}
               {flight.flight_number && (
-                <Badge variant="outline" className="text-xs">
+                <Badge
+                  variant="outline"
+                  className="text-xs font-medium border-gray-300 dark:border-slate-600 px-2.5 py-1"
+                >
                   {flight.flight_number}
                 </Badge>
               )}
             </div>
 
             {/* Flight Times and Route */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-              <div>
-                <div className="text-gray-600 dark:text-gray-400 text-xs mb-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-4">
+              <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3">
+                <div className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-1.5 flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" />
                   Departure
                 </div>
-                <div className="font-medium flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-gray-400 dark:text-gray-500" />
+                <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
                   {flight.departure}
                 </div>
               </div>
-              <div>
-                <div className="text-gray-600 dark:text-gray-400 text-xs mb-1">
+              <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3">
+                <div className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-1.5 flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
                   Arrival
                 </div>
-                <div className="font-medium flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-gray-400 dark:text-gray-500" />
+                <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
                   {flight.arrival}
                 </div>
               </div>
-              <div>
-                <div className="text-gray-600 dark:text-gray-400 text-xs mb-1">
+              <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3">
+                <div className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-1.5 flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
                   Duration
                 </div>
-                <div className="font-medium flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-gray-400 dark:text-gray-500" />
+                <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
                   {formatDuration(flight.duration)}
                 </div>
               </div>
             </div>
 
             {/* Flight Features */}
-            <div className="flex items-center gap-4 mt-3 text-xs text-gray-600 dark:text-gray-400">
-              <span className="flex items-center gap-1">
-                <Shield className="h-3 w-3" />
-                {flight.stops === 0 ? "Non-stop" : `${flight.stops} stop(s)`}
+            <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
+              <span className="flex items-center gap-1.5 bg-gray-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
+                <Shield className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                {flight.stops === 0 ? "✈️ Non-stop" : `${flight.stops} stop(s)`}
               </span>
-              <span className="flex items-center gap-1">
-                <Users className="h-3 w-3" />
+              <span className="flex items-center gap-1.5 bg-gray-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
+                <Users className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
                 {trip?.userSelection?.travelers}
               </span>
               {flight.aircraft_type && (
-                <span className="text-gray-500">{flight.aircraft_type}</span>
+                <span className="bg-gray-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
+                  ✈️ {flight.aircraft_type}
+                </span>
               )}
             </div>
           </div>
 
           {/* Price and Booking */}
-          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-3 lg:gap-2">
+          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-4 lg:gap-3 pt-4 sm:pt-0 border-t sm:border-t-0 lg:border-l-2 border-gray-100 dark:border-slate-700 lg:pl-6">
             <div className="text-center sm:text-right lg:text-right flex-1 sm:flex-initial">
-              <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
                 Total Price
               </div>
-              <div className="text-2xl font-bold text-green-600 dark:text-green-500">
+              <div className="text-3xl sm:text-2xl lg:text-3xl font-bold text-green-600 dark:text-green-500 mb-1">
                 {flight.price}
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">
+              <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                 per person
               </div>
             </div>
 
             <Button
               onClick={onBook}
-              className="brand-button cursor-pointer group-hover:scale-105 transition-all duration-200 w-full sm:w-auto lg:w-auto px-6 py-3 sm:px-4 sm:py-2 text-base sm:text-sm font-semibold"
+              className="brand-button cursor-pointer group-hover:scale-105 group-hover:shadow-lg transition-all duration-300 w-full sm:w-auto lg:w-full min-w-[140px] h-12 sm:h-11 lg:h-12 text-base font-bold"
             >
               <span className="flex items-center justify-center gap-2">
                 <span>Book Now</span>
-                <ExternalLink className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
               </span>
             </Button>
           </div>

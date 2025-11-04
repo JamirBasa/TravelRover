@@ -105,9 +105,15 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+
+# ✅ UPDATED: Use Philippine Time (PHT, UTC+8)
+TIME_ZONE = 'Asia/Manila'
 USE_I18N = True
-USE_TZ = True
+USE_TZ = True  # Keep timezone-aware datetimes
+
+# Date formatting for Philippine context
+DATE_FORMAT = 'Y-m-d'  # YYYY-MM-DD format
+DATETIME_FORMAT = 'Y-m-d H:i:s'  # YYYY-MM-DD HH:MM:SS format
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
@@ -137,6 +143,7 @@ CORS_ALLOW_CREDENTIALS = True
 # API Keys from environment variables
 SERPAPI_KEY = config('SERPAPI_KEY', default='')
 GOOGLE_PLACES_API_KEY = config('GOOGLE_PLACES_API_KEY', default='')
+GOOGLE_MAPS_API_KEY = config('GOOGLE_MAPS_API_KEY', default='')  # ✅ Added for geocoding
 
 # Gemini AI API Key (used by proxy endpoint)
 GOOGLE_GEMINI_AI_API_KEY = config('GOOGLE_GEMINI_AI_API_KEY', default='')

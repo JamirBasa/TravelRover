@@ -40,10 +40,11 @@ export const UI_CONFIG = {
 };
 
 // Date Configuration
+// ✅ UPDATED: Use centralized trip duration limits from tripDurationLimits.js
 export const DATE_CONFIG = {
-  MIN_TRIP_DAYS: 1,
-  MAX_TRIP_DAYS: 30,
-  DEFAULT_TRIP_DAYS: 3,
+  MIN_TRIP_DAYS: 1, // 1 day (import from TRIP_DURATION when needed)
+  MAX_TRIP_DAYS: 30, // 30 days (1 month - import from TRIP_DURATION when needed)
+  DEFAULT_TRIP_DAYS: 3, // 3 days
   DATE_FORMAT: "en-US",
   DATE_OPTIONS: {
     weekday: "long",
@@ -71,7 +72,13 @@ export const VALIDATION_RULES = {
   MIN_BUDGET: 1000,
   MAX_BUDGET: 1000000,
   MIN_TRAVELERS: 1,
-  MAX_TRAVELERS: 20,
+  MAX_TRAVELERS: 50, // ✅ Updated to match TravelerSelector max (was 20)
+  BUDGET_LEVELS: ["Budget-Friendly", "Moderate", "Luxury"], // Valid budget level options
+  TRAVELER_LIMITS: {
+    MIN: 1,
+    MAX: 50,
+    LARGE_GROUP_WARNING: 15, // Show warning for groups larger than this
+  },
   REQUIRED_FIELDS: {
     TRIP: ["location", "startDate", "endDate", "travelers", "budget"],
     PROFILE: ["firstName", "lastName", "email"],
@@ -140,7 +147,7 @@ export const DEFAULT_VALUES = {
   TRIP: {
     duration: 3,
     travelers: "1-2 People",
-    budget: "Moderate",
+    budget: "Moderate", // Default budget level
   },
   FLIGHT: {
     includeFlights: false,
@@ -156,14 +163,14 @@ export const STEP_CONFIGS = {
     {
       id: 1,
       title: "Destination & Dates",
-      description: "Where, when, and special requests for your trip",
+      description: "Where and when you'd like to travel",
       icon: FaMapMarkerAlt,
     },
     {
       id: 2,
-      title: "Travel Preferences",
-      description: "Budget and group size preferences",
-      icon: FaCog,
+      title: "Group Size",
+      description: "How many travelers are going?",
+      icon: FaUsers,
     },
     {
       id: 3,
@@ -173,15 +180,15 @@ export const STEP_CONFIGS = {
     },
     {
       id: 4,
-      title: "Flight Options",
-      description: "Include flights in your itinerary",
-      icon: FaPlane,
+      title: "Travel Services",
+      description: "Include flights and hotels in your trip",
+      icon: FaPlane, // Could also use FaCog for services
     },
     {
       id: 5,
-      title: "Hotel Options",
-      description: "Include hotel recommendations",
-      icon: FaHotel,
+      title: "Budget",
+      description: "Set your trip budget knowing all your needs",
+      icon: FaCog,
     },
     {
       id: 6,
@@ -236,6 +243,14 @@ export const STEP_CONFIGS = {
   ],
 };
 
+// Import PHT utilities for date operations
+import {
+  getMinDatePHT,
+  addDaysPHT,
+  formatPHTDate,
+  calculatePHTDays,
+} from "../utils/philippineTime";
+
 // Utility Functions
 export const formatCurrency = (amount) =>
   `₱${parseInt(amount).toLocaleString()}`;
@@ -243,25 +258,33 @@ export const formatCurrency = (amount) =>
 export const calculateProgress = (currentStep, totalSteps) =>
   (currentStep / totalSteps) * 100;
 
+/**
+ * Get minimum date for date picker (tomorrow in PHT)
+ * @returns {string} YYYY-MM-DD format
+ */
 export const getMinDate = () => {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  return tomorrow.toISOString().split("T")[0];
+  return getMinDatePHT();
 };
 
+/**
+ * Get minimum end date (day after start date in PHT)
+ * @param {string|Date} startDate - Start date
+ * @returns {string} YYYY-MM-DD format
+ */
 export const getMinEndDate = (startDate) => {
-  if (!startDate) return getMinDate();
-  const nextDay = new Date(startDate);
-  nextDay.setDate(nextDay.getDate() + 1);
-  return nextDay.toISOString().split("T")[0];
+  if (!startDate) return getMinDatePHT();
+  const nextDay = addDaysPHT(startDate, 1);
+  return formatPHTDate(nextDay);
 };
 
+/**
+ * Calculate duration between dates (PHT, inclusive)
+ * @param {string|Date} startDate - Start date
+ * @param {string|Date} endDate - End date
+ * @returns {number} Number of days
+ */
 export const calculateDuration = (startDate, endDate) => {
-  if (!startDate || !endDate) return 0;
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const diffTime = Math.abs(end - start);
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return calculatePHTDays(startDate, endDate);
 };
 
 // Form Validation Helpers
@@ -388,13 +411,57 @@ export const SelectTravelList = [
   },
 ];
 
+// ✅ NEW: Enhanced Traveler Options (used in TravelerSelector)
+export const TRAVELER_OPTIONS = [
+  {
+    id: 1,
+    title: "Solo Traveler",
+    desc: "Exploring on your own adventure",
+    icon: "🧳",
+    count: 1,
+    category: "solo",
+  },
+  {
+    id: 2,
+    title: "Duo",
+    desc: "Two travelers exploring together",
+    icon: "👥",
+    count: 2,
+    category: "duo",
+  },
+  {
+    id: 3,
+    title: "Small Group",
+    desc: "Perfect for close friends",
+    icon: "👨‍👩‍👧",
+    count: 4,
+    category: "group",
+  },
+  {
+    id: 4,
+    title: "Family",
+    desc: "Fun for the whole family",
+    icon: "👨‍👩‍👧‍👦",
+    count: 5,
+    category: "family",
+  },
+  {
+    id: 5,
+    title: "Large Group",
+    desc: "Big adventures with more people",
+    icon: "🎉",
+    count: 8,
+    category: "group",
+  },
+];
+
 export const SelectBudgetOptions = [
   {
     id: 1,
-    title: "Budget",
+    title: "Budget-Friendly",
     desc: "Hostels, local food, basic activities - Perfect for backpackers",
     icon: "💰",
-    value: "Budget",
+    value: "Budget-Friendly",
   },
   {
     id: 2,
@@ -592,7 +659,7 @@ CRITICAL JSON REQUIREMENTS:
 - Complete all objects and arrays properly
 - Use real coordinates and PHP pricing
 - Activity count: STRICTLY follow the activity preference rules above (Day 1: 1-2 max, Middle days: EXACTLY {activityPreference}, Last day: 0-1 max)
-- Budget levels: Budget ₱2-8K, Moderate ₱8-20K, Luxury ₱20K+
+- Budget levels: Budget-Friendly ₱2-8K, Moderate ₱8-20K, Luxury ₱20K+
 - Descriptions under 80 chars
 - Must include: tripName, destination, hotels, itinerary, placesToVisit
 - Response must be parseable by JSON.parse()

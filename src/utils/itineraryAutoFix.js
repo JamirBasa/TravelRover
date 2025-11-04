@@ -20,26 +20,15 @@ export function autoFixDay1Activities(tripData) {
     return tripData;
   }
 
-  console.log("🔧 Auto-fixing Day 1 activity count...");
-
   // Use unified activity classification
   const { activities, logistics, activityCount } = classifyActivities(day1.plan);
-  
-  console.log(`📊 Day 1 Analysis - Activities: ${activityCount}, Logistics: ${logistics.length}`);
 
   // Get constraints for arrival day
   const constraints = getActivityConstraints(true, false, 2);
 
   // If more than max allowed activities, reduce to max
   if (activityCount > constraints.max) {
-    console.log(`⚠️ Day 1 has ${activityCount} activities, reducing to ${constraints.max}`);
-    
     const keptActivities = activities.slice(0, constraints.max);
-    const removedActivities = activities.slice(constraints.max);
-    
-    console.log("✅ Kept activities:", keptActivities.map(a => a.placeName).join(", "));
-    console.log("❌ Removed activities:", removedActivities.map(a => a.placeName).join(", "));
-
     // Reconstruct Day 1 plan with logistics + max allowed activities
     // Sort by time to maintain chronological order
     const newPlan = [...logistics, ...keptActivities].sort((a, b) => {
@@ -53,65 +42,105 @@ export function autoFixDay1Activities(tripData) {
       ...day1,
       plan: newPlan
     };
-
-    console.log(`✅ Day 1 auto-fixed: Reduced to ${constraints.max} activities`);
-  } else {
-    console.log(`✅ Day 1 already compliant: ${activityCount} activities`);
   }
-
   return tripData;
 }
 
 /**
- * Auto-fix entire itinerary activity counts
+ * Auto-fix missing "Return to hotel" activities at end of middle days
+ * @param {Object} tripData - The parsed trip data
+ * @returns {Object} - { tripData, modificationsCount }
+ */
+function autoFixHotelReturns(tripData) {
+  let modificationsCount = 0;
+  
+  if (!tripData?.itinerary || tripData.itinerary.length <= 2) {
+    return { tripData, modificationsCount };
+  }
+
+  // Process middle days only (skip Day 1 and last day)
+  for (let i = 1; i < tripData.itinerary.length - 1; i++) {
+    const day = tripData.itinerary[i];
+    if (!day?.plan || day.plan.length === 0) continue;
+
+    const lastActivity = day.plan[day.plan.length - 1];
+    const lastText = (lastActivity.placeName || '').toLowerCase();
+
+    // Check if day already ends with hotel return
+    const hasHotelReturn =
+      lastText.includes('return to hotel') ||
+      lastText.includes('hotel return') ||
+      lastText.includes('back to hotel');
+
+    if (!hasHotelReturn) {
+      // Add "Return to hotel" activity at end of day
+      day.plan.push({
+        time: "20:00",
+        placeName: "Return to hotel",
+        placeDetails: "End of day - rest and prepare for tomorrow's activities",
+        ticketPricing: "Free",
+        travelTime: "15-30 minutes",
+      });
+      modificationsCount++;
+    }
+  }
+  return { tripData, modificationsCount };
+}
+
+/**
+ * Auto-fix entire itinerary activity counts and structure
  * @param {Object} tripData - The parsed trip data
  * @param {Object} formData - Form data with activity preferences
- * @returns {Object} - Fixed trip data
+ * @returns {Object} - Fixed trip data with modifications summary
  */
 export function autoFixItinerary(tripData, formData) {
-  console.log("🔧 Starting auto-fix for itinerary...");
-  console.log("📊 Input data:", {
-    hasItinerary: !!tripData?.itinerary,
-    itineraryLength: tripData?.itinerary?.length || 0,
-    hasFormData: !!formData
-  });
-
   if (!tripData?.itinerary || !formData) {
-    console.warn("⚠️ Cannot auto-fix: Missing trip data or form data");
-    return tripData;
+    console.warn("Cannot auto-fix: Missing trip data or form data");
+    return { tripData, modificationsCount: 0 };
   }
 
   if (tripData.itinerary.length === 0) {
-    console.warn("⚠️ Cannot auto-fix: Itinerary is empty");
-    return tripData;
+    console.warn("Cannot auto-fix: Itinerary is empty");
+    return { tripData, modificationsCount: 0 };
   }
 
+  let modificationsCount = 0;
+
   // Fix Day 1 (max 2 activities)
+  const originalDay1Count = countDayActivities(tripData.itinerary[0]);
   tripData = autoFixDay1Activities(tripData);
+  const newDay1Count = countDayActivities(tripData.itinerary[0]);
+  if (originalDay1Count !== newDay1Count) modificationsCount++;
 
   // Fix all middle days based on activity preference
-  tripData = autoFixMiddleDays(tripData, formData);
+  const middleDaysResult = autoFixMiddleDays(tripData, formData);
+  tripData = middleDaysResult.tripData;
+  modificationsCount += middleDaysResult.modificationsCount;
 
-  console.log("✅ Auto-fix completed");
-  return tripData;
+  // Fix missing hotel returns
+  const hotelReturnResult = autoFixHotelReturns(tripData);
+  tripData = hotelReturnResult.tripData;
+  modificationsCount += hotelReturnResult.modificationsCount;
+
+  return { tripData, modificationsCount };
 }
 
 /**
  * Auto-fix middle days to match activity preference
  * @param {Object} tripData - The parsed trip data
  * @param {Object} formData - Form data with activity preferences
- * @returns {Object} - Fixed trip data
+ * @returns {Object} - { tripData, modificationsCount }
  */
 function autoFixMiddleDays(tripData, formData) {
+  let modificationsCount = 0;
+  
   if (!tripData?.itinerary || tripData.itinerary.length <= 2) {
-    return tripData; // Only Day 1 and last day, no middle days
+    return { tripData, modificationsCount }; // Only Day 1 and last day, no middle days
   }
 
   // Get activity preference (1=Light, 2=Moderate, 3=Packed)
   const activityPreference = formData.activityPreference || 2;
   const constraints = getActivityConstraints(false, false, activityPreference);
-
-  console.log(`🔧 Auto-fixing middle days (max ${constraints.max} activities per day)...`);
 
   // Process middle days (skip first and last day)
   for (let i = 1; i < tripData.itinerary.length - 1; i++) {
@@ -123,14 +152,7 @@ function autoFixMiddleDays(tripData, formData) {
 
     // If more than max activities, keep only allowed number
     if (activityCount > constraints.max) {
-      console.log(`⚠️ Day ${i + 1} has ${activityCount} activities, reducing to ${constraints.max}`);
-      
       const keptActivities = activities.slice(0, constraints.max);
-      const removedActivities = activities.slice(constraints.max);
-      
-      console.log(`  ✅ Kept: ${keptActivities.map(a => a.placeName).join(", ")}`);
-      console.log(`  ❌ Removed: ${removedActivities.map(a => a.placeName).join(", ")}`);
-
       // Reconstruct day plan
       const newPlan = [...logistics, ...keptActivities].sort((a, b) => {
         const timeA = a.time || '00:00';
@@ -142,12 +164,11 @@ function autoFixMiddleDays(tripData, formData) {
         ...day,
         plan: newPlan
       };
-    } else {
-      console.log(`  ✅ Day ${i + 1} compliant: ${activityCount} activities`);
+      modificationsCount++; // Track modifications
     }
   }
-
-  return tripData;
+  
+  return { tripData, modificationsCount };
 }
 
 /**

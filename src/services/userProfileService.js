@@ -132,9 +132,14 @@ export class UserProfileService {
     }
 
     const budgetMapping = {
-      budget: 1,
-      moderate: 2,
-      luxury: 3,
+      'budget': 1,
+      'budget-friendly': 1,
+      'Budget-Friendly': 1,
+      'moderate': 2,
+      'Moderate': 2,
+      'luxury': 3,
+      'Luxury': 3,
+      'flexible': 2, // Map flexible to moderate (level 2)
     };
 
     return {
@@ -170,12 +175,20 @@ export class UserProfileService {
     const normalizeBudget = (budgetRange) => {
       if (!budgetRange) return undefined;
       
-      // Capitalize first letter to match form options: "Budget", "Moderate", "Luxury"
-      const normalized = budgetRange.charAt(0).toUpperCase() + budgetRange.slice(1).toLowerCase();
+      // Handle legacy lowercase values and map to SelectBudgetOptions format
+      const budgetMap = {
+        'budget': 'Budget-Friendly',
+        'budget-friendly': 'Budget-Friendly',
+        'Budget-Friendly': 'Budget-Friendly',
+        'moderate': 'Moderate',
+        'Moderate': 'Moderate',
+        'luxury': 'Luxury',
+        'Luxury': 'Luxury',
+        'flexible': 'Moderate', // Map flexible to moderate as fallback
+      };
       
-      // Validate against known options
-      const validOptions = ["Budget", "Moderate", "Luxury"];
-      return validOptions.includes(normalized) ? normalized : undefined;
+      const key = budgetRange.toLowerCase().trim();
+      return budgetMap[key] || budgetMap[budgetRange] || undefined;
     };
 
     return {
