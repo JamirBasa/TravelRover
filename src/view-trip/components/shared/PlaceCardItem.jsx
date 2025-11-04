@@ -188,7 +188,9 @@ function PlaceCardItem({ place }) {
             {/* Action Indicator */}
             <div className="flex items-center gap-2 text-xs text-sky-600 dark:text-sky-400 font-semibold pt-1">
               <span>View on Maps</span>
-              <span className="transform group-hover:translate-x-1 transition-transform">→</span>
+              <span className="transform group-hover:translate-x-1 transition-transform">
+                →
+              </span>
             </div>
           </div>
         </div>

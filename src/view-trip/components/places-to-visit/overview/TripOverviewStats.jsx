@@ -52,7 +52,9 @@ function TripOverviewStats({
         className={`${PATTERNS.sectionHeader.content} ${SPACING.padding.large} px-5 sm:px-8 py-8`}
       >
         <div className="text-center mb-8">
-          <h3 className={`text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 leading-tight`}>
+          <h3
+            className={`text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 leading-tight`}
+          >
             ✨ Your Adventure at a Glance
           </h3>
           <p

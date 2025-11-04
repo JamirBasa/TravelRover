@@ -151,7 +151,9 @@ function BudgetBreakdown({ trip, className = "" }) {
         <div className="flex items-start gap-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4">
           <span className="text-xl flex-shrink-0">💡</span>
           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            <strong className="text-gray-700 dark:text-gray-300 font-bold">Note:</strong>{" "}
+            <strong className="text-gray-700 dark:text-gray-300 font-bold">
+              Note:
+            </strong>{" "}
             These are estimated costs. Actual prices may vary based on season,
             availability, and booking time.
           </p>

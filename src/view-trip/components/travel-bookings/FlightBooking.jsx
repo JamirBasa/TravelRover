@@ -768,7 +768,9 @@ function FlightBooking({ trip }) {
                       <span className="flex items-center gap-1.5">
                         <span className="text-base">✈️</span>
                         <span className="font-medium">
-                          {validFlights.length} {validFlights.length === 1 ? 'flight' : 'flights'} available
+                          {validFlights.length}{" "}
+                          {validFlights.length === 1 ? "flight" : "flights"}{" "}
+                          available
                         </span>
                       </span>
                       <span className="hidden sm:inline">•</span>
@@ -785,7 +787,9 @@ function FlightBooking({ trip }) {
                     <div className="text-2xl font-bold text-white">
                       {validFlights.length}
                     </div>
-                    <div className="text-xs text-sky-100 font-medium">Total Flights</div>
+                    <div className="text-xs text-sky-100 font-medium">
+                      Total Flights
+                    </div>
                   </div>
                 </div>
               </div>
@@ -806,7 +810,10 @@ function FlightBooking({ trip }) {
                     </h4>
                     <p className="text-sm text-amber-800 dark:text-amber-400 mb-3 leading-relaxed">
                       Some flight data has been filtered or corrected. Quality
-                      score: <span className="font-bold">{Math.round(dataQualityScore)}%</span>
+                      score:{" "}
+                      <span className="font-bold">
+                        {Math.round(dataQualityScore)}%
+                      </span>
                     </p>
                     {validationSummary?.invalid_flights > 0 && (
                       <p className="text-xs text-amber-700 dark:text-amber-500 mb-2">
@@ -865,7 +872,9 @@ function FlightBooking({ trip }) {
             {/* Sort Options */}
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-gray-100 dark:border-slate-700">
               <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Sort by:</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Sort by:
+                </span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
@@ -877,7 +886,8 @@ function FlightBooking({ trip }) {
                 </select>
               </div>
               <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium">
-                Showing {sortedFlights.length} {sortedFlights.length === 1 ? 'result' : 'results'}
+                Showing {sortedFlights.length}{" "}
+                {sortedFlights.length === 1 ? "result" : "results"}
               </div>
             </div>
 
@@ -910,8 +920,11 @@ function FlightBooking({ trip }) {
                       transactions and the best available rates.
                     </p>
                     <p className="text-xs sm:text-sm">
-                      <strong className="font-semibold">Flight Duration:</strong> Scheduled time from
-                      takeoff to landing, excluding ground time and boarding.
+                      <strong className="font-semibold">
+                        Flight Duration:
+                      </strong>{" "}
+                      Scheduled time from takeoff to landing, excluding ground
+                      time and boarding.
                     </p>
                   </div>
                 </div>
@@ -935,7 +948,8 @@ function FlightBooking({ trip }) {
                   Lowest Price
                 </div>
                 <div className="text-lg sm:text-xl font-bold text-green-900 dark:text-green-300">
-                  ₱{trip.realFlightData.price_alerts.lowest_price?.toLocaleString()}
+                  ₱
+                  {trip.realFlightData.price_alerts.lowest_price?.toLocaleString()}
                 </div>
               </div>
               <div className="bg-white dark:bg-slate-900/50 rounded-lg p-3 sm:p-4 border border-green-200 dark:border-green-800">
@@ -943,7 +957,10 @@ function FlightBooking({ trip }) {
                   Average Price
                 </div>
                 <div className="text-lg sm:text-xl font-bold text-green-900 dark:text-green-300">
-                  ₱{Math.round(trip.realFlightData.price_alerts.average_price)?.toLocaleString()}
+                  ₱
+                  {Math.round(
+                    trip.realFlightData.price_alerts.average_price
+                  )?.toLocaleString()}
                 </div>
               </div>
               <div className="bg-white dark:bg-slate-900/50 rounded-lg p-3 sm:p-4 border border-green-200 dark:border-green-800">
@@ -958,7 +975,9 @@ function FlightBooking({ trip }) {
             <div className="bg-white dark:bg-slate-900/50 rounded-lg p-3 sm:p-4 border border-green-200 dark:border-green-800">
               <p className="text-green-800 dark:text-green-300 text-sm font-medium flex items-start gap-2">
                 <span className="text-base flex-shrink-0">💡</span>
-                <span>{trip.realFlightData.price_alerts.best_booking_time}</span>
+                <span>
+                  {trip.realFlightData.price_alerts.best_booking_time}
+                </span>
               </p>
             </div>
           </div>
@@ -1054,7 +1073,10 @@ function FlightCard({ flight, onBook, trip, formatDuration }) {
                 </Badge>
               )}
               {flight.flight_number && (
-                <Badge variant="outline" className="text-xs font-medium border-gray-300 dark:border-slate-600 px-2.5 py-1">
+                <Badge
+                  variant="outline"
+                  className="text-xs font-medium border-gray-300 dark:border-slate-600 px-2.5 py-1"
+                >
                   {flight.flight_number}
                 </Badge>
               )}

@@ -43,9 +43,7 @@ import {
   Undo2,
   CheckCircle2,
 } from "lucide-react";
-import {
-  validateDaySchedule,
-} from "../utils/timeValidator";
+import { validateDaySchedule } from "../utils/timeValidator";
 
 function ActivityEditor({
   activities = [],
@@ -115,12 +113,12 @@ function ActivityEditor({
   const handleDeleteActivity = (activityIndex) => {
     const activity = localActivities[activityIndex];
     const activityName = activity?.placeName || `Activity ${activityIndex + 1}`;
-    
+
     // Store deleted activity for potential undo
     setDeletedActivity({
       activity,
       index: activityIndex,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // Remove from list immediately
@@ -128,7 +126,7 @@ function ActivityEditor({
       (_, index) => index !== activityIndex
     );
     setLocalActivities(updatedActivities);
-    
+
     // Show undo message
     setStatusMessage(
       <div className="flex items-center justify-between gap-4">
@@ -167,11 +165,15 @@ function ActivityEditor({
 
       // Restore the activity at its original position
       const updatedActivities = [...localActivities];
-      updatedActivities.splice(deletedActivity.index, 0, deletedActivity.activity);
-      
+      updatedActivities.splice(
+        deletedActivity.index,
+        0,
+        deletedActivity.activity
+      );
+
       setLocalActivities(updatedActivities);
       setDeletedActivity(null);
-      
+
       setStatusMessage(`Restored "${deletedActivity.activity.placeName}"`);
       setTimeout(() => setStatusMessage(""), 2000);
     }
@@ -368,7 +370,10 @@ function ActivityEditor({
           {/* Overall schedule summary with modern card */}
           {validationResult.totalTime > 0 && (
             <div className="relative overflow-hidden p-6 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 dark:from-sky-950/40 dark:via-blue-950/40 dark:to-indigo-950/40 border-2 border-sky-300 dark:border-sky-700 rounded-2xl shadow-lg backdrop-blur-sm">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-sky-200 dark:bg-sky-800 rounded-full blur-3xl opacity-20" aria-hidden="true" />
+              <div
+                className="absolute top-0 right-0 w-32 h-32 bg-sky-200 dark:bg-sky-800 rounded-full blur-3xl opacity-20"
+                aria-hidden="true"
+              />
               <div className="relative flex items-start gap-4">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
@@ -381,19 +386,27 @@ function ActivityEditor({
                   </p>
                   <div className="space-y-2">
                     <p className="text-sm text-sky-800 dark:text-sky-300 font-medium">
-                      Total time needed: <span className="font-bold">~{Math.round(validationResult.totalTime / 60)} hours</span>
+                      Total time needed:{" "}
+                      <span className="font-bold">
+                        ~{Math.round(validationResult.totalTime / 60)} hours
+                      </span>
                     </p>
                     <div className="flex items-center gap-3">
                       <div className="flex-1 bg-sky-200 dark:bg-sky-800 rounded-full h-3 overflow-hidden shadow-inner">
-                        <div 
+                        <div
                           className={`h-full transition-all duration-500 ${
-                            validationResult.utilizationPercent > 90 
-                              ? 'bg-gradient-to-r from-red-500 to-orange-500' 
+                            validationResult.utilizationPercent > 90
+                              ? "bg-gradient-to-r from-red-500 to-orange-500"
                               : validationResult.utilizationPercent > 75
-                              ? 'bg-gradient-to-r from-amber-500 to-yellow-500'
-                              : 'bg-gradient-to-r from-emerald-500 to-green-500'
+                              ? "bg-gradient-to-r from-amber-500 to-yellow-500"
+                              : "bg-gradient-to-r from-emerald-500 to-green-500"
                           }`}
-                          style={{ width: `${Math.min(validationResult.utilizationPercent, 100)}%` }}
+                          style={{
+                            width: `${Math.min(
+                              validationResult.utilizationPercent,
+                              100
+                            )}%`,
+                          }}
                           role="progressbar"
                           aria-valuenow={validationResult.utilizationPercent}
                           aria-valuemin="0"
@@ -409,7 +422,8 @@ function ActivityEditor({
                     <div className="mt-3 p-3 bg-red-100 dark:bg-red-950/50 border-l-4 border-red-500 rounded-lg">
                       <p className="text-sm text-red-700 dark:text-red-400 font-semibold flex items-center gap-2">
                         <XCircle className="h-4 w-4" aria-hidden="true" />
-                        This schedule may not be realistic - consider adjusting times
+                        This schedule may not be realistic - consider adjusting
+                        times
                       </p>
                     </div>
                   )}
@@ -426,21 +440,24 @@ function ActivityEditor({
               const severityConfig = {
                 critical: {
                   icon: XCircle,
-                  gradient: 'from-red-50 to-rose-50 dark:from-red-950/40 dark:to-rose-950/40',
-                  border: 'border-red-300 dark:border-red-700',
-                  iconBg: 'from-red-500 to-rose-600',
-                  text: 'text-red-900 dark:text-red-200'
+                  gradient:
+                    "from-red-50 to-rose-50 dark:from-red-950/40 dark:to-rose-950/40",
+                  border: "border-red-300 dark:border-red-700",
+                  iconBg: "from-red-500 to-rose-600",
+                  text: "text-red-900 dark:text-red-200",
                 },
                 high: {
                   icon: AlertTriangle,
-                  gradient: 'from-orange-50 to-amber-50 dark:from-orange-950/40 dark:to-amber-950/40',
-                  border: 'border-orange-300 dark:border-orange-700',
-                  iconBg: 'from-orange-500 to-amber-600',
-                  text: 'text-orange-900 dark:text-orange-200'
-                }
+                  gradient:
+                    "from-orange-50 to-amber-50 dark:from-orange-950/40 dark:to-amber-950/40",
+                  border: "border-orange-300 dark:border-orange-700",
+                  iconBg: "from-orange-500 to-amber-600",
+                  text: "text-orange-900 dark:text-orange-200",
+                },
               };
 
-              const config = severityConfig[warning.severity] || severityConfig.high;
+              const config =
+                severityConfig[warning.severity] || severityConfig.high;
               const IconComponent = config.icon;
 
               return (
@@ -451,8 +468,13 @@ function ActivityEditor({
                 >
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0">
-                      <div className={`w-10 h-10 bg-gradient-to-br ${config.iconBg} rounded-lg flex items-center justify-center shadow-md`}>
-                        <IconComponent className="h-5 w-5 text-white" aria-hidden="true" />
+                      <div
+                        className={`w-10 h-10 bg-gradient-to-br ${config.iconBg} rounded-lg flex items-center justify-center shadow-md`}
+                      >
+                        <IconComponent
+                          className="h-5 w-5 text-white"
+                          aria-hidden="true"
+                        />
                       </div>
                     </div>
                     <div className="flex-1 space-y-2">
@@ -461,7 +483,9 @@ function ActivityEditor({
                       </p>
                       {warning.suggestion && (
                         <p className="text-xs font-medium opacity-80 flex items-start gap-2">
-                          <span className="text-base" aria-hidden="true">💡</span>
+                          <span className="text-base" aria-hidden="true">
+                            💡
+                          </span>
                           <span>{warning.suggestion}</span>
                         </p>
                       )}
@@ -485,14 +509,20 @@ function ActivityEditor({
           {localActivities.map((activity, index) => {
             const activityId = `activity-${dayIndex}-${index}`;
             return (
-              <li key={index} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <li
+                key={index}
+                className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+              >
                 <Card
                   className="group relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl border-2 border-sky-200 dark:border-sky-800 shadow-lg hover:shadow-2xl hover:border-sky-400 dark:hover:border-sky-600 transition-all duration-300 backdrop-blur-sm"
                   id={activityId}
                 >
                   {/* Decorative gradient overlay */}
-                  <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500" aria-hidden="true" />
-                  
+                  <div
+                    className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500"
+                    aria-hidden="true"
+                  />
+
                   <CardContent className="p-6 space-y-5">
                     {/* Enhanced Activity controls */}
                     <div className="flex items-center justify-between pb-4 border-b-2 border-gray-100 dark:border-slate-700">
@@ -530,7 +560,10 @@ function ActivityEditor({
                           title="Move up"
                           className="h-9 w-9 p-0 hover:bg-sky-100 dark:hover:bg-sky-900/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
                         >
-                          <ChevronUp className="h-4 w-4 text-sky-600 dark:text-sky-400" aria-hidden="true" />
+                          <ChevronUp
+                            className="h-4 w-4 text-sky-600 dark:text-sky-400"
+                            aria-hidden="true"
+                          />
                           <span className="sr-only">Move up</span>
                         </Button>
                         <Button
@@ -542,10 +575,16 @@ function ActivityEditor({
                           title="Move down"
                           className="h-9 w-9 p-0 hover:bg-sky-100 dark:hover:bg-sky-900/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
                         >
-                          <ChevronDown className="h-4 w-4 text-sky-600 dark:text-sky-400" aria-hidden="true" />
+                          <ChevronDown
+                            className="h-4 w-4 text-sky-600 dark:text-sky-400"
+                            aria-hidden="true"
+                          />
                           <span className="sr-only">Move down</span>
                         </Button>
-                        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" aria-hidden="true" />
+                        <div
+                          className="w-px h-6 bg-gray-300 dark:bg-gray-600"
+                          aria-hidden="true"
+                        />
                         <Button
                           variant="ghost"
                           size="sm"
@@ -572,7 +611,10 @@ function ActivityEditor({
                           htmlFor={`time-${activityId}`}
                           className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300"
                         >
-                          <Clock className="h-4 w-4 text-sky-600 dark:text-sky-400" aria-hidden="true" />
+                          <Clock
+                            className="h-4 w-4 text-sky-600 dark:text-sky-400"
+                            aria-hidden="true"
+                          />
                           Time
                         </label>
                         <div className="relative">
@@ -595,7 +637,10 @@ function ActivityEditor({
                           htmlFor={`name-${activityId}`}
                           className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300"
                         >
-                          <MapPin className="h-4 w-4 text-sky-600 dark:text-sky-400" aria-hidden="true" />
+                          <MapPin
+                            className="h-4 w-4 text-sky-600 dark:text-sky-400"
+                            aria-hidden="true"
+                          />
                           Activity Name
                         </label>
                         <InlineEditableText
@@ -617,7 +662,10 @@ function ActivityEditor({
                         htmlFor={`description-${activityId}`}
                         className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300"
                       >
-                        <Edit3 className="h-4 w-4 text-sky-600 dark:text-sky-400" aria-hidden="true" />
+                        <Edit3
+                          className="h-4 w-4 text-sky-600 dark:text-sky-400"
+                          aria-hidden="true"
+                        />
                         Activity Details
                       </label>
                       <InlineEditableText
@@ -645,8 +693,14 @@ function ActivityEditor({
           role="region"
           aria-label="No activities added yet"
         >
-          <div className="absolute top-0 right-0 w-40 h-40 bg-sky-200 dark:bg-sky-800 rounded-full blur-3xl opacity-20" aria-hidden="true" />
-          <div className="absolute bottom-0 left-0 w-40 h-40 bg-blue-200 dark:bg-blue-800 rounded-full blur-3xl opacity-20" aria-hidden="true" />
+          <div
+            className="absolute top-0 right-0 w-40 h-40 bg-sky-200 dark:bg-sky-800 rounded-full blur-3xl opacity-20"
+            aria-hidden="true"
+          />
+          <div
+            className="absolute bottom-0 left-0 w-40 h-40 bg-blue-200 dark:bg-blue-800 rounded-full blur-3xl opacity-20"
+            aria-hidden="true"
+          />
           <div className="relative">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-sky-500 to-blue-600 rounded-2xl shadow-lg mb-6">
               <Edit3 className="h-10 w-10 text-white" aria-hidden="true" />
@@ -668,7 +722,10 @@ function ActivityEditor({
         onClick={handleAddActivity}
         aria-label="Add a new activity"
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-sky-500/10 via-blue-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" aria-hidden="true" />
+        <div
+          className="absolute inset-0 bg-gradient-to-r from-sky-500/10 via-blue-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          aria-hidden="true"
+        />
         <div className="relative flex items-center justify-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all duration-300">
             <Plus className="h-6 w-6 text-white" aria-hidden="true" />

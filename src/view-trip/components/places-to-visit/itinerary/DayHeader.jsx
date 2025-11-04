@@ -51,7 +51,7 @@ function DayHeader({
   const handleToggleExpanded = onToggleExpanded || (() => {});
   const handleStartEdit = onStartEdit || (() => {});
   const handleStopEdit = onStopEdit || (() => {});
-  
+
   const handleSaveClick = () => {
     setShowSaveConfirm(true);
   };
@@ -84,28 +84,30 @@ function DayHeader({
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3 pt-2">
               <p className="text-base">
-                You're about to save changes to <span className="font-semibold">Day {dayNumber}</span>.
+                You're about to save changes to{" "}
+                <span className="font-semibold">Day {dayNumber}</span>.
               </p>
               {activitiesCount > 0 && (
                 <div className="p-3 bg-sky-50 dark:bg-sky-950/30 rounded-lg border border-sky-200 dark:border-sky-800">
                   <div className="flex items-center gap-2 text-sm text-sky-800 dark:text-sky-300">
                     <AlertCircle className="h-4 w-4" />
                     <span>
-                      <span className="font-semibold">{activitiesCount}</span> {activitiesCount === 1 ? 'activity' : 'activities'} will be updated
+                      <span className="font-semibold">{activitiesCount}</span>{" "}
+                      {activitiesCount === 1 ? "activity" : "activities"} will
+                      be updated
                     </span>
                   </div>
                 </div>
               )}
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                This will update your trip itinerary. You can always edit it again later.
+                This will update your trip itinerary. You can always edit it
+                again later.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="h-11">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel className="h-11">Cancel</AlertDialogCancel>
+            <AlertDialogAction
               onClick={handleConfirmSave}
               className="h-11 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold"
             >
@@ -126,7 +128,10 @@ function DayHeader({
             } dark:opacity-90`}
             aria-hidden="true"
           >
-            <Calendar className="h-7 w-7 sm:h-8 sm:w-8 text-white" aria-hidden="true" />
+            <Calendar
+              className="h-7 w-7 sm:h-8 sm:w-8 text-white"
+              aria-hidden="true"
+            />
           </div>
         </div>
 
@@ -168,7 +173,9 @@ function DayHeader({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleToggleExpanded(dayIndex)}
-                className={`gap-2 h-10 sm:h-11 px-3 sm:px-4 ${ANIMATIONS.transition.medium} ${
+                className={`gap-2 h-10 sm:h-11 px-3 sm:px-4 ${
+                  ANIMATIONS.transition.medium
+                } ${
                   isEditing && isExpanded
                     ? `text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30`
                     : `text-sky-700 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/30`
@@ -184,15 +191,23 @@ function DayHeader({
               >
                 {isExpanded ? (
                   <>
-                    <ChevronDown className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
+                    <ChevronDown
+                      className="h-5 w-5 sm:h-6 sm:w-6"
+                      aria-hidden="true"
+                    />
                     <span className="text-sm sm:text-base font-semibold">
                       {isEditing ? "Editing" : "Collapse"}
                     </span>
                   </>
                 ) : (
                   <>
-                    <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
-                    <span className="text-sm sm:text-base font-semibold">Expand</span>
+                    <ChevronRight
+                      className="h-5 w-5 sm:h-6 sm:w-6"
+                      aria-hidden="true"
+                    />
+                    <span className="text-sm sm:text-base font-semibold">
+                      Expand
+                    </span>
                   </>
                 )}
               </Button>
@@ -217,7 +232,10 @@ function DayHeader({
                     className={`gap-2 h-10 sm:h-11 px-4 sm:px-5 ${COLORS.success.gradient} hover:opacity-90 text-white transition-opacity cursor-pointer shadow-md font-bold`}
                     aria-label="Save day changes"
                   >
-                    <Save className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
+                    <Save
+                      className="h-5 w-5 sm:h-6 sm:w-6"
+                      aria-hidden="true"
+                    />
                     <span className="text-sm sm:text-base">Save</span>
                   </Button>
                 </div>
@@ -243,7 +261,9 @@ function DayHeader({
               aria-live="polite"
             >
               <div className="flex items-center gap-2.5 text-amber-800 dark:text-amber-300">
-                <span aria-hidden="true" className="text-base">✏️</span>
+                <span aria-hidden="true" className="text-base">
+                  ✏️
+                </span>
                 <span className="font-medium text-xs sm:text-sm">
                   Editing mode: Reorder activities using arrow buttons
                 </span>
@@ -260,11 +280,9 @@ function DayHeader({
               } transition-all duration-300`}
             >
               <div className="flex items-center gap-2.5">
-                <span 
-                  aria-hidden="true" 
-                  className={`text-xl ${
-                    isEditing ? "grayscale-0" : ""
-                  }`}
+                <span
+                  aria-hidden="true"
+                  className={`text-xl ${isEditing ? "grayscale-0" : ""}`}
                 >
                   🎯
                 </span>

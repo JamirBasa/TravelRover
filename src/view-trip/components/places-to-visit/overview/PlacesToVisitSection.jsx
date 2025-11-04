@@ -26,7 +26,7 @@ function PlacesToVisitSection({ placesToVisit }) {
       <div className="bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-600 dark:to-teal-600 px-6 sm:px-8 py-6 relative overflow-hidden">
         {/* Single subtle background accent */}
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-10 translate-x-10"></div>
-        
+
         <div className="relative flex items-center gap-4">
           <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
             <span className="text-3xl">🎯</span>
@@ -36,7 +36,8 @@ function PlacesToVisitSection({ placesToVisit }) {
               Must-Visit Attractions
             </h2>
             <p className="text-emerald-50 text-sm sm:text-base font-medium">
-              {validPlaces.length} {validPlaces.length === 1 ? "place" : "places"} to explore
+              {validPlaces.length}{" "}
+              {validPlaces.length === 1 ? "place" : "places"} to explore
             </p>
           </div>
         </div>
@@ -55,7 +56,8 @@ function PlacesToVisitSection({ placesToVisit }) {
         <div className="mt-6 flex items-start gap-3 p-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-100 dark:border-emerald-900">
           <span className="text-lg flex-shrink-0">💡</span>
           <p className="text-xs sm:text-sm text-emerald-800 dark:text-emerald-300 leading-relaxed">
-            <span className="font-semibold">Tip:</span> Click any attraction to view on Google Maps and get directions.
+            <span className="font-semibold">Tip:</span> Click any attraction to
+            view on Google Maps and get directions.
           </p>
         </div>
       </div>

@@ -194,6 +194,47 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           activityText = activityText.replace(/\s*\([^)]+\)$/, "").trim();
         }
 
+        // Smart parsing: Handle hyphens in place names
+        // Format: "2:00 PM - Check-in at El Cielito Hotel - Description"
+        // We need to find the first " - " (space-hyphen-space) for time separation
+        
+        const timeMatch = activityText.match(/^([^-]+?)\s+-\s+(.+)$/);
+        
+        if (timeMatch) {
+          const timeStr = timeMatch[1].trim();
+          const restOfText = timeMatch[2].trim();
+          
+          // Now check if there's another " - " for description separation
+          // But we need to be careful with hyphens in names like "Check-in"
+          // Strategy: Look for " - " (with spaces) which is more likely to be a separator
+          const descriptionMatch = restOfText.match(/^(.+?)\s+-\s+(.+)$/);
+          
+          let placeName, placeDetails;
+          
+          if (descriptionMatch) {
+            // Has description: "Check-in at Hotel - Settle into your room"
+            placeName = descriptionMatch[1].trim();
+            placeDetails = descriptionMatch[2].trim();
+          } else {
+            // No description separator, entire rest is place name
+            // "Check-in at El Cielito Hotel Baguio"
+            placeName = restOfText;
+            placeDetails = "";
+          }
+
+          const parsed = {
+            time: timeStr || "All Day",
+            placeName: placeName || "Activity",
+            placeDetails: placeDetails,
+            ticketPricing: price,
+            timeTravel: duration,
+            rating: rating,
+          };
+
+          return parsed;
+        }
+
+        // Fallback: Original simple split (for backwards compatibility)
         const mainParts = activityText.split("-").map((p) => p.trim());
 
         if (mainParts.length >= 2) {
@@ -329,7 +370,7 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
 
   // Generate hash of itinerary to detect changes
   const generateItineraryHash = useCallback((locations) => {
-    return locations.map(loc => `${loc.id}:${loc.name}`).join('|');
+    return locations.map((loc) => `${loc.id}:${loc.name}`).join("|");
   }, []);
 
   // Enhanced geocode with caching
@@ -364,13 +405,13 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           latitude: location.lat,
           longitude: location.lng,
         };
-        
+
         // Cache the result
-        setGeocodeCache(prev => ({
+        setGeocodeCache((prev) => ({
           ...prev,
-          [locationName]: coords
+          [locationName]: coords,
         }));
-        
+
         console.log(
           `✅ Geocoded: "${locationName}" → ${location.lat}, ${location.lng}`
         );
@@ -383,7 +424,7 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
         return null;
       }
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === "AbortError") {
         console.log(`🛑 Geocoding aborted for: "${locationName}"`);
         return null;
       }
@@ -410,7 +451,7 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       console.log(
         `🔍 Starting smart geocoding for ${allLocations.length} locations...`
       );
-      
+
       setIsUpdating(true);
       setLastItineraryHash(currentHash);
 
@@ -421,21 +462,21 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       geocodingAbortController.current = new AbortController();
 
       // ✅ Filter locations that need geocoding (not in cache and no coordinates)
-      const locationsToGeocode = allLocations.filter((loc) => 
-        !loc.coordinates && !geocodeCache[loc.name]
+      const locationsToGeocode = allLocations.filter(
+        (loc) => !loc.coordinates && !geocodeCache[loc.name]
       );
 
       if (locationsToGeocode.length === 0) {
         console.log("✅ All locations cached or have coordinates");
-        
+
         // Apply cached coordinates
-        const updatedLocations = allLocations.map(loc => {
+        const updatedLocations = allLocations.map((loc) => {
           if (!loc.coordinates && geocodeCache[loc.name]) {
             return { ...loc, coordinates: geocodeCache[loc.name] };
           }
           return loc;
         });
-        
+
         setGeocodedLocations(updatedLocations);
         setIsUpdating(false);
         setIsGeocoding(false);
@@ -623,7 +664,42 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
         };
       }
 
-      // Pattern 2: Walking distance (e.g., "Walking distance from Burnham Park")
+      // Pattern 2: Walking distance with or without time
+      // Matches: "Walking distance", "10 minutes walking distance", "5 min walking distance (free)"
+      const walkingWithTime = durationText.match(
+        /(\d+)\s*(minutes?|hours?|min|mins|hr|hrs|h)?\s*walking\s+distance/i
+      );
+      if (walkingWithTime) {
+        if (walkingWithTime[1]) {
+          // Has time: "10 minutes walking distance"
+          const value = parseInt(walkingWithTime[1]);
+          const unit = walkingWithTime[2] ? walkingWithTime[2].toLowerCase() : "minutes";
+          
+          let displayDuration;
+          if (unit.startsWith("h")) {
+            displayDuration = value === 1 ? "1 hour" : `${value} hours`;
+          } else {
+            displayDuration = value === 1 ? "1 minute" : `${value} minutes`;
+          }
+          
+          return {
+            duration: `${displayDuration} walk`,
+            transport: "walking",
+            transportIcon: "🚶",
+            rawText: durationText,
+          };
+        } else {
+          // Just "walking distance"
+          return {
+            duration: "Walking distance",
+            transport: "walking",
+            transportIcon: "🚶",
+            rawText: durationText,
+          };
+        }
+      }
+
+      // Pattern 2b: Just "Walking distance" (original pattern as fallback)
       const walkingDistance = durationText.match(/walking\s+distance/i);
       if (walkingDistance) {
         return {
@@ -635,8 +711,9 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       }
 
       // Pattern 3: Just time without transport (e.g., "30 minutes from city center")
+      // This should match clean time values and extract them even if there's extra text
       const timeOnly = durationText.match(
-        /(\d+)\s*(minutes?|hours?|min|mins|hr|hrs|h)/i
+        /(\d+)\s*(minutes?|hours?|min|mins|hr|hrs|h)(?:\s|$)/i
       );
       if (timeOnly) {
         const value = parseInt(timeOnly[1]);
@@ -649,10 +726,13 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           displayDuration = value === 1 ? "1 minute" : `${value} minutes`;
         }
 
+        // Detect if it mentions walking in the text
+        const hasWalking = /walk/i.test(durationText);
+        
         return {
           duration: displayDuration,
-          transport: "various",
-          transportIcon: "🚶",
+          transport: hasWalking ? "walking" : "various",
+          transportIcon: hasWalking ? "🚶" : "🚗",
           rawText: durationText,
         };
       }
@@ -680,17 +760,49 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
         };
       }
 
-      // If no pattern matches but there's duration text, show it as-is
-      if (durationText && durationText.trim().length > 0) {
+      // Final fallback: Extract any time value from messy text
+      // This handles cases like "10 minutes walking distance (free)" that didn't match above
+      const anyTimeValue = durationText.match(/(\d+)\s*(minutes?|hours?|min|mins|hr|hrs|h)/i);
+      if (anyTimeValue) {
+        const value = parseInt(anyTimeValue[1]);
+        const unit = anyTimeValue[2].toLowerCase();
+
+        let displayDuration;
+        if (unit.startsWith("h")) {
+          displayDuration = value === 1 ? "1 hour" : `${value} hours`;
+        } else {
+          displayDuration = value === 1 ? "1 minute" : `${value} minutes`;
+        }
+
+        // Smart transport detection from text
+        const lowerText = durationText.toLowerCase();
+        let transport = "various";
+        let icon = "🚗";
+        
+        if (/walk/i.test(lowerText)) {
+          transport = "walking";
+          icon = "🚶";
+        } else if (/taxi|cab/i.test(lowerText)) {
+          transport = "taxi";
+          icon = "🚕";
+        } else if (/jeepney/i.test(lowerText)) {
+          transport = "jeepney";
+          icon = "🚌";
+        } else if (/tricycle/i.test(lowerText)) {
+          transport = "tricycle";
+          icon = "🛺";
+        }
+
         return {
-          duration: durationText,
-          transport: "various",
-          transportIcon: "🚶",
+          duration: displayDuration,
+          transport: transport,
+          transportIcon: icon,
           rawText: durationText,
         };
       }
 
-      // If no travel info, don't show connector
+      // If absolutely no time value found, hide the connector
+      // (This prevents "Varies" from showing)
       return null;
     },
     [filteredLocations]
@@ -937,7 +1049,10 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
                 {filteredLocations.length === 1 ? "stop" : "stops"}
               </Badge>
               {isUpdating && (
-                <Badge variant="outline" className="ml-2 gap-1.5 text-sky-600 dark:text-sky-400 border-sky-300 dark:border-sky-700">
+                <Badge
+                  variant="outline"
+                  className="ml-2 gap-1.5 text-sky-600 dark:text-sky-400 border-sky-300 dark:border-sky-700"
+                >
                   <RefreshCw className="h-3 w-3 animate-spin" />
                   Updating
                 </Badge>
@@ -954,7 +1069,9 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
                 className="gap-2 h-9 text-sm"
                 title="Refresh map locations"
               >
-                <RefreshCw className={`h-4 w-4 ${isGeocoding ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`h-4 w-4 ${isGeocoding ? "animate-spin" : ""}`}
+                />
                 Refresh
               </Button>
 

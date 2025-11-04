@@ -70,10 +70,7 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 bg-sky-100 dark:bg-sky-950/30 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
                 <MapPin
-                  className={cn(
-                    "h-5 w-5",
-                    "text-sky-600 dark:text-sky-400"
-                  )}
+                  className={cn("h-5 w-5", "text-sky-600 dark:text-sky-400")}
                   aria-hidden="true"
                 />
               </div>
@@ -136,9 +133,7 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                     )}
                   >
                     <DollarSign className="h-3.5 w-3.5" aria-hidden="true" />
-                    <span className="font-bold">
-                      {activity.ticketPricing}
-                    </span>
+                    <span className="font-bold">{activity.ticketPricing}</span>
                   </Badge>
                 )}
 
@@ -173,7 +168,10 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                       ANIMATIONS.transition.medium
                     )}
                   >
-                    <Star className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+                    <Star
+                      className="h-3.5 w-3.5 fill-current"
+                      aria-hidden="true"
+                    />
                     <span className="font-bold">{activity.rating}/5</span>
                   </Badge>
                 )}
