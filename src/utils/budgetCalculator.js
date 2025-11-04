@@ -252,7 +252,7 @@ export const formatCurrency = (amount) => {
  * Get budget category based on total amount
  */
 export const getBudgetCategory = (totalAmount) => {
-  if (totalAmount < 5000) return 'Budget';
+  if (totalAmount < 5000) return 'Budget-Friendly';
   if (totalAmount < 15000) return 'Moderate';
   return 'Luxury';
 };

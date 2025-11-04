@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { APIProvider, Map } from "@vis.gl/react-google-maps";
-import { MapPin, AlertCircle } from "lucide-react";
+import { MapPin, AlertCircle, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   GeocodingLoadingOverlay,
   MapMarkers,
@@ -10,16 +11,28 @@ import {
   DayFilterDropdown,
   LocationSequenceList,
 } from "./route-components";
+import {
+  extractRecommendedHotelName,
+  resolveAllHotelReferences,
+  isGenericHotelReference,
+} from "@/utils/hotelNameResolver";
+import {
+  extractFlightDetails,
+  resolveAllFlightReferences,
+} from "@/utils/flightNameResolver";
+import { getLimitedServiceInfo } from "@/utils/flightRecommendations";
 
 /**
  * OptimizedRouteMap Component
  *
  * Features:
- * - 📍 Visual markers for all locations
+ * - 📍 Visual markers for all locations WITH SPECIFIC HOTEL & FLIGHT NAMES
  * - 🛣️ Optimized route display
- * - ⏱️ Distance and travel time
+ * - ⏱️ Distance and travel time from AI
  * - 🗺️ Interactive navigation
  * - 🎯 Auto-center and bounds fitting
+ * - 🏨 Automatic hotel name resolution
+ * - ✈️ Automatic flight details resolution
  */
 function OptimizedRouteMap({ itinerary, destination, trip }) {
   const [selectedLocation, setSelectedLocation] = useState(null);
@@ -32,57 +45,74 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
     current: 0,
     total: 0,
   });
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [geocodeCache, setGeocodeCache] = useState({});
+  const [lastItineraryHash, setLastItineraryHash] = useState("");
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const mapContainerRef = React.useRef(null);
+  const geocodingAbortController = React.useRef(null);
 
-  // Extract recommended hotel name from trip data
+  // ✅ Extract recommended hotel name using new utility
   const recommendedHotelName = useMemo(() => {
-    if (!trip?.tripData) return null;
+    return extractRecommendedHotelName(trip?.tripData);
+  }, [trip?.tripData]);
 
-    // Try multiple possible paths for hotel data
-    const possiblePaths = [
-      trip?.tripData?.hotels,
-      trip?.tripData?.accommodations,
-      trip?.tripData?.tripData?.hotels,
-      trip?.tripData?.tripData?.accommodations,
+  // ✅ Extract flight details using new utility (pass full trip, not trip.tripData)
+  const flightDetails = useMemo(() => {
+    return extractFlightDetails(trip); // ← Changed from trip?.tripData to trip
+  }, [trip]); // ← Changed dependency from trip?.tripData to trip
+
+  console.log("🏨 Recommended Hotel Name:", recommendedHotelName);
+  console.log(
+    "✈️ Flight Details:",
+    flightDetails ||
+      "(No flight data - see Flights tab for inactive airport info)"
+  );
+
+  // ✅ Check if destination is an inactive airport (no commercial flights)
+  // Now using centralized data from flightRecommendations.js
+  const isInactiveAirport = useMemo(() => {
+    const destination = trip?.userSelection?.location;
+    if (!destination) return null;
+
+    const destLower = destination.toLowerCase();
+
+    // Check common airport codes that might be in the destination name
+    const commonCodes = [
+      "BAG",
+      "VIG",
+      "SAG",
+      "BAN",
+      "PAG",
+      "ELN",
+      "COR",
+      "BOR",
+      "SIQ",
+      "CAM",
+      "MAL",
+      "OSL",
+      "TAW",
+      "SIT",
     ];
 
-    for (const path of possiblePaths) {
-      if (path) {
-        let hotels = [];
-
-        // Parse if it's a string
-        if (typeof path === "string") {
-          try {
-            hotels = JSON.parse(path);
-          } catch {
-            console.warn("Failed to parse hotels data");
-            continue;
-          }
-        } else if (Array.isArray(path)) {
-          hotels = path;
-        } else if (typeof path === "object") {
-          hotels = [path];
-        }
-
-        // Get first hotel name
-        if (hotels.length > 0) {
-          const firstHotel = hotels[0];
-          const hotelName =
-            firstHotel?.name || firstHotel?.hotelName || firstHotel?.hotel_name;
-
-          if (hotelName) {
-            console.log("🏨 Extracted recommended hotel:", hotelName);
-            return hotelName;
-          }
-        }
+    for (const code of commonCodes) {
+      const info = getLimitedServiceInfo(code);
+      if (
+        info &&
+        (destLower.includes(info.name.toLowerCase()) ||
+          destLower.includes(code.toLowerCase()))
+      ) {
+        return {
+          code,
+          name: info.name,
+          alternatives: info.alternativeNames || info.alternatives,
+        };
       }
     }
 
-    console.log("⚠️ No recommended hotel found in trip data");
     return null;
-  }, [trip]);
+  }, [trip?.userSelection?.location]);
 
   // Helper to parse itinerary - handles multiple formats
   const parseItinerary = (data) => {
@@ -184,7 +214,7 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       .filter(Boolean);
   };
 
-  // Extract all locations from itinerary
+  // ✅ Extract all locations from itinerary WITH HOTEL NAME RESOLUTION
   const allLocations = useMemo(() => {
     const parsedItinerary = parseItinerary(itinerary);
     if (!parsedItinerary || parsedItinerary.length === 0) {
@@ -212,44 +242,31 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
         let placeName =
           activity.placeName || activity.place || activity.location;
 
-        // Check if this is a "return to hotel" activity
-        const isReturnToHotel =
-          placeName &&
-          (/return.*hotel/i.test(placeName) ||
-            /back.*hotel/i.test(placeName) ||
-            /hotel.*return/i.test(placeName));
-
-        // If it's a return to hotel, replace with actual hotel name
-        if (isReturnToHotel && recommendedHotelName) {
-          console.log(
-            `🏨 Found "return to hotel" activity, replacing with: ${recommendedHotelName}`
-          );
-          placeName = recommendedHotelName;
-          // Update the activity details to show it's a return
-          activity.placeDetails = `Return to hotel - ${
-            activity.placeDetails || "End of day activities"
-          }`;
-        }
-
+        // ✅ Skip truly generic entries that should never appear on map
         const excludePatterns = [
           /^Activity$/i,
-          /^Hotel Check/i,
           /^Last\s*$/i,
           /^Halal (Lunch|Dinner|Breakfast)$/i,
-          /^Spa & Relaxation/i,
+          /^Spa & Relaxation$/i,
           /^Shopping$/i,
         ];
 
-        const shouldExclude =
-          !isReturnToHotel &&
-          excludePatterns.some(
-            (pattern) => placeName && pattern.test(placeName.trim())
-          );
+        const shouldExclude = excludePatterns.some(
+          (pattern) => placeName && pattern.test(placeName.trim())
+        );
 
-        if (placeName && !shouldExclude && placeName.length > 3) {
+        if (shouldExclude) {
+          console.log(`⏭️ Skipping excluded activity: ${placeName}`);
+          return; // Skip this activity
+        }
+
+        // ✅ Check if this is a generic hotel reference (will be resolved later)
+        const isGenericHotel = isGenericHotelReference(placeName);
+
+        if (placeName && placeName.length > 3) {
           locations.push({
             id: `day${dayIndex}-activity${activityIndex}`,
-            name: placeName,
+            name: placeName, // Keep original for now, will resolve in batch
             details: activity.placeDetails || activity.details || "",
             time: activity.time || "All Day",
             day: dayIndex + 1,
@@ -259,18 +276,32 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
             duration: activity.timeTravel || activity.duration || "Varies",
             coordinates:
               activity.geoCoordinates || activity.coordinates || null,
-            isReturnToHotel: isReturnToHotel,
+            isGenericHotel: isGenericHotel, // Flag for UI display
           });
         }
       });
     });
 
     console.log(
-      `📍 Extracted ${locations.length} locations from itinerary`,
-      locations.slice(0, 3)
+      `📍 Extracted ${locations.length} locations from itinerary (before resolution)`
     );
-    return locations;
-  }, [itinerary, recommendedHotelName]);
+
+    // ✅ Step 1: Batch resolve all hotel references to specific hotel names
+    let resolvedLocations = resolveAllHotelReferences(
+      locations,
+      recommendedHotelName
+    );
+
+    // ✅ Step 2: Batch resolve all flight references to specific flight details
+    resolvedLocations = resolveAllFlightReferences(
+      resolvedLocations,
+      flightDetails
+    );
+
+    console.log(`✅ Fully resolved locations:`, resolvedLocations.slice(0, 3));
+
+    return resolvedLocations;
+  }, [itinerary, recommendedHotelName, flightDetails]);
 
   // Get unique days from itinerary
   const uniqueDays = useMemo(() => {
@@ -296,48 +327,117 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
     return dayData?.theme || `Day ${day}`;
   };
 
-  // Geocode a location name to get coordinates
-  const geocodeLocation = async (locationName) => {
+  // Generate hash of itinerary to detect changes
+  const generateItineraryHash = useCallback((locations) => {
+    return locations.map(loc => `${loc.id}:${loc.name}`).join('|');
+  }, []);
+
+  // Enhanced geocode with caching
+  const geocodeLocation = async (locationName, signal) => {
     try {
+      // Check cache first
+      if (geocodeCache[locationName]) {
+        console.log(`✅ Using cached coordinates for: "${locationName}"`);
+        return geocodeCache[locationName];
+      }
+
+      // ✅ Validate location name before geocoding
+      if (!locationName || locationName.trim().length < 3) {
+        console.warn(
+          `⚠️ Skipping geocoding for invalid location: "${locationName}"`
+        );
+        return null;
+      }
+
+      // ✅ Add Philippines context for better accuracy
       const searchQuery = `${locationName}, Philippines`;
       const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
         searchQuery
       )}&key=${apiKey}`;
 
-      const response = await fetch(geocodeUrl);
+      const response = await fetch(geocodeUrl, { signal });
       const data = await response.json();
 
       if (data.results && data.results.length > 0) {
         const location = data.results[0].geometry.location;
-        console.log(
-          `✅ Geocoded: ${locationName} → ${location.lat}, ${location.lng}`
-        );
-        return {
+        const coords = {
           latitude: location.lat,
           longitude: location.lng,
         };
+        
+        // Cache the result
+        setGeocodeCache(prev => ({
+          ...prev,
+          [locationName]: coords
+        }));
+        
+        console.log(
+          `✅ Geocoded: "${locationName}" → ${location.lat}, ${location.lng}`
+        );
+        return coords;
       } else {
-        console.warn(`⚠️ No geocode results for: ${locationName}`);
+        console.warn(
+          `⚠️ No geocode results for: "${locationName}"`,
+          data.status
+        );
         return null;
       }
     } catch (error) {
-      console.error(`❌ Geocoding error for ${locationName}:`, error);
+      if (error.name === 'AbortError') {
+        console.log(`🛑 Geocoding aborted for: "${locationName}"`);
+        return null;
+      }
+      console.error(`❌ Geocoding error for "${locationName}":`, error);
       return null;
     }
   };
 
-  // Geocode all locations without coordinates
+  // ✅ Smart geocoding with change detection and abort support
   useEffect(() => {
     const geocodeLocations = async () => {
-      if (allLocations.length === 0) return;
+      if (allLocations.length === 0) {
+        setGeocodedLocations([]);
+        return;
+      }
 
-      console.log(`🔍 Geocoding ${allLocations.length} locations...`);
+      // Check if itinerary actually changed
+      const currentHash = generateItineraryHash(allLocations);
+      if (currentHash === lastItineraryHash && geocodedLocations.length > 0) {
+        console.log("✅ Itinerary unchanged, skipping geocoding");
+        return;
+      }
 
-      const locationsToGeocode = allLocations.filter((loc) => !loc.coordinates);
+      console.log(
+        `🔍 Starting smart geocoding for ${allLocations.length} locations...`
+      );
+      
+      setIsUpdating(true);
+      setLastItineraryHash(currentHash);
+
+      // Abort any ongoing geocoding
+      if (geocodingAbortController.current) {
+        geocodingAbortController.current.abort();
+      }
+      geocodingAbortController.current = new AbortController();
+
+      // ✅ Filter locations that need geocoding (not in cache and no coordinates)
+      const locationsToGeocode = allLocations.filter((loc) => 
+        !loc.coordinates && !geocodeCache[loc.name]
+      );
 
       if (locationsToGeocode.length === 0) {
-        console.log("✅ All locations already have coordinates");
-        setGeocodedLocations(allLocations);
+        console.log("✅ All locations cached or have coordinates");
+        
+        // Apply cached coordinates
+        const updatedLocations = allLocations.map(loc => {
+          if (!loc.coordinates && geocodeCache[loc.name]) {
+            return { ...loc, coordinates: geocodeCache[loc.name] };
+          }
+          return loc;
+        });
+        
+        setGeocodedLocations(updatedLocations);
+        setIsUpdating(false);
         setIsGeocoding(false);
         return;
       }
@@ -355,7 +455,20 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           total: locationsToGeocode.length,
         });
 
-        const coords = await geocodeLocation(location.name);
+        console.log(
+          `🔍 Geocoding (${i + 1}/${locationsToGeocode.length}): "${
+            location.name
+          }"${
+            location.wasResolved
+              ? ` (resolved from "${location.originalName}")`
+              : ""
+          }`
+        );
+
+        const coords = await geocodeLocation(
+          location.name,
+          geocodingAbortController.current.signal
+        );
 
         if (coords) {
           const index = updatedLocations.findIndex((l) => l.id === location.id);
@@ -367,6 +480,7 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           }
         }
 
+        // ✅ Rate limiting: 150ms delay between requests
         if (i < locationsToGeocode.length - 1) {
           await new Promise((resolve) => setTimeout(resolve, 150));
         }
@@ -379,11 +493,19 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
 
       setGeocodedLocations(updatedLocations);
       setIsGeocoding(false);
+      setIsUpdating(false);
     };
 
     geocodeLocations();
+
+    // Cleanup on unmount
+    return () => {
+      if (geocodingAbortController.current) {
+        geocodingAbortController.current.abort();
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allLocations.length, apiKey]);
+  }, [allLocations, apiKey, generateItineraryHash, lastItineraryHash]);
 
   // Calculate center of all locations
   const calculateCenter = useCallback(async () => {
@@ -498,7 +620,6 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           transport: transport,
           transportIcon: transportIcons[transport] || "🚗",
           rawText: durationText,
-          source: "AI recommendation",
         };
       }
 
@@ -510,7 +631,6 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           transport: "walking",
           transportIcon: "🚶",
           rawText: durationText,
-          source: "AI recommendation",
         };
       }
 
@@ -534,7 +654,6 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           transport: "various",
           transportIcon: "🚶",
           rawText: durationText,
-          source: "AI recommendation",
         };
       }
 
@@ -558,7 +677,6 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           transport: "various",
           transportIcon: "🚗",
           rawText: durationText,
-          source: "AI recommendation",
         };
       }
 
@@ -569,7 +687,6 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           transport: "various",
           transportIcon: "🚶",
           rawText: durationText,
-          source: "AI recommendation",
         };
       }
 
@@ -609,6 +726,13 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       }, 500);
     }
   };
+
+  // Manual refresh handler
+  const handleManualRefresh = useCallback(() => {
+    console.log("🔄 Manual refresh requested");
+    setLastItineraryHash(""); // Force re-geocoding
+    setGeocodeCache({}); // Clear cache
+  }, []);
 
   // Handle marker click
   const handleMarkerClick = useCallback((location) => {
@@ -676,6 +800,82 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
         </div>
       </div>
 
+      {/* ✅ Hotel Name Display */}
+      {recommendedHotelName && (
+        <div className="bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sky-600 dark:text-sky-400 text-sm">🏨</span>
+            <span className="text-sky-900 dark:text-sky-300 text-sm font-medium">
+              Your hotel: {recommendedHotelName}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Flight Details Display */}
+      {flightDetails && (flightDetails.outbound || flightDetails.return) ? (
+        <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3">
+          <div className="space-y-2">
+            {flightDetails.outbound && (
+              <div className="flex items-center gap-2">
+                <span className="text-indigo-600 dark:text-indigo-400 text-sm">
+                  ✈️
+                </span>
+                <span className="text-indigo-900 dark:text-indigo-300 text-sm">
+                  <span className="font-medium">Outbound:</span>{" "}
+                  {flightDetails.outbound.airline ||
+                    flightDetails.outbound.carrier}
+                  {flightDetails.outbound.flightNumber &&
+                    ` (${flightDetails.outbound.flightNumber})`}
+                  {flightDetails.outbound.departure &&
+                    flightDetails.outbound.arrival &&
+                    ` ${flightDetails.outbound.departure} → ${flightDetails.outbound.arrival}`}
+                </span>
+              </div>
+            )}
+            {flightDetails.return && (
+              <div className="flex items-center gap-2">
+                <span className="text-indigo-600 dark:text-indigo-400 text-sm">
+                  🛬
+                </span>
+                <span className="text-indigo-900 dark:text-indigo-300 text-sm">
+                  <span className="font-medium">Return:</span>{" "}
+                  {flightDetails.return.airline || flightDetails.return.carrier}
+                  {flightDetails.return.flightNumber &&
+                    ` (${flightDetails.return.flightNumber})`}
+                  {flightDetails.return.departure &&
+                    flightDetails.return.arrival &&
+                    ` ${flightDetails.return.departure} → ${flightDetails.return.arrival}`}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* ✅ Show helpful message for trips with "Include Flights" but no flight data (inactive airports) */
+        trip?.flightPreferences?.includeFlights &&
+        isInactiveAirport && (
+          <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <span className="text-orange-600 dark:text-orange-400 text-sm mt-0.5">
+                ℹ️
+              </span>
+              <div className="flex-1 text-sm text-orange-900 dark:text-orange-300">
+                <span className="font-medium">{isInactiveAirport.name}</span>{" "}
+                has no commercial airport. Fly to{" "}
+                {isInactiveAirport.alternatives.join(" or ")}, then travel by
+                bus (3-4 hours).
+                <span className="block mt-1 text-xs text-orange-700 dark:text-orange-400">
+                  💡 Check the{" "}
+                  <span className="font-semibold">Flights tab</span> for booking
+                  alternatives.
+                </span>
+              </div>
+            </div>
+          </div>
+        )
+      )}
+
       {/* Map Container */}
       <Card ref={mapContainerRef} className="overflow-hidden">
         <APIProvider
@@ -683,6 +883,14 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           libraries={["places", "geometry", "routes"]}
         >
           <div className="relative w-full h-[600px]">
+            {/* Updating Indicator */}
+            {isUpdating && !isGeocoding && (
+              <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-sky-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span className="text-sm font-medium">Updating map...</span>
+              </div>
+            )}
+
             {/* Geocoding Loading Overlay */}
             <GeocodingLoadingOverlay
               isGeocoding={isGeocoding}
@@ -717,9 +925,9 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       {/* Location List with Travel Times */}
       <Card>
         <CardContent className="p-4">
-          {/* Header with Filter */}
+          {/* Header with Filter and Refresh */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <MapPin className="h-5 w-5 text-sky-600 dark:text-sky-500" />
               <h4 className="font-bold text-gray-900 dark:text-gray-100">
                 Location Sequence
@@ -728,15 +936,36 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
                 {filteredLocations.length}{" "}
                 {filteredLocations.length === 1 ? "stop" : "stops"}
               </Badge>
+              {isUpdating && (
+                <Badge variant="outline" className="ml-2 gap-1.5 text-sky-600 dark:text-sky-400 border-sky-300 dark:border-sky-700">
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                  Updating
+                </Badge>
+              )}
             </div>
 
-            {/* Day Filter Dropdown */}
-            <DayFilterDropdown
-              selectedDay={selectedDay}
-              uniqueDays={uniqueDays}
-              onDayChange={setSelectedDay}
-              getDayTheme={getDayTheme}
-            />
+            <div className="flex items-center gap-2">
+              {/* Manual Refresh Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleManualRefresh}
+                disabled={isGeocoding}
+                className="gap-2 h-9 text-sm"
+                title="Refresh map locations"
+              >
+                <RefreshCw className={`h-4 w-4 ${isGeocoding ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+
+              {/* Day Filter Dropdown */}
+              <DayFilterDropdown
+                selectedDay={selectedDay}
+                uniqueDays={uniqueDays}
+                onDayChange={setSelectedDay}
+                getDayTheme={getDayTheme}
+              />
+            </div>
           </div>
 
           {isGeocoding ? (

@@ -82,12 +82,11 @@ def gemini_generate(request):
         
         # Build generation config
         config = {
-            'temperature': generation_config.get('temperature', 0.2),
-            'top_p': generation_config.get('topP', 0.9),
-            'top_k': generation_config.get('topK', 20),
-            'max_output_tokens': 16384,
+            'temperature': 0.2,  # Lower = faster, more consistent
+            'top_p': 0.9,
+            'top_k': 20,
+            'max_output_tokens': 32768,  # ✅ DOUBLED from 16384
         }
-        
         # Add response schema if provided
         if schema:
             config['response_mime_type'] = 'application/json'
@@ -143,8 +142,44 @@ PHILIPPINES AIRPORT GUIDE:
 - Vigan → Laoag (LAO) + 2hr bus (₱200-400)
 - Camiguin → Cagayan de Oro (CGY) + 2hr ferry (₱500)
 
+🗺️ TRAVEL TIME CALCULATION (CRITICAL):
+Use coordinates to calculate accurate travel times:
+
+CALCULATION METHOD:
+1. Get straight-line distance from coordinates
+2. Multiply by circuity: Urban 1.3x | Suburban 1.4x | Mountainous 1.8x
+3. Divide by speed: Manila 20 km/h | Peak 12 km/h | Tourist areas 25 km/h | Walking 4 km/h
+4. Add traffic buffer: +30-50% for major cities during peak hours
+5. Round to nearest 5 min (minimum 5 min)
+
+SPEED REFERENCE:
+• Metro Manila/Cebu (normal): 20-25 km/h
+• Metro Manila/Cebu (peak 7-9 AM, 5-7 PM): 12-15 km/h
+• Tourist areas: 25 km/h
+• Provincial highway: 60 km/h
+• Walking: 4 km/h
+• Jeepney: 18 km/h
+
+EXAMPLES:
+• Burnham Park → Baguio Cathedral (250m): "5 minutes walking distance (free)"
+• NAIA → Makati (13km): "35 minutes by taxi (₱220)" or "65 minutes during rush hour"
+• Intramuros sites (<500m): "5 minutes walking distance (free)"
+
+timeTravel FORMAT: "[X] minutes by [transport] (₱[cost])"
+Example: "15 minutes by jeepney (₱15)"
+
 🏨 DAILY STRUCTURE (MANDATORY):
 ✅ Day 1: Arrival → Hotel Check-in (2:00 PM) → 2-3 activities → Return to hotel (8:00 PM)
+   ⚠️ CRITICAL: Day 1 "Hotel Check-in" activity MUST reference the FIRST hotel from your hotels array
+   Example: If hotels[0].hotelName = "Bayfront Hotel Manila", then Day 1 must show:
+   {
+     "time": "2:00 PM",
+     "placeName": "Check-in at Bayfront Hotel Manila",
+     "placeDetails": "Check-in at Bayfront Hotel Manila, settle into your room",
+     ...
+   }
+   ❌ NEVER use generic "Check-in at Hotel" - always use EXACT hotel name from hotels[0]
+   
 ✅ Day 2-N (Middle): Morning → Lunch → Afternoon → Dinner → **Return to hotel (8:00 PM)**
 ✅ Last Day: Breakfast → Activity → Hotel Check-out (11:00 AM) → Departure
 
@@ -154,7 +189,7 @@ EVERY MIDDLE DAY MUST END WITH:
   "placeName": "Return to hotel",
   "placeDetails": "End of day, return to hotel for rest",
   "ticketPricing": "Free",
-  "timeTravel": "20 minutes"
+  "timeTravel": "20 minutes by taxi (₱100)"
 }
 
 ⚠️ FORBIDDEN:
@@ -163,8 +198,10 @@ EVERY MIDDLE DAY MUST END WITH:
 ❌ NO activities past 9:00 PM without hotel return
 ❌ NO Day 1 without hotel check-in around 2:00 PM
 ❌ NO Last Day without hotel check-out around 11:00 AM
+❌ NO generic travel times without calculating from coordinates
+❌ NO "15 minutes" for all locations without checking actual distance
 
-Generate realistic, logistically accurate itineraries with proper airport handling and daily hotel returns.
+Generate realistic, logistically accurate itineraries with ACCURATE travel times calculated from coordinates.
 """
         
         # Check if this is a travel itinerary request (contains travel-related keywords)

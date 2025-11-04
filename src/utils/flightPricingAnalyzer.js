@@ -47,24 +47,25 @@ export const getBookingTimingCategory = (daysUntilDeparture) => {
 };
 
 /**
- * Calculate price multiplier based on booking timing
+ * IMPROVED: Calculate price multiplier with reasonable caps
+ * Capped to prevent unrealistic flight price inflation
  */
 export const getTimingPriceMultiplier = (daysUntilDeparture) => {
   const category = getBookingTimingCategory(daysUntilDeparture);
   
   const multipliers = {
     'past': 0,
-    'today': 4.0,
-    'tomorrow': 3.2,
-    'very-last-minute': 2.8,
-    'last-minute': 2.2,
-    'short-notice': 1.4,
-    'moderate': 1.1,
-    'good': 0.95,
-    'optimal': 0.75,
+    'today': 3.5,              // CAPPED: Was 4.0
+    'tomorrow': 3.0,            // CAPPED: Was 3.2
+    'very-last-minute': 2.5,    // CAPPED: Was 2.8
+    'last-minute': 2.0,         // CAPPED: Was 2.2
+    'short-notice': 1.5,        // CAPPED: Was 1.4
+    'moderate': 1.3,            // Increased: Was 1.1 (more realistic)
+    'good': 1.1,                // Increased: Was 0.95 (bookings still cost normal)
+    'optimal': 1.0,             // Changed: Was 0.75 (baseline = normal price)
   };
   
-  return multipliers[category] || 1.0;
+  return multipliers[category] || 1.3;
 };
 
 /**
@@ -285,7 +286,7 @@ const getPriceImpactDescription = (multiplier) => {
   return 'Best Prices';
 };
 
-const getRecommendations = (category, departureCity, destination) => {
+const getRecommendations = (category) => {
   const baseRecommendations = {
     'today': [
       'Check airline counters for last-minute availability',

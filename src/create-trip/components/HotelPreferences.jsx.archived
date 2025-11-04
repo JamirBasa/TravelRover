@@ -1,0 +1,777 @@
+import React, { useEffect } from "react";
+import { Input } from "../../components/ui/input";
+import Select from "../../components/ui/select";
+import {
+  FaHotel,
+  FaInfoCircle,
+  FaCheck,
+  FaStar,
+  FaMapMarkerAlt,
+  FaCalendarAlt,
+  FaUsers,
+} from "react-icons/fa";
+import { HOTEL_CONFIG } from "../../constants/options";
+import { UserProfileService } from "../../services/userProfileService";
+import { adjustPriceForCity } from "../../utils/budgetCompliance";
+import {
+  formatTravelersForDisplay,
+  getTravelersCount,
+} from "../../utils/travelersParsers";
+
+const HotelPreferences = ({
+  hotelData,
+  onHotelDataChange,
+  formData,
+  userProfile,
+}) => {
+  // Get profile summary for consistent display
+  const profileSummary =
+    UserProfileService.getProfileDisplaySummary(userProfile);
+
+  // Track if auto-population has already happened
+  const hasAutoPopulated = React.useRef(false);
+
+  // Auto-populate hotel preferences when enabled using centralized service
+  // Only runs ONCE when hotels are first enabled
+  useEffect(() => {
+    if (
+      hotelData.includeHotels &&
+      !hasAutoPopulated.current &&
+      UserProfileService.shouldAutoPopulateHotels(userProfile, hotelData)
+    ) {
+      const autoPopulatedData = UserProfileService.autoPopulateHotelData(
+        userProfile,
+        hotelData
+      );
+
+      console.log(
+        "🏨 Auto-populating hotel preferences from centralized service"
+      );
+      onHotelDataChange(autoPopulatedData);
+      hasAutoPopulated.current = true;
+    } else if (
+      hotelData.includeHotels &&
+      !hasAutoPopulated.current &&
+      !hotelData.preferredType
+    ) {
+      // Set smart defaults if no profile data available
+      const defaultHotelData = {
+        ...hotelData,
+        preferredType: "hotel", // Default to standard hotels
+        budgetLevel: hotelData.budgetLevel || 2, // Default to budget-friendly
+        priceRange: HOTEL_CONFIG.PRICE_LEVELS[hotelData.budgetLevel || 2],
+      };
+
+      console.log("🏨 Setting default hotel preferences (no profile data)");
+      onHotelDataChange(defaultHotelData);
+      hasAutoPopulated.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hotelData.includeHotels]);
+
+  const priceRangeOptions = [
+    {
+      value: 1,
+      label: HOTEL_CONFIG.PRICE_LEVELS[1],
+      description: "Hostels, fan rooms, basic lodging, shared bathrooms",
+      examples: "Backpacker hostels, pension houses, fan rooms",
+    },
+    {
+      value: 2,
+      label: HOTEL_CONFIG.PRICE_LEVELS[2],
+      description: "Budget hotels, air-con, private bath, WiFi",
+      examples: "RedDoorz, OYO, budget chains, standard rooms",
+    },
+    {
+      value: 3,
+      label: HOTEL_CONFIG.PRICE_LEVELS[3],
+      description: "Comfortable hotels, pool, restaurant, good amenities",
+      examples: "Go Hotels, Summit Hotels, 3-star properties",
+    },
+    {
+      value: 4,
+      label: HOTEL_CONFIG.PRICE_LEVELS[4],
+      description: "Quality hotels, excellent service, business facilities",
+      examples: "Microtel, Quest, Seda Hotels, 4-star properties",
+    },
+    {
+      value: 5,
+      label: HOTEL_CONFIG.PRICE_LEVELS[5],
+      description: "Premium resorts, spa, multiple restaurants, luxury",
+      examples: "Shangri-La, Marco Polo, Dusit Thani, 5-star",
+    },
+    {
+      value: 6,
+      label: HOTEL_CONFIG.PRICE_LEVELS[6],
+      description: "Ultra-luxury resorts, villas, private beaches",
+      examples: "Amanpulo, El Nido Resorts, exclusive properties",
+    },
+  ];
+
+  const accommodationOptions = [
+    {
+      value: "hotel",
+      label: "Hotels",
+      icon: "🏨",
+      description: "Standard hotels with room service and facilities",
+    },
+    {
+      value: "resort",
+      label: "Beach/Mountain Resorts",
+      icon: "🏖️",
+      description: "Full-service resorts with recreational activities",
+    },
+    {
+      value: "hostel",
+      label: "Hostels & Backpacker Inns",
+      icon: "🛏️",
+      description: "Budget-friendly, shared or private rooms",
+    },
+    {
+      value: "aparthotel",
+      label: "Aparthotels/Condotels",
+      icon: "🏢",
+      description: "Apartment-style with kitchen facilities",
+    },
+    {
+      value: "guesthouse",
+      label: "Guesthouses & B&Bs",
+      icon: "🏡",
+      description: "Family-run, homely atmosphere with breakfast",
+    },
+    {
+      value: "boutique",
+      label: "Boutique Hotels",
+      icon: "✨",
+      description: "Unique, stylish, personalized service",
+    },
+  ];
+
+  // Calculate check-in and check-out dates from trip dates
+  const getAccommodationDates = () => {
+    if (formData?.startDate && formData?.endDate) {
+      return {
+        checkIn: new Date(formData.startDate).toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
+        checkOut: new Date(formData.endDate).toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
+        nights: Math.ceil(
+          (new Date(formData.endDate) - new Date(formData.startDate)) /
+            (1000 * 60 * 60 * 24)
+        ),
+      };
+    }
+    return null;
+  };
+
+  const accommodationDates = getAccommodationDates();
+
+  // Helper function to parse and adjust hotel prices by destination
+  const getRegionalHotelPricing = (priceLevel, destination) => {
+    // Extract base prices from HOTEL_CONFIG (Manila baseline)
+    const priceMatch = priceLevel.match(/₱([\d,]+)-([\d,]+)/);
+
+    if (!priceMatch) {
+      return null; // Return null if no valid price format
+    }
+
+    const minPrice = parseInt(priceMatch[1].replace(/,/g, ""));
+    const maxPrice = parseInt(priceMatch[2].replace(/,/g, ""));
+
+    // If no destination, return baseline Manila prices with indicator
+    if (!destination) {
+      return {
+        minPerNight: minPrice,
+        maxPerNight: maxPrice,
+        multiplier: 1.0,
+        location: "Manila (Baseline)",
+        isBaseline: true,
+        perNightRange: `₱${minPrice.toLocaleString()} - ₱${maxPrice.toLocaleString()}`,
+        getTotalRange: (nights) => {
+          const totalMin = minPrice * nights;
+          const totalMax = maxPrice * nights;
+          return `₱${totalMin.toLocaleString()} - ₱${totalMax.toLocaleString()}`;
+        },
+      };
+    }
+
+    // Adjust prices for destination using regional multipliers
+    const adjustedMin = adjustPriceForCity(minPrice, destination);
+    const adjustedMax = adjustPriceForCity(maxPrice, destination);
+
+    return {
+      minPerNight: adjustedMin.adjustedPrice,
+      maxPerNight: adjustedMax.adjustedPrice,
+      multiplier: adjustedMin.multiplier,
+      location:
+        adjustedMin.location?.matched ||
+        adjustedMin.location ||
+        "Manila (default)", // ✅ Extract matched string
+      isBaseline: false,
+      // Format per-night range
+      perNightRange: `₱${adjustedMin.adjustedPrice.toLocaleString()} - ₱${adjustedMax.adjustedPrice.toLocaleString()}`,
+      // Calculate total for trip duration
+      getTotalRange: (nights) => {
+        const totalMin = adjustedMin.adjustedPrice * nights;
+        const totalMax = adjustedMax.adjustedPrice * nights;
+        return `₱${totalMin.toLocaleString()} - ₱${totalMax.toLocaleString()}`;
+      },
+    };
+  };
+
+  // Check for missing required data
+  const missingRequirements = [];
+  if (hotelData.includeHotels) {
+    if (!formData?.startDate || !formData?.endDate) {
+      missingRequirements.push({
+        field: "Travel Dates",
+        message: "Please set your trip dates in Step 2",
+        icon: "📅",
+      });
+    }
+
+    // ✅ FIXED: Parse travelers using centralized utility
+    const travelersCount = getTravelersCount(formData?.travelers);
+
+    // Debug logging
+    console.log("🔍 HotelPreferences - Travelers Debug:", {
+      raw: formData?.travelers,
+      type: typeof formData?.travelers,
+      parsed: travelersCount,
+      isValid: travelersCount >= 1,
+      displayFormat: formatTravelersForDisplay(formData?.travelers),
+    });
+
+    if (travelersCount < 1) {
+      missingRequirements.push({
+        field: "Number of Travelers",
+        message: "Please specify the number of guests in Step 3",
+        icon: "👥",
+      });
+    }
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      {/* Main Question */}
+      <div className="text-center mb-8">
+        <div className="inline-block mb-4 p-3 bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 rounded-2xl">
+          <FaHotel className="text-4xl text-orange-600 dark:text-orange-400" />
+        </div>
+        <h2 className="text-2xl font-bold brand-gradient-text mb-3">
+          Hotel Preferences
+        </h2>
+        <p className="text-gray-700 dark:text-gray-300 text-base font-medium">
+          Would you like us to include hotel recommendations in your itinerary?
+        </p>
+      </div>
+
+      {/* Hotel Toggle */}
+      <div className="space-y-6">
+        <div className="brand-card p-6 shadow-lg border-sky-200 dark:border-sky-800 hover:shadow-xl transition-shadow duration-300">
+          <div className="flex items-start gap-4">
+            <div className="brand-gradient p-3 rounded-xl shadow-md">
+              <FaInfoCircle className="text-white text-xl" />
+            </div>
+            <div>
+              <h3 className="font-semibold brand-gradient-text text-base mb-2">
+                Hotel Search Feature
+              </h3>
+              <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+                Enable this to get real hotel recommendations with pricing,
+                ratings, and availability for your destination. Helps with
+                accommodation planning and booking.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Include Hotels Toggle */}
+        <div className="space-y-4">
+          <div
+            onClick={() => {
+              onHotelDataChange({
+                ...hotelData,
+                includeHotels: !hotelData.includeHotels,
+              });
+            }}
+            className={`brand-card p-6 cursor-pointer transition-all duration-300 border-2 hover:shadow-xl hover:scale-[1.02] ${
+              hotelData.includeHotels
+                ? "border-orange-500 dark:border-orange-600 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 shadow-lg ring-2 ring-orange-200 dark:ring-orange-800"
+                : "border-gray-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-700"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div
+                  className={`p-3 rounded-xl transition-all duration-300 ${
+                    hotelData.includeHotels
+                      ? "bg-gradient-to-br from-orange-500 to-amber-600 dark:from-orange-600 dark:to-amber-700 shadow-lg scale-110"
+                      : "bg-gray-100 dark:bg-slate-800"
+                  }`}
+                >
+                  <FaHotel
+                    className={`text-xl ${
+                      hotelData.includeHotels
+                        ? "text-white"
+                        : "text-gray-400 dark:text-gray-500"
+                    }`}
+                  />
+                </div>
+                <div>
+                  <h3
+                    className={`font-semibold text-lg ${
+                      hotelData.includeHotels
+                        ? "text-orange-900 dark:text-orange-300"
+                        : "text-gray-800 dark:text-gray-200"
+                    }`}
+                  >
+                    Include Hotel Search
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                    {hotelData.includeHotels
+                      ? "✓ Hotel preferences enabled"
+                      : "Click to enable hotel search"}
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                  hotelData.includeHotels
+                    ? "border-orange-500 dark:border-orange-600 bg-orange-500 dark:bg-orange-600 scale-110"
+                    : "border-gray-300 dark:border-slate-600"
+                }`}
+              >
+                {hotelData.includeHotels && (
+                  <FaCheck className="text-white text-sm" />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {hotelData.includeHotels && (
+            <div className="ml-8 pl-5 border-l-2 border-orange-200 dark:border-orange-800 space-y-5 animate-in slide-in-from-left duration-300">
+              {/* Missing Requirements Alert */}
+              {missingRequirements.length > 0 && (
+                <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/30 dark:to-orange-950/30 border-2 border-red-300 dark:border-red-800 rounded-xl p-5 shadow-md animate-pulse">
+                  <div className="flex items-start gap-3">
+                    <div className="text-3xl">⚠️</div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-red-800 dark:text-red-300 mb-2 text-base">
+                        Missing Required Information
+                      </h4>
+                      <p className="text-sm text-red-700 dark:text-red-400 mb-3">
+                        Please complete the following before proceeding with
+                        hotel search:
+                      </p>
+                      <ul className="space-y-2">
+                        {missingRequirements.map((req, index) => (
+                          <li
+                            key={index}
+                            className="flex items-center gap-2 text-sm bg-white dark:bg-slate-900 p-3 rounded-lg border border-red-200 dark:border-red-800 shadow-sm"
+                          >
+                            <span className="text-lg">{req.icon}</span>
+                            <div>
+                              <span className="font-semibold text-red-800 dark:text-red-300">
+                                {req.field}:
+                              </span>
+                              <span className="text-red-700 dark:text-red-400 ml-1">
+                                {req.message}
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-gray-50 dark:bg-slate-800/50 p-5 rounded-xl shadow-inner">
+                {/* Auto-populated indicator */}
+                {hotelData.preferredType &&
+                  profileSummary?.accommodationPreference ===
+                    hotelData.preferredType && (
+                    <div className="mb-4 p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-2 border-green-200 dark:border-green-800 rounded-xl shadow-sm">
+                      <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm">
+                        <div className="p-1.5 bg-green-100 dark:bg-green-900/50 rounded-lg">
+                          <FaCheck className="text-green-600 dark:text-green-400" />
+                        </div>
+                        <span className="font-medium">
+                          Auto-populated from your profile:{" "}
+                          <span className="font-bold">
+                            {profileSummary.accommodationPreference}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-4 text-base">
+                  What type of accommodation do you prefer?
+                </h4>
+
+                {/* Check-in/Check-out Dates Display */}
+                {accommodationDates && (
+                  <div className="mb-5 p-5 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 dark:from-sky-950/30 dark:via-blue-950/30 dark:to-indigo-950/30 border-2 border-sky-200 dark:border-sky-800 rounded-xl shadow-md">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="p-2 bg-sky-100 dark:bg-sky-900/50 rounded-lg">
+                        <FaCalendarAlt className="text-sky-600 dark:text-sky-400 text-lg" />
+                      </div>
+                      <span className="font-bold text-sky-900 dark:text-sky-300 text-base">
+                        Accommodation Period
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border-2 border-sky-200 dark:border-sky-700 shadow-sm hover:shadow-md transition-shadow duration-300">
+                        <div className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-2 flex items-center gap-1">
+                          <span>📥</span> Check-in
+                        </div>
+                        <div className="font-bold text-gray-800 dark:text-gray-200 text-base mb-1">
+                          {accommodationDates.checkIn}
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mt-2 bg-gray-50 dark:bg-slate-900 px-2 py-1 rounded">
+                          Standard: 2:00 PM
+                        </div>
+                      </div>
+                      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border-2 border-sky-200 dark:border-sky-700 shadow-sm hover:shadow-md transition-shadow duration-300">
+                        <div className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-2 flex items-center gap-1">
+                          <span>📤</span> Check-out
+                        </div>
+                        <div className="font-bold text-gray-800 dark:text-gray-200 text-base mb-1">
+                          {accommodationDates.checkOut}
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mt-2 bg-gray-50 dark:bg-slate-900 px-2 py-1 rounded">
+                          Standard: 12:00 PM
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 text-center">
+                      <span className="inline-flex items-center gap-2 text-sky-700 dark:text-sky-400 font-bold text-base bg-sky-100 dark:bg-sky-900/50 px-4 py-2 rounded-full shadow-sm">
+                        <FaHotel className="text-lg" />
+                        {accommodationDates.nights}{" "}
+                        {accommodationDates.nights === 1 ? "Night" : "Nights"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Accommodation Type */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">
+                      <div className="p-1.5 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                        <FaHotel className="text-orange-600 dark:text-orange-400" />
+                      </div>
+                      Accommodation Type
+                    </label>
+                    <div className="space-y-2">
+                      {accommodationOptions.map((option) => (
+                        <div
+                          key={option.value}
+                          onClick={() =>
+                            onHotelDataChange({
+                              ...hotelData,
+                              preferredType: option.value,
+                            })
+                          }
+                          className={`group p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
+                            hotelData.preferredType === option.value
+                              ? "border-orange-500 dark:border-orange-600 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 shadow-lg scale-[1.02] ring-2 ring-orange-200 dark:ring-orange-800"
+                              : "border-gray-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-700 hover:bg-gray-50 dark:hover:bg-slate-800/50 hover:shadow-md hover:scale-[1.01]"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span
+                              className={`text-3xl transition-transform duration-300 ${
+                                hotelData.preferredType === option.value
+                                  ? "scale-110"
+                                  : "group-hover:scale-110"
+                              }`}
+                            >
+                              {option.icon}
+                            </span>
+                            <div className="flex-1">
+                              <div className="font-semibold text-gray-800 dark:text-gray-200 text-base">
+                                {option.label}
+                              </div>
+                              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1.5">
+                                {option.description}
+                              </div>
+                            </div>
+                            {hotelData.preferredType === option.value && (
+                              <div className="bg-orange-500 dark:bg-orange-600 p-1 rounded-full shadow-lg">
+                                <FaCheck className="text-white text-xs" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Price Range */}
+                  <div className="mt-6">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">
+                      <div className="p-1.5 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                        <FaStar className="text-amber-600 dark:text-amber-400" />
+                      </div>
+                      Budget Range (Per Night)
+                      {formData?.location && (
+                        <span className="ml-2 text-xs text-sky-600 dark:text-sky-400 font-normal bg-sky-50 dark:bg-sky-950/30 px-2 py-1 rounded-full">
+                          📍 {formData.location}
+                        </span>
+                      )}
+                    </label>
+
+                    {/* Show warning if no destination selected */}
+                    {!formData?.location && (
+                      <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <span className="text-amber-600 dark:text-amber-400">
+                            ⚠️
+                          </span>
+                          <p className="text-xs text-amber-800 dark:text-amber-300">
+                            <strong>Showing Manila prices.</strong> Select your
+                            destination in Step 1 to see rates specific to your
+                            location.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      {priceRangeOptions.map((option) => {
+                        // Get regional pricing for this hotel level
+                        const regionalPricing = getRegionalHotelPricing(
+                          HOTEL_CONFIG.PRICE_LEVELS[option.value],
+                          formData?.location
+                        );
+
+                        return (
+                          <div
+                            key={option.value}
+                            onClick={() => {
+                              const level = option.value;
+                              onHotelDataChange({
+                                ...hotelData,
+                                budgetLevel: level,
+                                priceRange: HOTEL_CONFIG.PRICE_LEVELS[level],
+                              });
+                            }}
+                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                              hotelData.budgetLevel === option.value
+                                ? "border-orange-500 dark:border-orange-600 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 shadow-md"
+                                : "border-gray-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-700 hover:bg-gray-50 dark:hover:bg-slate-800/50"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1">
+                                {/* Header with title and checkmark */}
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="font-semibold text-base text-gray-800 dark:text-gray-200">
+                                    {option.label}
+                                  </div>
+                                  {hotelData.budgetLevel === option.value && (
+                                    <FaCheck className="text-orange-500 dark:text-orange-400 flex-shrink-0" />
+                                  )}
+                                </div>
+
+                                {/* Per-night pricing - BOLD and CLEAR */}
+                                {regionalPricing && (
+                                  <div className="mb-2 p-2 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/40 dark:to-blue-950/40 rounded-lg border border-sky-200 dark:border-sky-700">
+                                    <div className="text-xs text-sky-600 dark:text-sky-400 font-medium mb-0.5">
+                                      Per Night Rate:
+                                    </div>
+                                    <div className="text-lg font-bold text-sky-900 dark:text-sky-300">
+                                      {regionalPricing.perNightRange}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Description */}
+                                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                  {option.description}
+                                </div>
+
+                                {/* Examples */}
+                                <div className="text-xs text-gray-500 dark:text-gray-500 italic mb-2">
+                                  Examples: {option.examples}
+                                </div>
+
+                                {/* Total trip cost - BOLD and PROMINENT */}
+                                {accommodationDates && regionalPricing && (
+                                  <div className="p-2.5 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/40 dark:to-green-950/40 rounded-lg border-2 border-emerald-300 dark:border-emerald-700">
+                                    <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-0.5">
+                                      Total Trip Cost (
+                                      {accommodationDates.nights}{" "}
+                                      {accommodationDates.nights === 1
+                                        ? "night"
+                                        : "nights"}
+                                      ):
+                                    </div>
+                                    <div className="text-base font-bold text-emerald-900 dark:text-emerald-300">
+                                      {regionalPricing.getTotalRange(
+                                        accommodationDates.nights
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Budget Helper Info */}
+                    <div className="mt-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-800 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <span className="text-green-600 dark:text-green-400 text-sm">
+                          💡
+                        </span>
+                        <div className="text-xs text-green-800 dark:text-green-300">
+                          <div className="font-semibold mb-1">
+                            Budget-Saving Tips
+                            {formData?.location
+                              ? ` for ${formData.location}`
+                              : ""}
+                            :
+                          </div>
+                          <ul className="space-y-0.5 ml-4 list-disc">
+                            <li>
+                              <strong>Budget (₱500-1,500):</strong> Backpackers,
+                              hostels, fan rooms
+                            </li>
+                            <li>
+                              <strong>Mid-Range (₱1,500-3,500):</strong> Best
+                              value - clean hotels with A/C
+                            </li>
+                            <li>
+                              <strong>Upscale (₱3,500+):</strong> Premium
+                              comfort and amenities
+                            </li>
+                            <li>
+                              Book directly or compare prices across platforms
+                            </li>
+                            <li>
+                              Weekday rates are typically 20-30% cheaper than
+                              weekends
+                            </li>
+                            <li>
+                              Off-peak season can save you 30-50% on
+                              accommodation
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Guest Information Display */}
+                  {formData?.travelers && (
+                    <div className="mt-4 bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FaUsers className="text-blue-600 dark:text-blue-400" />
+                        <span className="font-semibold text-blue-900 dark:text-blue-300 text-sm">
+                          Guest Details
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Number of guests:
+                          </span>
+                          <span className="font-semibold text-gray-800 dark:text-gray-200">
+                            {formatTravelersForDisplay(formData.travelers)}
+                          </span>
+                        </div>
+                        {formData.startDate && formData.endDate && (
+                          <>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Trip duration:
+                              </span>
+                              <span className="font-semibold text-gray-800 dark:text-gray-200">
+                                {accommodationDates?.nights}{" "}
+                                {accommodationDates?.nights === 1
+                                  ? "night"
+                                  : "nights"}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Dates:
+                              </span>
+                              <span className="font-semibold text-gray-800 dark:text-gray-200">
+                                {new Date(
+                                  formData.startDate
+                                ).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                })}{" "}
+                                -{" "}
+                                {new Date(formData.endDate).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  }
+                                )}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Helpful Tips */}
+                <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <FaInfoCircle className="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-amber-900 dark:text-amber-300">
+                      <div className="font-semibold mb-1">
+                        💡 Accommodation Tips:
+                      </div>
+                      <ul className="space-y-1 ml-4 list-disc">
+                        <li>Check-in time is typically 2:00 PM - 3:00 PM</li>
+                        <li>Check-out time is usually 11:00 AM - 12:00 PM</li>
+                        <li>
+                          Early check-in/late check-out may incur additional
+                          charges
+                        </li>
+                        <li>
+                          Budget prices are per room per night, not per person
+                        </li>
+                        <li>Peak season rates may be 20-50% higher</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Search Info */}
+                <div className="mt-3 text-xs text-gray-600 dark:text-gray-400 text-center">
+                  🔍 We'll search for available accommodations matching your
+                  preferences in {formData?.location || "your destination"}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default HotelPreferences;

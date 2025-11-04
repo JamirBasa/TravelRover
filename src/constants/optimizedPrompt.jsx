@@ -14,197 +14,52 @@ export const AI_PROMPT_OPTIMIZED = `Generate travel itinerary JSON for {location
 🎯 CRITICAL CONSTRAINTS
 
 1. LOCATION VALIDATION
-   ALL places MUST be in {location}
-   Format: "Place Name, City/District" (e.g., "Fort Santiago, Intramuros, Manila")
-   
-2. ACTIVITY COUNT (Strict) ⚠️ CRITICAL - VALIDATE BEFORE SUBMISSION
-   • Day 1 (Arrival Day): ABSOLUTE MAXIMUM 2 ACTIVITIES - NO EXCEPTIONS
-     - Example Day 1: "Airport arrival" + "Hotel check-in" + "Rest" + MAX 2 tourist spots
-     - If 08:00 AM arrival → 2 activities possible
-     - If 12:00 PM+ arrival → 1 activity only
-     - If 06:00 PM+ arrival → 0 activities (rest only)
-     - Count ONLY tourist attractions (NOT airport, hotel, meals, rest)
-   • Middle Days (Days 2 to N-1): EXACTLY {activityPreference} activities per day
-     - Must match user's selected pace preference
-     - Count ONLY main tourist activities
-   • Last Day (Departure): MAXIMUM 1 activity OR 0 if early departure
-     - Must end 4-5hrs before departure time
-     - INCLUDE: Hotel checkout, departure meal, airport departure as separate entries
-   • VALIDATION CHECK: Count each day's activities BEFORE finalizing JSON
-   
-   ⚠️ EXAMPLE - Day 1 with 2 activities (CORRECT):
-   08:00 AM - Arrival at Airport
-   09:00 AM - Check-in at Hotel  
-   09:30 AM - Rest & Freshen Up
-   12:00 PM - Lunch
-   02:00 PM - Activity 1: Burnham Park (counts as 1)
-   05:00 PM - Activity 2: Baguio Cathedral (counts as 2)
-   07:00 PM - Dinner
-   Total: 2 activities ✓
-   
-3. TIMING RULES
-   • Day 1: Start with airport arrival → hotel check-in → 2-3hr rest → activities
-   • Last Day: End with hotel checkout → departure meal → airport departure
-   • Travel: Same district 15-30min | Cross-city 30-60min | +50% peak hours
-   • timeTravel format: "X min by [transport] from [origin]" (e.g., "30 min by bus from hotel")
-   • Transport types: Bus, Jeepney, Taxi, Grab, Tricycle, Walking, etc.
-   • Cluster nearby attractions same day to minimize travel
-   • VALIDATE: Day 1 must respect arrival buffer + limited activities (max 2)
-   
-4. ITINERARY STRUCTURE REQUIREMENTS
-   • Day 1 must include: Airport arrival → Hotel check-in → Rest period → (1-2 activities max) → Dinner
-   • Middle days: Breakfast → Activities (exactly {activityPreference}) → Lunch → Activities → Dinner
-   • Last day must include: Breakfast → (0-1 activity max) → Lunch → Hotel checkout → Airport departure
-   • Always specify transport method and travel time between locations
-   • Include meal times (breakfast ~8am, lunch ~12pm, dinner ~6pm)
-   
-4. JSON FORMAT
-   • Valid JSON only (parseable by JSON.parse())
-   • No trailing commas, no markdown blocks
-   • Descriptions <80 chars
-   • Budget levels: Budget ₱2-8K | Moderate ₱8-20K | Luxury ₱20K+
-   • HOTELS: Provide 3-5 hotel options with different price ranges (budget, mid-range, luxury)
-   • BEFORE RETURNING: Verify Day 1 has ≤2 activities, Middle days have exactly {activityPreference}
-   • Each itinerary entry needs: time, placeName, placeDetails, ticketPricing, timeTravel, geoCoordinates
-   • Each hotel needs: hotelName, hotelAddress, pricePerNight, description, amenities (array), rating (1-5), reviews_count
+   ALL places MUST be in {location}. Format: "Place Name, City/District".
 
-5. BUDGET ENFORCEMENT (CRITICAL) 🚨 MANDATORY
-   USER BUDGET CAP: {budgetAmount}
-   
-   ⚠️ ZERO TOLERANCE POLICY - PLAN WILL BE REJECTED IF:
-   • ANY line item has missing or "varies" or "FREE" without numeric value
-   • Total cost exceeds {budgetAmount}
-   • Daily totals are not calculated
-   • Grand total is not provided
-   • Prices are generic/unrealistic for current Philippines market
-   
-   🇵🇭 ACTUAL FILIPINO PRICING REQUIREMENTS (2025 rates):
-   
-   REGIONAL PRICE MULTIPLIERS (Manila baseline = 1.0x):
-   • METRO MANILA: Makati/BGC (1.4-1.5x higher), Quezon City (1.1x), Manila proper (1.0x baseline)
-   • CORDILLERA (Baguio, Sagada): 0.6-0.75x (cooler climate, lower costs than Manila)
-   • CENTRAL VISAYAS (Cebu): 0.9-1.1x (comparable to Manila)
-   • MINDANAO (Davao): 0.7-0.9x (generally cheaper than Manila)
-   • ISLAND DESTINATIONS: Palawan/El Nido (0.8x base, luxury resorts +50%), Boracay (1.3x tourist premium)
-   
-   EXAMPLES:
-   • Mid-Range hotel in Manila: ₱2,000/night → Baguio: ₱1,200/night (0.6x)
-   • Mid-Range hotel in Manila: ₱2,000/night → Makati: ₱2,800/night (1.4x)
-   • Meal in Manila: ₱300 → Cebu: ₱270 (0.9x) | BGC: ₱420 (1.4x)
-   ⚠️ ALWAYS adjust base prices by destination multiplier
-   
-   ACCOMMODATION (per night) - MANILA BASELINE:
-   • Budget hostels/guesthouses: ₱800-1,500 (Baguio: ₱480-900, Makati: ₱1,120-2,100)
-   • Mid-range hotels (3-star): ₱1,500-3,000 (Baguio: ₱900-1,800, Makati: ₱2,100-4,200)
-   • Upscale hotels (4-star): ₱3,000-5,000 (Baguio: ₱1,800-3,000, Makati: ₱4,200-7,000)
-   • Luxury hotels (5-star): ₱5,000-15,000+ (Baguio: ₱3,000-9,000, BGC: ₱7,500-22,500)
-   • Airbnb/homestays: ₱1,200-3,500 (Baguio: ₱720-2,100, Makati: ₱1,680-4,900)
-   ⚠️ Never use prices below regional minimum (e.g., Baguio ≥₱480 budget, Makati ≥₱1,120)
-   
-   TRANSPORTATION (actual current fares):
-   • Jeepney (city): ₱13-20 base fare
-   • Bus (city): ₱15-25
-   • Provincial bus (per 100km): ₱150-300
-   • Long-distance bus (Manila-Baguio): ₱450-650
-   • Long-distance bus (Manila-Cebu ferry): ₱1,200-2,000
-   • Tricycle (short): ₱20-50
-   • Taxi (flagdown): ₱40 + ₱13.50/km
-   • Grab/taxi (airport to city): ₱200-500
-   • Domestic flights: ₱1,500-5,000 (budget), ₱3,000-8,000 (full-service)
-   • Ferry (short routes): ₱200-800
-   • Ferry (Manila-Mindoro): ₱800-1,500
-   ⚠️ Use actual distance-based calculation, never flat generic rates
-   
-   MEALS (per person, 2025 prices):
-   • Carinderia/street food: ₱50-120
-   • Fast food (Jollibee, McDonald's): ₱150-250
-   • Casual dining: ₱250-500
-   • Mid-range restaurant: ₱400-800
-   • Fine dining: ₱800-2,000+
-   • Hotel breakfast buffet: ₱500-1,200
-   ⚠️ Budget travelers: ₱150-300/meal | Moderate: ₱300-600/meal | Luxury: ₱600-1,500/meal
-   
-   ATTRACTIONS (actual entrance fees):
-   • National parks: ₱0-100 (many free)
-   • Museums (government): ₱50-150
-   • Historical sites: ₱50-200
-   • Theme parks (Enchanted Kingdom): ₱800-1,200
-   • Water parks: ₱500-1,000
-   • Island hopping tours: ₱800-2,500
-   • Scuba diving: ₱2,500-4,500
-   • Zip-lining: ₱300-800
-   • Hiking (guides): ₱500-1,500
-   • City tours: ₱500-1,500
-   ⚠️ Research actual 2025 prices, many heritage sites are FREE or under ₱100
-   
-   REQUIRED PRICING FORMAT:
-   • ALL prices MUST be numeric in PHP (₱): "₱150" or "₱1,500-2,000" (with range)
-   • ticketPricing examples: "₱500", "₱200-350", "₱0 (free)", "₱800 per person"
-   • Transport costs: Include in timeTravel (e.g., "30 min by jeepney (₱15)")
-   • Meals: Specify cost per person (e.g., "₱250-400 per person")
-   • FREE items: Write "₱0 (free)" NOT "Free" or "No charge"
-   • UNCERTAIN prices: Write "₱??? (needs confirmation)" and flag in missingPrices array
-   
-   ⚠️ PRICING VERIFICATION RULES:
-   1. NEVER invent generic prices (e.g., ₱100, ₱200, ₱500 for everything)
-   2. NEVER underestimate major expenses (hotels, long-distance travel)
-   3. ALWAYS use upper bound of ranges for budget safety
-   4. If actual price is unknown: Use "₱??? (needs confirmation)" + add to missingPrices[]
-   5. Popular tourist destinations: Use current 2025 published rates
-   6. Include ALL expense categories: accommodation, meals (3x/day), activities, transport
-   7. Transport between cities: Calculate based on actual distance and mode
-   
-   MANDATORY COST BREAKDOWN:
-   Add these fields to root JSON:
-   • "dailyCosts": [{"day": 1, "breakdown": {"accommodation": ₱X, "meals": ₱X, "activities": ₱X, "transport": ₱X, "subtotal": ₱X}}, ...]
-   • "grandTotal": ₱XXXX (sum of all dailyCosts.subtotal)
-   • "budgetCompliance": {"userBudget": ₱XXXX, "totalCost": ₱XXXX, "remaining": ₱XXXX, "withinBudget": true/false}
-   • "missingPrices": [] (List any items with "₱???" or uncertain pricing - if empty, all prices confirmed)
-   • "pricingNotes": "Source of prices: Official 2025 rates from [destination] tourism board / Recent traveler reports / Estimated based on similar destinations"
-   
-   COST CALCULATION RULES:
-   1. Sum ALL costs from itinerary items (attractions, meals, transport)
-   2. Add accommodation cost per night × number of nights
-   3. Include all transport between locations (jeepney, taxi, bus, etc.) - calculate based on actual distance
-   4. If item range (e.g., ₱200-350), use UPPER bound for budget safety
-   5. If cost "per person", multiply by {travelers} count
-   6. Include 3 meals per day (breakfast, lunch, dinner) with realistic prices
-   7. Never omit major expense categories (accommodation, meals, main transport)
-   8. If price genuinely unknown after research: Use "₱??? (needs confirmation)" and add to missingPrices[]
-   
-   AUTO-SUBSTITUTION PROTOCOL:
-   If initial plan exceeds budget:
-   • Replace expensive hotels with budget alternatives (₱1,500-2,500 range)
-   • Swap paid attractions with free/cheaper alternatives (₱0-100 range)
-   • Reduce meal budgets (use carinderias ₱80-150 instead of restaurants ₱400-800)
-   • Use public transport (jeepney ₱15-25, bus ₱150-300) instead of taxis (₱300-800)
-   • Use actual current prices for substitutions, never generic estimates
-   • Reduce activity count if necessary while maintaining quality experience
-   • NEVER return a plan that exceeds {budgetAmount}
-   • If budget is too low for destination, flag this in pricingNotes
-   
-   VALIDATION CHECKLIST (Execute before returning JSON):
-   ✓ Every itinerary item has numeric ticketPricing using 2025 Filipino market rates
-   ✓ Every meal has cost estimate (₱50-150 budget | ₱250-500 moderate | ₱600-1,500 luxury)
-   ✓ Every transport has cost in timeTravel calculated from actual distance/mode
-   ✓ Hotel rates match actual 2025 market prices (₱800-1,500 budget | ₱1,500-3,000 mid | ₱3,000-5,000 upscale)
-   ✓ Bus fares match actual provincial rates (₱150-300 per 100km)
-   ✓ No generic or repeated placeholder prices (₱100, ₱200, ₱500)
-   ✓ dailyCosts array matches number of days
-   ✓ grandTotal = sum of all dailyCosts.subtotal
-   ✓ budgetCompliance.withinBudget = true
-   ✓ missingPrices array lists any "₱???" items (can be non-empty if prices uncertain)
-   ✓ grandTotal ≤ {budgetAmount}
-   ✓ pricingNotes explains source of pricing data
+2. ACTIVITY COUNT (Strict) ⚠️
+   • Day 1 (Arrival): MAX 2 activities. 1 if after 12 PM, 0 if after 6 PM.
+   • Middle Days: EXACTLY {activityPreference} activities.
+   • Last Day (Departure): MAX 1 activity.
+   • Count ONLY tourist attractions (NOT airport, hotel, meals, rest).
 
-6. REQUIRED ITINERARY ELEMENTS
+3. TIMING & TRAVEL (CRITICAL)
+   • Calculate travel time using geoCoordinates. Apply circuity factor (Urban: 1.3-1.5x, Mountainous: 1.8x) and realistic speeds (Manila peak: 12-15km/h, provincial: 60km/h).
+   • timeTravel FORMAT: "[X] minutes by [transport] (₱[cost])". MUST include time, transport, and cost.
+   • Example: "20 minutes by taxi (₱135)". Adjacent locations (<500m) are "5 minutes walking distance (free)".
 
-6. REQUIRED ITINERARY ELEMENTS
-   • Arrival activities: "Arrival at [Airport Name]", "Check-in at Hotel", "Rest & Freshen Up"
-   • Departure activities: "Check-out from Hotel", "Departure to [Airport Name]"
-   • Transport info: Always include timeTravel with transport type AND COST (e.g., "15 min by jeepney (₱15) from hotel")
-   • Meals: Include breakfast, lunch, dinner with restaurant suggestions AND COST (e.g., "₱250-350 per person")
-   • All costs must be included in budget calculations
+4. ITINERARY STRUCTURE
+   • Day 1: Arrival, Hotel Check-in, Rest, 1-2 activities, Dinner.
+   • Middle days: Breakfast, {activityPreference} activities, Lunch, Dinner.
+   • Last day: Breakfast, 0-1 activity, Lunch, Hotel Checkout, Airport Departure.
+   • Include meals (breakfast, lunch, dinner) with estimated costs.
+
+5. JSON FORMAT ⚠️ CRITICAL
+   • Valid JSON only. No trailing commas. Descriptions < 80 chars.
+   • ALL ARRAYS MUST USE BRACKETS: hotels: [...], itinerary: [...], placesToVisit: [...], dailyCosts: [...]
+   • ❌ WRONG: "placesToVisit": "{...}, {...}, {...}" (comma-separated objects)
+   • ✅ CORRECT: "placesToVisit": [{...}, {...}, {...}] (proper JSON array)
+   • HOTELS: 3-5 options (budget, mid-range, luxury) in array format.
+   • Each itinerary item: time, placeName, placeDetails, ticketPricing, timeTravel, geoCoordinates.
+   • Each hotel: hotelName, hotelAddress, pricePerNight, description, amenities, rating, reviews_count.
+
+6. BUDGET ENFORCEMENT (CRITICAL) 🚨
+   USER BUDGET CAP: {budgetAmount}. The plan MUST NOT exceed this.
+   • All items must have a numeric PHP price ("₱500", "₱0 (free)"). Use "₱??? (needs confirmation)" if unknown and add to 'missingPrices' array.
+   • Use realistic 2025 prices. Adjust for region (e.g., Baguio is ~0.7x Manila prices, Makati is ~1.4x).
+   • Accommodation (Manila base): Budget ₱800-1.5k, Mid ₱1.5-3k, Luxury ₱5k+.
+   • Meals (per person): Budget ₱150-300, Mid ₱300-600, Luxury ₱600+.
+   • Transport: Use actual fares (Jeepney ~₱15, Taxi flagdown ₱40).
+   • If over budget, auto-substitute with cheaper options (hostels, free attractions, public transport).
+   • MANDATORY: Include 'dailyCosts', 'grandTotal', and 'budgetCompliance' in root JSON.
+
+7. REQUIRED ITINERARY ELEMENTS
+   • Arrival: "Arrival at [Airport Name]", "Check-in at [Hotel Name]", "Rest".
+   • Departure: "Check-out from [Hotel Name]", "Departure to [Airport Name]".
+   • Meals: Include breakfast, lunch, dinner with cost estimates.
+   
+🏨 CRITICAL: DAY 1 HOTEL CHECK-IN
+   • Day 1 check-in MUST use the name of the FIRST hotel in the 'hotels' array.
+   • Example: "Check-in at Bayfront Hotel Manila". NEVER "Check-in at Hotel".
 
 📊 TRIP CONTEXT
 Dates: {travelDates}
@@ -220,26 +75,11 @@ Dietary: {dietary} | Cultural: {cultural}
 {specialRequests}
 
 🚨 VALIDATION RULES
-• Don't recommend places from {userHomeLocation}
-• Respect dietary restrictions: {dietary}
-• Respect cultural preferences: {cultural}
-• Activities between {activityStartDate} and {activityEndDate}
-• Hotel checkout: {checkoutDate}
-• FINAL CHECK: Day 1 must have 1-2 activities MAX (arrival day = lighter schedule)
+• Respect all user preferences (dietary, cultural, etc.).
+• Activities between {activityStartDate} and {activityEndDate}.
+• FINAL CHECK: Day 1 activities ≤ 2. Middle days = {activityPreference}.
 
-⚠️ ACTIVITY COUNT VALIDATION REMINDER:
-Before submitting your JSON response, count the activities for each day:
-- Day 1 (Arrival): Should have 1 or 2 activities only
-- Middle Days: Should have exactly {activityPreference} activities
-- Last Day: Should have 0 or 1 activity only
-
-🏨 HOTEL OPTIONS REQUIREMENT:
-- Provide 3-5 hotel options with varied price ranges
-- Include budget (₱1,500-2,500), mid-range (₱2,500-5,000), and upscale (₱5,000+) options
-- Each hotel MUST include: hotelName, hotelAddress, pricePerNight, description, amenities (array of 5-8 items), rating (1-5), reviews_count
-- Example amenities: WiFi, Pool, Gym, Restaurant, Spa, Bar, Room Service, Air Conditioning, Free Breakfast, Parking
-
-Generate complete JSON: {"tripName":"...","destination":"{location}","hotels":[...],"itinerary":[...],"placesToVisit":[...],"dailyCosts":[{"day":1,"breakdown":{"accommodation":0,"meals":0,"activities":0,"transport":0,"subtotal":0}}],"grandTotal":0,"budgetCompliance":{"userBudget":0,"totalCost":0,"remaining":0,"withinBudget":true},"missingPrices":[],"pricingNotes":"Prices based on actual 2025 Filipino market rates"}`;
+Generate complete JSON: {"tripName":"...","destination":"{location}","hotels":[{...},{...},{...}],"itinerary":[{day:1,...},{day:2,...}],"placesToVisit":[{placeName:"...",...},{placeName:"...",...}],"dailyCosts":[{day:1,breakdown:{...}},{day:2,breakdown:{...}}],"grandTotal":0,"budgetCompliance":{...},"missingPrices":[],"pricingNotes":"Prices based on actual 2025 Filipino market rates"}`;
 
 /**
  * CONDENSED USER PROFILE TEMPLATE
@@ -274,21 +114,41 @@ export const buildFlightSummary = (flightRecommendations) => {
   }
 
   const flights = flightRecommendations.flights.slice(0, 3);
-  const flightLines = flights.map(
-    (f) =>
-      `${f.airline} ₱${f.estimatedPrice} | ${f.departureTime} → ${
-        f.arrivalTime
-      } | ${f.stops || "Non-stop"}`
-  );
+  const recommendedFlight = flights[0]; // Primary recommendation
 
-  return `✈️ FLIGHTS (from ${
-    flightRecommendations.departureCity || "origin"
-  }):\n${flightLines.join("\n")}`;
+  const flightLines = flights.map((f, index) => {
+    const prefix = index === 0 ? "⭐ RECOMMENDED:" : "  Alt:";
+    return `${prefix} ${f.airline} (${f.flightNumber || "TBD"}) | ₱${
+      f.estimatedPrice
+    } | ${f.departureTime} → ${f.arrivalTime} | ${f.stops || "Non-stop"}`;
+  });
+
+  return `✈️ FLIGHTS (from ${flightRecommendations.departureCity || "origin"}):
+${flightLines.join("\n")}
+
+🚨 CRITICAL FLIGHT RULES:
+1. ALWAYS use the RECOMMENDED flight: "${recommendedFlight.airline} (${
+    recommendedFlight.flightNumber || "Flight " + recommendedFlight.airline
+  })"
+2. NEVER write generic references like "Flight to ${
+    flightRecommendations.destinationCity || "destination"
+  }"
+3. CORRECT format: "Departure: ${recommendedFlight.airline} (${
+    recommendedFlight.flightNumber || "PR123"
+  }) - ${recommendedFlight.departureTime}"
+4. WRONG format: "Flight to ${
+    flightRecommendations.destinationCity || "city"
+  }" or "Depart via commercial airline"
+5. For return flights, use the same airline: "${
+    recommendedFlight.airline
+  } (return flight)"`;
 };
 
 /**
  * CONDENSED HOTEL SUMMARY
  * Replaces verbose hotel section (600 tokens → 120 tokens)
+ * EMPHASIZES first hotel as the default check-in hotel
+ * ENFORCES specific hotel name usage in itinerary
  */
 export const buildHotelSummary = (hotelRecommendations) => {
   if (
@@ -299,11 +159,29 @@ export const buildHotelSummary = (hotelRecommendations) => {
   }
 
   const hotels = hotelRecommendations.hotels.slice(0, 3);
-  const hotelLines = hotels.map(
-    (h) => `${h.name} • ₱${h.price || "N/A"}/night • ${h.location || ""}`
-  );
+  const primaryHotel = hotels[0]; // PRIMARY check-in hotel
 
-  return `🏨 HOTELS:\n${hotelLines.join("\n")}`;
+  const hotelLines = hotels.map((h, index) => {
+    const prefix =
+      index === 0 ? "⭐ PRIMARY (Use for Day 1 check-in):" : "  Alt:";
+    return `${prefix} ${h.name} • ₱${h.price || "N/A"}/night • ${
+      h.location || ""
+    }`;
+  });
+
+  return `🏨 HOTELS (First hotel = Day 1 check-in default):
+${hotelLines.join("\n")}
+
+🚨 CRITICAL HOTEL RULES:
+1. ALWAYS use the PRIMARY hotel for ALL activities: "${primaryHotel.name}"
+2. NEVER write generic references like "Hotel Check-in" or "Return to hotel"
+3. CORRECT format: "Check-in at ${primaryHotel.name}", "Breakfast at ${
+    primaryHotel.name
+  }", "Return to ${primaryHotel.name}"
+4. WRONG format: "Check-in at hotel", "Hotel breakfast", "Back to accommodation"
+5. Use the exact hotel name "${
+    primaryHotel.name
+  }" in ALL itinerary activities involving the hotel`;
 };
 
 /**

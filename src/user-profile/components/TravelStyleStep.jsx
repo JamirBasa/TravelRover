@@ -124,37 +124,41 @@ const TravelStyleStep = ({
           <div>
             <div className="mb-3">
               <h3 className="text-base font-bold brand-gradient-text mb-1">
-                Budget Per Trip
+                Preferred Budget Range
               </h3>
+              <p className="text-xs text-gray-500">
+                Your typical budget preference (can be customized per trip)
+              </p>
             </div>
             <div className="mb-2 p-2.5 bg-gradient-to-br from-sky-50 to-blue-50 border border-sky-200 rounded-lg">
               <div className="space-y-0.5 text-xs text-gray-700">
                 <div className="flex gap-2">
-                  <span className="font-semibold text-sky-600 min-w-[55px]">
+                  <span className="font-semibold text-sky-600 min-w-[70px]">
                     Budget:
                   </span>
-                  <span>₱2-8k/day</span>
+                  <span>₱2-8k/day · Hostels, local food, basic activities</span>
                 </div>
                 <div className="flex gap-2">
-                  <span className="font-semibold text-sky-600 min-w-[55px]">
+                  <span className="font-semibold text-sky-600 min-w-[70px]">
                     Moderate:
                   </span>
-                  <span>₱8-20k/day</span>
+                  <span>
+                    ₱8-20k/day · Mid-range hotels, popular attractions
+                  </span>
                 </div>
                 <div className="flex gap-2">
-                  <span className="font-semibold text-sky-600 min-w-[55px]">
+                  <span className="font-semibold text-sky-600 min-w-[70px]">
                     Luxury:
                   </span>
-                  <span>₱20k+/day</span>
+                  <span>₱20k+/day · High-end resorts, premium experiences</span>
                 </div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { value: "budget", label: "Budget", range: "₱2-8k" },
-                { value: "moderate", label: "Moderate", range: "₱8-20k" },
-                { value: "luxury", label: "Luxury", range: "₱20k+" },
-                { value: "flexible", label: "Flexible", range: "Varies" },
+                { value: "Budget-Friendly", label: "Budget", range: "₱2-8k" },
+                { value: "Moderate", label: "Moderate", range: "₱8-20k" },
+                { value: "Luxury", label: "Luxury", range: "₱20k+" },
               ].map((budget) => {
                 const isSelected = profileData.budgetRange === budget.value;
                 return (

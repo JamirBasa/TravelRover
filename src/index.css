@@ -124,10 +124,16 @@
 }
 
 /* ============================================
-   OPTIMIZED DARK MODE TRANSITIONS
+   UNIFIED ANIMATION SYSTEM
    ============================================ */
 
-/* Strategy: Ultra-fast transitions for immediate visual feedback */
+/* 
+  Design Philosophy: Minimal, Purposeful Motion
+  - Only animate when it provides value
+  - Fast durations for instant feedback (100-200ms)
+  - Smooth durations for complex transitions (300ms)
+  - Use easing functions consistently
+*/
 
 /* Root element - Instant background change */
 html {
@@ -140,16 +146,16 @@ body {
   transition: background-color 150ms ease-out, color 150ms ease-out;
 }
 
-/* Global color transitions - Faster for text */
+/* Global color transitions - Optimized for text */
 *,
 *::before,
 *::after {
-  /* Fast text color changes (120ms = nearly instant) */
-  transition: color 120ms ease-out, background-color 150ms ease-out,
-    border-color 150ms ease-out, fill 120ms ease-out, stroke 120ms ease-out;
+  /* Fast color changes for instant feedback */
+  transition: color 100ms ease-out, background-color 150ms ease-out,
+    border-color 150ms ease-out, fill 100ms ease-out, stroke 100ms ease-out;
 }
 
-/* Optimize specific elements for instant feel */
+/* Typography - Instant color changes */
 h1,
 h2,
 h3,
@@ -163,7 +169,7 @@ label {
   transition: color 100ms ease-out, background-color 150ms ease-out;
 }
 
-/* Interactive elements - Preserve hover/active states */
+/* Interactive Elements - Standard 200ms transitions */
 button,
 a,
 input,
@@ -173,30 +179,34 @@ select,
 [tabindex] {
   transition: color 100ms ease-out, background-color 150ms ease-out,
     border-color 150ms ease-out, transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+/* Micro-interactions - Scale transforms for tactile feedback */
+button:not(:disabled),
+a:not(:disabled),
+[role="button"]:not(:disabled) {
+  transition: color 100ms ease-out, background-color 150ms ease-out,
+    border-color 150ms ease-out, transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
     opacity 200ms ease-out, box-shadow 200ms ease-out,
     scale 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Animated elements - Preserve complex animations */
-*[class*="animate-"],
-*[class*="transition-transform"],
-*[class*="transition-opacity"],
-*[class*="hover:scale"],
-*[class*="group-hover"],
-*[class*="hover:shadow"] {
-  transition: color 100ms ease-out, background-color 150ms ease-out,
-    border-color 150ms ease-out, transform 250ms cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 250ms ease-out, box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1),
-    scale 250ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Cards and containers - Smooth but not slow */
+/* Cards - Smooth but responsive */
 [class*="card"],
 [class*="brand-card"],
 .bg-white,
 .dark\:bg-slate-900 {
   transition: background-color 150ms ease-out, border-color 150ms ease-out,
-    box-shadow 200ms ease-out;
+    box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Progressive Disclosure - Smooth 300ms reveal */
+*[class*="animate-in"],
+*[class*="slide-in"] {
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 300ms ease-out;
 }
 
 /* Disable transitions during page load */
@@ -204,35 +214,135 @@ select,
   transition: none !important;
 }
 
-/* Hero Animation Styles */
-@keyframes blob {
-  0% {
-    transform: translate(0px, 0px) scale(1);
+/* ============================================
+   PURPOSEFUL ANIMATION UTILITIES
+   ============================================ */
+
+/* Micro-interaction: Button Press */
+.button-press {
+  transition: transform 100ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.button-press:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Micro-interaction: Gentle Hover Lift */
+.hover-lift {
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+/* Entrance: Fade In (300ms) */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
-  100% {
-    transform: translate(0px, 0px) scale(1);
+  to {
+    opacity: 1;
   }
 }
 
-.animate-blob {
-  animation: blob 7s infinite;
+.animate-fade-in {
+  animation: fadeIn 300ms ease-out;
 }
 
-.animation-delay-2000 {
-  animation-delay: 2s;
+/* ============================================
+   PROFESSIONAL ENTRANCE ANIMATIONS
+   ============================================ */
+
+/* Slide In from Top - Smooth and subtle (300ms) */
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.animation-delay-4000 {
-  animation-delay: 4s;
+.animate-slide-in-top {
+  animation: slideInFromTop 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Standard spin animation - ensure it's available */
+/* Fade In with Scale - Professional card entrance (250ms) */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Expand Height - Smooth height transition */
+@keyframes expandHeight {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+    transform: translateY(0);
+  }
+}
+
+.animate-expand-height {
+  animation: expandHeight 350ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-fill-mode: forwards;
+  overflow: hidden;
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-fill-mode: forwards;
+}
+
+.animate-slide-in-top {
+  animation: slideInFromTop 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-fill-mode: forwards;
+}
+
+/* Stagger animation delays for sequential entrance */
+.stagger-1 {
+  animation-delay: 50ms;
+}
+
+.stagger-2 {
+  animation-delay: 100ms;
+}
+
+.stagger-3 {
+  animation-delay: 150ms;
+}
+
+.stagger-4 {
+  animation-delay: 200ms;
+}
+
+.stagger-5 {
+  animation-delay: 250ms;
+}
+
+/* ============================================
+   CORE ANIMATIONS (Minimal Set)
+   ============================================ */
+
+/* Loading: Spin (infinite) */
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -246,7 +356,22 @@ select,
   animation: spin 1s linear infinite;
 }
 
-/* Ping animation for pulse rings */
+/* Status: Pulse (attention) */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Status: Ping (ripple effect) */
 @keyframes ping {
   75%,
   100% {
@@ -259,43 +384,79 @@ select,
   animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
-/* Slow spin animation for sparkles */
-@keyframes spin-slow {
-  from {
-    transform: rotate(0deg);
+/* Hero: Blob (ambient motion) */
+@keyframes blob {
+  0%,
+  100% {
+    transform: translate(0px, 0px) scale(1);
   }
-  to {
-    transform: rotate(360deg);
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
   }
 }
 
-.animate-spin-slow {
-  animation: spin-slow 3s linear infinite;
+.animate-blob {
+  animation: blob 7s ease-in-out infinite;
 }
 
-/* TravelRover Design System Variables */
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Loading: Shimmer (skeleton screens) */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s ease-in-out infinite;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+}
+
+/* ============================================
+   BRAND DESIGN SYSTEM
+   ============================================ */
+
+/* Brand Color Variables */
 :root {
   --brand-sky: #0ea5e9;
   --brand-blue: #0284c7;
   --brand-sky-hover: #0284c7;
   --brand-blue-hover: #0369a1;
   --brand-light: #7dd3fc;
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(14, 165, 233, 0.2);
 }
 
-/* Dark Mode Variables - No transition on variables themselves */
 .dark {
   --brand-sky: #38bdf8;
   --brand-blue: #0ea5e9;
   --brand-sky-hover: #7dd3fc;
   --brand-blue-hover: #38bdf8;
   --brand-light: #0ea5e9;
-  --glass-bg: rgba(15, 23, 42, 0.8);
+  --glass-bg: rgba(15, 23, 42, 0.9);
   --glass-border: rgba(148, 163, 184, 0.2);
 }
 
-/* Brand Gradient Classes */
+/* Brand Gradient - Primary */
 .brand-gradient {
   background: linear-gradient(
     135deg,
@@ -304,6 +465,7 @@ select,
   );
 }
 
+/* Brand Gradient Text - Headers */
 .brand-gradient-text {
   background: linear-gradient(
     135deg,
@@ -316,6 +478,7 @@ select,
   color: transparent;
 }
 
+/* Brand Button - Primary CTA */
 .brand-button {
   background: linear-gradient(
     135deg,
@@ -325,13 +488,19 @@ select,
   color: white;
   font-weight: 600;
   border-radius: 9999px;
+  padding: 0.75rem 1.5rem;
   box-shadow: 0 10px 15px -3px rgb(14 165 233 / 0.3),
     0 4px 6px -4px rgb(14 165 233 / 0.2);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
-.brand-button:hover {
+.brand-button:hover:not(:disabled) {
   background: linear-gradient(
     135deg,
     var(--brand-sky-hover) 0%,
@@ -339,7 +508,11 @@ select,
   );
   box-shadow: 0 20px 25px -5px rgb(14 165 233 / 0.4),
     0 8px 10px -6px rgb(14 165 233 / 0.3);
-  transform: scale(1.05);
+  transform: scale(1.02);
+}
+
+.brand-button:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .brand-button:disabled {
@@ -347,85 +520,51 @@ select,
   opacity: 0.6;
 }
 
+/* Brand Card - Glassmorphic Container */
 .brand-card {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(16px);
   border: 1px solid rgb(229 231 235);
   border-radius: 12px;
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-  transition: all 0.3s ease;
-  /* cursor removed - add cursor-pointer class explicitly for clickable cards */
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  transition: box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1), border-color 150ms ease-out;
 }
 
 .dark .brand-card {
   background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgb(51 65 85);
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.2);
 }
 
 .brand-card:hover {
-  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.15);
 }
 
 .dark .brand-card:hover {
-  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.4);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
 }
 
+/* Glass Morphism - Enhanced Cards */
 .glass-morphism {
   background: var(--glass-bg);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
-  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  box-shadow: 0 8px 32px 0 rgba(14, 165, 233, 0.1);
 }
 
-/* Elegant animations */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes gentlePulse {
-  0%,
-  100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 0.8;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.fade-in-up {
-  animation: fadeInUp 0.6s ease-out forwards;
-}
-
-.gentle-pulse {
-  animation: gentlePulse 3s ease-in-out infinite;
-}
-
-.animate-shimmer {
-  animation: shimmer 1.5s infinite;
-}
-
-/* Enhanced glassmorphism */
 .glass-card {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.dark .glass-card {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 /* Google Maps UI-Safe Control Styles */

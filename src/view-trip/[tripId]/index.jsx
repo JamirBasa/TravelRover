@@ -16,6 +16,9 @@ import { DevMetaData } from "../components/shared";
 import { TabbedTripView } from "../components/navigation";
 import TripViewErrorBoundary from "../../components/common/TripViewErrorBoundary";
 
+// ✅ NEW: Import data flow auditor (development tool)
+import { auditTripData } from "@/utils/tripDataAuditor";
+
 function ViewTrip() {
   const { tripId } = useParams();
   const navigate = useNavigate();
@@ -37,6 +40,7 @@ function ViewTrip() {
       setError("No trip ID provided");
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId]);
 
   const GetTripData = async () => {
@@ -52,6 +56,13 @@ function ViewTrip() {
         console.log("🔍 ViewTrip - Full document data:", tripData);
         console.log("🔍 ViewTrip - tripData field:", tripData?.tripData);
         console.log("🔍 ViewTrip - tripData type:", typeof tripData?.tripData);
+
+        // ✅ Run comprehensive data flow audit (development only)
+        // Auditor handles all string-to-array parsing automatically
+        if (import.meta.env.DEV) {
+          auditTripData(tripData);
+        }
+
         setTrip(tripData);
 
         const currentUser = JSON.parse(localStorage.getItem("user") || "{}");

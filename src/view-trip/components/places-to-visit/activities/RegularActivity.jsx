@@ -26,35 +26,35 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
       className={cn(
         PATTERNS.card.base,
         PATTERNS.card.hover,
-        "group relative overflow-hidden"
+        "group relative overflow-hidden shadow-md hover:shadow-xl border-2 border-gray-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-600 rounded-xl transition-all duration-300"
       )}
       tabIndex="0"
       role="article"
       aria-labelledby={titleId}
       aria-describedby={detailsId}
     >
-      <CardContent className="p-3 sm:p-4">
-        <div className="relative flex gap-3">
+      <CardContent className="p-4 sm:p-5">
+        <div className="relative flex gap-4">
           {/* Enhanced activity indicator - Bigger and more visible */}
           <div className="flex-shrink-0 pt-1">
             <div
               className={cn(
-                "w-5 h-5 rounded-full shadow-lg",
+                "w-6 h-6 rounded-full shadow-lg border-2 border-white dark:border-slate-800",
                 COLORS.primary.gradient
               )}
               aria-hidden="true"
             />
           </div>
 
-          <div className="flex-1 min-w-0 space-y-2">
+          <div className="flex-1 min-w-0 space-y-3">
             {/* Enhanced time badge - Show actual extracted time */}
             {displayTime && displayTime !== "All Day" && (
               <div className="flex items-center">
                 <Badge
                   variant="secondary"
                   className={cn(
-                    "gap-2 font-semibold border-0 px-3 py-1.5 text-sm",
-                    "bg-primary/10 text-primary hover:bg-primary/20",
+                    "gap-2 font-bold border-2 px-4 py-2 text-sm",
+                    "bg-sky-100 dark:bg-sky-950/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800 hover:bg-sky-200 dark:hover:bg-sky-900/50 shadow-sm",
                     ANIMATIONS.transition.medium
                   )}
                 >
@@ -67,21 +67,23 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
             )}
 
             {/* Enhanced activity title - Bigger icon and more readable text */}
-            <div className="flex items-start gap-2">
-              <MapPin
-                className={cn(
-                  "h-5 w-5 mt-0.5 flex-shrink-0",
-                  COLORS.primary.text
-                )}
-                aria-hidden="true"
-              />
-              <div className="flex-1">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-sky-100 dark:bg-sky-950/30 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                <MapPin
+                  className={cn(
+                    "h-5 w-5",
+                    "text-sky-600 dark:text-sky-400"
+                  )}
+                  aria-hidden="true"
+                />
+              </div>
+              <div className="flex-1 min-w-0">
                 <h4
                   id={titleId}
                   className={cn(
-                    "text-base font-semibold leading-tight",
+                    "text-base sm:text-lg font-bold leading-tight",
                     "text-gray-900 dark:text-gray-100",
-                    "break-words"
+                    "break-words mb-2"
                   )}
                 >
                   {cleanPlaceName || "Activity"}
@@ -95,11 +97,11 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors mt-1 cursor-pointer"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition-colors cursor-pointer hover:underline"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <MapPin className="h-3 w-3" />
-                    See Directions
+                    <MapPin className="h-4 w-4" />
+                    <span>See Directions</span>
                   </a>
                 )}
               </div>
@@ -108,7 +110,7 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
             {/* Enhanced description - More readable text */}
             <p
               id={detailsId}
-              className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed break-words"
+              className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed break-words"
             >
               {activity?.placeDetails ||
                 "Discover this amazing location and create unforgettable memories during your visit."}
@@ -116,7 +118,7 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
 
             {/* Modern badge collection - Only show meaningful data, not defaults */}
             <div
-              className="flex flex-wrap items-center gap-1.5"
+              className="flex flex-wrap items-center gap-2"
               aria-label="Activity details"
             >
               {activity?.ticketPricing &&
@@ -125,16 +127,16 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                   <Badge
                     variant="outline"
                     className={cn(
-                      "gap-1.5 px-2 py-1 text-xs font-medium",
-                      COLORS.badges.pricing.border,
-                      COLORS.badges.pricing.bg,
-                      COLORS.badges.pricing.text,
-                      COLORS.badges.pricing.hover,
+                      "gap-2 px-3 py-1.5 text-xs font-semibold border-2",
+                      "border-green-300 dark:border-green-800",
+                      "bg-green-50 dark:bg-green-950/30",
+                      "text-green-700 dark:text-green-400",
+                      "hover:bg-green-100 dark:hover:bg-green-900/50",
                       ANIMATIONS.transition.medium
                     )}
                   >
-                    <DollarSign className="h-3 w-3" aria-hidden="true" />
-                    <span className="font-medium">
+                    <DollarSign className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span className="font-bold">
                       {activity.ticketPricing}
                     </span>
                   </Badge>
@@ -144,16 +146,16 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                 <Badge
                   variant="outline"
                   className={cn(
-                    "gap-1.5 px-2 py-1 text-xs font-medium",
-                    COLORS.badges.time.border,
-                    COLORS.badges.time.bg,
-                    COLORS.badges.time.text,
-                    COLORS.badges.time.hover,
+                    "gap-2 px-3 py-1.5 text-xs font-semibold border-2",
+                    "border-orange-300 dark:border-orange-800",
+                    "bg-orange-50 dark:bg-orange-950/30",
+                    "text-orange-700 dark:text-orange-400",
+                    "hover:bg-orange-100 dark:hover:bg-orange-900/50",
                     ANIMATIONS.transition.medium
                   )}
                 >
-                  <Timer className="h-3 w-3" aria-hidden="true" />
-                  <span className="font-medium">{activity.timeTravel}</span>
+                  <Timer className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span className="font-bold">{activity.timeTravel}</span>
                 </Badge>
               )}
 
@@ -163,16 +165,16 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                   <Badge
                     variant="outline"
                     className={cn(
-                      "gap-1.5 px-2 py-1 text-xs font-medium",
-                      COLORS.badges.rating.border,
-                      COLORS.badges.rating.bg,
-                      COLORS.badges.rating.text,
-                      COLORS.badges.rating.hover,
+                      "gap-2 px-3 py-1.5 text-xs font-semibold border-2",
+                      "border-yellow-300 dark:border-yellow-800",
+                      "bg-yellow-50 dark:bg-yellow-950/30",
+                      "text-yellow-700 dark:text-yellow-400",
+                      "hover:bg-yellow-100 dark:hover:bg-yellow-900/50",
                       ANIMATIONS.transition.medium
                     )}
                   >
-                    <Star className="h-3 w-3" aria-hidden="true" />
-                    <span className="font-medium">{activity.rating}/5</span>
+                    <Star className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+                    <span className="font-bold">{activity.rating}/5</span>
                   </Badge>
                 )}
             </div>
