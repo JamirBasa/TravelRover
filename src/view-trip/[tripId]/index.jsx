@@ -1,5 +1,5 @@
 // src/view-trip/[tripId]/index.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { db } from "@/config/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
@@ -16,6 +16,9 @@ import { DevMetaData } from "../components/shared";
 import { TabbedTripView } from "../components/navigation";
 import TripViewErrorBoundary from "../../components/common/TripViewErrorBoundary";
 
+// ✅ Import PDF export service
+import { generateTripPDF } from "@/services/pdfExportService";
+
 // ✅ NEW: Import data flow auditor (development tool)
 import { auditTripData } from "@/utils/tripDataAuditor";
 
@@ -26,6 +29,9 @@ function ViewTrip() {
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // ✅ NEW: Ref to control TabbedTripView from parent
+  const tabbedViewRef = useRef(null);
 
   // Set dynamic page title based on trip data
   const tripTitle = trip
@@ -102,25 +108,112 @@ function ViewTrip() {
   };
 
   // Action handlers
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: `Trip to ${trip?.userSelection?.location}`,
-        text: `Check out my ${trip?.userSelection?.duration} day trip to ${trip?.userSelection?.location}!`,
-        url: window.location.href,
-      });
+  const handleShare = async () => {
+    const tripUrl = window.location.href;
+    const shareData = {
+      title: `${trip?.userSelection?.location || "My Trip"} Itinerary`,
+      text: `Check out my ${trip?.userSelection?.duration || "amazing"} day trip to ${
+        trip?.userSelection?.location || "this destination"
+      }!`,
+      url: tripUrl,
+    };
+
+    // Try Web Share API first (mobile/modern browsers)
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        toast.success("Shared successfully!");
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          // User didn't cancel, fall back to clipboard
+          copyToClipboard(tripUrl);
+        }
+      }
     } else {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success("Trip link copied to clipboard!");
+      // Fallback: Copy to clipboard
+      copyToClipboard(tripUrl);
     }
   };
 
-  const handleDownload = () => {
-    toast.info("PDF download feature coming soon!");
+  // Copy link to clipboard helper
+  const copyToClipboard = (text) => {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        toast.success("Link copied to clipboard!", {
+          description: "Share this link with friends and family",
+          duration: 3000,
+        });
+      })
+      .catch(() => {
+        toast.error("Failed to copy link", {
+          description: "Please copy the URL manually from your browser",
+        });
+      });
+  };
+
+  const handleDownload = async () => {
+    if (!trip) {
+      toast.error("Unable to generate PDF", {
+        description: "Trip data is not available",
+      });
+      return;
+    }
+
+    const loadingToast = toast.loading("Generating your PDF itinerary...");
+
+    try {
+      const result = await generateTripPDF(trip);
+
+      toast.dismiss(loadingToast);
+
+      if (result.success) {
+        toast.success("PDF Downloaded!", {
+          description: `Saved as ${result.filename}`,
+          duration: 4000,
+        });
+      } else {
+        throw new Error(result.error || "PDF generation failed");
+      }
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      console.error("PDF generation error:", error);
+      toast.error("Failed to generate PDF", {
+        description: error.message || "Please try again later",
+      });
+    }
   };
 
   const handleEdit = () => {
-    navigate("/create-trip");
+    console.log("🔧 handleEdit called");
+    console.log("📌 tabbedViewRef.current:", tabbedViewRef.current);
+    
+    // Check if ref is available
+    if (!tabbedViewRef.current) {
+      console.error("❌ tabbedViewRef.current is null!");
+      toast.error("Unable to switch tabs", {
+        description: "Please refresh the page and try again",
+      });
+      return;
+    }
+
+    // Check if method exists
+    if (!tabbedViewRef.current.switchToItinerary) {
+      console.error("❌ switchToItinerary method not found!");
+      toast.error("Tab switching not available", {
+        description: "Please refresh the page and try again",
+      });
+      return;
+    }
+
+    // Notify user about switching to Itinerary tab
+    toast.info("Switching to Itinerary tab for editing...", {
+      duration: 2000,
+    });
+
+    // Use ref to switch to Itinerary tab
+    console.log("✅ Calling switchToItinerary()");
+    tabbedViewRef.current.switchToItinerary();
   };
 
   const handleRetry = () => {
@@ -170,7 +263,11 @@ function ViewTrip() {
       >
         {/* Enhanced Tabbed Content Interface */}
         <TripViewErrorBoundary onRetry={refreshTripData}>
-          <TabbedTripView trip={trip} onTripUpdate={refreshTripData} />
+          <TabbedTripView 
+            ref={tabbedViewRef}
+            trip={trip} 
+            onTripUpdate={refreshTripData} 
+          />
         </TripViewErrorBoundary>
 
         {/* Development Info (only in dev mode) */}

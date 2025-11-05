@@ -18,7 +18,7 @@
  * ✅ Firebase database persistence for all changes
  */
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/config/firebaseConfig";
 import { toast } from "sonner";
@@ -37,11 +37,37 @@ import {
 } from "./index";
 
 // Main Component
-function PlacesToVisit({ trip, onTripUpdate }) {
+const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
   // Enhanced state management for per-day editing functionality
   const [editingDay, setEditingDay] = useState(null); // null or dayIndex number
   const [editableItinerary, setEditableItinerary] = useState([]);
   const [expandedDays, setExpandedDays] = useState(new Set());
+
+  // ✅ Expose methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    expandAndFocusDay: (dayIndex = 0) => {
+      console.log(`📌 expandAndFocusDay called for day ${dayIndex}`);
+      
+      // Expand the specified day
+      const newExpanded = new Set(expandedDays);
+      newExpanded.add(dayIndex);
+      setExpandedDays(newExpanded);
+      
+      // Scroll to the day after a short delay
+      setTimeout(() => {
+        const dayElement = document.querySelector(`[data-day-index="${dayIndex}"]`);
+        if (dayElement) {
+          dayElement.scrollIntoView({ behavior: "smooth", block: "start" });
+          console.log(`✅ Scrolled to day ${dayIndex}`);
+        }
+      }, 300);
+      
+      // Show helpful toast
+      toast.info("Click 'Edit' on any day to modify activities", {
+        duration: 4000,
+      });
+    },
+  }));
 
   // Clean data parsing utility (removed console.log for production)
   const parseDataArray = (data, fieldName) => {
@@ -409,6 +435,7 @@ function PlacesToVisit({ trip, onTripUpdate }) {
             return (
               <div
                 key={dayIndex}
+                data-day-index={dayIndex}
                 className="bg-white dark:bg-slate-900 rounded-lg shadow-md border border-gray-200 dark:border-slate-700 overflow-hidden w-full"
               >
                 {/* Day Header */}
@@ -451,6 +478,8 @@ function PlacesToVisit({ trip, onTripUpdate }) {
       <TravelTipsSection />
     </div>
   );
-}
+});
+
+PlacesToVisit.displayName = "PlacesToVisit";
 
 export default PlacesToVisit;
