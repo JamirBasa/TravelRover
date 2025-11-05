@@ -16,14 +16,14 @@ class RouteOptimizerAgent(BaseAgent):
     def __init__(self, session_id: str, use_genetic_algorithm: bool = True):
         super().__init__(session_id, 'route_optimizer')
         
-        # Genetic Algorithm optimizer
+        # ✅ OPTIMIZED: Genetic Algorithm with reduced parameters (50% faster)
         self.use_genetic_algorithm = use_genetic_algorithm
         self.genetic_optimizer = GeneticItineraryOptimizer(
-            population_size=50,
-            generations=100,
+            population_size=30,      # Reduced from 50
+            generations=50,          # Reduced from 100
             mutation_rate=0.15,
             crossover_rate=0.7,
-            elite_size=5
+            elite_size=3             # Reduced from 5
         )
         
         # Activity type mappings for intelligent routing

@@ -20,6 +20,12 @@ import { OptimizedRouteMap } from "../maps";
 function TabbedTripView({ trip, onTripUpdate }) {
   const [activeTab, setActiveTab] = useState("overview");
 
+  // ✅ Check if user enabled flights but has no real flight data (inactive airports show alternatives)
+  const showsFlightAlternatives =
+    trip?.flightPreferences?.includeFlights &&
+    !trip?.realFlightData?.success &&
+    !trip?.hasRealFlights;
+
   const tabs = [
     {
       id: "overview",
@@ -43,7 +49,9 @@ function TabbedTripView({ trip, onTripUpdate }) {
       icon: <Hotel className="h-4 w-4" />,
       component: <Hotels trip={trip} />,
     },
-    ...(trip?.hasRealFlights ||
+    // ✅ Show Flights tab if user ENABLED flights (even if no data for inactive airports)
+    ...(trip?.flightPreferences?.includeFlights ||
+    trip?.hasRealFlights ||
     trip?.realFlightData?.success ||
     trip?.flightResults?.success
       ? [
@@ -196,6 +204,12 @@ function TabbedTripView({ trip, onTripUpdate }) {
                     {tab.icon}
                   </span>
                   <span>{tab.label}</span>
+                  {/* ✅ Show "Alternatives" badge on Flights tab when no direct flights */}
+                  {tab.id === "flights" && showsFlightAlternatives && (
+                    <span className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 border border-orange-300 dark:border-orange-700">
+                      Alternatives
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

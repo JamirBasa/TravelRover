@@ -5,6 +5,7 @@ import { chatSession } from "../config/aimodel";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { doc, setDoc } from "firebase/firestore";
+import { correctItineraryTravelTimes } from "../utils/itineraryTravelTimeCorrector";
 import { db } from "../config/firebaseConfig";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -16,6 +17,7 @@ import {
   sanitizeJSONString,
 } from "../constants/options";
 import { buildOptimizedPrompt } from "../constants/optimizedPrompt";
+import { TRIP_DURATION } from "../constants/tripDurationLimits";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 import { safeJsonParse } from "../utils/jsonParsers";
@@ -30,10 +32,22 @@ import {
   getHotelSearchParams, // For future hotel API integration
 } from "../utils/hotelValidation";
 import {
+  parseTravelersToNumber,
+  formatTravelersDisplay,
+  validateTravelers,
+  getTravelersCount,
+} from "../utils/travelersParsers";
+import {
+  validateHotelItineraryConsistency,
+  autoFixHotelItineraryConsistency,
+  reportHotelItineraryValidation,
+} from "../utils/hotelItineraryValidator";
+import {
   calculateBudgetAmount,
   validateBudgetCompliance,
   detectUnrealisticPricing,
 } from "../utils/budgetCompliance";
+import { getBudgetRecommendations } from "../utils/budgetEstimator";
 import { FaArrowRight, FaArrowLeft, FaUser, FaCheck } from "react-icons/fa";
 
 // Import components
@@ -42,14 +56,12 @@ import DateRangePicker from "./components/DateRangePicker";
 import BudgetSelector from "./components/BudgetSelector";
 import TravelerSelector from "./components/TravelerSelector";
 import SpecificRequests from "./components/SpecificRequests";
-import FlightPreferences from "./components/FlightPreferences";
-import HotelPreferences from "./components/HotelPreferences";
+import TravelServicesSelector from "./components/TravelServicesSelector"; // ✅ Combined services step
 import ActivityPreferenceSelector from "./components/ActivityPreferenceSelector";
 import ReviewTripStep from "./components/ReviewTripStep";
 import GenerateTripButton from "./components/GenerateTripButton";
 import LoginDialog from "./components/LoginDialog";
 import TripGenerationModal from "./components/TripGenerationModal";
-import FloatingBudgetEstimate from "./components/FloatingBudgetEstimate";
 import { ProfileLoading, ErrorState } from "../components/common/LoadingStates";
 import { LangGraphTravelAgent } from "../config/langGraphAgent";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -218,6 +230,141 @@ function CreateTrip() {
     }
   }, [place, formData.location]);
 
+  // ❌ REMOVED: Service change monitoring (no longer needed with new step order)
+  // Budget is now set AFTER services are configured in Step 4, so no reactive updates needed
+
+  // ✅ NEW: Track service changes and warn about budget implications
+  const budgetWarningShownRef = useRef(false);
+  const previousServicesRef = useRef({
+    flights: flightData.includeFlights,
+    hotels: hotelData.includeHotels,
+  });
+
+  // ✅ NEW: Monitor service changes and validate custom budget
+  useEffect(() => {
+    // Only validate if we have a custom budget and we're past step 5 (budget step)
+    if (!customBudget || currentStep <= 5) {
+      budgetWarningShownRef.current = false;
+      return;
+    }
+
+    const currentServices = {
+      flights: flightData.includeFlights,
+      hotels: hotelData.includeHotels,
+    };
+
+    // Check if services have changed
+    const servicesChanged =
+      currentServices.flights !== previousServicesRef.current.flights ||
+      currentServices.hotels !== previousServicesRef.current.hotels;
+
+    if (servicesChanged) {
+      console.log("🔄 Service configuration changed:", {
+        previous: previousServicesRef.current,
+        current: currentServices,
+        customBudget,
+      });
+
+      // Update reference
+      previousServicesRef.current = currentServices;
+
+      // Recalculate minimum budget with new services
+      if (formData.location && formData.duration) {
+        try {
+          const travelerCount =
+            typeof formData.travelers === "number"
+              ? formData.travelers
+              : parseInt(formData.travelers, 10) || 1;
+
+          const budgetEstimates = getBudgetRecommendations({
+            destination: formData.location,
+            departureLocation:
+              flightData.departureCity || "Manila, Philippines",
+            duration: formData.duration,
+            travelers: travelerCount,
+            includeFlights: flightData.includeFlights || false,
+            startDate: formData.startDate,
+          });
+
+          if (budgetEstimates) {
+            const budgetTier =
+              budgetEstimates["budget-friendly"] ||
+              budgetEstimates["budget"] ||
+              budgetEstimates["budgetfriendly"];
+
+            if (budgetTier?.range) {
+              const recommendedBudget = parseInt(
+                budgetTier.range.replace(/[^0-9]/g, "")
+              );
+
+              const absoluteMinimum = Math.max(
+                Math.floor(recommendedBudget * 0.9),
+                formData.duration * 1200
+              );
+
+              const customBudgetAmount = parseInt(customBudget);
+
+              console.log("💰 Budget revalidation after service change:", {
+                customBudgetAmount,
+                absoluteMinimum,
+                servicesAdded: Object.entries(currentServices)
+                  .filter(([, enabled]) => enabled)
+                  .map(([service]) => service),
+                isValid: customBudgetAmount >= absoluteMinimum,
+              });
+
+              // ✅ NEW: Show warning if budget is now insufficient
+              if (
+                customBudgetAmount < absoluteMinimum &&
+                !budgetWarningShownRef.current
+              ) {
+                budgetWarningShownRef.current = true;
+
+                const servicesAdded = [];
+                if (
+                  currentServices.flights &&
+                  !previousServicesRef.current.flights
+                )
+                  servicesAdded.push("flights");
+                if (
+                  currentServices.hotels &&
+                  !previousServicesRef.current.hotels
+                )
+                  servicesAdded.push("hotels");
+
+                const serviceText =
+                  servicesAdded.length > 0
+                    ? ` after adding ${servicesAdded.join(" and ")}`
+                    : "";
+
+                toast.warning("Budget Update Required", {
+                  description: `Your custom budget (₱${customBudgetAmount.toLocaleString()}) is now below the minimum (₱${absoluteMinimum.toLocaleString()})${serviceText}. Please return to Step 5 to adjust your budget.`,
+                  duration: 8000,
+                  action: {
+                    label: "Go to Budget",
+                    onClick: () => setCurrentStep(5),
+                  },
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error("❌ Budget revalidation error:", error);
+        }
+      }
+    }
+  }, [
+    flightData.includeFlights,
+    hotelData.includeHotels,
+    customBudget,
+    currentStep,
+    formData.location,
+    formData.duration,
+    formData.travelers,
+    formData.startDate,
+    flightData.departureCity,
+  ]);
+
   const checkUserProfile = async () => {
     setProfileLoading(true);
     try {
@@ -276,10 +423,28 @@ function CreateTrip() {
 
   // Handlers
   const handleInputChange = useCallback((name, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+
+      // ✅ CRITICAL: Always store travelers as INTEGER
+      if (name === "travelers") {
+        // If value is already an integer (from TravelerSelector), use it
+        if (typeof value === "number") {
+          updated.travelers = value;
+        } else {
+          // If string or object, extract count
+          updated.travelers = getTravelersCount(value);
+        }
+
+        console.log(
+          "✅ Travelers stored as:",
+          updated.travelers,
+          typeof updated.travelers
+        );
+      }
+
+      return updated;
+    });
   }, []);
 
   const handleStartDateChange = useCallback(
@@ -365,6 +530,50 @@ function CreateTrip() {
           return false;
         }
 
+        // ✅ NEW: Validate trip duration limits (1-15 days) - Block navigation
+        console.log("🔍 Duration Validation Check:", {
+          duration: formData?.duration,
+          type: typeof formData?.duration,
+          MIN_DAYS: TRIP_DURATION.MIN,
+          MAX_DAYS: TRIP_DURATION.MAX,
+          startDate: formData?.startDate,
+          endDate: formData?.endDate,
+        });
+
+        if (!formData?.duration || formData.duration <= 0) {
+          console.log("❌ BLOCKING: Duration is 0 or undefined");
+          toast.error("Invalid Trip Duration", {
+            description:
+              "Please select valid travel dates to calculate trip duration.",
+            duration: 5000,
+          });
+          return false;
+        }
+
+        if (formData.duration < TRIP_DURATION.MIN) {
+          console.log("❌ BLOCKING: Duration too short:", formData.duration);
+          toast.error("Trip Too Short", {
+            description: `Trip must be at least ${TRIP_DURATION.MIN} day. Please adjust your dates.`,
+            duration: 6000,
+          });
+          return false;
+        }
+
+        if (formData.duration > TRIP_DURATION.MAX) {
+          console.log("❌ BLOCKING: Duration too long:", formData.duration);
+          toast.error("Trip Duration Exceeds Limit", {
+            description: `Maximum trip duration is ${TRIP_DURATION.MAX} days. Please shorten your trip or consider breaking it into multiple ${TRIP_DURATION.MAX}-day segments.`,
+            duration: 8000,
+          });
+          return false;
+        }
+
+        console.log(
+          "✅ Duration validation PASSED:",
+          formData.duration,
+          "days"
+        );
+
         if (dateValidation.warnings.length > 0) {
           dateValidation.warnings.forEach((warning) => {
             toast.warning("Travel planning tip", {
@@ -376,44 +585,27 @@ function CreateTrip() {
         break;
       }
 
-      case 2:
-        if (!formData?.travelers) {
+      case 2: {
+        // Step 2: Group Size (Travelers only)
+        const travelersValidation = validateTravelers(formData?.travelers);
+        if (!travelersValidation.isValid) {
           toast.error("Group size needed", {
             description:
+              travelersValidation.error ||
               "Please let us know how many people will be traveling.",
           });
           return false;
         }
-        if (!formData?.budget && !customBudget) {
-          toast.error("Budget information needed", {
-            description:
-              "Please select a budget range or enter a custom amount to help plan your trip.",
-          });
-          return false;
-        }
-        if (customBudget) {
-          const amount = parseInt(customBudget);
-          if (isNaN(amount) || amount < 1000) {
-            toast.error("Invalid budget amount", {
-              description:
-                "Please enter a budget of at least ₱1,000 for your trip.",
-            });
-            return false;
-          }
-          if (amount > 1000000) {
-            toast.error("Budget too high", {
-              description: "Please enter a reasonable budget amount.",
-            });
-            return false;
-          }
-        }
         break;
+      }
 
       case 3:
-        // Activity preference - no validation needed
+        // Step 3: Activity preference - no validation needed
         break;
 
       case 4: {
+        // Step 4: Travel Services (Flights + Hotels)
+        // Validate flights if enabled
         const flightValidation = validateFlightData(flightData);
         if (!flightValidation.isValid) {
           toast.error("Flight preferences incomplete", {
@@ -421,18 +613,8 @@ function CreateTrip() {
           });
           return false;
         }
-        break;
-      }
 
-      case 5: {
-        // Debug: Check formData before validation
-        console.log("🔍 Step 5 - formData before hotel validation:", {
-          travelers: formData.travelers,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-          fullFormData: formData,
-        });
-
+        // Validate hotels if enabled
         const hotelValidation = validateHotelData(hotelData, formData);
         if (!hotelValidation.isValid) {
           toast.error("Hotel preferences incomplete", {
@@ -440,7 +622,8 @@ function CreateTrip() {
           });
           return false;
         }
-        // Show warnings if any
+
+        // Show hotel warnings if any
         if (hotelValidation.warnings && hotelValidation.warnings.length > 0) {
           hotelValidation.warnings.forEach((warning) => {
             toast.warning("Hotel Search Notice", {
@@ -451,8 +634,171 @@ function CreateTrip() {
         break;
       }
 
+      case 5: {
+        // Step 5: Budget (NOW comes after services are selected!)
+        // ✅ Budget validation with FULL context of services
+        console.log("💰 Step 5 (Budget) Validation - Current State:", {
+          customBudget,
+          formDataBudget: formData?.budget,
+          location: formData?.location,
+          duration: formData?.duration,
+          travelers: formData?.travelers,
+          includeFlights: flightData.includeFlights,
+          includeHotels: hotelData.includeHotels,
+        });
+
+        const hasCustomBudget = customBudget && customBudget.trim() !== "";
+        const customBudgetAmount = hasCustomBudget ? parseInt(customBudget) : 0;
+
+        if (!formData?.budget && !hasCustomBudget) {
+          toast.error("Budget information needed", {
+            description:
+              "Please select a budget range or enter a custom amount to help plan your trip.",
+          });
+          return false;
+        }
+
+        // Validate custom budget amount (only if provided)
+        if (hasCustomBudget) {
+          if (isNaN(customBudgetAmount)) {
+            toast.error("Invalid budget amount", {
+              description: "Please enter a valid number for your budget.",
+            });
+            return false;
+          }
+
+          if (customBudgetAmount <= 0) {
+            toast.error("Budget must be greater than zero", {
+              description: "Please enter a budget amount greater than ₱0.",
+            });
+            return false;
+          }
+
+          // ✅ Smart minimum validation based on trip configuration
+          // Now includes ALL services that were configured in Step 4
+          if (formData.location && formData.duration) {
+            try {
+              console.log("🔍 Running smart budget validation...");
+
+              const travelerCount =
+                typeof formData.travelers === "number"
+                  ? formData.travelers
+                  : parseInt(formData.travelers, 10) || 1;
+
+              const budgetEstimates = getBudgetRecommendations({
+                destination: formData.location,
+                departureLocation:
+                  flightData.departureCity || "Manila, Philippines",
+                duration: formData.duration,
+                travelers: travelerCount,
+                includeFlights: flightData.includeFlights || false,
+                startDate: formData.startDate,
+              });
+
+              console.log("📊 Budget estimates received:", budgetEstimates);
+
+              if (budgetEstimates) {
+                const budgetTier =
+                  budgetEstimates["budget-friendly"] ||
+                  budgetEstimates["budget"] ||
+                  budgetEstimates["budgetfriendly"];
+
+                console.log("🏷️ Budget tier found:", budgetTier);
+
+                if (budgetTier?.range) {
+                  const recommendedBudget = parseInt(
+                    budgetTier.range.replace(/[^0-9]/g, "")
+                  );
+
+                  const absoluteMinimum = Math.max(
+                    Math.floor(recommendedBudget * 0.9),
+                    formData.duration * 1200
+                  );
+
+                  console.log("💰 Budget validation check:", {
+                    customBudgetAmount,
+                    recommendedBudget,
+                    absoluteMinimum,
+                    isValid: customBudgetAmount >= absoluteMinimum,
+                  });
+
+                  if (customBudgetAmount < absoluteMinimum) {
+                    console.log("❌ Budget validation FAILED");
+
+                    // Service-aware error message
+                    const services = [];
+                    if (flightData.includeFlights) services.push("flights");
+                    if (hotelData.includeHotels) services.push("hotels");
+                    const serviceText =
+                      services.length > 0
+                        ? ` (including ${services.join(" and ")})`
+                        : "";
+
+                    toast.error("Budget insufficient for trip requirements", {
+                      description: `Your budget (₱${customBudgetAmount.toLocaleString()}) is below the minimum viable amount (₱${absoluteMinimum.toLocaleString()}) for this ${
+                        formData.duration
+                      }-day trip to ${
+                        formData.location
+                      }${serviceText}. Please increase your budget or adjust trip details.`,
+                      duration: 7000,
+                    });
+                    return false;
+                  }
+
+                  console.log("✅ Budget validation PASSED");
+
+                  // Soft warning if below recommended (but above minimum)
+                  if (customBudgetAmount < recommendedBudget) {
+                    const percentBelow = Math.round(
+                      ((recommendedBudget - customBudgetAmount) /
+                        recommendedBudget) *
+                        100
+                    );
+
+                    if (percentBelow > 3) {
+                      const services = [];
+                      if (flightData.includeFlights) services.push("flights");
+                      if (hotelData.includeHotels) services.push("hotels");
+                      const serviceText =
+                        services.length > 0
+                          ? ` (including ${services.join(" and ")})`
+                          : "";
+
+                      toast.warning("Budget below recommended amount", {
+                        description: `Your budget is ${percentBelow}% below our recommendation (₱${recommendedBudget.toLocaleString()})${serviceText}. This may limit accommodation and activity options. You can proceed, but expect basic choices.`,
+                        duration: 6000,
+                      });
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.error("❌ Budget validation error:", error);
+            }
+          }
+
+          // Basic fallback validation
+          if (customBudgetAmount < 1000) {
+            toast.error("Budget too low", {
+              description:
+                "Please enter a budget of at least ₱1,000 for your trip.",
+            });
+            return false;
+          }
+
+          if (customBudgetAmount > 1000000) {
+            toast.error("Budget too high", {
+              description:
+                "Please enter a reasonable budget amount under ₱1,000,000.",
+            });
+            return false;
+          }
+        }
+        break;
+      }
+
       case 6:
-        // Review step - no additional validation needed
+        // Step 6: Review - no additional validation needed
         break;
     }
     return true;
@@ -503,9 +849,54 @@ function CreateTrip() {
     let hotelResults = null;
 
     try {
+      // ✅ STEP 1: Backend health check before starting
+      console.log("🔍 Checking backend connection...");
+      try {
+        const API_BASE_URL =
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+        const healthCheck = await axios.get(
+          `${API_BASE_URL}/api/langgraph/health/`,
+          {
+            timeout: 5000,
+          }
+        );
+
+        if (!healthCheck.data || healthCheck.data.status !== "healthy") {
+          throw new Error("Backend health check failed");
+        }
+        console.log("✅ Backend connection verified");
+      } catch (healthError) {
+        console.error("❌ Backend connection failed:", healthError);
+        toast.error("Backend Connection Failed", {
+          description:
+            "Unable to connect to the AI service. Please ensure the Django server is running on port 8000.",
+          duration: 6000,
+        });
+        setLoading(false);
+        setLangGraphLoading(false);
+        setFlightLoading(false);
+        setHotelLoading(false);
+        return; // ✅ STOP execution immediately
+      }
+
       const flightValidation = validateFlightData(flightData);
       const hotelValidation = validateHotelData(hotelData, formData); // ✅ Pass formData here!
       const activeServices = getActiveServices(flightData, hotelData);
+
+      // ✅ NEW: Validate trip duration (1-15 days)
+      const { validateDuration } = await import(
+        "../constants/tripDurationLimits"
+      );
+      const durationValidation = validateDuration(formData.duration);
+
+      if (!durationValidation.valid) {
+        toast.error("Invalid Trip Duration", {
+          description: `${durationValidation.error} ${durationValidation.suggestion}`,
+          duration: 8000,
+        });
+        setLoading(false);
+        return;
+      }
 
       if (!flightValidation.isValid) {
         toast.error("Flight Preferences Incomplete", {
@@ -622,15 +1013,33 @@ function CreateTrip() {
       const budgetAmount = calculateBudgetAmount(formData.budget, customBudget);
       console.log(`💰 Budget cap enforced: ₱${budgetAmount.toLocaleString()}`);
 
+      // ✅ NEW: Validate budget is reasonable (₱1,000/day/person minimum)
+      const minReasonableBudget = 1000; // Absolute minimum per day per person
+      const calculatedMinimum =
+        minReasonableBudget *
+        formData.duration *
+        (parseInt(formData.travelers) || 1);
+
+      if (budgetAmount < calculatedMinimum) {
+        toast.error("Budget Too Low", {
+          description: `Your budget (₱${budgetAmount.toLocaleString()}) is unrealistically low for ${
+            formData.duration
+          } day${formData.duration > 1 ? "s" : ""} and ${
+            formData.travelers
+          } traveler${
+            formData.travelers > 1 ? "s" : ""
+          }. Minimum recommended: ₱${calculatedMinimum.toLocaleString()} (₱1,000/day/person)`,
+          duration: 10000,
+        });
+        setLangGraphLoading(false);
+        setLoading(false);
+        return;
+      }
+
       const enhancedPrompt = buildOptimizedPrompt({
         location: formData?.location,
         duration: `${formData?.duration} days`,
-        travelers:
-          typeof formData?.travelers === "number"
-            ? `${formData.travelers} ${
-                formData.travelers === 1 ? "Person" : "People"
-              }`
-            : formData?.travelers,
+        travelers: formatTravelersDisplay(formData?.travelers),
         budget: customBudget ? `Custom: ₱${customBudget}` : formData?.budget,
         budgetAmount: `₱${budgetAmount.toLocaleString()}`, // 🔥 NEW: Explicit budget cap
         activityPreference: formData?.activityPreference || "2",
@@ -670,7 +1079,10 @@ function CreateTrip() {
             `🔄 AI Generation Attempt ${attempt}/${VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS}`
           );
 
-          const result = await chatSession.sendMessage(enhancedPrompt);
+          // ✅ Pass trip duration to chatSession for proper timeout calculation
+          const result = await chatSession.sendMessage(enhancedPrompt, {
+            tripDuration: formData.duration,
+          });
           const rawResponse = result?.response.text();
 
           console.log(
@@ -691,7 +1103,66 @@ function CreateTrip() {
             throw new Error(validationError);
           }
 
-          // 💰 Validate budget compliance
+          // ✅ NEW: Check if itinerary has activities
+          const hasActivities = testParse?.itinerary?.some((day) =>
+            day?.plan?.some(
+              (activity) =>
+                activity?.placeName &&
+                !activity.placeName.toLowerCase().includes("return to hotel") &&
+                !activity.placeName.toLowerCase().includes("check-in") &&
+                !activity.placeName.toLowerCase().includes("check-out") &&
+                !activity.placeName.toLowerCase().includes("flight")
+            )
+          );
+
+          if (!hasActivities) {
+            console.warn(
+              `⚠️ Attempt ${attempt}: Itinerary has no activities, retrying...`
+            );
+            if (attempt < VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS) {
+              await new Promise((resolve) => setTimeout(resolve, 2000));
+              continue;
+            }
+            throw new Error("Generated itinerary contains no activities");
+          }
+
+          // � AUTO-FIX: Correct grand total if it doesn't match calculated sum
+          if (testParse.dailyCosts && Array.isArray(testParse.dailyCosts)) {
+            const calculatedGrandTotal = testParse.dailyCosts.reduce(
+              (sum, day) => sum + (day.breakdown?.subtotal || 0),
+              0
+            );
+
+            // If grand total doesn't match (off by more than ₱1), auto-correct it
+            if (Math.abs(testParse.grandTotal - calculatedGrandTotal) > 1) {
+              console.warn(
+                `⚠️ Auto-correcting grand total: ₱${testParse.grandTotal.toLocaleString()} → ₱${calculatedGrandTotal.toLocaleString()}`
+              );
+              testParse.grandTotal = calculatedGrandTotal;
+
+              // Also update budgetCompliance.totalCost if present
+              if (testParse.budgetCompliance) {
+                testParse.budgetCompliance.totalCost = calculatedGrandTotal;
+
+                // Recalculate remaining
+                if (testParse.budgetCompliance.userBudget) {
+                  testParse.budgetCompliance.remaining =
+                    testParse.budgetCompliance.userBudget -
+                    calculatedGrandTotal;
+                  testParse.budgetCompliance.withinBudget =
+                    calculatedGrandTotal <=
+                    testParse.budgetCompliance.userBudget;
+                }
+              }
+
+              toast.info("Budget Auto-Corrected", {
+                description: `Adjusted total to match daily breakdown: ₱${calculatedGrandTotal.toLocaleString()}`,
+                duration: 4000,
+              });
+            }
+          }
+
+          // �💰 Validate budget compliance (after auto-correction)
           const budgetValidation = validateBudgetCompliance(testParse);
           if (!budgetValidation.isValid) {
             console.error(
@@ -771,14 +1242,50 @@ function CreateTrip() {
       SaveAiTrip(aiResponseText, flightResults, hotelResults, langGraphResults);
     } catch (error) {
       console.error("❌ Trip generation error:", error);
-      toast.error("Unable to create your trip", {
-        description:
-          "Something went wrong while generating your itinerary. Please try again or contact support if the issue persists.",
-      });
+
+      // ✅ ENHANCED: Immediately stop all loading states
       setLoading(false);
       setFlightLoading(false);
       setHotelLoading(false);
       setLangGraphLoading(false);
+
+      // ✅ ENHANCED: Better error messages based on error type
+      if (error.code === "ECONNABORTED") {
+        toast.error("Request Timeout", {
+          description:
+            "The generation took too long. Try reducing the trip duration or simplifying requirements.",
+          duration: 6000,
+        });
+      } else if (
+        error.code === "ERR_NETWORK" ||
+        error.message?.includes("Network Error")
+      ) {
+        toast.error("Connection Failed", {
+          description:
+            "Unable to reach the backend server. Ensure Django is running on http://localhost:8000",
+          duration: 6000,
+        });
+      } else if (error.response?.status === 500) {
+        toast.error("Server Error", {
+          description:
+            error.response?.data?.error ||
+            "Internal server error. Check Django logs for details.",
+          duration: 6000,
+        });
+      } else if (error.response?.status === 408) {
+        toast.error("Invalid API Configuration", {
+          description:
+            "AI service timeout. Please check your Gemini API key in Django settings.",
+          duration: 6000,
+        });
+      } else {
+        toast.error("Unable to create your trip", {
+          description:
+            error.message ||
+            "Something went wrong while generating your itinerary. Please try again.",
+          duration: 6000,
+        });
+      }
     }
   };
 
@@ -799,7 +1306,17 @@ function CreateTrip() {
 
         if (sanitizedValue !== null) {
           if (Array.isArray(value)) {
-            if (key === "plan" && value.length > 0) {
+            // ✅ FIX: Preserve critical arrays (itinerary, hotels, flights) as actual arrays
+            if (key === "itinerary" || key === "hotels" || key === "flights") {
+              sanitized[key] = value
+                .map((item) => sanitizeForFirebase(item))
+                .filter((item) => item !== null);
+            } else if (key === "plan" && value.length > 0) {
+              // Keep 'plan' as array too (day activities)
+              sanitized[key] = value
+                .map((item) => sanitizeForFirebase(item))
+                .filter((item) => item !== null);
+              // Also create text version for backward compatibility
               sanitized[`${key}Text`] = value
                 .map(
                   (item) =>
@@ -810,11 +1327,8 @@ function CreateTrip() {
                     }, Rating: ${item?.rating || "N/A"})`
                 )
                 .join(" | ");
-            } else if (key === "flights" && value.length > 0) {
-              sanitized[key] = value
-                .map((flight) => sanitizeForFirebase(flight))
-                .filter((item) => item !== null);
             } else if (value.length > 0) {
+              // Other arrays: convert to comma-separated string
               sanitized[key] = value
                 .map((item) =>
                   typeof item === "object" && item !== null
@@ -1026,6 +1540,141 @@ function CreateTrip() {
         return;
       }
 
+      if (activityValidation.warnings.length > 0) {
+        console.warn(
+          "⚠️ Activity count has warnings:",
+          activityValidation.warnings
+        );
+      }
+
+      // 🗺️ NEW: Travel Time Validation & Correction
+      console.log("🗺️ Validating and correcting travel times...");
+      try {
+        const correctionResult = correctItineraryTravelTimes(parsedTripData, {
+          autoCorrect: true, // Automatically fix inaccurate times
+          threshold: 30, // Correct if >30% difference from calculated
+          verbose: true, // Log detailed corrections
+        });
+
+        // Update parsed data with corrected times
+        parsedTripData = correctionResult.tripData;
+
+        // ✅ FIX: Check if report exists before accessing properties
+        if (!correctionResult.report) {
+          console.warn("⚠️ Travel time validation skipped - no itinerary data");
+        } else {
+          // Log and notify user of corrections
+          if (correctionResult.wasModified) {
+            console.log(
+              "✏️ Travel times corrected:",
+              correctionResult.report.summary
+            );
+            console.table(correctionResult.report.corrections);
+
+            toast.success("Travel Times Optimized", {
+              description: `${correctionResult.report.corrected} travel time${
+                correctionResult.report.corrected > 1 ? "s" : ""
+              } adjusted for better accuracy using real distance calculations.`,
+              duration: 5000,
+            });
+          } else {
+            console.log("✅ All AI-generated travel times are accurate!");
+          }
+
+          // Log validation statistics
+          console.log("📊 Travel Time Validation Stats:", {
+            totalChecked: correctionResult.report.totalChecks,
+            accurate: correctionResult.report.accurate,
+            corrected: correctionResult.report.corrected,
+            skipped: correctionResult.report.skipped,
+            accuracyRate:
+              correctionResult.report.totalChecks > 0
+                ? `${(
+                    (correctionResult.report.accurate /
+                      correctionResult.report.totalChecks) *
+                    100
+                  ).toFixed(1)}%`
+                : "N/A",
+          });
+
+          // Warn if many locations are missing coordinates
+          if (correctionResult.report.warnings?.length > 0) {
+            console.warn(
+              "⚠️ Travel time validation warnings:",
+              correctionResult.report.warnings
+            );
+          }
+        }
+      } catch (travelTimeError) {
+        console.error("❌ Travel time validation failed:", travelTimeError);
+        // Non-blocking - continue with original times if validation fails
+        toast.warning("Travel Time Validation Skipped", {
+          description: "Unable to validate travel times. Using AI estimates.",
+          duration: 3000,
+        });
+      }
+
+      // 🏨 NEW: Hotel Itinerary Consistency Validation & Auto-Fix
+      console.log("🏨 Validating hotel references consistency...");
+      try {
+        // Build trip data with hotel info for validation
+        const tripDataWithHotels = {
+          ...parsedTripData,
+          hotels: hotelResults?.hotels || [],
+          recommended_hotel:
+            langGraphResults?.merged_data?.recommended_hotel || null,
+        };
+
+        const hotelValidation =
+          validateHotelItineraryConsistency(tripDataWithHotels);
+
+        if (!hotelValidation.isValid) {
+          console.warn(
+            `⚠️ Found ${hotelValidation.totalIssues} generic hotel reference(s) across ${hotelValidation.issuesByDay.length} day(s)`
+          );
+
+          // Auto-fix hotel references
+          const fixResult =
+            autoFixHotelItineraryConsistency(tripDataWithHotels);
+
+          if (fixResult.fixed) {
+            // Apply corrections to parsed data
+            parsedTripData = fixResult.data;
+
+            console.log("✅ Auto-fixed hotel references:");
+            fixResult.fixes.forEach((fix) => {
+              console.log(
+                `  ✓ Day ${fix.day}, Activity ${fix.activity}: ${fix.message}`
+              );
+            });
+
+            toast.success("Hotel References Optimized", {
+              description: `Fixed ${
+                fixResult.totalIssues
+              } generic hotel reference${
+                fixResult.totalIssues > 1 ? "s" : ""
+              } to use specific hotel names for better map accuracy.`,
+              duration: 5000,
+            });
+          }
+        } else {
+          console.log(
+            "✅ All hotel references are specific - no generic references found!"
+          );
+        }
+
+        // Report validation results
+        reportHotelItineraryValidation(hotelValidation);
+      } catch (hotelValidationError) {
+        console.error("❌ Hotel validation failed:", hotelValidationError);
+        // Non-blocking - continue without hotel validation if it fails
+        toast.warning("Hotel Validation Skipped", {
+          description:
+            "Unable to validate hotel references. Proceeding with itinerary.",
+          duration: 3000,
+        });
+      }
+
       if (itineraryValidation.warnings.length > 0) {
         console.warn(
           "⚠️ Itinerary has warnings:",
@@ -1045,17 +1694,289 @@ function CreateTrip() {
         console.log("✅ Itinerary structure validated successfully");
       }
 
+      // 🆕 Hotel-Itinerary Consistency Validation
+      console.log("🏨 Validating hotel-itinerary consistency...");
+      const hotelItineraryResult =
+        autoFixHotelItineraryConsistency(parsedTripData);
+
+      if (hotelItineraryResult.fixed) {
+        console.log(
+          "🔧 Hotel-itinerary issues auto-fixed:",
+          hotelItineraryResult.fixes
+        );
+        parsedTripData = hotelItineraryResult.data; // Use corrected data
+
+        toast.success("Auto-Fixed Hotel References", {
+          description: `Day 1 check-in now correctly references the first recommended hotel.`,
+          duration: 5000,
+        });
+      } else if (hotelItineraryResult.issues.length > 0) {
+        console.warn(
+          "⚠️ Hotel-itinerary validation issues:",
+          hotelItineraryResult.issues
+        );
+      } else {
+        console.log("✅ Hotel-itinerary consistency validated");
+      }
+
+      // 🆕 MERGE RECOMMENDED FLIGHT & HOTEL INTO ITINERARY TIMELINE
+      console.log("✈️🏨 Merging recommended flight & hotel into itinerary...");
+      try {
+        // Extract recommended items from LangGraph results
+        const recommendedFlight =
+          langGraphResults?.merged_data?.recommended_flight;
+        const recommendedHotel =
+          langGraphResults?.merged_data?.recommended_hotel ||
+          hotelResults?.hotels?.[0]; // Fallback to first hotel
+
+        console.log("📦 Recommended items:", {
+          flight: recommendedFlight?.name || "None",
+          hotel:
+            recommendedHotel?.name || recommendedHotel?.hotelName || "None",
+        });
+
+        if (parsedTripData?.itinerary?.length > 0) {
+          // ===== DAY 1: Add flight arrival & ensure hotel check-in =====
+          const day1 = parsedTripData.itinerary[0];
+
+          // Add flight arrival at the beginning (if flights enabled)
+          if (recommendedFlight && flightData.includeFlights) {
+            const flightArrivalTime =
+              recommendedFlight.departure || formData.startDate || "08:00 AM";
+
+            const arrivalActivity = {
+              time: flightArrivalTime,
+              placeName: `✈️ Flight Arrival - ${
+                recommendedFlight.name || "Inbound Flight"
+              }`,
+              placeDetails: `Arrive at ${formData.location} from ${
+                flightData.departureCity || "departure city"
+              }. Flight: ${recommendedFlight.name || "N/A"}, Duration: ${
+                recommendedFlight.duration || "N/A"
+              }.`,
+              ticketPricing: recommendedFlight.price || "₱???",
+              timeTravel: "Flight arrival (included in ticket)",
+              geoCoordinates: { lat: 0, lng: 0 }, // Airport coordinates
+              isFlightActivity: true, // Flag for special handling
+            };
+
+            // Check if flight arrival already exists
+            const hasFlightArrival = day1.plan.some(
+              (activity) =>
+                activity.placeName?.toLowerCase().includes("flight") &&
+                activity.placeName?.toLowerCase().includes("arrival")
+            );
+
+            if (!hasFlightArrival) {
+              day1.plan.unshift(arrivalActivity);
+              console.log(
+                "✅ Added flight arrival to Day 1:",
+                recommendedFlight.name
+              );
+            } else {
+              console.log("ℹ️ Day 1 already has flight arrival activity");
+            }
+          }
+
+          // Ensure hotel check-in uses specific hotel name (not generic)
+          if (recommendedHotel) {
+            const hotelName =
+              recommendedHotel.name ||
+              recommendedHotel.hotelName ||
+              recommendedHotel.hotel_name;
+
+            if (hotelName) {
+              // Find check-in activity
+              const checkInIndex = day1.plan.findIndex((activity) =>
+                /check.?in.*hotel|hotel.*check.?in/i.test(
+                  activity.placeName || ""
+                )
+              );
+
+              if (checkInIndex >= 0) {
+                // Update existing check-in to use specific hotel name
+                const originalName = day1.plan[checkInIndex].placeName;
+                day1.plan[
+                  checkInIndex
+                ].placeName = `🏨 Check-in at ${hotelName}`;
+                day1.plan[checkInIndex].placeDetails =
+                  `Check-in at ${hotelName}, settle into your room and freshen up. ${
+                    recommendedHotel.description || ""
+                  }`.trim();
+
+                if (originalName !== day1.plan[checkInIndex].placeName) {
+                  console.log(
+                    `✅ Updated Day 1 check-in: "${originalName}" → "Check-in at ${hotelName}"`
+                  );
+                }
+              } else {
+                // Add check-in if missing
+                console.warn(
+                  "⚠️ Day 1 missing check-in activity, adding it..."
+                );
+                day1.plan.splice(1, 0, {
+                  time: "02:00 PM",
+                  placeName: `🏨 Check-in at ${hotelName}`,
+                  placeDetails: `Check-in at ${hotelName}, settle into your room and freshen up.`,
+                  ticketPricing: "Included in accommodation",
+                  timeTravel: "At hotel",
+                  geoCoordinates: { lat: 0, lng: 0 },
+                  isHotelActivity: true,
+                });
+                console.log(`✅ Added check-in at ${hotelName} to Day 1`);
+              }
+            }
+          }
+
+          // ===== LAST DAY: Add hotel checkout & departure flight =====
+          const lastDayIndex = parsedTripData.itinerary.length - 1;
+          const lastDay = parsedTripData.itinerary[lastDayIndex];
+
+          // Add hotel checkout if not present
+          if (recommendedHotel) {
+            const hotelName =
+              recommendedHotel.name ||
+              recommendedHotel.hotelName ||
+              recommendedHotel.hotel_name;
+
+            if (hotelName) {
+              const hasCheckout = lastDay.plan.some((activity) =>
+                /check.?out|checkout/i.test(activity.placeName || "")
+              );
+
+              if (!hasCheckout) {
+                // Insert checkout before last activity (usually airport departure)
+                const checkoutPosition = Math.max(0, lastDay.plan.length - 1);
+                lastDay.plan.splice(checkoutPosition, 0, {
+                  time: "11:00 AM",
+                  placeName: `🏨 Check-out from ${hotelName}`,
+                  placeDetails: `Check-out from ${hotelName} and prepare for departure. Ensure all belongings are packed.`,
+                  ticketPricing: "Free",
+                  timeTravel: "At hotel",
+                  geoCoordinates: { lat: 0, lng: 0 },
+                  isHotelActivity: true,
+                });
+                console.log(
+                  `✅ Added checkout from ${hotelName} to last day (Day ${
+                    lastDayIndex + 1
+                  })`
+                );
+              } else {
+                console.log("ℹ️ Last day already has checkout activity");
+              }
+            }
+          }
+
+          // Add departure flight at the end (if flights enabled)
+          if (recommendedFlight && flightData.includeFlights) {
+            const flightDepartureTime =
+              recommendedFlight.arrival || formData.endDate || "06:00 PM";
+
+            const departureActivity = {
+              time: flightDepartureTime,
+              placeName: `✈️ Departure Flight - ${
+                recommendedFlight.name || "Return Flight"
+              }`,
+              placeDetails: `Return flight to ${
+                flightData.departureCity || "home"
+              }. Flight: ${recommendedFlight.name || "N/A"}, Duration: ${
+                recommendedFlight.duration || "N/A"
+              }.`,
+              ticketPricing: recommendedFlight.price || "₱???",
+              timeTravel: "Flight departure (included in ticket)",
+              geoCoordinates: { lat: 0, lng: 0 },
+              isFlightActivity: true,
+            };
+
+            // Check if departure flight already exists
+            const hasDepartureFlight = lastDay.plan.some(
+              (activity) =>
+                activity.placeName?.toLowerCase().includes("flight") &&
+                (activity.placeName?.toLowerCase().includes("departure") ||
+                  activity.placeName?.toLowerCase().includes("return"))
+            );
+
+            if (!hasDepartureFlight) {
+              lastDay.plan.push(departureActivity);
+              console.log(
+                `✅ Added departure flight to last day (Day ${
+                  lastDayIndex + 1
+                }):`,
+                recommendedFlight.name
+              );
+            } else {
+              console.log("ℹ️ Last day already has departure flight activity");
+            }
+          }
+
+          // Summary
+          console.log("✅ Flight & Hotel integration completed successfully");
+          toast.success("Itinerary Enhanced", {
+            description:
+              "Your recommended flight and hotel are now integrated into your daily schedule!",
+            duration: 4000,
+          });
+        }
+      } catch (mergeError) {
+        console.error(
+          "❌ Failed to merge flight/hotel into itinerary:",
+          mergeError
+        );
+        console.error("Stack trace:", mergeError.stack);
+        // Non-blocking - continue with itinerary even if merge fails
+        toast.warning("Flight/Hotel Integration Skipped", {
+          description:
+            "Unable to add flight/hotel to timeline. They're still available in booking sections.",
+          duration: 4000,
+        });
+      }
+
+      // ✅ FIX 1: Ensure budget field is always included in userSelection
+      const budgetValue = customBudget
+        ? `Custom: ₱${customBudget}`
+        : formData.budget || "Moderate";
+
+      // ✅ FIX 2: Flatten nested tripData if it exists (prevents tripData.tripData structure)
+      let finalTripData = parsedTripData;
+      if (
+        parsedTripData?.tripData &&
+        typeof parsedTripData.tripData === "object"
+      ) {
+        console.warn(
+          "⚠️ Detected nested tripData.tripData structure during save - flattening..."
+        );
+        finalTripData = parsedTripData.tripData;
+        console.log("✅ Flattened tripData structure before saving");
+      }
+
+      // ✅ FIX 3: Ensure string fields are properly serialized for Firebase
+      if (finalTripData) {
+        // Convert arrays to JSON strings if needed (Firebase Firestore handles arrays natively, but check for edge cases)
+        if (Array.isArray(finalTripData.placesToVisit)) {
+          console.log("✅ placesToVisit is already an array");
+        } else if (typeof finalTripData.placesToVisit === "string") {
+          console.warn("⚠️ placesToVisit is a string - will be parsed on read");
+        }
+
+        if (Array.isArray(finalTripData.dailyCosts)) {
+          console.log("✅ dailyCosts is already an array");
+        } else if (typeof finalTripData.dailyCosts === "string") {
+          console.warn("⚠️ dailyCosts is a string - will be parsed on read");
+        }
+      }
+
       const tripDocument = {
         userSelection: {
           ...formData,
-          customBudget: customBudget,
+          budget: budgetValue, // ✅ Always include budget field
+          customBudget: customBudget, // Keep custom budget for reference
         },
         flightPreferences: flightData,
         hotelPreferences: hotelData,
         tripPreferences: sanitizeTripPreferences(flightData, hotelData),
         langGraphResults: cleanLangGraphResults,
         userProfile: userProfile,
-        tripData: parsedTripData,
+        tripData: finalTripData, // ✅ Use flattened tripData
         realFlightData: flightResults || null,
         realHotelData: hotelResults || null,
         userEmail: user?.email,
@@ -1123,6 +2044,7 @@ function CreateTrip() {
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
+        // Destination & Dates
         return (
           <div className="space-y-8">
             <LocationSelector
@@ -1152,26 +2074,20 @@ function CreateTrip() {
             />
           </div>
         );
+
       case 2:
+        // Group Size (Travelers only)
         return (
-          <div className="space-y-8">
-            <TravelerSelector
-              selectedTravelers={formData?.travelers}
-              onTravelersChange={handleTravelersChange}
-            />
-            <BudgetSelector
-              value={formData?.budget}
-              customValue={customBudget}
-              onBudgetChange={handleBudgetChange}
-              onCustomBudgetChange={setCustomBudget}
-              error={null}
-              formData={formData}
-              flightData={flightData}
-              userProfile={userProfile}
-            />
-          </div>
+          <TravelerSelector
+            selectedTravelers={formData?.travelers}
+            onTravelersChange={handleTravelersChange}
+            formData={formData}
+            flightData={flightData}
+          />
         );
+
       case 3:
+        // Activity Pace
         return (
           <ActivityPreferenceSelector
             activityPreference={activityPreference}
@@ -1180,25 +2096,38 @@ function CreateTrip() {
             userProfile={userProfile}
           />
         );
+
       case 4:
+        // Travel Services (Flights + Hotels combined)
         return (
-          <FlightPreferences
+          <TravelServicesSelector
             flightData={flightData}
             onFlightDataChange={handleFlightDataChange}
-            userProfile={userProfile}
-            formData={formData}
-          />
-        );
-      case 5:
-        return (
-          <HotelPreferences
             hotelData={hotelData}
             onHotelDataChange={handleHotelDataChange}
             formData={formData}
             userProfile={userProfile}
           />
         );
+
+      case 5:
+        // Budget (now comes AFTER services are selected)
+        return (
+          <BudgetSelector
+            value={formData?.budget}
+            customValue={customBudget}
+            onBudgetChange={handleBudgetChange}
+            onCustomBudgetChange={setCustomBudget}
+            error={null}
+            formData={formData}
+            flightData={flightData}
+            hotelData={hotelData}
+            userProfile={userProfile}
+          />
+        );
+
       case 6:
+        // Review & Generate
         return (
           <ReviewTripStep
             formData={formData}
@@ -1209,6 +2138,7 @@ function CreateTrip() {
             place={place}
           />
         );
+
       default:
         return (
           <LocationSelector
@@ -1236,15 +2166,6 @@ function CreateTrip() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
-      {/* Floating Budget Estimate - Appears after destination & duration are selected */}
-      {formData.location && formData.duration && currentStep >= 2 ? (
-        <FloatingBudgetEstimate
-          formData={formData}
-          flightData={flightData}
-          hotelData={hotelData}
-        />
-      ) : null}
-
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
@@ -1316,13 +2237,7 @@ function CreateTrip() {
       </div>
 
       {/* Main Content */}
-      <div
-        className={`mx-auto px-4 sm:px-6 py-8 transition-all duration-300 ${
-          formData.location && formData.duration && currentStep >= 2
-            ? "max-w-4xl lg:mr-[22rem] xl:mr-[24rem]" // Add right margin when budget estimate is visible
-            : "max-w-4xl"
-        }`}
-      >
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         {/* Form Container */}
         <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-6 lg:p-8">
           {/* Progress Steps */}
@@ -1388,14 +2303,8 @@ function CreateTrip() {
           {/* Step Content */}
           <div className="mb-8 sm:mb-12">{renderStepContent()}</div>
 
-          {/* Navigation Buttons - Extra padding on mobile when budget estimate is visible */}
-          <div
-            className={`flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-0 pt-6 border-t border-gray-200 dark:border-slate-700 ${
-              formData.location && formData.duration && currentStep >= 2
-                ? "pb-32 sm:pb-24 lg:pb-0" // Extra bottom padding on mobile for floating estimate
-                : "pb-4 sm:pb-0"
-            }`}
-          >
+          {/* Navigation Buttons */}
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-0 pt-6 border-t border-gray-200 dark:border-slate-700">
             <Button
               variant="outline"
               onClick={prevStep}

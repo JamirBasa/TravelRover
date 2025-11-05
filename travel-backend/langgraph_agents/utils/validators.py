@@ -1,5 +1,6 @@
 """
 Data validation utilities for LangGraph agents
+Uses Philippine Time (PHT, UTC+8) for all date operations
 """
 
 from typing import Dict, Any, List, Optional
@@ -7,6 +8,7 @@ from datetime import datetime
 import re
 
 from ..exceptions import DataValidationError
+from .timezone import parse_date_pht, validate_date_range_pht, to_pht, is_past_date_pht
 
 
 def _extract_travelers_number(travelers_input) -> int:
@@ -43,7 +45,7 @@ def _extract_travelers_number(travelers_input) -> int:
         lower_input = travelers_input.lower()
         if any(keyword in lower_input for keyword in ['solo', 'single', 'one', 'myself']):
             return 1
-        elif any(keyword in lower_input for keyword in ['couple', 'two', 'pair']):
+        elif any(keyword in lower_input for keyword in ['couple', 'duo', 'two', 'pair']):
             return 2
     
     raise ValueError(f"Cannot extract number from travelers input: {travelers_input}")
@@ -86,26 +88,30 @@ def validate_trip_params(params: Dict[str, Any]) -> Dict[str, Any]:
     except (ValueError, TypeError) as e:
         raise DataValidationError(f"Travelers must be a valid number (got: {params['travelers']})", field_name='travelers')
     
-    # Validate dates if provided
+    # Validate dates if provided (using PHT)
     if 'startDate' in params and params['startDate']:
-        try:
-            start_date = datetime.fromisoformat(params['startDate'].replace('Z', '+00:00'))
-            validated_params['startDate'] = start_date.isoformat()
-        except (ValueError, AttributeError):
+        start_date = parse_date_pht(params['startDate'])
+        if not start_date:
             raise DataValidationError("Invalid start date format", field_name='startDate')
+        
+        # Check if date is in the past (PHT)
+        if is_past_date_pht(start_date):
+            raise DataValidationError("Start date cannot be in the past (PHT)", field_name='startDate')
+        
+        validated_params['startDate'] = start_date.isoformat()
     
     if 'endDate' in params and params['endDate']:
-        try:
-            end_date = datetime.fromisoformat(params['endDate'].replace('Z', '+00:00'))
-            validated_params['endDate'] = end_date.isoformat()
-            
-            # Check if end date is after start date
-            if 'startDate' in validated_params:
-                start_date = datetime.fromisoformat(validated_params['startDate'].replace('Z', '+00:00'))
-                if end_date <= start_date:
-                    raise DataValidationError("End date must be after start date", field_name='endDate')
-        except (ValueError, AttributeError):
+        end_date = parse_date_pht(params['endDate'])
+        if not end_date:
             raise DataValidationError("Invalid end date format", field_name='endDate')
+        
+        validated_params['endDate'] = end_date.isoformat()
+        
+        # Check if end date is after start date (using PHT)
+        if 'startDate' in validated_params:
+            start_date = parse_date_pht(validated_params['startDate'])
+            if start_date and end_date <= start_date:
+                raise DataValidationError("End date must be after start date (PHT)", field_name='endDate')
     
     # Validate budget
     budget_levels = ['budget', 'moderate', 'luxury', 'Budget', 'Moderate', 'Luxury']

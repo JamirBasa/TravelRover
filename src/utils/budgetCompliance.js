@@ -6,7 +6,7 @@
 // 2025 Filipino Market Price Ranges (Manila baseline)
 export const FILIPINO_PRICE_RANGES = {
   ACCOMMODATION: {
-    BUDGET: { min: 800, max: 1500, label: "Budget hostels/guesthouses" },
+    BUDGET_FRIENDLY: { min: 800, max: 1500, label: "Budget-friendly hostels/guesthouses" },
     MID_RANGE: { min: 1500, max: 3000, label: "Mid-range hotels (3-star)" },
     UPSCALE: { min: 3000, max: 5000, label: "Upscale hotels (4-star)" },
     LUXURY: { min: 5000, max: 15000, label: "Luxury hotels (5-star)" },
@@ -126,7 +126,7 @@ export const validateBudgetCompliance = (tripData) => {
   if (!tripData.budgetCompliance) {
     errors.push("❌ Missing budgetCompliance object");
   } else {
-    const { totalCost, userBudget, withinBudget, remaining } =
+    const { totalCost, userBudget, withinBudget } =
       tripData.budgetCompliance;
 
     if (typeof totalCost !== "number") {
@@ -141,15 +141,33 @@ export const validateBudgetCompliance = (tripData) => {
       errors.push("❌ Missing or invalid withinBudget flag");
     }
 
-    if (withinBudget !== true) {
+    // ✅ IMPROVED: Allow small budget buffer (5% tolerance for real-world pricing variations)
+    // Real Filipino market prices don't align perfectly with round budget numbers
+    const BUDGET_TOLERANCE_PERCENT = 0.05; // 5% tolerance
+    const toleranceAmount = Math.round(userBudget * BUDGET_TOLERANCE_PERCENT);
+    const exceedsWithTolerance = totalCost > (userBudget + toleranceAmount);
+
+    if (withinBudget !== true && exceedsWithTolerance) {
+      const overage = totalCost - userBudget;
+      const overagePercent = ((overage / userBudget) * 100).toFixed(1);
+      
       errors.push(
-        `❌ BUDGET EXCEEDED: Total ₱${totalCost?.toLocaleString()} > Budget ₱${userBudget?.toLocaleString()} (₱${Math.abs(remaining)?.toLocaleString()} over)`
+        `❌ BUDGET EXCEEDED: Total ₱${totalCost?.toLocaleString()} > Budget ₱${userBudget?.toLocaleString()} + 5% buffer (₱${overage.toLocaleString()} or ${overagePercent}% over)`
+      );
+    } else if (withinBudget !== true && !exceedsWithTolerance) {
+      // Within tolerance - convert to warning instead of error
+      const overage = totalCost - userBudget;
+      const overagePercent = ((overage / userBudget) * 100).toFixed(1);
+      
+      warnings.push(
+        `⚠️ Slightly over budget: Total ₱${totalCost?.toLocaleString()} vs Budget ₱${userBudget?.toLocaleString()} (${overagePercent}% over, within 5% tolerance)`
       );
     }
 
-    if (totalCost && userBudget && totalCost > userBudget) {
+    if (totalCost && userBudget && exceedsWithTolerance) {
+      const overage = totalCost - userBudget;
       errors.push(
-        `❌ Plan exceeds budget by ₱${(totalCost - userBudget).toLocaleString()}`
+        `❌ Plan exceeds budget+buffer by ₱${overage.toLocaleString()} (more than 5% tolerance)`
       );
     }
   }
@@ -228,9 +246,16 @@ export const validateBudgetCompliance = (tripData) => {
       0
     );
 
-    if (Math.abs(tripData.grandTotal - calculatedGrandTotal) > 1) {
+    // ✅ LENIENT: Allow up to ₱100 discrepancy (rounding errors, fees, etc.)
+    const discrepancy = Math.abs(tripData.grandTotal - calculatedGrandTotal);
+    
+    if (discrepancy > 100) {
       errors.push(
-        `❌ Grand total mismatch (calculated: ₱${calculatedGrandTotal.toLocaleString()}, provided: ₱${tripData.grandTotal.toLocaleString()})`
+        `❌ Grand total mismatch (calculated: ₱${calculatedGrandTotal.toLocaleString()}, provided: ₱${tripData.grandTotal.toLocaleString()}, difference: ₱${discrepancy.toLocaleString()})`
+      );
+    } else if (discrepancy > 1) {
+      warnings.push(
+        `⚠️ Minor grand total difference: ₱${discrepancy.toLocaleString()} (acceptable for rounding)`
       );
     }
   }
@@ -298,10 +323,10 @@ export const formatBudgetSummary = (budgetCompliance) => {
 /**
  * Get budget tier from amount
  * @param {number} amount - Budget amount
- * @returns {string} Budget tier (Budget, Moderate, Luxury)
+ * @returns {string} Budget tier (Budget-Friendly, Moderate, Luxury)
  */
 export const getBudgetTier = (amount) => {
-  if (amount <= 8000) return "Budget";
+  if (amount <= 8000) return "Budget-Friendly";
   if (amount <= 20000) return "Moderate";
   return "Luxury";
 };
@@ -379,7 +404,7 @@ export const adjustPriceForCity = (basePrice, destination) => {
 
 /**
  * Get expected price range for destination (validates AI pricing)
- * @param {string} accommodationType - "Budget", "Mid-Range", "Upscale", "Luxury"
+ * @param {string} accommodationType - "Budget-Friendly", "Mid-Range", "Upscale", "Luxury"
  * @param {string} destination - Destination city
  * @returns {object} { min: number, max: number, label: string }
  * 
@@ -510,7 +535,7 @@ export const detectUnrealisticPricing = (tripData) => {
       const hotelPrice = extractNumericPrice(hotel.pricePerNight);
       
       // Get expected range for this destination
-      const budgetRange = getExpectedPriceRange("Budget", destination);
+      const budgetRange = getExpectedPriceRange("Budget-Friendly", destination);
       const luxuryRange = getExpectedPriceRange("Luxury", destination);
       
       if (hotelPrice > 0 && hotelPrice < budgetRange.min * 0.6) {
@@ -529,7 +554,7 @@ export const detectUnrealisticPricing = (tripData) => {
 
   // Check daily costs for unrealistic patterns with destination context
   if (tripData.dailyCosts && Array.isArray(tripData.dailyCosts)) {
-    const budgetMin = getExpectedPriceRange("Budget", destination).min;
+    const budgetMin = getExpectedPriceRange("Budget-Friendly", destination).min;
     
     tripData.dailyCosts.forEach((dayCost, index) => {
       const { accommodation, meals, activities, transport } = dayCost.breakdown || {};

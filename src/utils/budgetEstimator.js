@@ -12,6 +12,13 @@ import {
   calculateTimingAdjustedFlightCost 
 } from './flightPricingAnalyzer';
 
+import { 
+  findNearestAirportByDistance,
+  validateAirportRecommendation 
+} from './airportDistanceCalculator';
+
+import { getLimitedServiceInfo } from './flightRecommendations';
+
 // ========================================
 // MAJOR AIRPORTS IN PHILIPPINES
 // ========================================
@@ -49,17 +56,47 @@ const PHILIPPINE_AIRPORTS = {
   'ENI': { name: 'El Nido Airport', city: 'El Nido', region: 'r04b', type: 'domestic' },
 };
 
-// ✅ NEW: Airports that exist but have NO commercial service
-const INACTIVE_AIRPORTS = {
-  'BAG': {
-    name: 'Loakan Airport',
-    city: 'Baguio',
-    region: 'car',
-    status: 'No commercial service (suspended July 2024)',
-    nearestAlternative: 'CRK',
-    alternativeName: 'Clark International Airport',
-    travelTime: '3-4 hours by land from Clark'
+// ✅ CENTRALIZED: Get inactive airport data from single source
+// Helper to check if a city/airport code is inactive
+const checkInactiveAirport = (cityOrCode) => {
+  const commonCodes = [
+    "BAG", "VIG", "SAG", "BAN", "PAG", "HUN",  // Northern Luzon
+    "SFE", "ANC",  // Central Luzon
+    "LGZ", "DAR", "CAL", "DON", "MSB",  // Bicol
+    "SJO", "PUG",  // Mindoro
+    "ELN", "COR", "SAB", "BAL",  // Palawan
+    "BOR", "GIM", "ANT",  // Panay
+    "DUM", "SIQ", "DAU",  // Negros
+    "PAN", "CHO", "AMO",  // Bohol
+    "BANT", "MAL", "OSL", "MOA",  // Cebu
+    "TUB", "SOH", "KAL",  // Leyte/Samar
+    "CAM", "BUK", "ILG",  // Mindanao North
+    "GLE", "BUR", "BIS", "BRI",  // Caraga
+    "SAM", "MAT", "TBL",  // Davao
+    "SAN", "BAS",  // Zamboanga
+    "TAW", "SIT"  // Sulu/Tawi-Tawi
+  ];
+  
+  const searchTerm = cityOrCode.toLowerCase();
+  
+  for (const code of commonCodes) {
+    const info = getLimitedServiceInfo(code);
+    if (info && (
+      searchTerm.includes(info.name.toLowerCase()) ||
+      searchTerm === code.toLowerCase()
+    )) {
+      return {
+        code,
+        city: info.name,
+        status: 'No commercial service',
+        nearestAlternative: info.alternatives[0],
+        alternativeName: info.alternativeNames[0],
+        travelTime: info.travelTime
+      };
+    }
   }
+  
+  return null;
 };
 
 // Regional cost of living indexes for Philippines (relative to Manila = 100)
@@ -136,8 +173,8 @@ const DESTINATION_MULTIPLIERS = {
 
 // Base daily costs per person (in PHP) - realistic Philippines pricing
 const BASE_DAILY_COSTS = {
-  budget: {
-    accommodation: 800,      // Budget hotels/hostels (₱600-1000/night)
+  'budget-friendly': {
+    accommodation: 800,      // Budget-friendly hotels/hostels (₱600-1000/night)
     food: 600,              // Local eateries, street food (₱150-250 per meal)
     activities: 400,        // Basic entrance fees, local tours
     transport: 300,         // Jeepney, tricycle, local buses
@@ -318,7 +355,6 @@ export const estimateFlightCost = (departureLocation, destination, startDate = n
   if (startDate) {
     const daysUntil = getDaysUntilDeparture(startDate);
     if (daysUntil !== null) {
-      const multiplier = getTimingPriceMultiplier(daysUntil);
       baseCost = calculateTimingAdjustedFlightCost(baseCost, daysUntil);
     }
   }
@@ -327,8 +363,8 @@ export const estimateFlightCost = (departureLocation, destination, startDate = n
 };
 
 /**
- * Calculate estimated budget based on all factors
- * Returns detailed breakdown and total
+ * ENHANCED: Calculate estimated budget with accuracy improvements
+ * Returns detailed breakdown and total with validation
  */
 export const calculateEstimatedBudget = (params) => {
   const {
@@ -336,61 +372,98 @@ export const calculateEstimatedBudget = (params) => {
     departureLocation = 'Manila, Philippines',
     duration = 3,
     travelers = 1,
-    budgetLevel = 'moderate', // 'budget', 'moderate', 'luxury'
+    budgetLevel = 'moderate', // 'budget-friendly', 'moderate', 'luxury'
     includeFlights = false,
     startDate = null, // NEW: For timing-based flight pricing
   } = params;
   
-  // Get cost factors
+  // Validate inputs
+  if (duration < 1 || duration > 30) {
+    console.warn('⚠️ Invalid duration, using default:', duration);
+  }
+  
+  // Get cost factors with validation
   const regionCode = getRegionCode(destination);
   const costIndex = REGIONAL_COST_INDEX[regionCode] || 100;
   const destMultiplier = getDestinationMultiplier(destination);
+  
+  // Cap multipliers to prevent extreme values
+  const cappedCostIndex = Math.min(Math.max(costIndex, 60), 140);
+  const cappedDestMultiplier = Math.min(Math.max(destMultiplier, 0.7), 1.8);
+  
+  console.log('💰 Budget Factors:', {
+    destination,
+    regionCode,
+    costIndex: cappedCostIndex,
+    destMultiplier: cappedDestMultiplier,
+    budgetLevel
+  });
   
   // Get base daily costs for budget level
   const budgetLevelLower = String(budgetLevel).toLowerCase();
   const dailyCosts = BASE_DAILY_COSTS[budgetLevelLower] || BASE_DAILY_COSTS.moderate;
   
-  // Calculate daily cost per person
+  // Calculate daily cost per person with regional adjustments
   let dailyCostPerPerson = Object.values(dailyCosts).reduce((sum, cost) => sum + cost, 0);
-  
-  // Apply regional cost index (convert to multiplier)
-  dailyCostPerPerson = dailyCostPerPerson * (costIndex / 100);
-  
-  // Apply destination multiplier
-  dailyCostPerPerson = dailyCostPerPerson * destMultiplier;
+  dailyCostPerPerson = dailyCostPerPerson * (cappedCostIndex / 100) * cappedDestMultiplier;
   
   // Parse travelers count
-  let travelerCount = 1;
-  if (typeof travelers === 'string') {
-    const match = travelers.match(/(\d+)/);
-    if (match) travelerCount = parseInt(match[1]);
-  } else {
-    travelerCount = travelers;
-  }
+  let travelerCount = typeof travelers === 'number' ? travelers : parseInt(travelers, 10) || 1;
   
-  // Calculate total accommodation and daily costs
+  // Calculate base total
   let totalCost = dailyCostPerPerson * duration * travelerCount;
   
-  // Add flight costs if needed
+  // Add flight costs with IMPROVED timing multiplier
   let flightCost = 0;
   if (includeFlights) {
-    const flightCostPerPerson = estimateFlightCost(departureLocation, destination, startDate);
-    flightCost = flightCostPerPerson * travelerCount;
+    const baseFlightCost = estimateFlightCost(departureLocation, destination, null); // Get base cost first
+    
+    if (startDate) {
+      const daysUntil = getDaysUntilDeparture(startDate);
+      if (daysUntil !== null && daysUntil >= 0) {
+        // IMPROVED: Cap timing multiplier to prevent excessive inflation
+        const rawMultiplier = getTimingPriceMultiplier(daysUntil);
+        const cappedMultiplier = Math.min(rawMultiplier, 2.5); // Max 2.5x instead of 4x
+        
+        const adjustedFlightCost = Math.round(baseFlightCost * cappedMultiplier);
+        flightCost = adjustedFlightCost * travelerCount;
+        
+        console.log('✈️ Flight Cost Calculation:', {
+          baseFlightCost,
+          daysUntil,
+          rawMultiplier,
+          cappedMultiplier,
+          perPerson: adjustedFlightCost,
+          total: flightCost
+        });
+      } else {
+        flightCost = baseFlightCost * travelerCount;
+      }
+    } else {
+      flightCost = baseFlightCost * travelerCount;
+    }
+    
     totalCost += flightCost;
   }
   
-  // Round to nearest 500
-  totalCost = Math.round(totalCost / 500) * 500;
+  // Round to nearest 100 for cleaner display
+  totalCost = Math.round(totalCost / 100) * 100;
   
-  // Calculate breakdown (per category per person per day, then multiply)
+  // Calculate detailed breakdown
   const breakdown = {
-    accommodation: Math.round((dailyCosts.accommodation * (costIndex / 100) * destMultiplier * duration * travelerCount) / 100) * 100,
-    food: Math.round((dailyCosts.food * (costIndex / 100) * destMultiplier * duration * travelerCount) / 100) * 100,
-    activities: Math.round((dailyCosts.activities * (costIndex / 100) * destMultiplier * duration * travelerCount) / 100) * 100,
-    transport: Math.round((dailyCosts.transport * (costIndex / 100) * destMultiplier * duration * travelerCount) / 100) * 100,
+    accommodation: Math.round((dailyCosts.accommodation * (cappedCostIndex / 100) * cappedDestMultiplier * duration * travelerCount) / 100) * 100,
+    food: Math.round((dailyCosts.food * (cappedCostIndex / 100) * cappedDestMultiplier * duration * travelerCount) / 100) * 100,
+    activities: Math.round((dailyCosts.activities * (cappedCostIndex / 100) * cappedDestMultiplier * duration * travelerCount) / 100) * 100,
+    transport: Math.round((dailyCosts.transport * (cappedCostIndex / 100) * cappedDestMultiplier * duration * travelerCount) / 100) * 100,
     flights: flightCost,
-    miscellaneous: Math.round((dailyCosts.miscellaneous * (costIndex / 100) * destMultiplier * duration * travelerCount) / 100) * 100,
+    miscellaneous: Math.round((dailyCosts.miscellaneous * (cappedCostIndex / 100) * cappedDestMultiplier * duration * travelerCount) / 100) * 100,
   };
+  
+  // Validate breakdown sums to total (within rounding tolerance)
+  const breakdownSum = Object.values(breakdown).reduce((sum, val) => sum + val, 0);
+  if (Math.abs(breakdownSum - totalCost) > 100) {
+    console.warn('⚠️ Breakdown sum mismatch:', { breakdownSum, totalCost });
+  }
   
   return {
     total: totalCost,
@@ -399,21 +472,22 @@ export const calculateEstimatedBudget = (params) => {
     perDay: Math.round(totalCost / duration),
     factors: {
       destination,
-      costIndex,
-      destMultiplier,
+      costIndex: cappedCostIndex,
+      destMultiplier: cappedDestMultiplier,
       regionCode,
       budgetLevel: budgetLevelLower,
       includeFlights,
+      flightTimingApplied: includeFlights && startDate,
     },
   };
 };
 
 /**
- * Get budget recommendations for all three levels (Budget, Moderate, Luxury)
+ * Get budget recommendations for all three levels (Budget-Friendly, Moderate, Luxury)
  * Returns formatted estimates with descriptions
  */
 export const getBudgetRecommendations = (params) => {
-  const budget = calculateEstimatedBudget({ ...params, budgetLevel: 'budget' });
+  const budgetFriendly = calculateEstimatedBudget({ ...params, budgetLevel: 'budget-friendly' });
   const moderate = calculateEstimatedBudget({ ...params, budgetLevel: 'moderate' });
   const luxury = calculateEstimatedBudget({ ...params, budgetLevel: 'luxury' });
   
@@ -428,17 +502,21 @@ export const getBudgetRecommendations = (params) => {
     }
   }
   
-  return {
-    budget: {
-      range: `₱${budget.total.toLocaleString()}`,
-      perPerson: `₱${Math.round(budget.total / travelerCount).toLocaleString()}`,
+  // ✅ FIXED: Return object with MULTIPLE KEY ALIASES for compatibility
+  const results = {
+    // Primary keys (kebab-case)
+    'budget-friendly': {
+      range: `₱${budgetFriendly.total.toLocaleString()}`,
+      perPerson: `₱${Math.round(budgetFriendly.total / travelerCount).toLocaleString()}`,
+      perDay: `₱${Math.round(budgetFriendly.total / params.duration).toLocaleString()}`,
       description: 'Budget-friendly hostels, local food, basic activities',
-      breakdown: budget.breakdown,
-      total: budget.total,
+      breakdown: budgetFriendly.breakdown,
+      total: budgetFriendly.total,
     },
     moderate: {
       range: `₱${moderate.total.toLocaleString()}`,
       perPerson: `₱${Math.round(moderate.total / travelerCount).toLocaleString()}`,
+      perDay: `₱${Math.round(moderate.total / params.duration).toLocaleString()}`,
       description: 'Mid-range hotels, mix of local and tourist dining, popular attractions',
       breakdown: moderate.breakdown,
       total: moderate.total,
@@ -446,11 +524,20 @@ export const getBudgetRecommendations = (params) => {
     luxury: {
       range: `₱${luxury.total.toLocaleString()}`,
       perPerson: `₱${Math.round(luxury.total / travelerCount).toLocaleString()}`,
+      perDay: `₱${Math.round(luxury.total / params.duration).toLocaleString()}`,
       description: 'High-end resorts, fine dining, premium experiences',
       breakdown: luxury.breakdown,
       total: luxury.total,
     },
   };
+
+  // ✅ ADD ALIASES: Support multiple naming conventions
+  results['budget'] = results['budget-friendly']; // Alias for "budget"
+  results['budgetfriendly'] = results['budget-friendly']; // Alias without hyphen
+  results['Budget-Friendly'] = results['budget-friendly']; // Alias with caps
+  results['Budget'] = results['budget-friendly']; // Alias with single cap
+  
+  return results;
 };
 
 /**
@@ -489,14 +576,29 @@ export const getDestinationInfo = (destination) => {
  * Find nearest airport to a city
  * Returns airport details and travel information
  */
+/**
+ * ✅ ENHANCED: Find nearest airport with ACTUAL distance calculation
+ * Now uses Haversine distance formula for accuracy
+ * @param {string} cityName - City name
+ * @param {string} regionCode - Optional region code
+ * @returns {Object} - Nearest airport details with calculated distance
+ */
 export const findNearestAirport = (cityName, regionCode = null) => {
   if (!cityName) return null;
 
   const cityLower = cityName.toLowerCase();
 
-  // ✅ FIXED: Check if city has inactive airport
-  for (const [code, inactiveInfo] of Object.entries(INACTIVE_AIRPORTS)) {
-    if (cityLower.includes(inactiveInfo.city.toLowerCase())) {
+  // ✅ STEP 1: Check if city has INACTIVE airport using centralized data
+  const inactiveInfo = checkInactiveAirport(cityName);
+  
+  if (inactiveInfo) {
+    console.log(`ℹ️ ${inactiveInfo.city} has inactive airport (${inactiveInfo.code}), calculating nearest alternative...`);
+    
+    // ✅ Use distance calculator to find ACTUAL nearest alternative
+    const nearest = findNearestAirportByDistance(cityName, regionCode);
+    
+    if (nearest.error || nearest.warning) {
+      // Fallback to hardcoded alternative if calculation fails
       const alternative = PHILIPPINE_AIRPORTS[inactiveInfo.nearestAlternative];
       return {
         code: inactiveInfo.nearestAlternative,
@@ -504,16 +606,31 @@ export const findNearestAirport = (cityName, regionCode = null) => {
         distance: 'Via land transit',
         travelTime: inactiveInfo.travelTime,
         hasDirectAirport: false,
-        inactiveAirportCode: code,
+        inactiveAirportCode: inactiveInfo.code,
         inactiveAirportStatus: inactiveInfo.status,
-        message: `${inactiveInfo.city} airport (${code}) has no commercial service`,
+        message: `${inactiveInfo.city} airport (${inactiveInfo.code}) has no commercial service`,
         recommendation: `✈️ Fly to ${alternative.city} (${inactiveInfo.nearestAlternative}), then ${inactiveInfo.travelTime}`,
       };
     }
+    
+    return {
+      code: nearest.code,
+      name: nearest.name,
+      distance: nearest.distance,
+      distanceKm: nearest.distanceKm,
+      travelTime: nearest.travelTime,
+      terrain: nearest.terrain,
+      hasDirectAirport: false,
+      inactiveAirportCode: inactiveInfo.code,
+      inactiveAirportStatus: inactiveInfo.status,
+      message: `${inactiveInfo.city} airport (${inactiveInfo.code}) has no commercial service. ${nearest.message}`,
+      recommendation: nearest.recommendation,
+      alternatives: nearest.alternatives
+    };
   }
 
-  // Check if city has active airport
-  const cityAirport = Object.entries(PHILIPPINE_AIRPORTS).find(([code, airport]) => 
+  // ✅ STEP 2: Check if city has ACTIVE direct airport
+  const cityAirport = Object.entries(PHILIPPINE_AIRPORTS).find(([, airport]) => 
     airport.city.toLowerCase() === cityLower || cityLower.includes(airport.city.toLowerCase())
   );
 
@@ -522,65 +639,111 @@ export const findNearestAirport = (cityName, regionCode = null) => {
       code: cityAirport[0],
       ...cityAirport[1],
       distance: '0 km',
+      distanceKm: 0,
       travelTime: 'In city',
+      terrain: 'urban',
       hasDirectAirport: true,
       message: `${cityAirport[1].name} (${cityAirport[0]})`,
       recommendation: `✈️ Direct flights available via ${cityAirport[1].name}`
     };
   }
   
-  // If no region provided, try to get it from the city
-  if (!regionCode) {
-    regionCode = getRegionCode(cityName);
-  }
+  // ✅ STEP 3: Calculate ACTUAL nearest airport using Haversine distance
+  console.log(`🔍 Calculating nearest airport for: ${cityName}`);
+  const nearest = findNearestAirportByDistance(cityName, regionCode);
   
-  // Find airports in the same region
-  const regionalAirports = Object.entries(PHILIPPINE_AIRPORTS)
-    .filter(([code, airport]) => airport.region === regionCode)
-    .map(([code, airport]) => ({ code, ...airport }));
-  
-  if (regionalAirports.length > 0) {
-    const nearest = regionalAirports[0]; // Take the first (usually main) airport in region
+  if (nearest.error || nearest.warning) {
+    console.warn(`⚠️ Distance calculation unavailable for ${cityName}, using fallback`);
     
-    // Estimate travel time and distance based on region
-    let distance = '50-100 km';
-    let travelTime = '1-2 hours';
+    // Fallback: Try to find regional airports
+    if (!regionCode) {
+      regionCode = getRegionCode(cityName);
+    }
     
+    const regionalAirports = Object.entries(PHILIPPINE_AIRPORTS)
+      .filter(([, airport]) => airport.region === regionCode)
+      .map(([code, airport]) => ({ code, ...airport }));
+    
+    if (regionalAirports.length > 0) {
+      const regional = regionalAirports[0];
+      return {
+        ...regional,
+        distance: '50-100 km',
+        distanceKm: 75,
+        travelTime: '1-2 hours',
+        terrain: 'normal',
+        hasDirectAirport: false,
+        message: `Nearest: ${regional.name} (${regional.code})`,
+        recommendation: `✈️ Fly to ${regional.city} then 1-2 hours by land to ${cityName}`,
+        warning: 'Distance not calculated - using estimated values'
+      };
+    }
+    
+    // Ultimate fallback to Manila
     return {
-      ...nearest,
-      distance,
-      travelTime,
+      code: 'MNL',
+      ...PHILIPPINE_AIRPORTS['MNL'],
+      distance: 'Via Manila',
+      travelTime: 'Connect to nearest airport',
+      terrain: 'urban',
       hasDirectAirport: false,
-      message: `Nearest: ${nearest.name} (${nearest.code})`,
-      recommendation: `✈️ Fly to ${nearest.city} then ${travelTime} by land to ${cityName}`
+      message: 'Via Manila (MNL)',
+      recommendation: `✈️ Fly to Manila then connect to nearest regional airport`,
+      warning: 'Distance calculation unavailable'
     };
   }
   
-  // Fallback to Manila (MNL) as the main international hub
+  // ✅ Return calculated nearest airport
+  const airportData = PHILIPPINE_AIRPORTS[nearest.code];
   return {
-    code: 'MNL',
-    ...PHILIPPINE_AIRPORTS['MNL'],
-    distance: 'Via Manila',
-    travelTime: 'Connect to nearest airport',
+    code: nearest.code,
+    ...airportData,
+    distance: nearest.distance,
+    distanceKm: nearest.distanceKm,
+    travelTime: nearest.travelTime,
+    terrain: nearest.terrain,
     hasDirectAirport: false,
-    message: 'Via Manila (MNL)',
-    recommendation: `✈️ Fly to Manila then connect to nearest regional airport`
+    coordinates: nearest.coordinates,
+    message: nearest.message,
+    recommendation: nearest.recommendation,
+    alternatives: nearest.alternatives
   };
 };
 
 /**
  * Get airport recommendations for departure and destination
  * Used in budget calculations and flight preferences
+ * ✅ ENHANCED: Now includes validation of recommended airports
  */
 export const getAirportRecommendations = (departureCity, destinationCity) => {
   const departure = findNearestAirport(departureCity);
   const destination = findNearestAirport(destinationCity);
+  
+  // ✅ NEW: Validate if recommended airports are actually nearest
+  const departureValidation = departure ? validateAirportRecommendation(departureCity, departure.code) : null;
+  const destinationValidation = destination ? validateAirportRecommendation(destinationCity, destination.code) : null;
+  
+  // Log validation warnings
+  if (departureValidation && !departureValidation.valid) {
+    console.warn(`⚠️ Departure airport validation: ${departureValidation.message}`);
+    console.log(`   Suggestion: ${departureValidation.suggestion}`);
+  }
+  
+  if (destinationValidation && !destinationValidation.valid) {
+    console.warn(`⚠️ Destination airport validation: ${destinationValidation.message}`);
+    console.log(`   Suggestion: ${destinationValidation.suggestion}`);
+  }
   
   return {
     departure,
     destination,
     needsFlight: departure?.region !== destination?.region,
     route: departure && destination ? `${departure.code} → ${destination.code}` : null,
-    nonstopAvailableFromDeparture: departure?.hasDirectAirport && destination?.hasDirectAirport, // ✅ ADD THIS
+    nonstopAvailableFromDeparture: departure?.hasDirectAirport && destination?.hasDirectAirport,
+    validation: {
+      departure: departureValidation,
+      destination: destinationValidation,
+      bothValid: departureValidation?.valid && destinationValidation?.valid
+    }
   };
 };

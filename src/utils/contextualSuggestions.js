@@ -109,9 +109,9 @@ export function generateContextSuggestions(context) {
   }
 
   // 3. BUDGET-APPROPRIATE SUGGESTIONS
-  const budgetLevel = budget?.toLowerCase() || 'moderate';
+  const budgetLevel = budget?.toLowerCase()?.replace(/-/g, '') || 'moderate';
   
-  if (budgetLevel === 'budget' || budget === 'Budget') {
+  if (budgetLevel === 'budgetfriendly' || budget === 'Budget-Friendly') {
     suggestions.budgetAppropriate = [
       '• Focus on free or low-cost attractions',
       '• Include local markets and street food experiences',
@@ -168,7 +168,17 @@ export function generateContextSuggestions(context) {
 
   // 5. TRAVELER-SPECIFIC SUGGESTIONS
   if (travelers) {
-    const travelerLower = travelers.toLowerCase();
+    // ✅ FIX: Handle travelers as string, number, or object
+    let travelerLower = '';
+    
+    if (typeof travelers === 'string') {
+      travelerLower = travelers.toLowerCase();
+    } else if (typeof travelers === 'number') {
+      travelerLower = String(travelers);
+    } else if (typeof travelers === 'object' && travelers !== null) {
+      // If it's an object with a display or value property
+      travelerLower = String(travelers.display || travelers.value || travelers.travelers || '').toLowerCase();
+    }
     
     if (travelerLower.includes('partner') || travelerLower.includes('couple')) {
       suggestions.examples.push('• Include romantic dinner spots and couple activities');
@@ -242,17 +252,32 @@ export function generateSmartPlaceholder(context) {
   // Add budget-appropriate example
   if (budget === 'Luxury') {
     placeholder += '• Fine dining experience\n';
-  } else if (budget === 'Budget') {
+  } else if (budget === 'Budget-Friendly') {
     placeholder += '• Visit free attractions and parks\n';
   } else {
     placeholder += '• Sunset viewing spots\n';
   }
   
   // Add traveler-specific example
-  if (travelers?.includes('Family')) {
-    placeholder += '• Kid-friendly activities\n';
-  } else if (travelers?.includes('Partner')) {
-    placeholder += '• Romantic dinner spots\n';
+  // ✅ FIX: Handle travelers as string, number, or object
+  if (travelers) {
+    let travelerStr = '';
+    
+    if (typeof travelers === 'string') {
+      travelerStr = travelers;
+    } else if (typeof travelers === 'number') {
+      travelerStr = String(travelers);
+    } else if (typeof travelers === 'object' && travelers !== null) {
+      travelerStr = String(travelers.display || travelers.value || travelers.travelers || '');
+    }
+    
+    if (travelerStr.includes('Family')) {
+      placeholder += '• Kid-friendly activities\n';
+    } else if (travelerStr.includes('Partner')) {
+      placeholder += '• Romantic dinner spots\n';
+    } else {
+      placeholder += '• Photography locations\n';
+    }
   } else {
     placeholder += '• Photography locations\n';
   }
@@ -404,7 +429,7 @@ export function validateSpecificRequests(requests, context) {
   }
   
   // Check for budget inconsistencies
-  if (budget === 'Budget' && (
+  if (budget === 'Budget-Friendly' && (
     requestsLower.includes('luxury') ||
     requestsLower.includes('5-star') ||
     requestsLower.includes('fine dining') ||
@@ -412,7 +437,7 @@ export function validateSpecificRequests(requests, context) {
   )) {
     warnings.push({
       type: 'budget_mismatch',
-      message: 'You selected Budget tier but mentioned luxury experiences. Consider upgrading your budget or we\'ll find budget-friendly alternatives.',
+      message: 'You selected Budget-Friendly tier but mentioned luxury experiences. Consider upgrading your budget or we\'ll find budget-friendly alternatives.',
       severity: 'info',
     });
   }

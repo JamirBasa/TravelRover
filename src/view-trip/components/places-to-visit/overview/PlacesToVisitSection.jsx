@@ -1,115 +1,64 @@
 import React from "react";
-import { Badge } from "@/components/ui/badge";
 import PlaceCardItem from "../../shared/PlaceCardItem";
-import {
-  COLORS,
-  SPACING,
-  TYPOGRAPHY,
-  PATTERNS,
-  COMPOSED_STYLES,
-} from "../constants/designSystem";
 
 function PlacesToVisitSection({ placesToVisit }) {
-  if (placesToVisit.length === 0) {
+  // ✅ Safety check: Handle undefined, null, or empty array
+  if (
+    !placesToVisit ||
+    !Array.isArray(placesToVisit) ||
+    placesToVisit.length === 0
+  ) {
+    return null;
+  }
+
+  // ✅ Filter out any null/undefined items from the array
+  const validPlaces = placesToVisit.filter(
+    (place) => place !== null && place !== undefined
+  );
+
+  if (validPlaces.length === 0) {
     return null;
   }
 
   return (
-    <div className={PATTERNS.card.base}>
-      <div
-        className={`${COMPOSED_STYLES.secondarySection} ${SPACING.padding.medium}`}
-      >
-        {/* Background decoration */}
-        <div className={PATTERNS.sectionHeader.decoration}>
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white dark:bg-white/10 opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white dark:bg-white/10 opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
-        </div>
+    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl border-2 border-gray-200 dark:border-slate-700 overflow-hidden">
+      {/* Simplified Header */}
+      <div className="bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-600 dark:to-teal-600 px-6 sm:px-8 py-6 relative overflow-hidden">
+        {/* Single subtle background accent */}
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-10 translate-x-10"></div>
 
-        <div className={PATTERNS.sectionHeader.content}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={PATTERNS.iconContainer.medium}>
-                <span className="text-white text-2xl">🎯</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h2
-                  className={`text-2xl font-bold text-white mb-2 break-words`}
-                >
-                  Must-Visit Attractions
-                </h2>
-                <p
-                  className={`text-base font-medium text-emerald-100 flex items-center gap-2 flex-wrap`}
-                >
-                  <span>📍</span>
-                  <span>
-                    {placesToVisit.length} carefully curated destinations
-                  </span>
-                  <span>•</span>
-                  <span>🤖 AI-recommended</span>
-                </p>
-              </div>
-            </div>
-
-            <div className="hidden sm:flex items-center gap-3 text-white">
-              <div className="text-center">
-                <div className="text-xl font-bold">{placesToVisit.length}</div>
-                <div className="text-sm text-emerald-100 font-medium">
-                  Places
-                </div>
-              </div>
-            </div>
+        <div className="relative flex items-center gap-4">
+          <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+            <span className="text-3xl">🎯</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1 leading-tight">
+              Must-Visit Attractions
+            </h2>
+            <p className="text-emerald-50 text-sm sm:text-base font-medium">
+              {validPlaces.length}{" "}
+              {validPlaces.length === 1 ? "place" : "places"} to explore
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="p-4 sm:p-6">
-        {/* Category breakdown if available */}
-        <div className="mb-4 flex flex-wrap gap-2">
-          {placesToVisit.some((p) => p.category) && (
-            <div className="flex items-center gap-2 text-base font-medium text-gray-600 dark:text-gray-400">
-              <span>Categories:</span>
-              {[
-                ...new Set(
-                  placesToVisit.filter((p) => p.category).map((p) => p.category)
-                ),
-              ].map((category) => (
-                <Badge
-                  key={category}
-                  variant="secondary"
-                  className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 px-3 py-1.5 text-sm font-semibold"
-                >
-                  {category}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-          {placesToVisit.map((place, index) => (
+      {/* Clean Content Area */}
+      <div className="p-6 sm:p-8">
+        {/* Place Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+          {validPlaces.map((place, index) => (
             <PlaceCardItem key={place?.placeName || index} place={place} />
           ))}
         </div>
 
-        {/* Compact helpful tip */}
-        <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 rounded-lg border border-emerald-100 dark:border-emerald-800">
-          <div className="flex items-start gap-3">
-            <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/50 rounded flex items-center justify-center flex-shrink-0">
-              <span className="text-emerald-600 dark:text-emerald-400 text-xl">
-                💡
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-bold text-emerald-800 dark:text-emerald-300 mb-2 text-base">
-                Pro Travel Tip
-              </h4>
-              <p className="text-emerald-700 dark:text-emerald-400 text-base font-medium break-words">
-                Click on any attraction to view its exact location on Google
-                Maps. Consider visiting nearby places together to save time and
-                transportation costs!
-              </p>
-            </div>
-          </div>
+        {/* Subtle Helpful Tip */}
+        <div className="mt-6 flex items-start gap-3 p-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-100 dark:border-emerald-900">
+          <span className="text-lg flex-shrink-0">💡</span>
+          <p className="text-xs sm:text-sm text-emerald-800 dark:text-emerald-300 leading-relaxed">
+            <span className="font-semibold">Tip:</span> Click any attraction to
+            view on Google Maps and get directions.
+          </p>
         </div>
       </div>
     </div>

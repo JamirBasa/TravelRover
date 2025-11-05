@@ -46,14 +46,22 @@ export class LangGraphTravelAgent {
       const response = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (!response.ok) {
-        throw new Error(
-          `LangGraph API error: ${response.status} ${response.statusText}`
-        );
+        // ✅ Try to get detailed error from response body
+        let errorDetail = `${response.status} ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          errorDetail = errorData.error || errorData.message || errorDetail;
+          console.error("🔍 Django API Error Details:", errorData);
+        } catch (e) {
+          // If response is not JSON, use status text
+        }
+        throw new Error(`LangGraph API error: ${errorDetail}`);
       }
 
       const data = await response.json();
 
       if (!data.success) {
+        console.error("🔍 Django Response Error:", data);
         throw new Error(data.error || "LangGraph execution failed");
       }
 
@@ -87,17 +95,90 @@ export class LangGraphTravelAgent {
    * Prepare request data for Django API
    */
   prepareRequestData(tripParams) {
+    // ✅ Normalize budget value for Django backend
+    const normalizeBudget = (budget) => {
+      if (!budget) return "moderate"; // Default fallback
+
+      // If already starts with "Custom:", pass through
+      if (budget.startsWith("Custom:")) {
+        return budget;
+      }
+
+      // Map frontend budget names to backend expected values
+      const budgetMap = {
+        "Budget-Friendly": "budget",
+        Budget: "budget",
+        "budget-friendly": "budget",
+        budgetfriendly: "budget",
+        Moderate: "moderate",
+        moderate: "moderate",
+        Luxury: "luxury",
+        luxury: "luxury",
+      };
+
+      // Try exact match first
+      if (budgetMap[budget]) {
+        console.log(`💰 Budget mapped: "${budget}" → "${budgetMap[budget]}"`);
+        return budgetMap[budget];
+      }
+
+      // Try case-insensitive match
+      const lowerBudget = budget.toLowerCase();
+      if (
+        lowerBudget.includes("budget") ||
+        lowerBudget.includes("cheap") ||
+        lowerBudget.includes("affordable")
+      ) {
+        console.log(
+          `💰 Budget mapped (contains 'budget'): "${budget}" → "budget"`
+        );
+        return "budget";
+      }
+      if (
+        lowerBudget.includes("luxury") ||
+        lowerBudget.includes("premium") ||
+        lowerBudget.includes("upscale")
+      ) {
+        console.log(
+          `💰 Budget mapped (contains 'luxury'): "${budget}" → "luxury"`
+        );
+        return "luxury";
+      }
+
+      // Default to moderate
+      console.log(`💰 Budget defaulted: "${budget}" → "moderate"`);
+      return "moderate";
+    };
+
+    // ✅ FIXED: Send both camelCase and snake_case for backend compatibility
+    const flightData = tripParams.flightData || {};
+    const hotelData = tripParams.hotelData || {};
+
     return {
       destination: tripParams.destination,
-      startDate: tripParams.startDate,
-      endDate: tripParams.endDate,
+      start_date: tripParams.startDate,
+      end_date: tripParams.endDate,
+      startDate: tripParams.startDate, // Keep camelCase for backward compatibility
+      endDate: tripParams.endDate, // Keep camelCase for backward compatibility
       duration: tripParams.duration || 3,
       travelers: tripParams.travelers,
-      budget: tripParams.budget,
+      budget: normalizeBudget(tripParams.budget),
       user_email: this.getCurrentUserEmail(),
-      flightData: tripParams.flightData || {},
-      hotelData: tripParams.hotelData || {},
+
+      // Send flight data in both formats
+      flight_data: flightData,
+      flightData: flightData,
+
+      // Send hotel data in both formats
+      hotel_data: hotelData,
+      hotelData: hotelData,
+
+      // User profile
+      user_profile: tripParams.userProfile || {},
       userProfile: tripParams.userProfile || {},
+
+      // Travel dates
+      travelDates: tripParams.travelDates || {},
     };
   }
 
