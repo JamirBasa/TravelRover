@@ -197,20 +197,20 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
         // Smart parsing: Handle hyphens in place names
         // Format: "2:00 PM - Check-in at El Cielito Hotel - Description"
         // We need to find the first " - " (space-hyphen-space) for time separation
-        
+
         const timeMatch = activityText.match(/^([^-]+?)\s+-\s+(.+)$/);
-        
+
         if (timeMatch) {
           const timeStr = timeMatch[1].trim();
           const restOfText = timeMatch[2].trim();
-          
+
           // Now check if there's another " - " for description separation
           // But we need to be careful with hyphens in names like "Check-in"
           // Strategy: Look for " - " (with spaces) which is more likely to be a separator
           const descriptionMatch = restOfText.match(/^(.+?)\s+-\s+(.+)$/);
-          
+
           let placeName, placeDetails;
-          
+
           if (descriptionMatch) {
             // Has description: "Check-in at Hotel - Settle into your room"
             placeName = descriptionMatch[1].trim();
@@ -673,15 +673,17 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
         if (walkingWithTime[1]) {
           // Has time: "10 minutes walking distance"
           const value = parseInt(walkingWithTime[1]);
-          const unit = walkingWithTime[2] ? walkingWithTime[2].toLowerCase() : "minutes";
-          
+          const unit = walkingWithTime[2]
+            ? walkingWithTime[2].toLowerCase()
+            : "minutes";
+
           let displayDuration;
           if (unit.startsWith("h")) {
             displayDuration = value === 1 ? "1 hour" : `${value} hours`;
           } else {
             displayDuration = value === 1 ? "1 minute" : `${value} minutes`;
           }
-          
+
           return {
             duration: `${displayDuration} walk`,
             transport: "walking",
@@ -728,7 +730,7 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
 
         // Detect if it mentions walking in the text
         const hasWalking = /walk/i.test(durationText);
-        
+
         return {
           duration: displayDuration,
           transport: hasWalking ? "walking" : "various",
@@ -762,7 +764,9 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
 
       // Final fallback: Extract any time value from messy text
       // This handles cases like "10 minutes walking distance (free)" that didn't match above
-      const anyTimeValue = durationText.match(/(\d+)\s*(minutes?|hours?|min|mins|hr|hrs|h)/i);
+      const anyTimeValue = durationText.match(
+        /(\d+)\s*(minutes?|hours?|min|mins|hr|hrs|h)/i
+      );
       if (anyTimeValue) {
         const value = parseInt(anyTimeValue[1]);
         const unit = anyTimeValue[2].toLowerCase();
@@ -778,7 +782,7 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
         const lowerText = durationText.toLowerCase();
         let transport = "various";
         let icon = "🚗";
-        
+
         if (/walk/i.test(lowerText)) {
           transport = "walking";
           icon = "🚶";

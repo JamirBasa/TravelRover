@@ -51,6 +51,17 @@ export const AI_PROMPT_OPTIMIZED = `Generate travel itinerary JSON for {location
    • Transport: Use actual fares (Jeepney ~₱15, Taxi flagdown ₱40).
    • If over budget, auto-substitute with cheaper options (hostels, free attractions, public transport).
    • MANDATORY: Include 'dailyCosts', 'grandTotal', and 'budgetCompliance' in root JSON.
+   
+   ⚠️ BUDGET CALCULATION ACCURACY:
+   • Calculate each day's subtotal correctly: sum ALL costs (accommodation, meals, activities, transport)
+   • Verify grand total = sum of all daily subtotals
+   • BEFORE finalizing, check: grandTotal < {budgetAmount}
+   • If grandTotal exceeds budget, REVISE the plan:
+     1. Switch to cheaper hotels (₱800-1,000 range)
+     2. Replace paid activities with FREE alternatives
+     3. Use public transport (jeepney/bus) instead of taxis
+     4. Choose budget eateries (₱150-200/meal)
+   • Keep revising until grandTotal is BELOW {budgetAmount}
 
 7. REQUIRED ITINERARY ELEMENTS
    • Arrival: "Arrival at [Airport Name]", "Check-in at [Hotel Name]", "Rest".
@@ -196,6 +207,67 @@ Activities: Days 1-${dateInfo.totalDays} | Checkout: ${dateInfo.checkoutDate}`;
 };
 
 /**
+ * DURATION-BASED DETAIL LEVEL SYSTEM
+ * Prevents MAX_TOKENS errors for long trips
+ */
+const getDetailLevelForDuration = (durationDays, budgetAmount) => {
+  // Calculate daily budget for budget enforcement
+  const dailyBudget = budgetAmount ? 
+    Math.floor(parseInt(budgetAmount.replace(/[₱,]/g, '')) / durationDays) : 
+    2000;
+
+  if (durationDays <= 7) {
+    return {
+      level: "FULL",
+      activityCount: "normal", // Use user preference
+      descriptionLimit: 80,
+      instructions: "",
+    };
+  } else if (durationDays <= 14) {
+    return {
+      level: "MODERATE",
+      activityCount: "reduced", // Max 2-3 activities per day
+      descriptionLimit: 60,
+      instructions: `
+⚠️ MODERATE DETAIL MODE (${durationDays} days):
+• Limit to 2-3 key activities per day (ignore activityPreference if > 3)
+• Keep descriptions concise (max 60 characters)
+• Focus on must-see attractions only
+• Combine similar activities when possible
+• BUDGET: Target ₱${dailyBudget.toLocaleString()}/day to stay within total budget`,
+    };
+  } else {
+    return {
+      level: "OVERVIEW",
+      activityCount: "minimal", // Max 1-2 highlights per day
+      descriptionLimit: 40,
+      instructions: `
+🚨 OVERVIEW MODE (${durationDays} days - TOKEN LIMIT PROTECTION):
+• MAXIMUM 1-2 key highlights per day
+• Descriptions: 40 characters max
+• Focus on daily themes, not detailed schedules
+• Example format:
+  Day 1: Arrival + City Center Tour
+  Day 2: Cultural Heritage Sites
+  Day 3: Nature & Hiking
+• Group similar activities: "Historic District Tour (3 sites)" instead of listing each
+• Meals: Just mention "Breakfast/Lunch/Dinner included" without detailed pricing
+• Travel times: Estimate ranges "10-15 min" instead of exact calculations
+
+🚨 CRITICAL BUDGET CONSTRAINT FOR LONG TRIPS:
+• Daily budget target: ₱${dailyBudget.toLocaleString()} (STRICT - do NOT exceed)
+• Prioritize FREE or low-cost activities
+• Use budget accommodations (₱800-1,500/night)
+• Minimize paid attractions - focus on parks, beaches, free viewpoints
+• Transport: Use jeepneys/buses over taxis
+• Meals: Budget eateries (₱150-250/meal per person)
+• If day total exceeds ₱${dailyBudget.toLocaleString()}, CUT activities or use free alternatives
+• CALCULATE grand total and ensure it's BELOW the budget cap`,
+    };
+  }
+};
+
+/**
  * MASTER PROMPT BUILDER
  * Assembles optimized prompt with all dynamic data
  */
@@ -212,12 +284,34 @@ export const buildOptimizedPrompt = ({
   hotelRecommendations,
   specialRequests,
 }) => {
+  // Extract numeric duration for detail level calculation
+  const durationDays = parseInt(duration) || 1;
+  const detailLevel = getDetailLevelForDuration(durationDays, budgetAmount);
+
+  // Adjust activity preference based on duration
+  let adjustedActivityPreference = activityPreference;
+  if (detailLevel.activityCount === "reduced") {
+    adjustedActivityPreference = Math.min(parseInt(activityPreference) || 2, 3).toString();
+  } else if (detailLevel.activityCount === "minimal") {
+    adjustedActivityPreference = "2"; // Force max 2 for long trips
+  }
+
+  console.log(`📊 Trip Duration: ${durationDays} days`);
+  console.log(`🎯 Detail Level: ${detailLevel.level}`);
+  console.log(`🎨 Activity Preference: ${activityPreference} → ${adjustedActivityPreference}`);
+  if (durationDays > 14) {
+    const dailyBudget = budgetAmount ? 
+      Math.floor(parseInt(budgetAmount.replace(/[₱,]/g, '')) / durationDays) : 
+      2000;
+    console.log(`💰 Daily Budget Target: ₱${dailyBudget.toLocaleString()} (STRICT)`);
+  }
+
   let prompt = AI_PROMPT_OPTIMIZED.replace("{location}", location)
     .replace("{duration}", duration)
     .replace("{travelers}", travelers)
     .replace("{budget}", budget)
     .replace(/{budgetAmount}/g, budgetAmount || "₱50,000") // Replace all instances
-    .replace("{activityPreference}", activityPreference)
+    .replace("{activityPreference}", adjustedActivityPreference)
     .replace("{userName}", userProfile?.fullName || "Traveler")
     .replace("{userHomeLocation}", userProfile?.homeLocation || "Philippines")
     .replace(
@@ -241,6 +335,11 @@ export const buildOptimizedPrompt = ({
     .replace("{activityStartDate}", dateInfo?.activitiesStartDate || "")
     .replace("{activityEndDate}", dateInfo?.activitiesEndDate || "")
     .replace("{checkoutDate}", dateInfo?.checkoutDate || "");
+
+  // Add duration-specific instructions
+  if (detailLevel.instructions) {
+    prompt += detailLevel.instructions;
+  }
 
   return prompt;
 };

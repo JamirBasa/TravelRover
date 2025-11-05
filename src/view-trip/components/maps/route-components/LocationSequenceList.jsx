@@ -52,8 +52,10 @@ export function LocationSequenceList({
                            border-2 shadow-md"
                   style={{ borderColor: getMarkerColor(location.day) }}
                 >
-                  <Sparkles className="h-3.5 w-3.5 mr-1.5 inline" 
-                            style={{ color: getMarkerColor(location.day) }} />
+                  <Sparkles
+                    className="h-3.5 w-3.5 mr-1.5 inline"
+                    style={{ color: getMarkerColor(location.day) }}
+                  />
                   Day {location.day}
                 </Badge>
                 <div className="flex-1 h-0.5 bg-gradient-to-r from-transparent via-sky-300 dark:via-sky-700 to-transparent"></div>
@@ -133,8 +135,10 @@ function LocationCard({ location, index, onLocationClick, getMarkerColor }) {
           {/* Title Row */}
           <div className="flex items-start justify-between gap-3 mb-2">
             <div className="flex items-start gap-2 flex-1 min-w-0">
-              <h5 className="font-bold text-gray-900 dark:text-gray-100 text-base 
-                           leading-snug break-words">
+              <h5
+                className="font-bold text-gray-900 dark:text-gray-100 text-base 
+                           leading-snug break-words"
+              >
                 {location.name}
               </h5>
               {isHotelReturn && (
@@ -223,8 +227,10 @@ function LocationCard({ location, index, onLocationClick, getMarkerColor }) {
 
           {/* Details/Description */}
           {location.details && location.details.length > 10 && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 
-                        line-clamp-2 leading-relaxed">
+            <p
+              className="text-sm text-gray-600 dark:text-gray-400 
+                        line-clamp-2 leading-relaxed"
+            >
               {location.details}
             </p>
           )}
@@ -286,7 +292,7 @@ function adjustColorBrightness(color, percent) {
 function TravelTimeConnector({ travelInfo }) {
   // Use the transport icon from parsed data, or default to walking
   const icon = travelInfo.transportIcon || "🚶";
-  
+
   // Categorize transport for styling
   const transportType = getTransportType(travelInfo.transport);
   const colorScheme = getColorScheme(transportType);
@@ -302,7 +308,7 @@ function TravelTimeConnector({ travelInfo }) {
             backgroundImage: `linear-gradient(to bottom, transparent, ${colorScheme.line})`,
           }}
         />
-        
+
         {/* Transport icon with pulse animation */}
         <div className="relative">
           <div
@@ -317,7 +323,7 @@ function TravelTimeConnector({ travelInfo }) {
             style={{ backgroundColor: colorScheme.glow }}
           />
         </div>
-        
+
         {/* Bottom gradient line */}
         <div
           className="w-0.5 h-4 bg-gradient-to-b transition-all duration-300"
@@ -393,7 +399,10 @@ function TravelTimeConnector({ travelInfo }) {
           {/* AI source indicator with subtle styling */}
           {travelInfo.source && (
             <div className="flex items-center gap-2 mt-2 text-xs opacity-70">
-              <Sparkles className="h-3 w-3" style={{ color: colorScheme.icon }} />
+              <Sparkles
+                className="h-3 w-3"
+                style={{ color: colorScheme.icon }}
+              />
               <span style={{ color: colorScheme.secondaryText }}>
                 AI-recommended route
               </span>
@@ -410,13 +419,13 @@ function TravelTimeConnector({ travelInfo }) {
  */
 function getTransportType(transport) {
   if (!transport) return "walking";
-  
+
   const transportLower = transport.toLowerCase();
-  
+
   if (["taxi", "car", "van"].includes(transportLower)) return "vehicle";
   if (["jeepney", "bus", "tricycle"].includes(transportLower)) return "public";
   if (["walking", "walk"].includes(transportLower)) return "walking";
-  
+
   return "general";
 }
 
