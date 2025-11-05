@@ -50,6 +50,14 @@ export const COLORS = {
     border: 'border-sky-200 dark:border-sky-800',
   },
   
+  // Warning states - Warm amber for alerts and important info
+  warning: {
+    gradient: 'bg-gradient-to-r from-amber-500 to-orange-600',
+    lightGradient: 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30',
+    text: 'text-amber-700 dark:text-amber-400',
+    border: 'border-amber-200 dark:border-amber-800',
+  },
+  
   // Badge color system for consistent activity badges
   badges: {
     pricing: {
