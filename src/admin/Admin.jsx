@@ -35,9 +35,16 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { db } from "../config/firebaseConfig";
+import UserFilters from "./components/UserFilters";
 
 const Admin = () => {
   const [users, setUsers] = useState([]);
+  const [userFilters, setUserFilters] = useState({
+    status: "",
+    userType: "",
+    tripActivity: "",
+    dateRange: "", // ✅ Removed source
+  });
   const [trips, setTrips] = useState([]);
   const [dashboardStats, setDashboardStats] = useState(null);
   const [analyticsData, setAnalyticsData] = useState(null);
@@ -567,7 +574,7 @@ const Admin = () => {
           if (backendData.success && backendData.users) {
             backendUsers = backendData.users.map((user, index) => ({
               ...user,
-              source: "backend",
+              source: "backend", // ✅ Add source identifier
               display_id: index + 1,
             }));
             console.log("✅ Django backend users loaded:", backendUsers.length);
@@ -594,14 +601,14 @@ const Admin = () => {
         console.log(`📊 Firestore users found: ${usersSnapshot.size}`);
         console.log(`📊 Firestore trips found: ${tripsSnapshot.size}`);
 
-        const tripStatsByUser = {};
+        const tripStats = {};
         tripsSnapshot.forEach((tripDoc) => {
           const tripData = tripDoc.data();
           const userEmail = tripData.userEmail;
 
           if (userEmail) {
-            if (!tripStatsByUser[userEmail]) {
-              tripStatsByUser[userEmail] = {
+            if (!tripStats[userEmail]) {
+              tripStats[userEmail] = {
                 total_trips: 0,
                 completed_trips: 0,
                 recent_trip: null,
@@ -610,28 +617,28 @@ const Admin = () => {
               };
             }
 
-            tripStatsByUser[userEmail].total_trips++;
+            tripStats[userEmail].total_trips++;
 
             if (
               tripData.tripData &&
               Object.keys(tripData.tripData).length > 0
             ) {
-              tripStatsByUser[userEmail].completed_trips++;
+              tripStats[userEmail].completed_trips++;
             }
 
             if (tripData.hasRealFlights) {
-              tripStatsByUser[userEmail].has_real_flights++;
+              tripStats[userEmail].has_real_flights++;
             }
             if (tripData.hasRealHotels) {
-              tripStatsByUser[userEmail].has_real_hotels++;
+              tripStats[userEmail].has_real_hotels++;
             }
 
             const tripDate = new Date(tripData.createdAt || tripData.id);
             if (
-              !tripStatsByUser[userEmail].recent_trip ||
-              tripDate > new Date(tripStatsByUser[userEmail].recent_trip)
+              !tripStats[userEmail].recent_trip ||
+              tripDate > new Date(tripStats[userEmail].recent_trip)
             ) {
-              tripStatsByUser[userEmail].recent_trip =
+              tripStats[userEmail].recent_trip =
                 tripData.createdAt || tripData.id;
             }
           }
@@ -648,7 +655,7 @@ const Admin = () => {
           );
 
           if (!existsInBackend) {
-            const userStats = tripStatsByUser[userEmail] || {
+            const userStats = tripStats[userEmail] || {
               total_trips: 0,
               completed_trips: 0,
               recent_trip: null,
@@ -732,67 +739,62 @@ const Admin = () => {
 
   // ✅ Fetch Trips
   const fetchTrips = async () => {
-    setLoading(true);
-    try {
-      console.log("🔍 Fetching trips from Firestore AITrips collection...");
+  setLoading(true);
+  try {
+    const tripsRef = collection(db, "AITrips");
+    const tripsQuery = query(tripsRef, orderBy("createdAt", "desc"));
+    const tripsSnapshot = await getDocs(tripsQuery);
 
-      const tripsRef = collection(db, "AITrips");
-      const tripsQuery = query(tripsRef, orderBy("createdAt", "desc"));
-      const tripsSnapshot = await getDocs(tripsQuery);
+    const tripsData = [];
+    tripsSnapshot.forEach((doc) => {
+      const tripData = doc.data();
 
-      console.log(`📊 Found ${tripsSnapshot.size} trips in Firestore`);
-
-      const tripsData = [];
-      tripsSnapshot.forEach((doc) => {
-        const tripData = doc.data();
-
-        tripsData.push({
-          id: doc.id,
-          destination:
-            tripData.tripData?.destination ||
-            tripData.userSelection?.location?.label ||
-            "Unknown",
-          user_email: tripData.userEmail || "Unknown",
-          created_at: tripData.createdAt || new Date().toISOString(),
-          duration:
-            tripData.userSelection?.duration ||
-            tripData.tripData?.duration ||
-            "N/A",
-          budget:
-            tripData.userSelection?.budget ||
-            tripData.tripData?.budget ||
-            "N/A",
-          travelers:
-            tripData.userSelection?.travelers ||
-            tripData.tripData?.travelers ||
-            "N/A",
-          has_itinerary: !!(
-            tripData.tripData?.itinerary &&
-            Array.isArray(tripData.tripData.itinerary) &&
-            tripData.tripData.itinerary.length > 0
-          ),
-          has_hotels: !!(
-            tripData.tripData?.hotels &&
-            Array.isArray(tripData.tripData.hotels) &&
-            tripData.tripData.hotels.length > 0
-          ),
-          has_flights: tripData.hasRealFlights || false,
-          is_personalized: tripData.isPersonalized || false,
-          estimated_cost: calculateEstimatedCost(tripData),
-        });
+      tripsData.push({
+        id: doc.id,
+        destination:
+          tripData.tripData?.destination ||
+          tripData.userSelection?.location?.label ||
+          tripData.userSelection?.location ||
+          "Unknown",
+        user_email: tripData.userEmail || "Unknown",
+        created_at: tripData.createdAt || new Date().toISOString(),
+        duration:
+          tripData.userSelection?.duration ||
+          tripData.tripData?.duration ||
+          "N/A",
+        budget:
+          tripData.userSelection?.budget ||
+          tripData.tripData?.budget ||
+          "Not set",
+        travelers:
+          tripData.userSelection?.travelers ||
+          tripData.tripData?.travelers ||
+          "Not specified",
+        has_itinerary: !!(
+          tripData.tripData?.itinerary &&
+          Array.isArray(tripData.tripData.itinerary) &&
+          tripData.tripData.itinerary.length > 0
+        ),
+        has_hotels: !!(
+          tripData.tripData?.hotels &&
+          Array.isArray(tripData.tripData.hotels) &&
+          tripData.tripData.hotels.length > 0
+        ),
+        has_flights: tripData.hasRealFlights || false,
+        is_personalized: tripData.isPersonalized || false,
       });
+    });
 
-      setTrips(tripsData);
-      console.log("✅ Trips data loaded:", tripsData.length);
-      toast.success(`Loaded ${tripsData.length} trips`);
-    } catch (error) {
-      console.error("❌ Error fetching trips:", error);
-      toast.error("Failed to load trips");
-      setTrips([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setTrips(tripsData);
+    toast.success(`Loaded ${tripsData.length} trips`);
+  } catch (error) {
+    console.error("❌ Error fetching trips:", error);
+    toast.error("Failed to load trips");
+    setTrips([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // ✅ Delete User
   const deleteUser = async (userId) => {
@@ -889,19 +891,59 @@ const Admin = () => {
   };
 
   // Filtered lists
-  const filteredUsers = users.filter(
-    (user) =>
+  const filteredUsers = users.filter((user) => {
+    // 1. Search term filter
+    const matchesSearch =
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.last_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      user.last_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const filteredTrips = trips.filter(
-    (trip) =>
-      trip.destination?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.user_email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    if (!matchesSearch) return false;
+
+    // 2. Status filter
+    if (userFilters.status) {
+      const isActive = userFilters.status === "active";
+      if (user.is_active !== isActive) return false;
+    }
+
+    // 3. User type filter
+    if (userFilters.userType) {
+      if (userFilters.userType === "staff" && !user.is_staff) return false;
+      if (userFilters.userType === "superuser" && !user.is_superuser)
+        return false;
+      if (
+        userFilters.userType === "regular" &&
+        (user.is_staff || user.is_superuser)
+      )
+        return false;
+    }
+
+    // 4. Trip activity filter
+    if (userFilters.tripActivity) {
+      const hasTrips = (user.total_trips || 0) > 0;
+      if (userFilters.tripActivity === "has_trips" && !hasTrips) return false;
+      if (userFilters.tripActivity === "no_trips" && hasTrips) return false;
+    }
+
+    // 5. Date range filter
+    if (userFilters.dateRange) {
+      const joinDate = new Date(user.date_joined);
+      const now = new Date();
+
+      if (userFilters.dateRange === "today") {
+        if (joinDate.toDateString() !== now.toDateString()) return false;
+      } else if (userFilters.dateRange === "week") {
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        if (joinDate < weekAgo) return false;
+      } else if (userFilters.dateRange === "month") {
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        if (joinDate < monthAgo) return false;
+      }
+    }
+
+    return true;
+  });
 
   // Check admin authentication
   useEffect(() => {
@@ -1109,10 +1151,11 @@ const Admin = () => {
             </div>
           </div>
 
-          {/* Search bar */}
+          {/* Search bar and filters */}
           {(activeTab === "users" || activeTab === "trips") && (
-            <div className="mb-4">
-              <div className="relative max-w-md">
+            <div className="mb-4 flex flex-col sm:flex-row gap-3">
+              {/* Search Input */}
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   type="text"
@@ -1122,6 +1165,15 @@ const Admin = () => {
                   className="pl-10 w-full border-sky-200 focus:border-sky-500"
                 />
               </div>
+
+              {/* Filter Button (only for users tab) */}
+              {activeTab === "users" && (
+                <UserFilters
+                  filters={userFilters}
+                  setFilters={setUserFilters}
+                  users={users}
+                />
+              )}
             </div>
           )}
         </div>
@@ -1312,7 +1364,7 @@ const Admin = () => {
                               {/* Empty space for alignment */}
                             </div>
                           </div>
-                          <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 hover:shadow-md transition-shadow">
+                          <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-500 rounded-xl border border-green-200 hover:shadow-md transition-shadow">
                             <div className="text-3xl mb-2">✅</div>
                             <div className="text-xs text-gray-600 font-medium mb-1">
                               Completed
@@ -1688,187 +1740,352 @@ const Admin = () => {
 
         {/* ✅ USERS TAB */}
         {activeTab === "users" && !loading && (
-          <Card className="brand-card overflow-hidden border-sky-200">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-sky-50 to-blue-50 border-b border-sky-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden md:table-cell">
-                      Email
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
-                      Trips
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredUsers.length === 0 ? (
+          <>
+            {/* Filter Summary */}
+            {Object.values(userFilters).some(Boolean) && (
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-blue-700 dark:text-blue-400">
+                    Showing {filteredUsers.length} of {users.length} users
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setUserFilters({
+                        status: "",
+                        userType: "",
+                        tripActivity: "",
+                        dateRange: "", // ✅ Removed source
+                      })
+                    }
+                    className="text-blue-600 hover:text-blue-700 cursor-pointer"
+                  >
+                    Reset Filters
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <Card className="brand-card overflow-hidden border-sky-200">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gradient-to-r from-sky-50 to-blue-50 border-b border-sky-200">
                     <tr>
-                      <td
-                        colSpan="5"
-                        className="px-4 py-8 text-center text-gray-500"
-                      >
-                        No users found
-                      </td>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        User
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden md:table-cell">
+                        Email
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
+                        Trips
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
-                  ) : (
-                    filteredUsers.map((user) => (
-                      <tr
-                        key={user.id}
-                        className="hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 transition-colors"
-                      >
-                        <td className="px-4 py-3">
-                          <div>
-                            <div className="font-semibold text-gray-900">
-                              {user.username}
-                            </div>
-                            <div className="text-sm text-gray-500 md:hidden">
-                              {user.email}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700 hidden md:table-cell">
-                          {user.email}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-700 hidden lg:table-cell">
-                          {user.total_trips || 0}
-                        </td>
-                        <td className="px-4 py-3 hidden lg:table-cell">
-                          <Badge
-                            className={
-                              user.is_active
-                                ? "bg-green-100 text-green-700 border-green-300"
-                                : "bg-gray-100 text-gray-700 border-gray-300"
-                            }
-                          >
-                            {user.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => deleteUser(user.id)}
-                            className="bg-red-600 hover:bg-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filteredUsers.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan="5"
+                          className="px-4 py-8 text-center text-gray-500"
+                        >
+                          No users found
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        )}
-
-        {/* ✅ TRIPS TAB */}
-        {activeTab === "trips" && !loading && (
-          <Card className="brand-card overflow-hidden border-sky-200">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-sky-50 to-blue-50 border-b border-sky-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      Destination
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden md:table-cell">
-                      User
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
-                      Duration
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredTrips.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan="5"
-                        className="px-4 py-8 text-center text-gray-500"
-                      >
-                        No trips found
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredTrips.map((trip) => (
-                      <tr
-                        key={trip.id}
-                        className="hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 transition-colors"
-                      >
-                        <td className="px-4 py-3">
-                          <div>
-                            <div className="font-semibold text-gray-900">
-                              {trip.destination}
+                    ) : (
+                      filteredUsers.map((user) => (
+                        <tr
+                          key={user.id}
+                          className="hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 transition-colors"
+                        >
+                          <td className="px-4 py-3">
+                            <div>
+                              <div className="font-semibold text-gray-900">
+                                {user.username}
+                              </div>
+                              <div className="text-sm text-gray-500 md:hidden">
+                                {user.email}
+                              </div>
                             </div>
-                            <div className="text-sm text-gray-500 md:hidden">
-                              {trip.user_email}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700 hidden md:table-cell">
-                          {trip.user_email}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-700 hidden lg:table-cell">
-                          {trip.duration} days
-                        </td>
-                        <td className="px-4 py-3 hidden lg:table-cell">
-                          <Badge
-                            className={
-                              trip.has_itinerary
-                                ? "bg-green-100 text-green-700 border-green-300"
-                                : "bg-gray-100 text-gray-700 border-gray-300"
-                            }
-                          >
-                            {trip.has_itinerary ? "Complete" : "Incomplete"}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigate(`/view-trip/${trip.id}`)}
-                              className="border-sky-500 text-sky-700 hover:bg-sky-50"
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700 hidden md:table-cell">
+                            {user.email}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-700 hidden lg:table-cell">
+                            {user.total_trips || 0}
+                          </td>
+                          <td className="px-4 py-3 hidden lg:table-cell">
+                            <Badge
+                              className={
+                                user.is_active
+                                  ? "bg-green-100 text-green-700 border-green-300"
+                                  : "bg-gray-100 text-gray-700 border-gray-300"
+                              }
                             >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                              {user.is_active ? "Active" : "Inactive"}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3">
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => deleteTrip(trip.id)}
+                              onClick={() => deleteUser(user.id)}
                               className="bg-red-600 hover:bg-red-700"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </>
+        )}
+
+           {/* ✅ ENHANCED TRIPS TAB */}
+        {activeTab === "trips" && !loading && (
+          <>
+            {/* Search Bar for Trips */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  type="text"
+                  placeholder="Search trips by destination or user..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full border-sky-200 focus:border-sky-500"
+                />
+              </div>
+            </div>
+
+            <Card className="brand-card overflow-hidden border-sky-200">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gradient-to-r from-sky-50 to-blue-50 border-b border-sky-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Destination
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden md:table-cell">
+                        User
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
+                        Duration
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden xl:table-cell">
+                        Budget
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden xl:table-cell">
+                        Travelers
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden xl:table-cell">
+                        Created
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {trips.filter((trip) =>
+                      searchTerm
+                        ? trip.destination
+                            ?.toLowerCase()
+                            .includes(searchTerm.toLowerCase()) ||
+                          trip.user_email
+                            ?.toLowerCase()
+                            .includes(searchTerm.toLowerCase())
+                        : true
+                    ).length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan="8"
+                          className="px-4 py-12 text-center text-gray-500"
+                        >
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="text-5xl">🔍</div>
+                            <p className="font-medium">No trips found</p>
+                            {searchTerm && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSearchTerm("")}
+                                className="border-sky-500 text-sky-700 hover:bg-sky-50 cursor-pointer"
+                              >
+                                Clear search
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+                    ) : (
+                      trips
+                        .filter((trip) =>
+                          searchTerm
+                            ? trip.destination
+                                ?.toLowerCase()
+                                .includes(searchTerm.toLowerCase()) ||
+                              trip.user_email
+                                ?.toLowerCase()
+                                .includes(searchTerm.toLowerCase())
+                            : true
+                        )
+                        .map((trip) => (
+                          <tr
+                            key={trip.id}
+                            className="hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 transition-colors"
+                          >
+                            {/* Destination */}
+                            <td className="px-4 py-3">
+                              <div>
+                                <div className="font-semibold text-gray-900 flex items-center gap-2">
+                                  <span>📍</span>
+                                  {trip.destination}
+                                </div>
+                                <div className="text-sm text-gray-500 md:hidden">
+                                  {trip.user_email}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* User Email */}
+                            <td className="px-4 py-3 text-sm text-gray-700 hidden md:table-cell">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">👤</span>
+                                {trip.user_email}
+                              </div>
+                            </td>
+
+                            {/* Duration */}
+                            <td className="px-4 py-3 text-sm font-medium text-gray-700 hidden lg:table-cell">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">📅</span>
+                                {trip.duration} days
+                              </div>
+                            </td>
+
+                            {/* Budget */}
+                            <td className="px-4 py-3 text-sm font-medium text-gray-700 hidden xl:table-cell">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">💰</span>
+                                <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                                  {trip.budget}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Travelers */}
+                            <td className="px-4 py-3 text-sm font-medium text-gray-700 hidden xl:table-cell">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">👥</span>
+                                {trip.travelers}
+                              </div>
+                            </td>
+
+                            {/* Created Date */}
+                            <td className="px-4 py-3 text-sm text-gray-600 hidden xl:table-cell">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">🕒</span>
+                                {new Date(trip.created_at).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })}
+                              </div>
+                            </td>
+
+                            {/* Status - Simplified */}
+                            <td className="px-4 py-3 hidden lg:table-cell">
+                              <Badge
+                                className={
+                                  trip.has_itinerary
+                                    ? "bg-green-100 text-green-700 border-green-300 font-semibold"
+                                    : "bg-gray-100 text-gray-700 border-gray-300 font-semibold"
+                                }
+                              >
+                                {trip.has_itinerary ? "✓ Complete" : "⚠ Incomplete"}
+                              </Badge>
+                            </td>
+
+                            {/* Actions */}
+                            <td className="px-4 py-3">
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    navigate(`/view-trip/${trip.id}`)
+                                  }
+                                  className="border-sky-500 text-sky-700 hover:bg-sky-50 cursor-pointer"
+                                  title="View trip details"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => deleteTrip(trip.id)}
+                                  className="bg-red-600 hover:bg-red-700 cursor-pointer"
+                                  title="Delete trip"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Table Footer with Trip Count */}
+              {trips.length > 0 && (
+                <div className="bg-gray-50 px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+                  <span className="text-sm text-gray-600">
+                    Showing{" "}
+                    <span className="font-semibold text-gray-900">
+                      {trips.filter((trip) =>
+                        searchTerm
+                          ? trip.destination
+                              ?.toLowerCase()
+                              .includes(searchTerm.toLowerCase()) ||
+                            trip.user_email
+                              ?.toLowerCase()
+                              .includes(searchTerm.toLowerCase())
+                          : true
+                      ).length}
+                    </span>{" "}
+                    of{" "}
+                    <span className="font-semibold text-gray-900">
+                      {trips.length}
+                    </span>{" "}
+                    trips
+                  </span>
+                  <div className="text-sm text-gray-500">
+                    {trips.filter((t) => t.has_itinerary).length} completed
+                  </div>
+                </div>
+              )}
+            </Card>
+          </>
         )}
 
-        {/* API Keys Tab */}
+        {/* API KEYS TAB */}
         {activeTab === "apikeys" && !loading && <APIKeyMonitoring />}
       </div>
     </div>
