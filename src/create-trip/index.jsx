@@ -931,9 +931,9 @@ function CreateTrip() {
       console.log("🔍 Checking backend connection...");
       try {
         const API_BASE_URL =
-          import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
         const healthCheck = await axios.get(
-          `${API_BASE_URL}/api/langgraph/health/`,
+          `${API_BASE_URL}/langgraph/health/`,
           {
             timeout: 5000,
           }
