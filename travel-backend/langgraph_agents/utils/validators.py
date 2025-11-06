@@ -152,7 +152,7 @@ def validate_coordinates(lat: float, lng: float) -> tuple[float, float]:
 
 def validate_email(email: str) -> str:
     """
-    Validate email format
+    Validate email format with development fallback
     
     Args:
         email: Email address to validate
@@ -163,7 +163,12 @@ def validate_email(email: str) -> str:
     Raises:
         DataValidationError: If email is invalid
     """
+    # ✅ ALLOW GUEST EMAIL FOR DEVELOPMENT
     if not email or not isinstance(email, str):
+        import os
+        if os.getenv('DJANGO_SETTINGS_MODULE') == 'travelapi.settings' and os.getenv('DEBUG', 'True') == 'True':
+            # Development mode: use guest email
+            return "guest@travelrover.com"
         raise DataValidationError("Email is required")
     
     email = email.strip().lower()
@@ -172,7 +177,7 @@ def validate_email(email: str) -> str:
     email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     
     if not re.match(email_pattern, email):
-        raise DataValidationError("Invalid email format")
+        raise DataValidationError(f"Invalid email format: {email}")
     
     return email
 

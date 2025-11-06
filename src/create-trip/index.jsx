@@ -880,6 +880,33 @@ function CreateTrip() {
       return;
     }
 
+    // ✅ SECURITY: Validate user email before proceeding
+    let userEmail = null;
+    try {
+      const userObj = JSON.parse(user);
+      userEmail = userObj.email || userObj.user?.email || userObj.providerData?.[0]?.email;
+      
+      if (!userEmail || !userEmail.includes('@')) {
+        console.error("❌ Invalid user email:", userEmail);
+        toast.error("Authentication Error", {
+          description: "Your email address is invalid. Please log in again.",
+          duration: 5000,
+        });
+        setOpenDialog(true);
+        return;
+      }
+      
+      console.log("✅ User email validated:", userEmail);
+    } catch (parseError) {
+      console.error("❌ Could not parse user data:", parseError);
+      toast.error("Authentication Error", {
+        description: "Your session is invalid. Please log in again.",
+        duration: 5000,
+      });
+      setOpenDialog(true);
+      return;
+    }
+
     if (!userProfile) {
       toast.info("Profile setup needed", {
         description:
