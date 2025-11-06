@@ -29,10 +29,10 @@ function SpecificRequests({
   const [validation, setValidation] = useState({ valid: true, warnings: [] });
   const [showAllSuggestions, setShowAllSuggestions] = useState(false);
   const [securityWarning, setSecurityWarning] = useState(null);
-  
+
   // ✅ PERFORMANCE: Use refs to prevent unnecessary re-renders
   const validationTimeoutRef = useRef(null);
-  const lastValidatedValueRef = useRef('');
+  const lastValidatedValueRef = useRef("");
 
   // ✅ PERFORMANCE: Only rebuild context when specific values change (not entire objects)
   const context = useMemo(
@@ -69,14 +69,15 @@ function SpecificRequests({
   const suggestions = useMemo(
     () => {
       // Skip if no location (primary driver)
-      if (!context.location) return {
-        examples: [],
-        categorySpecific: [],
-        destinationSpecific: [],
-        budgetAppropriate: [],
-        profileBased: [],
-        contextualTips: [],
-      };
+      if (!context.location)
+        return {
+          examples: [],
+          categorySpecific: [],
+          destinationSpecific: [],
+          budgetAppropriate: [],
+          profileBased: [],
+          contextualTips: [],
+        };
       return generateContextSuggestions(context);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -96,24 +97,27 @@ function SpecificRequests({
     if (validationTimeoutRef.current) {
       clearTimeout(validationTimeoutRef.current);
     }
-    
+
     // Skip if value hasn't changed
     if (value === lastValidatedValueRef.current) {
       return;
     }
-    
+
     // Debounce validation (1000ms = more aggressive)
     validationTimeoutRef.current = setTimeout(() => {
       if (value) {
         // ✅ SECURITY: Sanitize input using centralized utility
         const securityResult = sanitizeTravelRequests(value);
-        
+
         if (securityResult.hasInjection) {
-          setSecurityWarning(securityResult.warnings[0] || {
-            type: 'prompt_injection',
-            message: 'Suspicious content detected and removed. Please describe places naturally without system instructions.',
-            severity: 'error',
-          });
+          setSecurityWarning(
+            securityResult.warnings[0] || {
+              type: "prompt_injection",
+              message:
+                "Suspicious content detected and removed. Please describe places naturally without system instructions.",
+              severity: "error",
+            }
+          );
           // Update with sanitized value
           onChange(securityResult.sanitized);
         } else if (securityResult.warnings.length > 0) {
@@ -122,15 +126,18 @@ function SpecificRequests({
         } else {
           setSecurityWarning(null);
         }
-        
+
         // Validate sanitized input
-        const validationResult = validateSpecificRequests(securityResult.sanitized, context);
+        const validationResult = validateSpecificRequests(
+          securityResult.sanitized,
+          context
+        );
         setValidation(validationResult);
         lastValidatedValueRef.current = value;
       } else {
         setValidation({ valid: true, warnings: [] });
         setSecurityWarning(null);
-        lastValidatedValueRef.current = '';
+        lastValidatedValueRef.current = "";
       }
     }, 1000); // Increased from 500ms to 1000ms
 
@@ -164,46 +171,52 @@ function SpecificRequests({
   }, [suggestions]);
 
   // ✅ PERFORMANCE: Memoize handler to prevent re-renders
-  const handleAddSuggestion = useCallback((suggestion) => {
-    const cleanSuggestion = suggestion.replace("• ", "");
-    const currentValue = value || "";
-    
-    // ✅ SECURITY: Check combined length before adding
-    const newValue = currentValue
-      ? `${currentValue}\n${cleanSuggestion}`
-      : cleanSuggestion;
-    
-    if (newValue.length > 2000) {
-      setSecurityWarning({
-        type: 'length_exceeded',
-        message: 'Cannot add more - you\'ve reached the 2000 character limit.',
-        severity: 'warning',
-      });
-      return;
-    }
-    
-    onChange(newValue);
-    setSecurityWarning(null);
-  }, [value, onChange]);
+  const handleAddSuggestion = useCallback(
+    (suggestion) => {
+      const cleanSuggestion = suggestion.replace("• ", "");
+      const currentValue = value || "";
+
+      // ✅ SECURITY: Check combined length before adding
+      const newValue = currentValue
+        ? `${currentValue}\n${cleanSuggestion}`
+        : cleanSuggestion;
+
+      if (newValue.length > 2000) {
+        setSecurityWarning({
+          type: "length_exceeded",
+          message: "Cannot add more - you've reached the 2000 character limit.",
+          severity: "warning",
+        });
+        return;
+      }
+
+      onChange(newValue);
+      setSecurityWarning(null);
+    },
+    [value, onChange]
+  );
 
   // ✅ PERFORMANCE: Memoize input change handler with sanitization
-  const handleInputChange = useCallback((e) => {
-    const inputValue = e.target.value;
-    
-    // Allow typing but enforce limit at 2000 chars
-    if (inputValue.length <= 2000) {
-      onChange(inputValue);
-      if (securityWarning?.type === 'length_exceeded') {
-        setSecurityWarning(null);
+  const handleInputChange = useCallback(
+    (e) => {
+      const inputValue = e.target.value;
+
+      // Allow typing but enforce limit at 2000 chars
+      if (inputValue.length <= 2000) {
+        onChange(inputValue);
+        if (securityWarning?.type === "length_exceeded") {
+          setSecurityWarning(null);
+        }
+      } else {
+        setSecurityWarning({
+          type: "length_exceeded",
+          message: "Maximum 2000 characters allowed.",
+          severity: "warning",
+        });
       }
-    } else {
-      setSecurityWarning({
-        type: 'length_exceeded',
-        message: 'Maximum 2000 characters allowed.',
-        severity: 'warning',
-      });
-    }
-  }, [onChange, securityWarning]);
+    },
+    [onChange, securityWarning]
+  );
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -234,24 +247,30 @@ function SpecificRequests({
 
         {/* ✅ SECURITY: Security Warning Display */}
         {securityWarning && (
-          <div className={`p-4 rounded-xl border-2 flex items-start gap-3 ${
-            securityWarning.severity === 'error'
-              ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
-              : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800'
-          }`}>
-            <div className={`flex-shrink-0 ${
-              securityWarning.severity === 'error'
-                ? 'text-red-600 dark:text-red-500'
-                : 'text-amber-600 dark:text-amber-500'
-            }`}>
+          <div
+            className={`p-4 rounded-xl border-2 flex items-start gap-3 ${
+              securityWarning.severity === "error"
+                ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800"
+                : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800"
+            }`}
+          >
+            <div
+              className={`flex-shrink-0 ${
+                securityWarning.severity === "error"
+                  ? "text-red-600 dark:text-red-500"
+                  : "text-amber-600 dark:text-amber-500"
+              }`}
+            >
               <FaShieldAlt className="text-lg" />
             </div>
             <div>
-              <p className={`text-sm font-medium ${
-                securityWarning.severity === 'error'
-                  ? 'text-red-800 dark:text-red-300'
-                  : 'text-amber-800 dark:text-amber-300'
-              }`}>
+              <p
+                className={`text-sm font-medium ${
+                  securityWarning.severity === "error"
+                    ? "text-red-800 dark:text-red-300"
+                    : "text-amber-800 dark:text-amber-300"
+                }`}
+              >
                 {securityWarning.message}
               </p>
             </div>
@@ -288,11 +307,13 @@ function SpecificRequests({
               </div>
               {value.length > 1500 && (
                 <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-1.5">
-                  <div 
+                  <div
                     className={`h-1.5 rounded-full transition-all ${
-                      value.length > 1900 ? 'bg-red-500' :
-                      value.length > 1700 ? 'bg-amber-500' :
-                      'bg-emerald-500'
+                      value.length > 1900
+                        ? "bg-red-500"
+                        : value.length > 1700
+                        ? "bg-amber-500"
+                        : "bg-emerald-500"
                     }`}
                     style={{ width: `${(value.length / 2000) * 100}%` }}
                   />

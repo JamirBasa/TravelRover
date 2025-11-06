@@ -4,7 +4,7 @@ import { FLIGHT_CONFIG } from "../constants/options";
 import { getAirportCode } from "../data/airports";
 
 // ⚙️ Configuration
-const API_BASE_URL = buildApiUrl('');
+const API_BASE_URL = buildApiUrl("");
 const USE_MOCK_DATA = false; // 🎭 Set to false when backend server is running
 
 // 🛠️ Development Note:

@@ -22,13 +22,9 @@ class GooglePlacesService {
   }
 
   /**
-   * Get real coordinates for a place name using Geocoding API
+   * Get real coordinates for a place name using Geocoding API (via Django proxy)
    */
   async getPlaceCoordinates(placeName, location = '') {
-    if (!await this.initialize()) {
-      return this.getFallbackCoordinates(placeName, location);
-    }
-
     const cacheKey = `geocode_${placeName}_${location}`;
     if (this.cache.has(cacheKey)) {
       return this.cache.get(cacheKey);
@@ -36,19 +32,32 @@ class GooglePlacesService {
 
     try {
       const query = location ? `${placeName}, ${location}` : placeName;
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${this.apiKey}`;
       
-      const response = await fetch(url);
-      const data = await response.json();
+      // ✅ Use Django proxy for geocoding (secure, no API key exposure)
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+      const url = `${apiBaseUrl}/langgraph/geocoding/`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: query,
+          components: 'country:PH' // Restrict to Philippines for accuracy
+        })
+      });
 
-      if (data.status === 'OK' && data.results?.length > 0) {
-        const result = data.results[0];
+      const result = await response.json();
+
+      if (result.success && result.data?.status === 'OK' && result.data.results?.length > 0) {
+        const geocodeResult = result.data.results[0];
         const coordinates = {
-          lat: result.geometry.location.lat,
-          lng: result.geometry.location.lng,
-          formatted_address: result.formatted_address,
-          place_id: result.place_id,
-          source: 'google_geocoding'
+          lat: geocodeResult.geometry.location.lat,
+          lng: geocodeResult.geometry.location.lng,
+          formatted_address: geocodeResult.formatted_address,
+          place_id: geocodeResult.place_id,
+          source: 'google_geocoding_proxy'
         };
 
         this.cache.set(cacheKey, coordinates);
@@ -60,7 +69,7 @@ class GooglePlacesService {
       return this.getFallbackCoordinates(placeName, location);
 
     } catch (error) {
-      console.error('❌ Geocoding API error:', error);
+      console.error('❌ Geocoding proxy error:', error);
       return this.getFallbackCoordinates(placeName, location);
     }
   }
