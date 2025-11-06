@@ -884,9 +884,12 @@ function CreateTrip() {
     let userEmail = null;
     try {
       const userObj = JSON.parse(user);
-      userEmail = userObj.email || userObj.user?.email || userObj.providerData?.[0]?.email;
-      
-      if (!userEmail || !userEmail.includes('@')) {
+      userEmail =
+        userObj.email ||
+        userObj.user?.email ||
+        userObj.providerData?.[0]?.email;
+
+      if (!userEmail || !userEmail.includes("@")) {
         console.error("❌ Invalid user email:", userEmail);
         toast.error("Authentication Error", {
           description: "Your email address is invalid. Please log in again.",
@@ -895,7 +898,7 @@ function CreateTrip() {
         setOpenDialog(true);
         return;
       }
-      
+
       console.log("✅ User email validated:", userEmail);
     } catch (parseError) {
       console.error("❌ Could not parse user data:", parseError);
