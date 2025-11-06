@@ -34,16 +34,30 @@ export class HotelAgent {
 
   static async getLocationCoordinates(destination) {
     try {
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-          destination
-        )}&key=${HOTEL_CONFIG.GOOGLE_PLACES_API_KEY}`
-      );
+      // ✅ Use Django backend proxy for geocoding
+      const apiBaseUrl =
+        import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+      const geocodeUrl = `${apiBaseUrl}/langgraph/geocoding/`;
 
-      const data = await response.json();
+      const response = await fetch(geocodeUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          address: destination,
+          components: "country:PH",
+        }),
+      });
 
-      if (data.results && data.results.length > 0) {
-        const location = data.results[0].geometry.location;
+      const result = await response.json();
+
+      if (
+        result.success &&
+        result.data?.results &&
+        result.data.results.length > 0
+      ) {
+        const location = result.data.results[0].geometry.location;
         return {
           lat: location.lat,
           lng: location.lng,
@@ -52,7 +66,7 @@ export class HotelAgent {
 
       return null;
     } catch (error) {
-      console.error("❌ Geocoding failed:", error);
+      console.error("❌ Geocoding proxy failed:", error);
       return null;
     }
   }

@@ -7,7 +7,7 @@ import axios from "axios";
 import { getTimeoutForDuration } from "../constants/tripDurationLimits";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 export class GeminiProxyService {
   // ✅ OPTIMIZED: Increased timeouts for complex requests
@@ -234,7 +234,7 @@ export class GeminiProxyService {
       }
 
       const response = await axios.post(
-        `${API_BASE_URL}/api/langgraph/gemini/generate/`,
+        `${API_BASE_URL}/langgraph/gemini/generate/`,
         {
           prompt,
           schema,

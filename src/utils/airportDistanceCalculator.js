@@ -56,6 +56,14 @@ const AIRPORT_COORDINATES = {
 
 // ✅ Major Philippine Cities Without Direct Airports
 const CITY_COORDINATES = {
+  // Metro Manila (NCR)
+  'manila': { lat: 14.5995, lng: 120.9842, region: 'ncr', terrain: 'highway' },
+  'quezon': { lat: 14.6760, lng: 121.0437, region: 'ncr', terrain: 'highway' },
+  'makati': { lat: 14.5547, lng: 121.0244, region: 'ncr', terrain: 'highway' },
+  'taguig': { lat: 14.5176, lng: 121.0509, region: 'ncr', terrain: 'highway' },
+  'pasig': { lat: 14.5764, lng: 121.0851, region: 'ncr', terrain: 'highway' },
+  'mandaluyong': { lat: 14.5794, lng: 121.0359, region: 'ncr', terrain: 'highway' },
+  
   // Luzon
   'baguio': { lat: 16.4023, lng: 120.5960, region: 'car', terrain: 'mountainous' },
   'sagada': { lat: 17.0833, lng: 120.9000, region: 'car', terrain: 'mountainous' },
@@ -67,20 +75,52 @@ const CITY_COORDINATES = {
   'baler': { lat: 15.7592, lng: 121.5611, region: 'r03', terrain: 'mountainous' },
   
   // Visayas
+  'boracay': { lat: 11.9674, lng: 121.9248, region: 'r06', terrain: 'island' },
+  'caticlan': { lat: 11.9167, lng: 121.9500, region: 'r06', terrain: 'normal' },
+  'kalibo': { lat: 11.7072, lng: 122.3681, region: 'r06', terrain: 'normal' },
+  'iloilo': { lat: 10.7202, lng: 122.5621, region: 'r06', terrain: 'normal' },
+  'bacolod': { lat: 10.6761, lng: 122.9503, region: 'r06', terrain: 'normal' },
   'siquijor': { lat: 9.2000, lng: 123.5500, region: 'r07', terrain: 'island' },
   'ormoc': { lat: 11.0059, lng: 124.6074, region: 'r08', terrain: 'normal' },
-  'bantayan': { lat: 11.1687, lng: 123.7191, region: 'r07', terrain: 'island' },
+  
+  // Cebu nearby attractions (Region VII)
+  'oslob': { lat: 9.4833, lng: 123.3833, region: 'r07', terrain: 'normal' },
+  'moalboal': { lat: 9.9333, lng: 123.3833, region: 'r07', terrain: 'normal' },
+  'badian': { lat: 9.8667, lng: 123.4000, region: 'r07', terrain: 'normal' },
   'malapascua': { lat: 11.3333, lng: 124.1167, region: 'r07', terrain: 'island' },
+  'bantayan': { lat: 11.1687, lng: 123.7191, region: 'r07', terrain: 'island' },
+  
+  // Bohol (Region VII)
+  'anda': { lat: 9.7333, lng: 124.5667, region: 'r07', terrain: 'island' },
+  'buenavista': { lat: 10.0833, lng: 124.1128, region: 'r07', terrain: 'normal' },
+  'carmen': { lat: 9.8500, lng: 124.1833, region: 'r07', terrain: 'normal' },       // Chocolate Hills
+  'cortes': { lat: 9.6333, lng: 123.8833, region: 'r07', terrain: 'normal' },
+  'dauis': { lat: 9.6333, lng: 123.8500, region: 'r07', terrain: 'normal' },        // Near Panglao
+  'loboc': { lat: 9.6333, lng: 124.0333, region: 'r07', terrain: 'island' },
+  'panglao': { lat: 9.5833, lng: 123.7500, region: 'r07', terrain: 'island' },
+  'tagbilaran': { lat: 9.6472, lng: 123.8531, region: 'r07', terrain: 'normal' },
+  'tubigon': { lat: 10.0500, lng: 124.0167, region: 'r07', terrain: 'normal' },
   
   // Palawan
+  'elnido': { lat: 11.1949, lng: 119.4038, region: 'r04b', terrain: 'normal' },
   'el nido': { lat: 11.1949, lng: 119.4038, region: 'r04b', terrain: 'normal' },
+  'coron': { lat: 11.9975, lng: 120.2067, region: 'r04b', terrain: 'island' },
   'coron town': { lat: 11.9975, lng: 120.2067, region: 'r04b', terrain: 'island' },
+  'puertoprincess': { lat: 9.7392, lng: 118.7353, region: 'r04b', terrain: 'normal' },
+  'puerto princesa': { lat: 9.7392, lng: 118.7353, region: 'r04b', terrain: 'normal' },
   'port barton': { lat: 10.4833, lng: 119.2333, region: 'r04b', terrain: 'normal' },
   'san vicente': { lat: 10.5275, lng: 119.2772, region: 'r04b', terrain: 'normal' },
   
   // Mindanao
-  'siargao town': { lat: 9.8667, lng: 126.0500, region: 'r13', terrain: 'island' },
+  'cagayan de oro': { lat: 8.4542, lng: 124.6319, region: 'r10', terrain: 'normal' },
+  'camiguin': { lat: 9.2000, lng: 124.7000, region: 'r10', terrain: 'island' },
   'camiguin town': { lat: 9.2000, lng: 124.7000, region: 'r10', terrain: 'island' },
+  'dapa': { lat: 9.7500, lng: 126.0500, region: 'r13', terrain: 'island' },          // Siargao port
+  'general luna': { lat: 9.7833, lng: 126.1500, region: 'r13', terrain: 'island' },
+  'mambajao': { lat: 9.2500, lng: 124.7167, region: 'r10', terrain: 'island' },
+  'siargao': { lat: 9.8667, lng: 126.0500, region: 'r13', terrain: 'island' },
+  'siargao town': { lat: 9.8667, lng: 126.0500, region: 'r13', terrain: 'island' },
+  'zamboanga': { lat: 6.9214, lng: 122.0790, region: 'r09', terrain: 'normal' },
 };
 
 /**
@@ -202,16 +242,62 @@ function getTerrainType(cityName, airportCode) {
 }
 
 /**
+ * Location aliases for common city name variations
+ * Maps variations like "Tagbilaran City" → "tagbilaran"
+ */
+const LOCATION_ALIASES = {
+  // City variations
+  'tagbilaran city': 'tagbilaran',
+  'cebu city': 'cebu',
+  'davao city': 'davao',
+  'baguio city': 'baguio',
+  'iloilo city': 'iloilo',
+  'bacolod city': 'bacolod',
+  'cagayan de oro city': 'cagayan de oro',
+  'zamboanga city': 'zamboanga',
+  
+  // Palawan destinations
+  'el nido': 'elnido',
+  'puerto princesa': 'puertoprincess',
+  'puerto princesa city': 'puertoprincess',
+  
+  // Bohol destinations
+  'chocolate hills': 'carmen',          // Carmen is home to Chocolate Hills
+  'alona beach': 'panglao',             // Alona Beach is in Panglao
+  'alona': 'panglao',
+  
+  // Siargao destinations
+  'cloud 9': 'general luna',            // Cloud 9 surf spot is in General Luna
+  'gen. luna': 'general luna',
+  'gen luna': 'general luna',
+  
+  // Metro Manila
+  'quezon city': 'quezon',
+  'makati city': 'makati',
+  'taguig city': 'taguig',
+  'pasig city': 'pasig',
+  'mandaluyong city': 'mandaluyong',
+};
+
+/**
  * Get city coordinates (from database or hardcoded list)
- * @param {string} cityName - City name
+ * @param {string} cityName - City name (can be "City, Region, Country" format)
  * @returns {Object|null} - Coordinates object with lat, lng, region
  */
 function getCityCoordinates(cityName) {
   if (!cityName) return null;
   
-  const cityLower = cityName.toLowerCase().trim();
+  // Extract city name from "City, Region, Country" format (take first segment before comma)
+  const cleanCityName = cityName.split(',')[0].trim();
+  const cityLower = cleanCityName.toLowerCase();
   
-  // Check hardcoded city list
+  // Check alias mapping first
+  const aliasedCity = LOCATION_ALIASES[cityLower];
+  if (aliasedCity && CITY_COORDINATES[aliasedCity]) {
+    return CITY_COORDINATES[aliasedCity];
+  }
+  
+  // Check hardcoded city list (direct match)
   if (CITY_COORDINATES[cityLower]) {
     return CITY_COORDINATES[cityLower];
   }
@@ -234,7 +320,7 @@ function getCityCoordinates(cityName) {
     }
   }
   
-  console.warn(`⚠️ No coordinates found for city: ${cityName}`);
+  console.warn(`⚠️ No coordinates found for city: ${cleanCityName} (from: ${cityName})`);
   return null;
 }
 

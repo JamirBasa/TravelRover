@@ -87,12 +87,21 @@ class GooglePlacesSearchProxyView(View):
             
             logger.info(f"🔍 Proxying Places search: {text_query}")
             
-            # Make request to Google Places API
+            # Make request to Google Places API with SSL verification
+            # Using certifi for consistent SSL certificate handling
+            try:
+                import certifi
+                verify_ssl = certifi.where()
+            except ImportError:
+                logger.warning("certifi not found, using default SSL verification")
+                verify_ssl = True
+            
             response = requests.post(
                 self.GOOGLE_PLACES_SEARCH_URL,
                 headers=headers,
                 json=request_body,
-                timeout=10
+                timeout=10,
+                verify=verify_ssl  # Use certifi certificates for SSL verification
             )
             
             if response.status_code == 200:
