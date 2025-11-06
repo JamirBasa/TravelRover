@@ -13,43 +13,7 @@ import {
   generateSmartPlaceholder,
   validateSpecificRequests,
 } from "../../utils/contextualSuggestions";
-
-// ✅ SECURITY: Input sanitization to prevent prompt injection
-const sanitizeInput = (input) => {
-  if (!input || typeof input !== 'string') return '';
-  
-  // Character limit to prevent context overflow (2000 chars max)
-  const trimmed = input.substring(0, 2000);
-  
-  // Remove dangerous prompt injection patterns
-  const dangerousPatterns = [
-    /ignore\s+(all\s+)?(previous|above|prior)\s+(instructions?|prompts?|commands?)/gi,
-    /disregard\s+(all\s+)?(previous|above|prior)\s+(instructions?|prompts?|commands?)/gi,
-    /forget\s+(all\s+)?(previous|above|prior)\s+(instructions?|prompts?|commands?)/gi,
-    /system\s*(prompt|message|instruction)/gi,
-    /you\s+are\s+(now|a)\s+(different|new)/gi,
-    /pretend\s+(you|to\s+be)/gi,
-    /act\s+as\s+(if|a)/gi,
-    /new\s+role/gi,
-    /from\s+now\s+on/gi,
-    /<\s*script/gi, // XSS prevention
-    /javascript:/gi,
-    /on\w+\s*=/gi, // Event handlers
-  ];
-  
-  let sanitized = trimmed;
-  let foundInjection = false;
-  
-  dangerousPatterns.forEach(pattern => {
-    if (pattern.test(sanitized)) {
-      foundInjection = true;
-      sanitized = sanitized.replace(pattern, '[REMOVED]');
-    }
-  });
-  
-  // Return sanitized input and flag
-  return { sanitized, hasInjection: foundInjection };
-};
+import { sanitizeTravelRequests } from "../../utils/inputSecurity";
 
 function SpecificRequests({
   value,
@@ -138,23 +102,26 @@ function SpecificRequests({
     // Debounce validation (1000ms = more aggressive)
     validationTimeoutRef.current = setTimeout(() => {
       if (value) {
-        // ✅ SECURITY: Sanitize input first
-        const { sanitized, hasInjection } = sanitizeInput(value);
+        // ✅ SECURITY: Sanitize input using centralized utility
+        const securityResult = sanitizeTravelRequests(value);
         
-        if (hasInjection) {
-          setSecurityWarning({
+        if (securityResult.hasInjection) {
+          setSecurityWarning(securityResult.warnings[0] || {
             type: 'prompt_injection',
             message: 'Suspicious content detected and removed. Please describe places naturally without system instructions.',
             severity: 'error',
           });
           // Update with sanitized value
-          onChange(sanitized);
+          onChange(securityResult.sanitized);
+        } else if (securityResult.warnings.length > 0) {
+          // Show other warnings (formatting, repetition)
+          setSecurityWarning(securityResult.warnings[0]);
         } else {
           setSecurityWarning(null);
         }
         
         // Validate sanitized input
-        const validationResult = validateSpecificRequests(sanitized, context);
+        const validationResult = validateSpecificRequests(securityResult.sanitized, context);
         setValidation(validationResult);
         lastValidatedValueRef.current = value;
       } else {
