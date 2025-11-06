@@ -35,23 +35,28 @@ export class HotelAgent {
   static async getLocationCoordinates(destination) {
     try {
       // ✅ Use Django backend proxy for geocoding
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+      const apiBaseUrl =
+        import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
       const geocodeUrl = `${apiBaseUrl}/langgraph/geocoding/`;
-      
+
       const response = await fetch(geocodeUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           address: destination,
-          components: 'country:PH'
-        })
+          components: "country:PH",
+        }),
       });
 
       const result = await response.json();
 
-      if (result.success && result.data?.results && result.data.results.length > 0) {
+      if (
+        result.success &&
+        result.data?.results &&
+        result.data.results.length > 0
+      ) {
         const location = result.data.results[0].geometry.location;
         return {
           lat: location.lat,
