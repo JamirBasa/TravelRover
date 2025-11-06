@@ -1,86 +1,64 @@
 /**
  * Budget Compliance Utilities
  * Ensures strict budget enforcement for trip planning with ACTUAL Filipino pricing
+ * 
+ * @updated 2025-11-06 - Migrated to use centralized budget constants
  */
 
-// 2025 Filipino Market Price Ranges (Manila baseline)
+import {
+  ACCOMMODATION_RANGES,
+  MEAL_COSTS,
+  TRANSPORT_COSTS,
+  ACTIVITY_COSTS,
+  CITY_MULTIPLIERS,
+} from '../constants/budgetConstants';
+
+// 🔄 MIGRATED: Now using centralized budget constants from budgetConstants.js
+// Legacy export for backward compatibility
 export const FILIPINO_PRICE_RANGES = {
   ACCOMMODATION: {
-    BUDGET_FRIENDLY: { min: 800, max: 1500, label: "Budget-friendly hostels/guesthouses" },
-    MID_RANGE: { min: 1500, max: 3000, label: "Mid-range hotels (3-star)" },
-    UPSCALE: { min: 3000, max: 5000, label: "Upscale hotels (4-star)" },
-    LUXURY: { min: 5000, max: 15000, label: "Luxury hotels (5-star)" },
+    BUDGET_FRIENDLY: ACCOMMODATION_RANGES.BUDGET,
+    MID_RANGE: ACCOMMODATION_RANGES.MODERATE,
+    UPSCALE: ACCOMMODATION_RANGES.UPSCALE,
+    LUXURY: ACCOMMODATION_RANGES.LUXURY,
   },
   
-  // Regional price multipliers (Manila = 1.0 baseline)
+  // 🔄 MIGRATED: Regional multipliers now from budgetConstants.js (CITY_MULTIPLIERS)
+  // This legacy structure is maintained for backward compatibility
   REGIONAL_MULTIPLIERS: {
-    // Metro Manila & surrounding
-    "Metro Manila": { region: 1.0, cities: {
-      "Manila": 1.0,
-      "Makati": 1.4,     // Business district premium
-      "BGC": 1.5,        // Bonifacio Global City premium
-      "Quezon City": 1.1,
-      "Pasay": 1.0,
-      "Mandaluyong": 1.2,
-    }},
-    
-    // Luzon regions
-    "Cordillera": { region: 0.75, cities: {
-      "Baguio": 0.8,     // Tourist destination (₱2,000 × 0.75 × 0.8 = ₱1,200)
-      "Sagada": 0.6,     // Remote mountain town
-    }},
-    "Calabarzon": { region: 0.85, cities: {
-      "Tagaytay": 0.9,   // Weekend tourist spot
-      "Batangas City": 0.7,
-    }},
-    "Ilocos": { region: 0.65, cities: {
-      "Vigan": 0.8,      // Heritage tourist spot
-      "Laoag": 0.7,
-    }},
-    
-    // Visayas regions
-    "Central Visayas": { region: 0.80, cities: {
-      "Cebu City": 1.1,  // Major city premium (₱2,000 × 0.80 × 1.1 = ₱1,760)
-      "Mactan": 1.0,     // Island resort area
-      "Bohol": 0.7,
-    }},
-    
-    // Mindanao regions
-    "Davao": { region: 0.75, cities: {
-      "Davao City": 0.9,
-    }},
-    
-    // Island destinations
-    "Palawan": { region: 0.70, cities: {
-      "El Nido": 1.2,    // Premium tourist destination (₱2,000 × 0.70 × 1.2 = ₱1,680)
-      "Coron": 1.1,
-      "Puerto Princesa": 0.8,
-    }},
-    "Boracay": { region: 1.0, cities: {
-      "White Beach": 1.3, // Premium beach resort
-    }},
+    "Metro Manila": { region: 1.0, cities: CITY_MULTIPLIERS },
+    "Cordillera": { region: 0.75, cities: CITY_MULTIPLIERS },
+    "Calabarzon": { region: 0.85, cities: CITY_MULTIPLIERS },
+    "Ilocos": { region: 0.65, cities: CITY_MULTIPLIERS },
+    "Central Visayas": { region: 0.80, cities: CITY_MULTIPLIERS },
+    "Davao": { region: 0.75, cities: CITY_MULTIPLIERS },
+    "Palawan": { region: 0.70, cities: CITY_MULTIPLIERS },
+    "Boracay": { region: 1.0, cities: CITY_MULTIPLIERS },
   },
+  
   MEALS: {
-    STREET_FOOD: { min: 50, max: 120, label: "Carinderia/street food" },
-    FAST_FOOD: { min: 150, max: 250, label: "Fast food (Jollibee, McDonald's)" },
-    CASUAL: { min: 250, max: 500, label: "Casual dining" },
-    MID_RANGE: { min: 400, max: 800, label: "Mid-range restaurant" },
-    FINE_DINING: { min: 800, max: 2000, label: "Fine dining" },
+    STREET_FOOD: MEAL_COSTS.STREET_FOOD,
+    FAST_FOOD: MEAL_COSTS.FAST_FOOD,
+    CASUAL: MEAL_COSTS.CASUAL,
+    MID_RANGE: MEAL_COSTS.MID_RANGE,
+    FINE_DINING: MEAL_COSTS.FINE_DINING,
   },
+  
   TRANSPORT: {
-    JEEPNEY: { min: 13, max: 25, label: "Jeepney (city)" },
-    BUS_CITY: { min: 15, max: 25, label: "Bus (city)" },
-    BUS_PROVINCIAL_PER_100KM: { min: 150, max: 300, label: "Provincial bus per 100km" },
-    TRICYCLE: { min: 20, max: 50, label: "Tricycle (short)" },
-    TAXI_BASE: { base: 40, perKm: 13.5, label: "Taxi" },
-    GRAB_AIRPORT: { min: 200, max: 500, label: "Grab/taxi (airport to city)" },
+    JEEPNEY: TRANSPORT_COSTS.JEEPNEY,
+    BUS_CITY: TRANSPORT_COSTS.BUS_CITY,
+    BUS_PROVINCIAL_PER_100KM: TRANSPORT_COSTS.BUS_PROVINCIAL_PER_100KM,
+    TRICYCLE: TRANSPORT_COSTS.TRICYCLE,
+    TAXI_BASE: TRANSPORT_COSTS.TAXI,
+    GRAB_AIRPORT: TRANSPORT_COSTS.GRAB_AIRPORT,
   },
+  
   ATTRACTIONS: {
-    FREE: { min: 0, max: 0, label: "Free entry" },
-    GOVERNMENT: { min: 50, max: 150, label: "Government museums/sites" },
-    THEME_PARK: { min: 800, max: 1200, label: "Theme parks" },
-    ISLAND_TOUR: { min: 800, max: 2500, label: "Island hopping" },
-    DIVING: { min: 2500, max: 4500, label: "Scuba diving" },
+    FREE: ACTIVITY_COSTS.FREE,
+    GOVERNMENT: ACTIVITY_COSTS.GOVERNMENT,
+    THEME_PARK: ACTIVITY_COSTS.THEME_PARK,
+    ISLAND_TOUR: ACTIVITY_COSTS.ISLAND_TOUR,
+    DIVING: ACTIVITY_COSTS.DIVING,
   },
 };
 

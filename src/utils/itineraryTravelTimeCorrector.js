@@ -4,7 +4,8 @@
  * Uses coordinate-based validation and Philippines-specific travel patterns
  */
 
-import { travelTimeValidator } from '../services/TravelTimeValidator';
+import { travelTimeValidator } from '../services/TravelTimeValidator.js';
+import { isLogisticsItem } from './activityClassifier.js';
 
 /**
  * Correct travel times in an itinerary based on actual coordinates
@@ -48,6 +49,15 @@ export const correctItineraryTravelTimes = (tripData, options = {}) => {
 
       const from = activities[i - 1];
       const to = activity;
+
+      // Skip logistics items (should have 0 or minimal travel time)
+      if (isLogisticsItem(to)) {
+        if (verbose) {
+          console.log(`⏭️  Skipping logistics item: ${to.placeName}`);
+        }
+        report.skipped++;
+        continue;
+      }
 
       // Skip if no travel time specified
       if (!to.timeTravel || to.timeTravel === 'N/A') {

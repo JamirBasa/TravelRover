@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { GetPlaceDetails, PHOTO_REF_URL } from "@/config/GlobalApi";
+import { GetPlaceDetails, fetchPlacePhoto } from "@/config/GlobalApi";
 
 function DestinationsSection() {
   const [destinations, setDestinations] = useState([
@@ -38,11 +38,16 @@ function DestinationsSection() {
             if (response.data.places && response.data.places.length > 0) {
               const place = response.data.places[0];
               if (place.photos && place.photos.length > 0) {
-                const photoUrl = PHOTO_REF_URL.replace(
-                  "{NAME}",
-                  place.photos[0].name
-                );
-                return { ...dest, image: photoUrl };
+                try {
+                  // ✅ Fetch photo as blob URL
+                  const blobUrl = await fetchPlacePhoto(place.photos[0].name);
+                  return { ...dest, image: blobUrl };
+                } catch (photoError) {
+                  console.error(
+                    `Error fetching blob for ${dest.name}:`,
+                    photoError
+                  );
+                }
               }
             }
           } catch (error) {

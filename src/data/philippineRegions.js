@@ -49,6 +49,13 @@ export const PHILIPPINE_REGIONS = {
     keywords: ["tagaytay", "taal lake", "people's park", "picnic grove"],
     famousAttractions: ["Taal Lake View", "People's Park in the Sky", "Picnic Grove", "Sky Ranch", "Twin Lakes"]
   },
+  "Legazpi": {
+    region: "Region V",
+    province: "Albay",
+    nearbyAreas: ["Daraga", "Camalig", "Guinobatan", "Ligao", "Tabaco"],
+    keywords: ["legazpi", "albay", "mayon", "mayon volcano", "daraga", "cagsawa"],
+    famousAttractions: ["Mayon Volcano", "Cagsawa Ruins", "Lignon Hill", "Daraga Church", "Embarcadero de Legazpi", "Kawa-Kawa Hill"]
+  },
   
   // Visayas Major Cities
   "Cebu": {
@@ -173,8 +180,59 @@ export function validatePlaceLocation(placeName, destination) {
   const placeNameLower = placeName.toLowerCase();
   const destinationLower = destination.toLowerCase();
   
-  // High confidence checks
-  if (placeNameLower.includes(destinationLower)) {
+  // Extract main destination city from "City, Province" format
+  const mainDestCity = destinationLower.split(',')[0].trim();
+  
+  // FIRST: Check if this attraction belongs to a DIFFERENT region (cross-region validation)
+  for (const [otherDest, otherData] of Object.entries(PHILIPPINE_REGIONS)) {
+    if (otherDest.toLowerCase() === destinationLower || otherDest.toLowerCase() === mainDestCity) continue; // Skip current destination
+    
+    // Check if place is a famous attraction in another region
+    const isAttractionInOtherRegion = otherData.famousAttractions.some(attraction =>
+      placeNameLower.includes(attraction.toLowerCase()) || 
+      attraction.toLowerCase().includes(placeNameLower)
+    );
+    
+    if (isAttractionInOtherRegion) {
+      // Check if regions are different (cross-region violation)
+      if (regionData.region !== otherData.region) {
+        return { 
+          valid: false, 
+          confidence: "high", 
+          reason: `This attraction is in ${otherDest} (${otherData.region}), not ${destination} (${regionData.region})`
+        };
+      }
+    }
+    
+    // Check if place name contains other destination name
+    const isHotelName = placeNameLower.includes('hotel') || placeNameLower.includes('resort') || 
+                       placeNameLower.includes('inn') || placeNameLower.includes('lodge');
+    
+    if (placeNameLower.includes(otherDest.toLowerCase())) {
+      // For hotels: Only allow if the other city name matches the current destination
+      // e.g., "Cebu Grand Hotel" is OK in Cebu, but "Manila Grand Hotel" is NOT OK in Boracay
+      if (isHotelName) {
+        // Check if regions are different
+        if (regionData.region !== otherData.region) {
+          return { 
+            valid: false, 
+            confidence: "high", 
+            reason: `Hotel appears to be in ${otherDest} (${otherData.region}), not ${destination} (${regionData.region})` 
+          };
+        }
+      } else {
+        // Non-hotel attractions shouldn't have other city names
+        return { 
+          valid: false, 
+          confidence: "high", 
+          reason: `Place name contains ${otherDest}, which is in ${otherData.region}` 
+        };
+      }
+    }
+  }
+  
+  // High confidence checks for VALID places
+  if (placeNameLower.includes(destinationLower) || placeNameLower.includes(mainDestCity)) {
     return { valid: true, confidence: "high", reason: "Place name includes destination" };
   }
   
@@ -187,7 +245,7 @@ export function validatePlaceLocation(placeName, destination) {
     return { valid: true, confidence: "high", reason: "Place name includes region-specific keyword" };
   }
   
-  // Check if it's a famous attraction
+  // Check if it's a famous attraction in THIS region
   const isFamousAttraction = regionData.famousAttractions.some(attraction =>
     placeNameLower.includes(attraction.toLowerCase()) || 
     attraction.toLowerCase().includes(placeNameLower)
@@ -197,30 +255,13 @@ export function validatePlaceLocation(placeName, destination) {
     return { valid: true, confidence: "high", reason: "Recognized famous attraction" };
   }
   
-  // Check nearby areas
+  // Check nearby areas (same region)
   const isNearbyArea = regionData.nearbyAreas.some(area =>
     placeNameLower.includes(area.toLowerCase())
   );
   
   if (isNearbyArea) {
     return { valid: true, confidence: "medium", reason: "Located in nearby area" };
-  }
-  
-  // Check for conflicting location identifiers (other major cities)
-  const otherDestinations = Object.keys(PHILIPPINE_REGIONS).filter(d => 
-    d.toLowerCase() !== destinationLower
-  );
-  
-  const hasConflictingLocation = otherDestinations.some(otherDest =>
-    placeNameLower.includes(otherDest.toLowerCase())
-  );
-  
-  if (hasConflictingLocation) {
-    return { 
-      valid: false, 
-      confidence: "high", 
-      reason: "Place name contains different Philippine destination" 
-    };
   }
   
   // No strong indicators either way

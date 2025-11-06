@@ -29,7 +29,7 @@ function ViewTrip() {
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // ✅ NEW: Ref to control TabbedTripView from parent
   const tabbedViewRef = useRef(null);
 
@@ -112,14 +112,18 @@ function ViewTrip() {
     const tripUrl = window.location.href;
     const shareData = {
       title: `${trip?.userSelection?.location || "My Trip"} Itinerary`,
-      text: `Check out my ${trip?.userSelection?.duration || "amazing"} day trip to ${
-        trip?.userSelection?.location || "this destination"
-      }!`,
+      text: `Check out my ${
+        trip?.userSelection?.duration || "amazing"
+      } day trip to ${trip?.userSelection?.location || "this destination"}!`,
       url: tripUrl,
     };
 
     // Try Web Share API first (mobile/modern browsers)
-    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+    if (
+      navigator.share &&
+      navigator.canShare &&
+      navigator.canShare(shareData)
+    ) {
       try {
         await navigator.share(shareData);
         toast.success("Shared successfully!");
@@ -187,7 +191,7 @@ function ViewTrip() {
   const handleEdit = () => {
     console.log("🔧 handleEdit called");
     console.log("📌 tabbedViewRef.current:", tabbedViewRef.current);
-    
+
     // Check if ref is available
     if (!tabbedViewRef.current) {
       console.error("❌ tabbedViewRef.current is null!");
@@ -263,10 +267,10 @@ function ViewTrip() {
       >
         {/* Enhanced Tabbed Content Interface */}
         <TripViewErrorBoundary onRetry={refreshTripData}>
-          <TabbedTripView 
+          <TabbedTripView
             ref={tabbedViewRef}
-            trip={trip} 
-            onTripUpdate={refreshTripData} 
+            trip={trip}
+            onTripUpdate={refreshTripData}
           />
         </TripViewErrorBoundary>
 

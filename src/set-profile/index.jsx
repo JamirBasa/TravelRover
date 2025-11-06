@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../config/firebaseConfig";
 import { useNavigate } from "react-router-dom";
+import { usePageTitle } from "../hooks/usePageTitle";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 import {
@@ -18,7 +19,7 @@ import {
   FaPlane,
   FaUser,
 } from "react-icons/fa";
-import { usePageTitle } from "../hooks/usePageTitle";
+import { ProfileLoading } from "../components/common/LoadingStates";
 
 // Import step components
 import PersonalInfoStep from "./components/PersonalInfoStep";
@@ -326,15 +327,7 @@ const UserProfile = () => {
 
   // Show loading state
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 mb-2">Checking your profile...</p>
-          <p className="text-sm text-gray-500">Please wait a moment</p>
-        </div>
-      </div>
-    );
+    return <ProfileLoading />;
   }
 
   return (

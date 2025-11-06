@@ -27,12 +27,8 @@ import {
   getValidationSuggestion,
 } from "../utils/itineraryValidator";
 import { autoFixItinerary } from "../utils/itineraryAutoFix";
+import { validateHotelData } from "../utils/hotelValidation";
 import {
-  validateHotelData,
-  getHotelSearchParams, // For future hotel API integration
-} from "../utils/hotelValidation";
-import {
-  parseTravelersToNumber,
   formatTravelersDisplay,
   validateTravelers,
   getTravelersCount,
@@ -78,6 +74,12 @@ import {
   getDateExplanation,
   validateTravelDates,
 } from "../utils/travelDateManager";
+import {
+  saveDraft,
+  loadDraft,
+  clearDraft,
+  formatDraftAge,
+} from "../utils/formPersistence";
 
 // Use centralized step configuration
 const STEPS = STEP_CONFIGS.CREATE_TRIP;
@@ -118,6 +120,34 @@ function CreateTrip() {
   const location = useLocation();
   const progress = calculateProgress(currentStep, STEPS.length);
 
+  // ✅ NEW: Load draft on mount
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft && !location.state?.searchedLocation) {
+      // Only restore draft if user didn't come from home with a search
+      toast.info("Draft Restored", {
+        description: `Continuing from ${formatDraftAge()}`,
+        duration: 5000,
+        action: {
+          label: "Start Fresh",
+          onClick: () => {
+            clearDraft();
+            window.location.reload();
+          },
+        },
+      });
+
+      // Restore form state
+      if (draft.formData) setFormData(draft.formData);
+      if (draft.flightData) setFlightData(draft.flightData);
+      if (draft.hotelData) setHotelData(draft.hotelData);
+      if (draft.activityPreference)
+        setActivityPreference(draft.activityPreference);
+      if (draft.customBudget) setCustomBudget(draft.customBudget);
+      if (draft.currentStep) setCurrentStep(draft.currentStep);
+    }
+  }, [location.state]);
+
   // Check user profile on component mount
   useEffect(() => {
     checkUserProfile();
@@ -136,6 +166,31 @@ function CreateTrip() {
       activityPreference,
     }));
   }, [activityPreference]);
+
+  // ✅ NEW: Auto-save draft every 30 seconds
+  useEffect(() => {
+    if (currentStep <= 1) return; // Don't save empty form
+
+    const autoSaveTimer = setInterval(() => {
+      saveDraft({
+        formData,
+        flightData,
+        hotelData,
+        activityPreference,
+        customBudget,
+        currentStep,
+      });
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(autoSaveTimer);
+  }, [
+    formData,
+    flightData,
+    hotelData,
+    activityPreference,
+    customBudget,
+    currentStep,
+  ]);
 
   // Handle searched location from home page
   useEffect(() => {
@@ -271,10 +326,8 @@ function CreateTrip() {
       // Recalculate minimum budget with new services
       if (formData.location && formData.duration) {
         try {
-          const travelerCount =
-            typeof formData.travelers === "number"
-              ? formData.travelers
-              : parseInt(formData.travelers, 10) || 1;
+          // ✅ travelers is now guaranteed to be integer from getFormDefaults()
+          const travelerCount = formData.travelers || 1;
 
           const budgetEstimates = getBudgetRecommendations({
             destination: formData.location,
@@ -372,13 +425,13 @@ function CreateTrip() {
 
       if (!profile) {
         console.log("📝 No user profile found, redirecting to profile setup");
-        navigate("/user-profile");
+        navigate("/set-profile");
         return;
       }
 
       if (profile.needsCompletion) {
         console.log("🔄 User profile incomplete, redirecting to complete it");
-        navigate("/user-profile");
+        navigate("/set-profile");
         return;
       }
 
@@ -680,10 +733,8 @@ function CreateTrip() {
             try {
               console.log("🔍 Running smart budget validation...");
 
-              const travelerCount =
-                typeof formData.travelers === "number"
-                  ? formData.travelers
-                  : parseInt(formData.travelers, 10) || 1;
+              // ✅ travelers is now guaranteed to be integer from getFormDefaults()
+              const travelerCount = formData.travelers || 1;
 
               const budgetEstimates = getBudgetRecommendations({
                 destination: formData.location,
@@ -834,7 +885,7 @@ function CreateTrip() {
         description:
           "We need to know your preferences to create the perfect trip for you.",
       });
-      navigate("/user-profile");
+      navigate("/set-profile");
       return;
     }
 
@@ -1015,10 +1066,9 @@ function CreateTrip() {
 
       // ✅ NEW: Validate budget is reasonable (₱1,000/day/person minimum)
       const minReasonableBudget = 1000; // Absolute minimum per day per person
+      // ✅ travelers is now guaranteed to be integer
       const calculatedMinimum =
-        minReasonableBudget *
-        formData.duration *
-        (parseInt(formData.travelers) || 1);
+        minReasonableBudget * formData.duration * (formData.travelers || 1);
 
       if (budgetAmount < calculatedMinimum) {
         toast.error("Budget Too Low", {
@@ -1996,6 +2046,10 @@ function CreateTrip() {
 
       await setDoc(doc(db, "AITrips", docId), sanitizedTripDocument);
 
+      // ✅ NEW: Clear draft after successful trip creation
+      clearDraft();
+      console.log("🗑️ Draft cleared after successful trip creation");
+
       toast.success("🎉 Your Amazing Trip is Ready!", {
         description: `Your personalized itinerary for ${formData.location} has been created and saved. Get ready for an incredible adventure!`,
         duration: 6000,
@@ -2123,6 +2177,7 @@ function CreateTrip() {
             flightData={flightData}
             hotelData={hotelData}
             userProfile={userProfile}
+            activityPreference={activityPreference}
           />
         );
 
@@ -2158,7 +2213,7 @@ function CreateTrip() {
     return (
       <ErrorState
         error={MESSAGES.ERROR.PROFILE_REQUIRED}
-        onRetry={() => navigate("/user-profile")}
+        onRetry={() => navigate("/set-profile")}
         onCreateNew={() => navigate("/")}
       />
     );

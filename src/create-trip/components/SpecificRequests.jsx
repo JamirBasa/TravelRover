@@ -1,17 +1,55 @@
 // src/create-trip/components/SpecificRequests.jsx
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   FaListAlt,
   FaLightbulb,
   FaExclamationTriangle,
   FaInfoCircle,
   FaCheckCircle,
+  FaShieldAlt,
 } from "react-icons/fa";
 import {
   generateContextSuggestions,
   generateSmartPlaceholder,
   validateSpecificRequests,
 } from "../../utils/contextualSuggestions";
+
+// ✅ SECURITY: Input sanitization to prevent prompt injection
+const sanitizeInput = (input) => {
+  if (!input || typeof input !== 'string') return '';
+  
+  // Character limit to prevent context overflow (2000 chars max)
+  const trimmed = input.substring(0, 2000);
+  
+  // Remove dangerous prompt injection patterns
+  const dangerousPatterns = [
+    /ignore\s+(all\s+)?(previous|above|prior)\s+(instructions?|prompts?|commands?)/gi,
+    /disregard\s+(all\s+)?(previous|above|prior)\s+(instructions?|prompts?|commands?)/gi,
+    /forget\s+(all\s+)?(previous|above|prior)\s+(instructions?|prompts?|commands?)/gi,
+    /system\s*(prompt|message|instruction)/gi,
+    /you\s+are\s+(now|a)\s+(different|new)/gi,
+    /pretend\s+(you|to\s+be)/gi,
+    /act\s+as\s+(if|a)/gi,
+    /new\s+role/gi,
+    /from\s+now\s+on/gi,
+    /<\s*script/gi, // XSS prevention
+    /javascript:/gi,
+    /on\w+\s*=/gi, // Event handlers
+  ];
+  
+  let sanitized = trimmed;
+  let foundInjection = false;
+  
+  dangerousPatterns.forEach(pattern => {
+    if (pattern.test(sanitized)) {
+      foundInjection = true;
+      sanitized = sanitized.replace(pattern, '[REMOVED]');
+    }
+  });
+  
+  // Return sanitized input and flag
+  return { sanitized, hasInjection: foundInjection };
+};
 
 function SpecificRequests({
   value,
@@ -26,8 +64,13 @@ function SpecificRequests({
 }) {
   const [validation, setValidation] = useState({ valid: true, warnings: [] });
   const [showAllSuggestions, setShowAllSuggestions] = useState(false);
+  const [securityWarning, setSecurityWarning] = useState(null);
+  
+  // ✅ PERFORMANCE: Use refs to prevent unnecessary re-renders
+  const validationTimeoutRef = useRef(null);
+  const lastValidatedValueRef = useRef('');
 
-  // Build context object
+  // ✅ PERFORMANCE: Only rebuild context when specific values change (not entire objects)
   const context = useMemo(
     () => ({
       location: formData.location,
@@ -42,44 +85,93 @@ function SpecificRequests({
       hotelData,
     }),
     [
-      formData,
-      userProfile,
-      flightData,
-      hotelData,
+      formData.location,
+      formData.duration,
+      formData.budget,
+      formData.travelers,
+      formData.categoryName,
+      formData.startDate,
       customBudget,
       startDate,
       endDate,
+      userProfile,
+      flightData,
+      hotelData,
     ]
   );
 
-  // Generate smart suggestions based on context
+  // ✅ PERFORMANCE: Generate suggestions only when key context changes
   const suggestions = useMemo(
-    () => generateContextSuggestions(context),
-    [context]
+    () => {
+      // Skip if no location (primary driver)
+      if (!context.location) return {
+        examples: [],
+        categorySpecific: [],
+        destinationSpecific: [],
+        budgetAppropriate: [],
+        profileBased: [],
+        contextualTips: [],
+      };
+      return generateContextSuggestions(context);
+    },
+    [context.location, context.categoryName, context.budget, context.travelers]
   );
 
-  // Generate context-aware placeholder
+  // ✅ PERFORMANCE: Memoize placeholder (changes less frequently)
   const smartPlaceholder = useMemo(
     () => generateSmartPlaceholder(context),
-    [context]
+    [context.location, context.categoryName, context.budget, context.travelers]
   );
 
-  // Validate requests against context with debouncing for performance
+  // ✅ SECURITY + PERFORMANCE: Validate with longer debounce + sanitization
   useEffect(() => {
-    // Debounce validation to avoid running on every keystroke
-    const timeoutId = setTimeout(() => {
+    // Clear previous timeout
+    if (validationTimeoutRef.current) {
+      clearTimeout(validationTimeoutRef.current);
+    }
+    
+    // Skip if value hasn't changed
+    if (value === lastValidatedValueRef.current) {
+      return;
+    }
+    
+    // Debounce validation (1000ms = more aggressive)
+    validationTimeoutRef.current = setTimeout(() => {
       if (value) {
-        const validationResult = validateSpecificRequests(value, context);
+        // ✅ SECURITY: Sanitize input first
+        const { sanitized, hasInjection } = sanitizeInput(value);
+        
+        if (hasInjection) {
+          setSecurityWarning({
+            type: 'prompt_injection',
+            message: 'Suspicious content detected and removed. Please describe places naturally without system instructions.',
+            severity: 'error',
+          });
+          // Update with sanitized value
+          onChange(sanitized);
+        } else {
+          setSecurityWarning(null);
+        }
+        
+        // Validate sanitized input
+        const validationResult = validateSpecificRequests(sanitized, context);
         setValidation(validationResult);
+        lastValidatedValueRef.current = value;
       } else {
         setValidation({ valid: true, warnings: [] });
+        setSecurityWarning(null);
+        lastValidatedValueRef.current = '';
       }
-    }, 500); // Wait 500ms after user stops typing
+    }, 1000); // Increased from 500ms to 1000ms
 
-    return () => clearTimeout(timeoutId);
-  }, [value, context]);
+    return () => {
+      if (validationTimeoutRef.current) {
+        clearTimeout(validationTimeoutRef.current);
+      }
+    };
+  }, [value, context, onChange]);
 
-  // Combine all suggestions for display
+  // ✅ PERFORMANCE: Combine suggestions only when they change
   const allSuggestions = useMemo(() => {
     const combined = [
       ...suggestions.destinationSpecific,
@@ -101,15 +193,47 @@ function SpecificRequests({
         ];
   }, [suggestions]);
 
-  // Quick-add suggestion handler
-  const handleAddSuggestion = (suggestion) => {
+  // ✅ PERFORMANCE: Memoize handler to prevent re-renders
+  const handleAddSuggestion = useCallback((suggestion) => {
     const cleanSuggestion = suggestion.replace("• ", "");
     const currentValue = value || "";
+    
+    // ✅ SECURITY: Check combined length before adding
     const newValue = currentValue
       ? `${currentValue}\n${cleanSuggestion}`
       : cleanSuggestion;
+    
+    if (newValue.length > 2000) {
+      setSecurityWarning({
+        type: 'length_exceeded',
+        message: 'Cannot add more - you\'ve reached the 2000 character limit.',
+        severity: 'warning',
+      });
+      return;
+    }
+    
     onChange(newValue);
-  };
+    setSecurityWarning(null);
+  }, [value, onChange]);
+
+  // ✅ PERFORMANCE: Memoize input change handler with sanitization
+  const handleInputChange = useCallback((e) => {
+    const inputValue = e.target.value;
+    
+    // Allow typing but enforce limit at 2000 chars
+    if (inputValue.length <= 2000) {
+      onChange(inputValue);
+      if (securityWarning?.type === 'length_exceeded') {
+        setSecurityWarning(null);
+      }
+    } else {
+      setSecurityWarning({
+        type: 'length_exceeded',
+        message: 'Maximum 2000 characters allowed.',
+        severity: 'warning',
+      });
+    }
+  }, [onChange, securityWarning]);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -138,6 +262,32 @@ function SpecificRequests({
           </div>
         )}
 
+        {/* ✅ SECURITY: Security Warning Display */}
+        {securityWarning && (
+          <div className={`p-4 rounded-xl border-2 flex items-start gap-3 ${
+            securityWarning.severity === 'error'
+              ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
+              : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800'
+          }`}>
+            <div className={`flex-shrink-0 ${
+              securityWarning.severity === 'error'
+                ? 'text-red-600 dark:text-red-500'
+                : 'text-amber-600 dark:text-amber-500'
+            }`}>
+              <FaShieldAlt className="text-lg" />
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${
+                securityWarning.severity === 'error'
+                  ? 'text-red-800 dark:text-red-300'
+                  : 'text-amber-800 dark:text-amber-300'
+              }`}>
+                {securityWarning.message}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Textarea Input */}
         <div>
           <label className="block text-base font-medium text-gray-800 dark:text-gray-200 mb-2">
@@ -149,19 +299,34 @@ function SpecificRequests({
             rows="6"
             placeholder={smartPlaceholder}
             value={value || ""}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={handleInputChange}
+            maxLength={2000}
           />
 
-          {/* Character count - Only show if getting long */}
+          {/* Character count - Show progress bar when > 1500 */}
           {value && value.length > 300 && (
-            <div className="flex items-center justify-between mt-2">
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {value.length} characters
-              </p>
-              {value.length > 500 && (
-                <p className="text-xs text-amber-600 dark:text-amber-500">
-                  💡 Keep it concise for best results
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {value.length} / 2000 characters
                 </p>
+                {value.length > 1500 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-500">
+                    💡 {2000 - value.length} characters remaining
+                  </p>
+                )}
+              </div>
+              {value.length > 1500 && (
+                <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-1.5">
+                  <div 
+                    className={`h-1.5 rounded-full transition-all ${
+                      value.length > 1900 ? 'bg-red-500' :
+                      value.length > 1700 ? 'bg-amber-500' :
+                      'bg-emerald-500'
+                    }`}
+                    style={{ width: `${(value.length / 2000) * 100}%` }}
+                  />
+                </div>
               )}
             </div>
           )}

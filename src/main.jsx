@@ -5,7 +5,7 @@ import App from "./App.jsx";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Layout from "./components/Layout.jsx";
 import CreateTrip from "./create-trip/index.jsx";
-import UserProfile from "./user-profile/index.jsx";
+import SetProfile from "./set-profile/index.jsx";
 import Settings from "./settings/index.jsx";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import ViewTrip from "./view-trip/[tripId]/index.jsx";
@@ -30,8 +30,8 @@ const router = createBrowserRouter([
         element: <Home />, // Keep /home route for compatibility
       },
       {
-        path: "user-profile",
-        element: <UserProfile />,
+        path: "set-profile",
+        element: <SetProfile />,
       },
       {
         path: "settings",

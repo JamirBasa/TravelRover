@@ -210,7 +210,7 @@ const TravelStyleStep = ({
             <div className="space-y-2">
               {[
                 { value: "solo", label: "Solo traveler", icon: "🧳" },
-                { value: "couple", label: "With partner", icon: "💑" },
+                { value: "duo", label: "With partner", icon: "💑" },
                 { value: "family", label: "Family trips", icon: "👨‍👩‍👧‍👦" },
                 { value: "group", label: "With friends", icon: "👥" },
                 { value: "business", label: "Business", icon: "💼" },

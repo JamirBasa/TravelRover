@@ -114,25 +114,36 @@ class GooglePlacesService {
 
     try {
       const searchQuery = location ? `${query} in ${location}` : query;
-      const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${this.apiKey}`;
       
-      const response = await fetch(url);
+      // ✅ Use backend proxy instead of direct API call
+      const backendUrl = 'http://localhost:8000/api/langgraph/places-search/';
+      
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          textQuery: searchQuery,
+        }),
+      });
+      
       const data = await response.json();
 
-      if (data.status === 'OK' && data.results?.length > 0) {
-        const results = data.results.map(place => ({
-          place_id: place.place_id,
-          name: place.name,
+      if (data.success && data.data?.places?.length > 0) {
+        const results = data.data.places.map(place => ({
+          place_id: place.id,
+          name: place.displayName?.text || place.displayName,
           rating: place.rating,
-          formatted_address: place.formatted_address,
+          formatted_address: place.formattedAddress,
           coordinates: {
-            lat: place.geometry.location.lat,
-            lng: place.geometry.location.lng
+            lat: place.location?.latitude,
+            lng: place.location?.longitude
           },
-          price_level: place.price_level,
+          price_level: place.priceLevel,
           types: place.types,
           photos: place.photos,
-          source: 'google_places_search'
+          source: 'google_places_backend_proxy'
         }));
 
         // Cache the results

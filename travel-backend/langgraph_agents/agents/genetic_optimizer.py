@@ -104,8 +104,12 @@ class GeneticItineraryOptimizer:
         budget = self._parse_budget(trip_params.get('budget', 'moderate'))
         preferences = trip_params.get('user_profile', {})
         
-        # Initialize population
-        population = self._initialize_population(activities, num_days)
+        # ✅ NEW: Extract activity preference (1-4 activities per day)
+        activity_preference = int(trip_params.get('activityPreference', 2))
+        self.logger.info(f"🎯 User activity preference: {activity_preference} activities/day")
+        
+        # Initialize population with activity preference
+        population = self._initialize_population(activities, num_days, activity_preference)
         
         # Evolution loop
         best_fitness_history = []
@@ -114,7 +118,7 @@ class GeneticItineraryOptimizer:
             # Evaluate fitness for all chromosomes
             for chromosome in population:
                 chromosome.fitness = self._calculate_fitness(
-                    chromosome, num_days, budget, preferences
+                    chromosome, num_days, budget, preferences, activity_preference
                 )
             
             # Sort by fitness (descending)
@@ -133,7 +137,7 @@ class GeneticItineraryOptimizer:
                 break
             
             # Create next generation
-            population = self._create_next_generation(population, num_days)
+            population = self._create_next_generation(population, num_days, activity_preference)
         
         # Get best solution
         best_chromosome = population[0]
@@ -154,40 +158,115 @@ class GeneticItineraryOptimizer:
     def _initialize_population(
         self,
         activities: List[Dict[str, Any]],
-        num_days: int
+        num_days: int,
+        activity_preference: int = 2
     ) -> List[ItineraryChromosome]:
-        """Create initial population of random solutions"""
+        """
+        Create initial population of random solutions
+        
+        ✅ RESPECTS USER'S ACTIVITY PACE PREFERENCE
+        - Day 1 (Arrival): Max 2 activities
+        - Middle Days: Exactly activity_preference activities
+        - Last Day (Departure): Max 1 activity
+        """
         
         population = []
         
         for _ in range(self.population_size):
-            # Calculate activity range (70-100% of available, capped at max per day)
-            max_activities = min(len(activities), num_days * 4)  # Max 4 activities per day
-            min_activities = min(int(len(activities) * 0.7), max_activities)
+            # Calculate target activities based on user preference
+            # Day 1: max 2, Last day: max 1, Middle days: activity_preference
+            middle_days = max(0, num_days - 2)
             
-            # Ensure min is not greater than max
-            if min_activities > max_activities:
-                min_activities = max_activities
+            target_activities = (
+                2 +                                    # Day 1 max
+                (middle_days * activity_preference) +  # Middle days
+                1                                      # Last day max
+            )
+            
+            # Cap at available activities
+            target_activities = min(target_activities, len(activities))
+            
+            # Add some variance (80-100% of target)
+            min_activities = int(target_activities * 0.8)
+            max_activities = target_activities
             
             num_activities = random.randint(min_activities, max_activities)
+            num_activities = max(num_activities, num_days)  # At least 1 per day
             
-            selected_activities = random.sample(activities, num_activities)
+            selected_activities = random.sample(activities, min(num_activities, len(activities)))
             
-            # Randomly assign to days
-            day_assignments = [random.randint(1, num_days) for _ in selected_activities]
+            # Smart day assignment respecting activity preference
+            day_assignments = self._smart_day_assignment(
+                selected_activities, 
+                num_days, 
+                activity_preference
+            )
             
             chromosome = ItineraryChromosome(selected_activities, day_assignments)
             population.append(chromosome)
         
-        self.logger.info(f"✅ Initialized population of {len(population)} chromosomes")
+        self.logger.info(f"✅ Initialized population of {len(population)} chromosomes with {activity_preference} activities/day target")
         return population
+    
+    def _smart_day_assignment(
+        self,
+        activities: List[Dict[str, Any]],
+        num_days: int,
+        activity_preference: int
+    ) -> List[int]:
+        """
+        Intelligently assign activities to days based on user preference
+        
+        Rules:
+        - Day 1 (Arrival): 1-2 activities max
+        - Middle Days: Exactly activity_preference activities (with small variance)
+        - Last Day (Departure): 0-1 activities max
+        """
+        
+        assignments = []
+        activities_per_day = {day: [] for day in range(1, num_days + 1)}
+        
+        # Shuffle activities for randomness
+        shuffled_activities = activities.copy()
+        random.shuffle(shuffled_activities)
+        
+        # Determine capacity for each day
+        day_capacity = {}
+        for day in range(1, num_days + 1):
+            if day == 1:  # Arrival day
+                day_capacity[day] = random.randint(1, 2)
+            elif day == num_days:  # Departure day
+                day_capacity[day] = random.randint(0, 1)
+            else:  # Middle days
+                # Allow small variance around preference (±1)
+                variance = random.randint(-1, 1) if activity_preference > 1 else 0
+                day_capacity[day] = max(1, activity_preference + variance)
+        
+        # Assign activities to days
+        for idx, activity in enumerate(shuffled_activities):
+            # Find day with remaining capacity
+            available_days = [d for d in range(1, num_days + 1) if len(activities_per_day[d]) < day_capacity[d]]
+            
+            if available_days:
+                # Prefer days earlier in trip (fill sequentially)
+                day = available_days[0]
+                activities_per_day[day].append(activity)
+                assignments.append(day)
+            else:
+                # All days at capacity, assign to random middle day
+                middle_days = list(range(2, max(2, num_days)))
+                day = random.choice(middle_days) if middle_days else 1
+                assignments.append(day)
+        
+        return assignments
     
     def _calculate_fitness(
         self,
         chromosome: ItineraryChromosome,
         num_days: int,
         budget: float,
-        preferences: Dict[str, Any]
+        preferences: Dict[str, Any],
+        activity_preference: int = 2
     ) -> float:
         """
         Calculate fitness score for a chromosome
@@ -196,7 +275,7 @@ class GeneticItineraryOptimizer:
         
         # Component scores (0-100 each)
         distance_score = self._evaluate_distance(chromosome, num_days)
-        time_score = self._evaluate_time_distribution(chromosome, num_days)
+        time_score = self._evaluate_time_distribution(chromosome, num_days, activity_preference)
         cost_score = self._evaluate_cost(chromosome, budget)
         preference_score = self._evaluate_preferences(chromosome, preferences)
         diversity_score = self._evaluate_diversity(chromosome)
@@ -248,11 +327,18 @@ class GeneticItineraryOptimizer:
     def _evaluate_time_distribution(
         self,
         chromosome: ItineraryChromosome,
-        num_days: int
+        num_days: int,
+        activity_preference: int = 2
     ) -> float:
         """
         Evaluate how well activities are distributed across days
-        Balanced distribution = higher score
+        ✅ RESPECTS USER'S ACTIVITY PACE PREFERENCE
+        
+        Scoring:
+        - Day 1: Penalty if > 2 activities
+        - Middle days: Reward if close to activity_preference
+        - Last day: Penalty if > 1 activity
+        - Balanced distribution = higher score
         """
         
         daily_activities = self._group_by_day(chromosome)
@@ -263,26 +349,46 @@ class GeneticItineraryOptimizer:
         if not activity_counts or sum(activity_counts) == 0:
             return 0.0
         
-        # Calculate standard deviation
-        mean = sum(activity_counts) / len(activity_counts)
-        variance = sum((x - mean) ** 2 for x in activity_counts) / len(activity_counts)
-        std_dev = variance ** 0.5
+        score = 100.0
         
-        # Lower std_dev = more balanced = higher score
-        # Penalize days with 0 or too many (>5) activities
-        penalty = 0
-        for count in activity_counts:
-            if count == 0:
-                penalty += 20
-            elif count > 5:
-                penalty += 10 * (count - 5)
+        # Check Day 1 (Arrival) - should have max 2 activities
+        if len(activity_counts) >= 1:
+            day1_count = activity_counts[0]
+            if day1_count > 2:
+                penalty = (day1_count - 2) * 15  # 15 points per extra activity
+                score -= penalty
+                self.logger.debug(f"Day 1 penalty: {day1_count} activities (max 2), -{penalty} points")
         
-        score = max(100 - (std_dev * 20) - penalty, 0)
-        return score
+        # Check Last Day (Departure) - should have max 1 activity
+        if len(activity_counts) >= 2:
+            last_day_count = activity_counts[-1]
+            if last_day_count > 1:
+                penalty = (last_day_count - 1) * 20  # 20 points per extra activity
+                score -= penalty
+                self.logger.debug(f"Last day penalty: {last_day_count} activities (max 1), -{penalty} points")
+        
+        # Check Middle Days - should match activity_preference
+        if len(activity_counts) > 2:
+            middle_counts = activity_counts[1:-1]
+            for day_idx, count in enumerate(middle_counts, start=2):
+                diff = abs(count - activity_preference)
+                if diff > 1:  # Allow ±1 variance
+                    penalty = diff * 10  # 10 points per activity difference
+                    score -= penalty
+                    self.logger.debug(f"Day {day_idx} deviation: {count} vs {activity_preference} target, -{penalty} points")
+        
+        # Penalize days with 0 activities (except potentially last day)
+        zero_days = sum(1 for i, c in enumerate(activity_counts) if c == 0 and i < len(activity_counts) - 1)
+        if zero_days > 0:
+            penalty = zero_days * 25
+            score -= penalty
+        
+        return max(score, 0)
     
     def _evaluate_cost(self, chromosome: ItineraryChromosome, budget: float) -> float:
         """
         Evaluate total cost vs budget
+        ✅ STRICT ENFORCEMENT: Heavy penalties for over-budget solutions
         Within budget = higher score
         """
         
@@ -299,12 +405,28 @@ class GeneticItineraryOptimizer:
         # Calculate cost ratio
         cost_ratio = total_cost / budget
         
-        if cost_ratio <= 0.8:  # Under budget
+        # ✅ ENHANCED: Stricter budget enforcement
+        if cost_ratio > 1.0:
+            # Over budget: AGGRESSIVE PENALTY
+            # For every 10% over budget, lose 50 points
+            over_percentage = (cost_ratio - 1.0)
+            penalty = over_percentage * 500  # Much stricter than before
+            score = max(0, 100 - penalty)
+            
+            if score < 20:
+                self.logger.debug(
+                    f"⚠️ Heavy budget penalty: ₱{total_cost:.0f} vs ₱{budget:.0f} "
+                    f"({cost_ratio*100:.1f}%), score={score:.1f}"
+                )
+        elif cost_ratio <= 0.7:
+            # Too far under budget (not utilizing resources)
+            score = 80 + (cost_ratio / 0.7) * 10  # 80-90 range
+        elif cost_ratio <= 0.95:
+            # Sweet spot: 70-95% of budget
             score = 100
-        elif cost_ratio <= 1.0:  # Within budget
-            score = 100 - (cost_ratio - 0.8) * 100
-        else:  # Over budget
-            score = max(50 - (cost_ratio - 1.0) * 100, 0)
+        else:
+            # 95-100% of budget: slight preference for staying under
+            score = 95 + (1.0 - cost_ratio) * 100
         
         return score
     
@@ -316,35 +438,96 @@ class GeneticItineraryOptimizer:
         """
         Evaluate how well activities match user preferences
         Better match = higher score
+        
+        Now considers:
+        - activityTypes (legacy)
+        - interests (legacy)
+        - preferredTripTypes (from user profile)
+        - travelStyle (solo, duo, family, group, business)
         """
         
         if not preferences:
             return 75.0  # Default score if no preferences
         
         score = 0
+        total_activities = len(chromosome.activities)
+        
+        if total_activities == 0:
+            return 50.0
+        
+        # Extract preference fields
         activity_types = preferences.get('activityTypes', [])
         interests = preferences.get('interests', [])
+        preferred_trip_types = preferences.get('preferredTripTypes', [])
+        travel_style = preferences.get('travelStyle', '').lower()
+        
+        # Define travel style keywords for matching
+        style_keywords = {
+            'solo': ['cafe', 'coffee', 'solo', 'museum', 'gallery', 'walk', 'trek', 'hostel', 'coworking'],
+            'duo': ['romantic', 'couple', 'intimate', 'sunset', 'wine', 'spa', 'rooftop', 'view', 'scenic'],
+            'family': ['family', 'kid', 'children', 'playground', 'park', 'zoo', 'aquarium', 'educational', 'safe'],
+            'group': ['group', 'party', 'nightlife', 'adventure', 'sports', 'tour', 'social', 'pub', 'bar'],
+            'business': ['business', 'meeting', 'conference', 'hotel', 'efficient', 'quick', 'cbd', 'downtown']
+        }
+        
+        # Define trip type keywords
+        trip_type_keywords = {
+            'adventure': ['adventure', 'outdoor', 'hiking', 'climbing', 'trek', 'mountain', 'trail'],
+            'beach': ['beach', 'island', 'coast', 'shore', 'sand', 'sea', 'ocean', 'dive', 'snorkel'],
+            'cultural': ['cultural', 'historical', 'heritage', 'museum', 'temple', 'church', 'monument', 'fort'],
+            'nature': ['nature', 'wildlife', 'park', 'forest', 'sanctuary', 'reserve', 'garden', 'falls'],
+            'photography': ['scenic', 'view', 'viewpoint', 'landscape', 'photo', 'sunset', 'sunrise'],
+            'wellness': ['wellness', 'spa', 'massage', 'relax', 'yoga', 'meditation', 'hot spring'],
+            'food': ['food', 'restaurant', 'culinary', 'market', 'street food', 'dining', 'taste'],
+            'romantic': ['romantic', 'couple', 'intimate', 'candlelight', 'wine', 'rooftop', 'sunset']
+        }
         
         for activity in chromosome.activities:
             activity_name = activity.get('placeName', '').lower()
             activity_details = activity.get('placeDetails', '').lower()
+            combined_text = f"{activity_name} {activity_details}"
             
-            # Check activity type matches
+            activity_score = 0
+            
+            # 1. Check legacy activity type matches
             for activity_type in activity_types:
-                if activity_type.lower() in activity_name or activity_type.lower() in activity_details:
-                    score += 5
+                if activity_type.lower() in combined_text:
+                    activity_score += 5
             
-            # Check interest matches
+            # 2. Check legacy interest matches
             for interest in interests:
-                if interest.lower() in activity_name or interest.lower() in activity_details:
-                    score += 5
+                if interest.lower() in combined_text:
+                    activity_score += 5
+            
+            # 3. ✅ NEW: Check preferredTripTypes matches
+            for trip_type in preferred_trip_types:
+                trip_type_lower = trip_type.lower()
+                if trip_type_lower in trip_type_keywords:
+                    keywords = trip_type_keywords[trip_type_lower]
+                    for keyword in keywords:
+                        if keyword in combined_text:
+                            activity_score += 8  # Higher weight for trip type matches
+                            break  # Only count once per trip type
+            
+            # 4. ✅ NEW: Check travelStyle matches
+            if travel_style and travel_style in style_keywords:
+                keywords = style_keywords[travel_style]
+                for keyword in keywords:
+                    if keyword in combined_text:
+                        activity_score += 10  # Highest weight for style matches
+                        break  # Only count once per activity
+            
+            score += min(activity_score, 30)  # Cap per-activity score to avoid outliers
         
         # Normalize to 0-100
-        max_possible = len(chromosome.activities) * 10
+        max_possible = total_activities * 30
         if max_possible > 0:
-            score = min((score / max_possible) * 100, 100)
+            normalized_score = (score / max_possible) * 100
+            score = min(normalized_score, 100)
         else:
             score = 50.0
+        
+        self.logger.info(f"📊 Preference match score: {score:.2f}/100 (style: {travel_style}, types: {len(preferred_trip_types)})")
         
         return score
     
@@ -369,7 +552,8 @@ class GeneticItineraryOptimizer:
     def _create_next_generation(
         self,
         population: List[ItineraryChromosome],
-        num_days: int
+        num_days: int,
+        activity_preference: int = 2
     ) -> List[ItineraryChromosome]:
         """Create next generation through selection, crossover, and mutation"""
         
@@ -392,9 +576,9 @@ class GeneticItineraryOptimizer:
             
             # Mutation
             if random.random() < self.mutation_rate:
-                child1 = self._mutate(child1, num_days)
+                child1 = self._mutate(child1, num_days, activity_preference)
             if random.random() < self.mutation_rate:
-                child2 = self._mutate(child2, num_days)
+                child2 = self._mutate(child2, num_days, activity_preference)
             
             next_generation.append(child1)
             if len(next_generation) < self.population_size:
@@ -468,14 +652,17 @@ class GeneticItineraryOptimizer:
     def _mutate(
         self,
         chromosome: ItineraryChromosome,
-        num_days: int
+        num_days: int,
+        activity_preference: int = 2
     ) -> ItineraryChromosome:
         """
         Perform mutation on a chromosome
+        ✅ RESPECTS ACTIVITY PREFERENCE CONSTRAINTS
+        
         Types of mutations:
-        1. Change day assignment of an activity
+        1. Change day assignment (respecting day capacity)
         2. Swap two activities
-        3. Remove an activity
+        3. Remove an activity (if over target)
         """
         
         if not chromosome.activities:
@@ -484,9 +671,32 @@ class GeneticItineraryOptimizer:
         mutation_type = random.choice(['reassign', 'swap', 'remove'])
         
         if mutation_type == 'reassign':
-            # Change day assignment
+            # Change day assignment with preference awareness
             idx = random.randint(0, len(chromosome.activities) - 1)
-            chromosome.day_assignments[idx] = random.randint(1, num_days)
+            old_day = chromosome.day_assignments[idx]
+            
+            # Count current activities per day
+            daily_counts = {}
+            for day_num in chromosome.day_assignments:
+                daily_counts[day_num] = daily_counts.get(day_num, 0) + 1
+            
+            # Find days that can accept more activities
+            available_days = []
+            for day in range(1, num_days + 1):
+                current_count = daily_counts.get(day, 0)
+                max_for_day = self._get_max_activities_for_day(day, num_days, activity_preference)
+                
+                if day != old_day and current_count < max_for_day:
+                    available_days.append(day)
+            
+            # Reassign to available day or random middle day
+            if available_days:
+                chromosome.day_assignments[idx] = random.choice(available_days)
+            else:
+                # Fallback: random middle day
+                middle_days = list(range(2, max(2, num_days)))
+                if middle_days:
+                    chromosome.day_assignments[idx] = random.choice(middle_days)
         
         elif mutation_type == 'swap' and len(chromosome.activities) >= 2:
             # Swap two activities
@@ -496,13 +706,22 @@ class GeneticItineraryOptimizer:
             chromosome.day_assignments[idx1], chromosome.day_assignments[idx2] = \
                 chromosome.day_assignments[idx2], chromosome.day_assignments[idx1]
         
-        elif mutation_type == 'remove' and len(chromosome.activities) > 3:
-            # Remove an activity (keep at least 3)
+        elif mutation_type == 'remove' and len(chromosome.activities) > num_days:
+            # Remove an activity (keep at least 1 per day)
             idx = random.randint(0, len(chromosome.activities) - 1)
             chromosome.activities.pop(idx)
             chromosome.day_assignments.pop(idx)
         
         return chromosome
+    
+    def _get_max_activities_for_day(self, day: int, total_days: int, activity_preference: int) -> int:
+        """Get maximum activities allowed for a specific day"""
+        if day == 1:  # Arrival
+            return 2
+        elif day == total_days:  # Departure
+            return 1
+        else:  # Middle days
+            return activity_preference + 1  # Allow +1 for flexibility
     
     def _check_convergence(self, fitness_history: List[float], window: int = 10) -> bool:
         """

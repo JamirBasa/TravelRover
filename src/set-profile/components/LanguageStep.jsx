@@ -10,13 +10,6 @@ const LanguageStep = ({ profileData, handleMultiSelect }) => {
       flag: "🇵🇭",
       desc: "National language",
     },
-    { id: "cebuano", label: "Cebuano", flag: "🇵🇭", desc: "Visayan dialect" },
-    {
-      id: "ilocano",
-      label: "Ilocano",
-      flag: "🇵🇭",
-      desc: "Northern Philippines",
-    },
     { id: "arabic", label: "Arabic", flag: "🇸🇦", desc: "Middle Eastern" },
     {
       id: "spanish",

@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from .views_health import HealthCheckView, QuickHealthView
 from .views_photo_proxy import GooglePlacesPhotoProxyView
+from .views_places_proxy import GooglePlacesSearchProxyView
 from .views_gemini_proxy import gemini_generate, gemini_health
 
 app_name = 'langgraph_agents'
@@ -15,6 +16,9 @@ urlpatterns = [
     
     # Photo proxy (CORS bypass for Google Places photos)
     path('photo-proxy/', GooglePlacesPhotoProxyView.as_view(), name='photo_proxy'),
+    
+    # Places search proxy (CORS bypass + secure API key for Google Places search)
+    path('places-search/', GooglePlacesSearchProxyView.as_view(), name='places_search'),
     
     # Gemini AI proxy (secure API key on backend)
     path('gemini/generate/', gemini_generate, name='gemini_generate'),
