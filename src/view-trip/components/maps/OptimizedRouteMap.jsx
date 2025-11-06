@@ -22,6 +22,64 @@ import {
 } from "@/utils/flightNameResolver";
 import { getLimitedServiceInfo } from "@/utils/flightRecommendations";
 
+// ✅ PERSISTENT GEOCODING CACHE
+const GEOCODE_CACHE_KEY = "travelrover_geocode_cache_v1";
+const CACHE_EXPIRY_DAYS = 30;
+
+const loadGeocodeCache = () => {
+  try {
+    const cached = localStorage.getItem(GEOCODE_CACHE_KEY);
+    if (!cached) return {};
+
+    const { data, timestamp } = JSON.parse(cached);
+    const ageInDays = (Date.now() - timestamp) / (24 * 60 * 60 * 1000);
+
+    if (ageInDays > CACHE_EXPIRY_DAYS) {
+      console.log("🗑️ Geocode cache expired, clearing...");
+      localStorage.removeItem(GEOCODE_CACHE_KEY);
+      return {};
+    }
+
+    console.log(`✅ Loaded ${Object.keys(data).length} cached geocode entries`);
+    return data;
+  } catch (error) {
+    console.warn("Failed to load geocode cache:", error);
+    return {};
+  }
+};
+
+const saveGeocodeCache = (cache) => {
+  try {
+    const cacheSize = Object.keys(cache).length;
+
+    // Limit cache size to prevent localStorage overflow
+    if (cacheSize > 500) {
+      console.warn("⚠️ Geocode cache too large, trimming...");
+      const entries = Object.entries(cache);
+      const trimmed = Object.fromEntries(entries.slice(-400)); // Keep newest 400
+      cache = trimmed;
+    }
+
+    localStorage.setItem(
+      GEOCODE_CACHE_KEY,
+      JSON.stringify({
+        data: cache,
+        timestamp: Date.now(),
+      })
+    );
+
+    console.log(`💾 Saved ${cacheSize} geocode entries to cache`);
+  } catch (error) {
+    console.warn("Failed to save geocode cache:", error);
+    // If localStorage is full, try clearing old cache
+    try {
+      localStorage.removeItem(GEOCODE_CACHE_KEY);
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
+};
+
 /**
  * OptimizedRouteMap Component
  *
@@ -33,6 +91,7 @@ import { getLimitedServiceInfo } from "@/utils/flightRecommendations";
  * - 🎯 Auto-center and bounds fitting
  * - 🏨 Automatic hotel name resolution
  * - ✈️ Automatic flight details resolution
+ * - 💾 Persistent geocoding cache (30-day expiry)
  */
 function OptimizedRouteMap({ itinerary, destination, trip }) {
   const [selectedLocation, setSelectedLocation] = useState(null);
@@ -46,12 +105,20 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
     total: 0,
   });
   const [isUpdating, setIsUpdating] = useState(false);
-  const [geocodeCache, setGeocodeCache] = useState({});
+  // ✅ Initialize with persistent cache
+  const [geocodeCache, setGeocodeCache] = useState(() => loadGeocodeCache());
   const [lastItineraryHash, setLastItineraryHash] = useState("");
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const mapContainerRef = React.useRef(null);
   const geocodingAbortController = React.useRef(null);
+
+  // ✅ Auto-save cache to localStorage when it updates
+  useEffect(() => {
+    if (Object.keys(geocodeCache).length > 0) {
+      saveGeocodeCache(geocodeCache);
+    }
+  }, [geocodeCache]);
 
   // ✅ Extract recommended hotel name using new utility
   const recommendedHotelName = useMemo(() => {
@@ -373,34 +440,94 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
     return locations.map((loc) => `${loc.id}:${loc.name}`).join("|");
   }, []);
 
-  // Enhanced geocode with caching
+  // ✅ Extract place name from activity description
+  const extractPlaceName = (activityName) => {
+    if (!activityName) return null;
+
+    // Remove common activity prefixes (Breakfast at, Lunch at, Dinner at, Visit, etc.)
+    const cleaned = activityName
+      .replace(
+        /^(Breakfast|Lunch|Dinner|Snack|Check-in|Check out|Visit|Explore|Tour|Shopping|Relax)\s+(at|to)?\s+/i,
+        ""
+      )
+      .replace(/^(and check in|and check-in|for the day)\s*/i, "")
+      .trim();
+
+    // If it's too short or still has common words, return null
+    if (cleaned.length < 3) return null;
+
+    // Skip generic activities
+    const skipTerms = [
+      "hotel",
+      "rest",
+      "return",
+      "end of day",
+      "free time",
+      "leisure",
+    ];
+    if (skipTerms.some((term) => cleaned.toLowerCase() === term)) {
+      return null;
+    }
+
+    return cleaned;
+  };
+
+  // Enhanced geocode with caching and place name extraction
+  // Enhanced geocode with caching and place name extraction
   const geocodeLocation = async (locationName, signal) => {
     try {
-      // Check cache first
+      // ✅ Extract actual place name from activity description
+      const placeName = extractPlaceName(locationName);
+
+      if (!placeName) {
+        console.log(`⏭️ Skipping generic activity: "${locationName}"`);
+        return null;
+      }
+
+      // Check cache first (use original name as key)
       if (geocodeCache[locationName]) {
         console.log(`✅ Using cached coordinates for: "${locationName}"`);
         return geocodeCache[locationName];
       }
 
-      // ✅ Validate location name before geocoding
-      if (!locationName || locationName.trim().length < 3) {
+      // ✅ Validate place name before geocoding
+      if (placeName.trim().length < 3) {
         console.warn(
           `⚠️ Skipping geocoding for invalid location: "${locationName}"`
         );
         return null;
       }
 
-      // ✅ Add Philippines context for better accuracy
-      const searchQuery = `${locationName}, Philippines`;
-      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        searchQuery
-      )}&key=${apiKey}`;
+      // ✅ Use Django backend proxy for geocoding (secure, no API key exposure)
+      const apiBaseUrl =
+        import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+      const geocodeUrl = `${apiBaseUrl}/langgraph/geocoding/`;
+      const searchQuery = `${placeName}, Philippines`;
 
-      const response = await fetch(geocodeUrl, { signal });
-      const data = await response.json();
+      const response = await fetch(geocodeUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          address: searchQuery,
+          components: "country:PH", // Restrict to Philippines for accuracy
+        }),
+        signal,
+      });
 
-      if (data.results && data.results.length > 0) {
-        const location = data.results[0].geometry.location;
+      const result = await response.json();
+
+      if (!result.success) {
+        console.error(
+          "❌ Geocoding proxy error:",
+          result.error || "Unknown error"
+        );
+        return null;
+      }
+
+      if (result.data?.results && result.data.results.length > 0) {
+        const location = result.data.results[0].geometry.location;
         const coords = {
           latitude: location.lat,
           longitude: location.lng,
@@ -419,7 +546,7 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       } else {
         console.warn(
           `⚠️ No geocode results for: "${locationName}"`,
-          data.status
+          result.data?.status
         );
         return null;
       }
@@ -574,14 +701,30 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
     }
 
     try {
-      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        destination
-      )}&key=${apiKey}`;
-      const response = await fetch(geocodeUrl);
-      const data = await response.json();
+      // ✅ Use Django backend proxy for geocoding
+      const apiBaseUrl =
+        import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+      const geocodeUrl = `${apiBaseUrl}/langgraph/geocoding/`;
 
-      if (data.results && data.results.length > 0) {
-        const location = data.results[0].geometry.location;
+      const response = await fetch(geocodeUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          address: destination,
+          components: "country:PH",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (
+        result.success &&
+        result.data?.results &&
+        result.data.results.length > 0
+      ) {
+        const location = result.data.results[0].geometry.location;
         return { lat: location.lat, lng: location.lng };
       }
     } catch (error) {

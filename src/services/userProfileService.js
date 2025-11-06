@@ -90,6 +90,34 @@ export class UserProfileService {
   }
 
   /**
+   * Extract dietary restrictions from user profile
+   * @param {Object} userProfile - User profile object
+   * @returns {Array} Array of dietary restrictions
+   */
+  static extractDietaryRestrictions(userProfile) {
+    if (!userProfile?.dietaryRestrictions || !Array.isArray(userProfile.dietaryRestrictions)) {
+      return [];
+    }
+    return userProfile.dietaryRestrictions.filter(Boolean);
+  }
+
+  /**
+   * Extract travel preferences from user profile
+   * @param {Object} userProfile - User profile object
+   * @returns {Object} Extracted preferences
+   */
+  static extractTravelPreferences(userProfile) {
+    return {
+      budgetRange: userProfile?.budgetRange || null,
+      accommodationPreference: userProfile?.accommodationPreference || null,
+      preferredTripTypes: userProfile?.preferredTripTypes || [],
+      activityLevel: userProfile?.activityLevel || 'moderate',
+      culturalPreferences: userProfile?.culturalPreferences || [],
+      languagePreferences: userProfile?.languagePreferences || [],
+    };
+  }
+
+  /**
    * Auto-populate flight preferences from user profile
    * @param {Object} userProfile - User profile object
    * @param {Object} currentFlightData - Current flight data state
@@ -155,24 +183,19 @@ export class UserProfileService {
 
   /**
    * Get form defaults from user profile
+   * NOTE: Only auto-populates budget preference, NOT travelers count
+   * Travel style is used for destination recommendations, not traveler count
+   * 
    * @param {Object} userProfile - User profile object
-   * @returns {Object} Form default values
+   * @returns {Object} Form default values { budget: string }
    */
   static getFormDefaults(userProfile) {
     if (!userProfile?.isProfileComplete) {
       return {};
     }
 
-    // Helper to determine default travelers
-    const getDefaultTravelers = (profile) => {
-      if (profile.preferredTripTypes?.includes("Romantic")) return "Just Me & Partner";
-      if (profile.preferredTripTypes?.includes("Family")) return "Family (3-5 people)";
-      if (profile.preferredTripTypes?.includes("Group")) return "Large Group (6+ people)";
-      return "Just Me";
-    };
-
     // Helper to normalize budget value to match SelectBudgetOptions
-    const normalizeBudget = (budgetRange) => {
+    const normalizeBudgetRange = (budgetRange) => {
       if (!budgetRange) return undefined;
       
       // Handle legacy lowercase values and map to SelectBudgetOptions format
@@ -191,9 +214,77 @@ export class UserProfileService {
       return budgetMap[key] || budgetMap[budgetRange] || undefined;
     };
 
+    const defaults = {
+      budget: normalizeBudgetRange(userProfile.budgetRange), // ✅ Only auto-populate budget
+      // ❌ DO NOT auto-populate travelers - user must explicitly choose
+      // Travel style (solo/duo/family/group) affects destination recommendations, not traveler count
+    };
+
+    console.log("📋 Profile form defaults generated:", {
+      input: {
+        budgetRange: userProfile.budgetRange,
+        travelStyle: userProfile.travelStyle, // Used for AI recommendations only
+      },
+      output: defaults,
+      note: "Travel style influences destination types, not traveler count",
+    });
+
+    return defaults;
+  }
+
+  /**
+   * Get travel style context for AI recommendations
+   * Travel style influences destination/activity types, not traveler count
+   * 
+   * @param {Object} userProfile - User profile object
+   * @returns {Object} Travel style context for prompt generation
+   */
+  static getTravelStyleContext(userProfile) {
+    const travelStyle = userProfile?.travelStyle || "balanced";
+    
+    // Define how each style affects recommendations
+    const styleInfluence = {
+      solo: {
+        activityFocus: "solo-friendly cafes, co-working spaces, safe areas, walking tours",
+        accommodationHint: "hostels, boutique hotels, single-friendly accommodations",
+        diningPreference: "cafe culture, street food, communal dining experiences",
+        note: "Emphasize safety, walkability, and social opportunities"
+      },
+      duo: {
+        activityFocus: "romantic restaurants, intimate venues, couple activities, scenic spots",
+        accommodationHint: "boutique hotels, romantic resorts, private villas",
+        diningPreference: "romantic dining, wine bars, rooftop restaurants",
+        note: "Emphasize privacy, ambiance, and couple-oriented experiences"
+      },
+      family: {
+        activityFocus: "kid-friendly parks, educational sites, family restaurants, outdoor spaces",
+        accommodationHint: "family resorts, apartments with kitchens, connecting rooms",
+        diningPreference: "family restaurants, buffets, kid menus available",
+        note: "Emphasize safety, accessibility, and age-appropriate activities"
+      },
+      group: {
+        activityFocus: "group activities, party venues, large capacity restaurants, adventure sports",
+        accommodationHint: "hotels with group facilities, villas, aparthotels",
+        diningPreference: "restaurants with large tables, group dining, food halls",
+        note: "Emphasize group capacity, shared experiences, and social venues"
+      },
+      business: {
+        activityFocus: "business districts, meeting venues, efficient transport, quiet workspaces",
+        accommodationHint: "business hotels near CBD, co-working spaces, meeting rooms",
+        diningPreference: "quick service, business lunch spots, hotel dining",
+        note: "Emphasize efficiency, connectivity, and professional amenities"
+      }
+    };
+
     return {
-      budget: normalizeBudget(userProfile.budgetRange),
-      travelers: getDefaultTravelers(userProfile) || undefined,
+      style: travelStyle,
+      influence: styleInfluence[travelStyle] || styleInfluence.balanced || {
+        activityFocus: "balanced mix of activities",
+        accommodationHint: "mid-range accommodations",
+        diningPreference: "variety of dining options",
+        note: "Standard recommendations"
+      },
+      forPrompt: `Travel style: ${travelStyle} - Focus on ${styleInfluence[travelStyle]?.activityFocus || "general activities"}`
     };
   }
 

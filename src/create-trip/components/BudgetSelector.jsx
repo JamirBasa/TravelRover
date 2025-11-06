@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { SelectBudgetOptions } from "../../constants/options";
 import { getBudgetRecommendations } from "../../utils/budgetEstimator";
+import { getRecommendedBudgetTier } from "../../utils/budgetRecommendation";
+import { Badge } from "@/components/ui/badge";
 
 const BudgetSelector = ({
   value,
@@ -14,6 +16,7 @@ const BudgetSelector = ({
   flightData = {},
   hotelData = {}, // ✅ NEW: Track hotel preferences for budget calculation
   userProfile = {}, // Add userProfile prop
+  activityPreference = 2, // ✅ NEW: Activity pace affects budget
 }) => {
   const [showCustom, setShowCustom] = useState(!!customValue); // Show custom if there's already a custom value
 
@@ -136,6 +139,32 @@ const BudgetSelector = ({
     formData.duration,
     flightData.includeFlights, // ✅ NEW: Recalculate when flights change
     hotelData.includeHotels, // ✅ NEW: Recalculate when hotels change
+  ]);
+
+  // ✅ NEW: Get smart budget tier recommendation
+  const recommendation = useMemo(() => {
+    if (!formData.location || !formData.duration) return null;
+
+    const travelerCount =
+      typeof formData.travelers === "number"
+        ? formData.travelers
+        : parseInt(formData.travelers, 10) || 1;
+
+    return getRecommendedBudgetTier({
+      duration: formData.duration,
+      travelers: travelerCount,
+      includeFlights: flightData.includeFlights || false,
+      includeHotels: hotelData.includeHotels || false,
+      destination: formData.location,
+      activityPreference: activityPreference,
+    });
+  }, [
+    formData.location,
+    formData.duration,
+    formData.travelers,
+    flightData.includeFlights,
+    hotelData.includeHotels,
+    activityPreference,
   ]);
 
   // Separate value for DISPLAY (what we recommend) vs VALIDATION (what we enforce)
@@ -380,15 +409,27 @@ const BudgetSelector = ({
                     </span>
                   </div>
                   <div className="flex-1">
-                    <h3
-                      className={`font-semibold text-lg transition-colors ${
-                        value === option.title && !customValue
-                          ? "text-sky-800 dark:text-sky-300"
-                          : "text-gray-800 dark:text-gray-200 group-hover:text-sky-700 dark:group-hover:text-sky-400"
-                      }`}
-                    >
-                      {option.title}
-                    </h3>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3
+                        className={`font-semibold text-lg transition-colors ${
+                          value === option.title && !customValue
+                            ? "text-sky-800 dark:text-sky-300"
+                            : "text-gray-800 dark:text-gray-200 group-hover:text-sky-700 dark:group-hover:text-sky-400"
+                        }`}
+                      >
+                        {option.title}
+                      </h3>
+                      {/* ✅ NEW: Recommendation Badge */}
+                      {recommendation &&
+                        recommendation.tier === option.title && (
+                          <Badge
+                            variant="outline"
+                            className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-xs"
+                          >
+                            ⭐ Recommended
+                          </Badge>
+                        )}
+                    </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       {option.desc}
                     </p>

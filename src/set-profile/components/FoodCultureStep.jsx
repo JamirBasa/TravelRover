@@ -96,12 +96,12 @@ const FoodCultureStep = ({
   const languages = [
     { id: "english", label: "English" },
     { id: "filipino", label: "Filipino/Tagalog" },
-    { id: "cebuano", label: "Cebuano" },
     { id: "arabic", label: "Arabic" },
     { id: "spanish", label: "Spanish" },
     { id: "mandarin", label: "Mandarin" },
     { id: "japanese", label: "Japanese" },
     { id: "korean", label: "Korean" },
+    { id: "french", label: "French" },
   ];
 
   return (

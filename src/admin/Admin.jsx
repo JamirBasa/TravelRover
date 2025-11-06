@@ -57,7 +57,7 @@ const Admin = () => {
   const navigate = useNavigate();
 
   const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: "📊", mobile: "📊" },
@@ -442,7 +442,7 @@ const Admin = () => {
 
       try {
         const djangoUsersResponse = await fetch(
-          `${API_BASE_URL}/api/admin/users/`,
+          `${API_BASE_URL}/admin/users/`,
           {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -562,7 +562,7 @@ const Admin = () => {
       try {
         console.log("📡 Attempting to fetch users from Django backend...");
         const backendResponse = await fetch(
-          `${API_BASE_URL}/api/admin/users/`,
+          `${API_BASE_URL}/admin/users/`,
           {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -976,8 +976,8 @@ const Admin = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-100 flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-blue-700 font-medium text-sm sm:text-base">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-sky-700 font-medium text-sm sm:text-base">
             Verifying admin access...
           </p>
         </div>

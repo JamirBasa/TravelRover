@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { GetPlaceDetails, PHOTO_REF_URL } from "@/config/GlobalApi";
+import { GetPlaceDetails, fetchPlacePhoto } from "@/config/GlobalApi";
 
 function PlaceCardItem({ place }) {
   const [photoUrl, setPhotoUrl] = useState("");
@@ -13,9 +13,50 @@ function PlaceCardItem({ place }) {
       return;
     }
 
+    // ✅ Extract actual place name from activity description
+    const extractPlaceName = (activityName) => {
+      if (!activityName) return null;
+
+      // Remove common activity prefixes
+      const cleaned = activityName
+        .replace(
+          /^(Breakfast|Lunch|Dinner|Snack|Check-in|Check out|Visit|Explore|Tour|Shopping|Relax)\s+(at|to)?\s+/i,
+          ""
+        )
+        .replace(/^(and check in|and check-in|for the day)\s*/i, "")
+        .trim();
+
+      // If too short or generic, return original
+      if (cleaned.length < 3) return activityName;
+
+      // Skip generic activities and just use original
+      const skipTerms = [
+        "hotel",
+        "rest",
+        "return",
+        "end of day",
+        "free time",
+        "leisure",
+        "accommodation",
+      ];
+      if (skipTerms.some((term) => cleaned.toLowerCase() === term)) {
+        return null; // Will skip photo search for generic activities
+      }
+
+      return cleaned;
+    };
+
+    const cleanedPlaceName = extractPlaceName(placeName);
+
+    if (!cleanedPlaceName) {
+      console.log("⏭️ Skipping photo search for generic activity:", placeName);
+      setPhotoUrl(""); // Use placeholder for generic activities
+      return;
+    }
+
     console.log(
       "🔍 PlaceCardItem - Fetching Google Places photo for:",
-      placeName
+      cleanedPlaceName
     );
 
     // Always use Google Places API for accurate, real photos
@@ -24,14 +65,17 @@ function PlaceCardItem({ place }) {
 
     try {
       // Create more specific search query by adding location context
-      let searchQuery = placeName;
+      let searchQuery = cleanedPlaceName;
 
       // Add Manila, Philippines context for better location accuracy
       if (
         !searchQuery.toLowerCase().includes("manila") &&
-        !searchQuery.toLowerCase().includes("philippines")
+        !searchQuery.toLowerCase().includes("philippines") &&
+        !searchQuery.toLowerCase().includes("cebu") &&
+        !searchQuery.toLowerCase().includes("davao") &&
+        !searchQuery.toLowerCase().includes("baguio")
       ) {
-        searchQuery += ", Manila, Philippines";
+        searchQuery += ", Philippines";
       }
 
       console.log("🔍 PlaceCardItem - Search query:", searchQuery);
@@ -57,9 +101,23 @@ function PlaceCardItem({ place }) {
       const photoReference = placeData.photos[0]?.name;
 
       if (photoReference) {
-        const photoUrl = PHOTO_REF_URL.replace("{NAME}", photoReference);
-        console.log("🔍 PlaceCardItem - Google Places photo URL:", photoUrl);
-        setPhotoUrl(photoUrl);
+        try {
+          // ✅ Fetch photo as blob URL for proper loading
+          const blobUrl = await fetchPlacePhoto(photoReference);
+          console.log("🔍 PlaceCardItem - Photo loaded successfully");
+          setPhotoUrl(blobUrl);
+        } catch (photoError) {
+          console.warn(
+            "📸 PlaceCardItem - Failed to fetch photo:",
+            photoError.message
+          );
+          // Fallback to AI-generated image
+          if (place?.imageUrl) {
+            setPhotoUrl(place.imageUrl);
+          } else {
+            setPhotoUrl("");
+          }
+        }
       } else {
         console.warn("🔍 PlaceCardItem - No photo reference found");
         setPhotoUrl(""); // Will use placeholder
@@ -127,7 +185,7 @@ function PlaceCardItem({ place }) {
           <div className="flex-shrink-0">
             {isLoading ? (
               <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-800 dark:to-slate-700 rounded-lg flex items-center justify-center">
-                <div className="inline-block animate-spin rounded-full h-6 w-6 border-3 border-sky-300 dark:border-sky-600 border-t-sky-600 dark:border-t-sky-400"></div>
+                <div className="w-6 h-6 border-2 border-sky-500 dark:border-sky-400 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : photoUrl ? (
               <img

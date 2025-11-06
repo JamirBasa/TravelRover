@@ -1,5 +1,10 @@
 // src/config/langGraphAgent.jsx - Client-side adapter for Django LangGraph
-import { API_CONFIG } from "../constants/options";
+import {
+  API_CONFIG,
+  API_ENDPOINTS,
+  buildApiUrl,
+  getTimeout,
+} from "./apiConfig";
 
 /**
  * LangGraph Travel Agent - Client Adapter for Django Backend
@@ -7,8 +12,8 @@ import { API_CONFIG } from "../constants/options";
  */
 export class LangGraphTravelAgent {
   constructor() {
-    this.baseUrl = `${API_CONFIG.BASE_URL}/langgraph`;
-    this.timeout = API_CONFIG.TIMEOUT_MAX; // Use maximum timeout for complex LangGraph operations
+    this.baseUrl = buildApiUrl("/langgraph");
+    this.timeout = getTimeout("max"); // Use maximum timeout for complex LangGraph operations
   }
 
   /**
@@ -26,8 +31,13 @@ export class LangGraphTravelAgent {
       // Prepare request data for Django API
       const requestData = this.prepareRequestData(tripParams);
 
+      // ✅ Build the request URL using canonical endpoints to avoid env mismatch
+      const requestUrl = buildApiUrl(API_ENDPOINTS.LANGGRAPH.EXECUTE);
+      console.log("🔍 Request URL:", requestUrl);
+      console.log("🔍 Request Data:", requestData);
+
       // Create a promise that races between fetch and timeout
-      const fetchPromise = fetch(`${this.baseUrl}/execute/`, {
+      const fetchPromise = fetch(requestUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -48,13 +58,38 @@ export class LangGraphTravelAgent {
       if (!response.ok) {
         // ✅ Try to get detailed error from response body
         let errorDetail = `${response.status} ${response.statusText}`;
+        let errorData = null;
+
         try {
-          const errorData = await response.json();
+          errorData = await response.json();
           errorDetail = errorData.error || errorData.message || errorDetail;
-          console.error("🔍 Django API Error Details:", errorData);
-        } catch (e) {
-          // If response is not JSON, use status text
+          console.error("🔍 Django API Error Details:", {
+            status: response.status,
+            statusText: response.statusText,
+            url: requestUrl,
+            errorData: errorData,
+          });
+        } catch (parseError) {
+          // If response is not JSON, log raw response
+          console.error("🔍 Non-JSON Error Response:", {
+            status: response.status,
+            statusText: response.statusText,
+            url: requestUrl,
+            message: "Response body is not JSON",
+            parseError: parseError.message,
+          });
         }
+
+        // ✅ SPECIFIC 404 ERROR HANDLING
+        if (response.status === 404) {
+          throw new Error(
+            `LangGraph endpoint not found (404).\n` +
+              `URL: ${requestUrl}\n` +
+              `Make sure Django server is running on http://localhost:8000\n` +
+              `Error: ${errorDetail}`
+          );
+        }
+
         throw new Error(`LangGraph API error: ${errorDetail}`);
       }
 
@@ -153,6 +188,7 @@ export class LangGraphTravelAgent {
     // ✅ FIXED: Send both camelCase and snake_case for backend compatibility
     const flightData = tripParams.flightData || {};
     const hotelData = tripParams.hotelData || {};
+    const userEmail = this.getCurrentUserEmail();
 
     return {
       destination: tripParams.destination,
@@ -163,7 +199,10 @@ export class LangGraphTravelAgent {
       duration: tripParams.duration || 3,
       travelers: tripParams.travelers,
       budget: normalizeBudget(tripParams.budget),
-      user_email: this.getCurrentUserEmail(),
+
+      // ✅ CRITICAL: Send email in BOTH formats (Django backend checks both)
+      user_email: userEmail,
+      userEmail: userEmail,
 
       // Send flight data in both formats
       flight_data: flightData,
@@ -183,14 +222,75 @@ export class LangGraphTravelAgent {
   }
 
   /**
-   * Get current user email from localStorage
+   * Get current user email from localStorage or Firebase
+   * ✅ FIXED: Comprehensive email extraction with multiple fallbacks
    */
   getCurrentUserEmail() {
     try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      return user.email || "anonymous@example.com";
-    } catch {
-      return "anonymous@example.com";
+      // Try multiple sources in priority order
+      let email = null;
+
+      // 1. Try localStorage 'user' object (Firebase format)
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          console.log("🔍 Parsed localStorage user:", user);
+
+          // Try multiple nested paths
+          email =
+            user.email ||
+            user.user?.email ||
+            user.providerData?.[0]?.email ||
+            user.reloadUserInfo?.email;
+        } catch (parseError) {
+          console.warn("⚠️ Could not parse localStorage user:", parseError);
+        }
+      }
+
+      // 2. Try direct email storage
+      if (!email) {
+        email = localStorage.getItem("userEmail");
+      }
+
+      // 3. Try session storage as fallback
+      if (!email) {
+        const sessionUser = sessionStorage.getItem("user");
+        if (sessionUser) {
+          try {
+            const parsed = JSON.parse(sessionUser);
+            email = parsed.email || parsed.user?.email;
+          } catch {
+            console.warn("⚠️ Could not parse sessionStorage user");
+          }
+        }
+      }
+
+      // 4. Validate and sanitize email
+      if (email && typeof email === "string") {
+        email = email.trim().toLowerCase();
+
+        // Basic email format validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (emailRegex.test(email)) {
+          console.log("✅ Valid email found:", email);
+          return email;
+        } else {
+          console.warn("⚠️ Invalid email format:", email);
+        }
+      }
+
+      // 5. Use fallback for development/testing
+      console.warn(
+        "⚠️ No valid user email found, using fallback for development"
+      );
+      console.warn(
+        "💡 TIP: Make sure user is logged in via Firebase Authentication"
+      );
+      return "guest@travelrover.com"; // Valid format fallback
+    } catch (error) {
+      console.error("❌ Error getting user email:", error);
+      return "guest@travelrover.com"; // Valid format fallback
     }
   }
 

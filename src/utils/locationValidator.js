@@ -3,7 +3,27 @@
  * Validates that generated places actually belong to the selected destination
  */
 
-import { validatePlaceLocation, getRegionData } from '../data/philippineRegions';
+import { validatePlaceLocation, getRegionData } from '../data/philippineRegions.js';
+
+/**
+ * Helper function to detect logistics activities that shouldn't be validated
+ * @param {string} activityName - Name of the activity
+ * @returns {boolean} - True if it's a logistics item
+ */
+function isLogisticsActivity(activityName) {
+  const lowerName = activityName.toLowerCase();
+  
+  const logisticsPatterns = [
+    'check-in', 'check in', 'checkin',
+    'check-out', 'check out', 'checkout',
+    'return to hotel', 'back to hotel', 'hotel return',
+    'breakfast', 'lunch', 'dinner', 'meal',
+    'arrival', 'departure', 'transfer',
+    'airport', 'rest', 'freshen up'
+  ];
+  
+  return logisticsPatterns.some(pattern => lowerName.includes(pattern));
+}
 
 /**
  * Validate an entire trip itinerary for location consistency
@@ -66,31 +86,49 @@ export function validateTripLocations(tripData, destination) {
     });
   }
 
-  // Validate itinerary places
-  if (tripData.itinerary && Array.isArray(tripData.itinerary)) {
-    tripData.itinerary.forEach((day, dayIndex) => {
-      if (day.plan && Array.isArray(day.plan)) {
-        day.plan.forEach((activity, activityIndex) => {
+  // Validate itinerary places and activities
+  // Check both old format (tripData.itinerary as array) and new format (tripData.itinerary.days)
+  const itineraryDays = tripData.itinerary?.days || tripData.itinerary || [];
+  
+  if (Array.isArray(itineraryDays) && itineraryDays.length > 0) {
+    itineraryDays.forEach((day, dayIndex) => {
+      // Support both 'plan' (old format) and 'activities' (test format)
+      const dayActivities = day.plan || day.activities || [];
+      
+      if (Array.isArray(dayActivities)) {
+        dayActivities.forEach((activity, activityIndex) => {
+          // Get activity name - support different formats
+          const activityName = activity.placeName || activity.activity || activity;
+          
+          // Skip if activity name is not a string
+          if (typeof activityName !== 'string') return;
+          
+          // Skip logistics items (check-in, meals, etc.)
+          const isLogistics = isLogisticsActivity(activityName);
+          if (isLogistics) return;
+          
           results.stats.totalPlaces++;
-          const validation = validatePlaceLocation(activity.placeName, destination);
+          const validation = validatePlaceLocation(activityName, destination);
           
           if (!validation.valid && validation.confidence === "high") {
             results.errors.push({
-              type: 'itinerary',
-              day: day.day,
+              type: 'activity',
+              day: day.day || dayIndex + 1,
               activity: activityIndex,
-              name: activity.placeName,
+              name: activityName,
+              location: activity.location || destination,
               reason: validation.reason,
-              suggestion: `This place may not be in ${destination}`
+              suggestion: `This activity may not be in ${destination}`
             });
             results.suspiciousPlaces.push({
-              placeName: activity.placeName,
-              placeType: 'itinerary',
-              day: day.day,
+              placeName: activityName,
+              placeType: 'activity',
+              day: day.day || dayIndex + 1,
               confidence: validation.confidence,
               reason: validation.reason
             });
             results.stats.suspiciousPlaces++;
+            results.isValid = false;
           } else if (validation.confidence === "high") {
             results.stats.validatedPlaces++;
           } else {

@@ -131,7 +131,7 @@ function HeroSection() {
 
           // Redirect to profile page after a short delay
           setTimeout(() => {
-            navigate("/user-profile", {
+            navigate("/set-profile", {
               state: {
                 returnTo: "/home",
                 message: "Complete your profile to start planning trips",
@@ -189,7 +189,7 @@ function HeroSection() {
 
           // Redirect to profile page after a short delay
           setTimeout(() => {
-            navigate("/user-profile", {
+            navigate("/set-profile", {
               state: {
                 returnTo: "/home",
                 message: "Complete your profile to start planning trips",

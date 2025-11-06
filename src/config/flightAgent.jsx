@@ -1,8 +1,10 @@
 // src/config/flightAgent.js
-import { API_CONFIG, FLIGHT_CONFIG } from "../constants/options";
+import { buildApiUrl } from "./apiConfig";
+import { FLIGHT_CONFIG } from "../constants/options";
+import { getAirportCode } from "../data/airports";
 
 // ⚙️ Configuration
-const API_BASE_URL = API_CONFIG.BASE_URL;
+const API_BASE_URL = buildApiUrl("");
 const USE_MOCK_DATA = false; // 🎭 Set to false when backend server is running
 
 // 🛠️ Development Note:
@@ -131,132 +133,8 @@ export const FlightAgent = {
   },
 
   extractAirportCode(location) {
-    if (!location) return "MNL";
-
-    // Enhanced airport mapping with expanded city and province coverage
-    const airportMap = {
-      // Metro Manila and nearby
-      Manila: "MNL",
-      "Metro Manila": "MNL",
-      "Manila City": "MNL",
-      Quezon: "MNL",
-      "Quezon City": "MNL",
-      Pasay: "MNL",
-      Makati: "MNL",
-      Taguig: "MNL",
-      "San Juan": "MNL",
-      "Las Piñas": "MNL",
-      Caloocan: "MNL",
-      Parañaque: "MNL",
-
-      // Central Luzon
-      Pampanga: "CRK",
-      Angeles: "CRK",
-      "Angeles City": "CRK",
-      Clark: "CRK",
-      Subic: "SFS",
-      Bulacan: "MNL",
-      Tarlac: "CRK",
-      NuevaEcija: "CRK",
-      Cabanatuan: "CRK",
-
-      // North Luzon (Cordillera + Ilocos)
-      Baguio: "BAG", // ✅ FIXED: Return actual airport code, let flight logic handle routing
-      "Baguio City": "BAG",
-      "La Trinidad": "BAG",
-      Benguet: "BAG",
-      "Mountain Province": "TUG",
-      Ifugao: "TUG",
-      Abra: "LAO",
-      "Ilocos Norte": "LAO",
-      Laoag: "LAO",
-      "Ilocos Sur": "LAO",
-      Vigan: "LAO",
-      Dagupan: "CRK",
-      "San Fernando (La Union)": "CRK",
-
-      // Southern Luzon
-      Laguna: "MNL",
-      "San Pablo": "MNL",
-      Batangas: "BSO",
-      "Batangas City": "BSO",
-      Lucena: "MNL",
-      QuezonProvince: "MNL",
-      Naga: "WNP", // ✅ FIXED: WNP has active service (2x daily to MNL)
-      "Naga City": "WNP",
-      Legazpi: "LGP",
-      "Legazpi City": "LGP",
-      Sorsogon: "DRP",
-
-      // Visayas
-      Cebu: "CEB",
-      "Cebu City": "CEB",
-      Dumaguete: "DGT",
-      "Dumaguete City": "DGT",
-      Iloilo: "ILO",
-      "Iloilo City": "ILO",
-      Bacolod: "BCD",
-      "Bacolod City": "BCD",
-      Bohol: "TAG",
-      Tagbilaran: "TAG",
-      "Tagbilaran City": "TAG",
-      Kalibo: "KLO",
-      Boracay: "KLO",
-      Roxas: "RXS",
-      "Roxas City": "RXS",
-
-      // Mindanao
-      Davao: "DVO",
-      "Davao City": "DVO",
-      Cagayan: "CGY",
-      "Cagayan de Oro": "CGY",
-      Butuan: "BXU",
-      Surigao: "SUG",
-      "City of Mati": "DVO",
-      Zamboanga: "ZAM",
-      "Zamboanga City": "ZAM",
-      Cotabato: "CBO",
-      GenSan: "GES",
-      "General Santos": "GES",
-    };
-
-    // Normalize for flexible matching
-    const locationLower = location.toLowerCase();
-    const city = location.split(",")[0].trim();
-    const cityLower = city.toLowerCase();
-
-    console.log(
-      `🔍 Extracting airport code for: "${location}" -> City: "${city}"`
-    );
-
-    // Direct exact matches first
-    for (const [key, code] of Object.entries(airportMap)) {
-      const keyLower = key.toLowerCase();
-      if (cityLower === keyLower || locationLower.includes(keyLower)) {
-        console.log(`✅ Found exact match: ${key} -> ${code}`);
-        return code;
-      }
-    }
-
-    // Partial matching
-    for (const [key, code] of Object.entries(airportMap)) {
-      const keyLower = key.toLowerCase();
-      if (
-        cityLower.includes(keyLower) ||
-        keyLower.includes(cityLower) ||
-        locationLower.includes(keyLower)
-      ) {
-        console.log(`✅ Found partial match: ${key} -> ${code}`);
-        return code;
-      }
-    }
-
-    // ✅ REMOVED BAG and WNP from fallback - they should be returned as-is
-    // Only redirect truly inactive/non-existent airports
-    console.log(
-      `⚠️ No airport code found for "${location}", defaulting to MNL`
-    );
-    return "MNL"; // Default to Manila
+    // ✅ Use centralized airport data from src/data/airports.js
+    return getAirportCode(location);
   },
 
   parseAdults(travelers) {

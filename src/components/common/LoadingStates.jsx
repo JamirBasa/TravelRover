@@ -1,32 +1,124 @@
 // src/components/common/LoadingStates.jsx
-// Reusable loading and error state components to reduce duplication
+// ========================================
+// UNIFIED LOADING & ERROR STATE SYSTEM
+// ========================================
+// Provides consistent, brand-aligned loading experiences across the entire app
+//
+// USAGE EXAMPLES:
+//
+// 1. Full-screen loading with custom message:
+//    <LoadingSpinner message="Loading your trips..." subtitle="Fetching adventures..." />
+//
+// 2. Minimal inline loading (for cards, modals):
+//    <LoadingSpinner message="Loading..." minimal={true} />
+//
+// 3. Half-screen loading (for sections):
+//    <LoadingSpinner message="Loading data..." fullScreen={false} />
+//
+// 4. Use pre-configured loading states:
+//    <ProfileLoading />
+//    <TripLoading />
+//    <FlightLoading />
+//
+// 5. Standard messages from constants:
+//    import { MESSAGES } from "../../constants/options";
+//    <LoadingSpinner message={MESSAGES.LOADING.LOADING_TRIPS} />
+//
+// DESIGN SYSTEM:
+// - Brand gradient (sky-500 to blue-600) with pulse animation
+// - Spinning icon with AiOutlineLoading3Quarters
+// - Animated bouncing dots for progress indication
+// - Full dark mode support
+// - Consistent spacing and typography (tracking-wide)
+// ========================================
 
 import { Button } from "../ui/button";
-import { FaSpinner, FaExclamationTriangle, FaCheck } from "react-icons/fa";
+import { FaExclamationTriangle, FaCheck } from "react-icons/fa";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { MESSAGES } from "../../constants/options";
 
-// Generic Loading Component
+/**
+ * Unified Loading Component
+ * Consistent brand-aligned loading experience across all pages
+ * @param {string} message - Main loading message
+ * @param {string} subtitle - Optional subtitle text
+ * @param {boolean} minimal - Use minimal inline version
+ * @param {boolean} fullScreen - Use full screen height (default: true)
+ * @param {boolean} showDots - Show animated progress dots (default: true)
+ */
 export const LoadingSpinner = ({
   message = MESSAGES.LOADING.LOADING_TRIPS,
-  size = "default",
+  subtitle = "Please wait a moment",
+  minimal = false,
+  fullScreen = true,
+  showDots = true,
 }) => {
-  const sizeClasses = {
-    small: "w-4 h-4",
-    default: "w-16 h-16",
-    large: "w-24 h-24",
-  };
+  // Minimal loading for inline use (e.g., inside cards, modals)
+  if (minimal) {
+    return (
+      <div className="flex items-center justify-center gap-3 p-4">
+        <div className="w-5 h-5 border-2 border-sky-500 dark:border-sky-400 border-t-transparent rounded-full animate-spin" />
+        <span className="text-sm text-gray-600 dark:text-gray-400 tracking-wide">
+          {message}
+        </span>
+      </div>
+    );
+  }
 
+  // Full loading state with brand gradient
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div
-          className={`border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4 ${sizeClasses[size]}`}
-          style={{
-            animation: "spin 1s linear infinite",
-          }}
-        ></div>
-        <p className="text-gray-600 mb-2">{message}</p>
-        <p className="text-sm text-gray-500">Please wait a moment</p>
+    <div
+      className={`bg-gradient-to-br from-gray-50 via-blue-50/30 to-sky-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900 flex items-center justify-center ${
+        fullScreen ? "min-h-screen" : "min-h-[400px]"
+      }`}
+    >
+      <div className="text-center space-y-6 p-6">
+        {/* Animated Loading Spinner with Gradient */}
+        <div className="relative flex items-center justify-center">
+          <div className="relative w-20 h-20">
+            {/* Outer pulse ring */}
+            <div className="absolute inset-0 brand-gradient rounded-full opacity-20 animate-ping" />
+
+            {/* Middle pulse ring with delay */}
+            <div
+              className="absolute inset-0 brand-gradient rounded-full opacity-30 animate-ping"
+              style={{ animationDelay: "0.5s" }}
+            />
+
+            {/* Main spinning container - PERFECTLY CENTERED */}
+            <div className="absolute inset-0 brand-gradient rounded-full shadow-xl shadow-sky-500/30 dark:shadow-sky-500/20 flex items-center justify-center">
+              <AiOutlineLoading3Quarters
+                className="h-8 w-8 text-white"
+                style={{
+                  animation: "spin 1s linear infinite",
+                  transformOrigin: "center center",
+                  willChange: "transform",
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Loading Text */}
+        <div className="space-y-2">
+          <p className="text-xl font-semibold text-gray-800 dark:text-gray-200 brand-gradient-text tracking-wide">
+            {message}
+          </p>
+          {subtitle && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 tracking-wide">
+              {subtitle}
+            </p>
+          )}
+        </div>
+
+        {/* Loading Progress Dots */}
+        {showDots && (
+          <div className="flex items-center justify-center gap-2.5">
+            <div className="w-2.5 h-2.5 bg-sky-500 dark:bg-sky-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+            <div className="w-2.5 h-2.5 bg-blue-500 dark:bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+            <div className="w-2.5 h-2.5 bg-sky-600 dark:bg-sky-500 rounded-full animate-bounce" />
+          </div>
+        )}
       </div>
     </div>
   );
