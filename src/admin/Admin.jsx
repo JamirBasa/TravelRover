@@ -50,7 +50,7 @@ const Admin = () => {
   const navigate = useNavigate();
 
   const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: "📊", mobile: "📊" },
@@ -435,7 +435,7 @@ const Admin = () => {
 
       try {
         const djangoUsersResponse = await fetch(
-          `${API_BASE_URL}/api/admin/users/`,
+          `${API_BASE_URL}/admin/users/`,
           {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -555,7 +555,7 @@ const Admin = () => {
       try {
         console.log("📡 Attempting to fetch users from Django backend...");
         const backendResponse = await fetch(
-          `${API_BASE_URL}/api/admin/users/`,
+          `${API_BASE_URL}/admin/users/`,
           {
             method: "GET",
             headers: { "Content-Type": "application/json" },
