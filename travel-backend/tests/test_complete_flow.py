@@ -30,7 +30,7 @@ def test_complete_data_flow():
         "hotelData": {"includeHotels": False},
         "userProfile": {
             "preferredTripTypes": ["beach", "cultural"],
-            "travelStyle": "couple",
+            "travelStyle": "duo",
             "budgetRange": "moderate"
         }
     }

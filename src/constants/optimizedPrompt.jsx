@@ -76,6 +76,7 @@ export const AI_PROMPT_OPTIMIZED = `Generate travel itinerary JSON for {location
 Dates: {travelDates}
 Profile: {userName} from {userHomeLocation}
 Interests: {tripTypes} | Style: {travelStyle}
+🎯 Style Focus: {travelStyleInfluence}
 Dietary: {dietary} | Cultural: {cultural}
 
 💡 AVAILABLE OPTIONS
@@ -86,7 +87,7 @@ Dietary: {dietary} | Cultural: {cultural}
 {specialRequests}
 
 🚨 VALIDATION RULES
-• Respect all user preferences (dietary, cultural, etc.).
+• Respect all user preferences (dietary, cultural, travel style focus).
 • Activities between {activityStartDate} and {activityEndDate}.
 • FINAL CHECK: Day 1 activities ≤ 2. Middle days = {activityPreference}.
 
@@ -99,17 +100,41 @@ Generate complete JSON: {"tripName":"...","destination":"{location}","hotels":[{
 export const buildUserProfileSummary = (userProfile) => {
   if (!userProfile) return "New traveler";
 
+  // Get travel style context for better recommendations
+  const travelStyleContext = getTravelStyleInfluence(userProfile.travelStyle);
+
   return `${userProfile.fullName || "Traveler"} from ${
     userProfile.homeLocation || "Philippines"
   }
 Interests: ${
     (userProfile.preferredTripTypes || []).join(", ") || "General"
   } | Style: ${userProfile.travelStyle || "Balanced"}
+${travelStyleContext ? `🎯 Focus: ${travelStyleContext}` : ""}
 Dietary: ${
     (userProfile.dietaryRestrictions || []).join(", ") || "None"
   } | Cultural: ${
     (userProfile.culturalPreferences || []).join(", ") || "None"
   }`;
+};
+
+/**
+ * Get travel style influence text for AI recommendations
+ * @param {string} travelStyle - Travel style (solo, duo, family, group, business)
+ * @returns {string} Actionable guidance for AI
+ */
+const getTravelStyleInfluence = (travelStyle) => {
+  const influences = {
+    solo: "Solo-friendly cafes, safe walkable areas, co-working spaces, social opportunities",
+    duo: "Romantic restaurants, intimate venues, couple activities, scenic viewpoints, privacy",
+    family:
+      "Kid-friendly parks, educational sites, family restaurants, safe outdoor spaces, age-appropriate activities",
+    group:
+      "Group activities, large capacity venues, adventure sports, social dining, nightlife",
+    business:
+      "Business districts, efficient transport, quiet workspaces, quick service dining, meeting venues",
+  };
+
+  return influences[travelStyle] || null;
 };
 
 /**
@@ -212,9 +237,9 @@ Activities: Days 1-${dateInfo.totalDays} | Checkout: ${dateInfo.checkoutDate}`;
  */
 const getDetailLevelForDuration = (durationDays, budgetAmount) => {
   // Calculate daily budget for budget enforcement
-  const dailyBudget = budgetAmount ? 
-    Math.floor(parseInt(budgetAmount.replace(/[₱,]/g, '')) / durationDays) : 
-    2000;
+  const dailyBudget = budgetAmount
+    ? Math.floor(parseInt(budgetAmount.replace(/[₱,]/g, "")) / durationDays)
+    : 2000;
 
   if (durationDays <= 7) {
     return {
@@ -291,20 +316,32 @@ export const buildOptimizedPrompt = ({
   // Adjust activity preference based on duration
   let adjustedActivityPreference = activityPreference;
   if (detailLevel.activityCount === "reduced") {
-    adjustedActivityPreference = Math.min(parseInt(activityPreference) || 2, 3).toString();
+    adjustedActivityPreference = Math.min(
+      parseInt(activityPreference) || 2,
+      3
+    ).toString();
   } else if (detailLevel.activityCount === "minimal") {
     adjustedActivityPreference = "2"; // Force max 2 for long trips
   }
 
   console.log(`📊 Trip Duration: ${durationDays} days`);
   console.log(`🎯 Detail Level: ${detailLevel.level}`);
-  console.log(`🎨 Activity Preference: ${activityPreference} → ${adjustedActivityPreference}`);
+  console.log(
+    `🎨 Activity Preference: ${activityPreference} → ${adjustedActivityPreference}`
+  );
   if (durationDays > 14) {
-    const dailyBudget = budgetAmount ? 
-      Math.floor(parseInt(budgetAmount.replace(/[₱,]/g, '')) / durationDays) : 
-      2000;
-    console.log(`💰 Daily Budget Target: ₱${dailyBudget.toLocaleString()} (STRICT)`);
+    const dailyBudget = budgetAmount
+      ? Math.floor(parseInt(budgetAmount.replace(/[₱,]/g, "")) / durationDays)
+      : 2000;
+    console.log(
+      `💰 Daily Budget Target: ₱${dailyBudget.toLocaleString()} (STRICT)`
+    );
   }
+
+  // Get travel style influence text
+  const travelStyleInfluence = getTravelStyleInfluence(
+    userProfile?.travelStyle
+  );
 
   let prompt = AI_PROMPT_OPTIMIZED.replace("{location}", location)
     .replace("{duration}", duration)
@@ -320,6 +357,10 @@ export const buildOptimizedPrompt = ({
         "General exploration"
     )
     .replace("{travelStyle}", userProfile?.travelStyle || "Balanced")
+    .replace(
+      "{travelStyleInfluence}",
+      travelStyleInfluence || "Balanced mix of activities"
+    )
     .replace(
       "{dietary}",
       (userProfile?.dietaryRestrictions || []).join(", ") || "None"

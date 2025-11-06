@@ -4,57 +4,37 @@
  * Tailored for Philippines destinations with accurate regional pricing
  * Includes nearest airport recommendations for cities without direct airports
  * NOW INCLUDES: Smart flight pricing based on booking timing
+ * 
+ * @updated 2025-11-06 - Migrated to use centralized budget constants
  */
 
 import { 
   getDaysUntilDeparture, 
   getTimingPriceMultiplier,
   calculateTimingAdjustedFlightCost 
-} from './flightPricingAnalyzer';
+} from './flightPricingAnalyzer.js';
 
 import { 
   findNearestAirportByDistance,
   validateAirportRecommendation 
-} from './airportDistanceCalculator';
+} from './airportDistanceCalculator.js';
 
-import { getLimitedServiceInfo } from './flightRecommendations';
+import { getLimitedServiceInfo } from './flightRecommendations.js';
 
-// ========================================
-// MAJOR AIRPORTS IN PHILIPPINES
-// ========================================
-const PHILIPPINE_AIRPORTS = {
-  // Luzon - Major Airports
-  'MNL': { name: 'Ninoy Aquino International Airport', city: 'Manila', region: 'ncr', type: 'international' },
-  'CRK': { name: 'Clark International Airport', city: 'Angeles', region: 'r03', type: 'international' },
-  'LAO': { name: 'Laoag International Airport', city: 'Laoag', region: 'r01', type: 'international' }, // ✅ FIXED: Changed to international
-  // ❌ REMOVED BAG - No commercial service as of Oct 2025
-  'LGP': { name: 'Legazpi Airport', city: 'Legazpi', region: 'r05', type: 'domestic' },
-  'WNP': { name: 'Naga Airport', city: 'Naga', region: 'r05', type: 'domestic' }, // ✅ CORRECT: Has 2x daily to MNL
-  
-  // Visayas - Major Airports
-  'CEB': { name: 'Mactan-Cebu International Airport', city: 'Cebu', region: 'r07', type: 'international' },
-  'ILO': { name: 'Iloilo International Airport', city: 'Iloilo', region: 'r06', type: 'international' },
-  'KLO': { name: 'Kalibo International Airport', city: 'Kalibo', region: 'r06', type: 'international' },
-  'MPH': { name: 'Godofredo P. Ramos Airport (Caticlan)', city: 'Caticlan', region: 'r06', type: 'domestic' },
-  'BCD': { name: 'Bacolod-Silay Airport', city: 'Bacolod', region: 'r06', type: 'domestic' },
-  'TAG': { name: 'Tagbilaran Airport', city: 'Tagbilaran', region: 'r07', type: 'domestic' },
-  'DGT': { name: 'Sibulan Airport', city: 'Dumaguete', region: 'r07', type: 'domestic' },
-  'TAC': { name: 'Daniel Z. Romualdez Airport', city: 'Tacloban', region: 'r08', type: 'domestic' },
-  
-  // Mindanao - Major Airports
-  'DVO': { name: 'Francisco Bangoy International Airport', city: 'Davao', region: 'r11', type: 'international' },
-  'GES': { name: 'General Santos International Airport', city: 'General Santos', region: 'r12', type: 'domestic' },
-  'CGY': { name: 'Laguindingan Airport', city: 'Cagayan de Oro', region: 'r10', type: 'domestic' },
-  'ZAM': { name: 'Zamboanga International Airport', city: 'Zamboanga', region: 'r09', type: 'domestic' },
-  'BXU': { name: 'Bancasi Airport', city: 'Butuan', region: 'r13', type: 'domestic' },
-  'IAO': { name: 'Sayak Airport', city: 'Siargao', region: 'r13', type: 'domestic' },
-  'CGM': { name: 'Camiguin Airport', city: 'Camiguin', region: 'r10', type: 'domestic' },
-  
-  // Palawan
-  'PPS': { name: 'Puerto Princesa International Airport', city: 'Puerto Princesa', region: 'r04b', type: 'international' },
-  'USU': { name: 'Francisco B. Reyes Airport', city: 'Coron', region: 'r04b', type: 'domestic' },
-  'ENI': { name: 'El Nido Airport', city: 'El Nido', region: 'r04b', type: 'domestic' },
-};
+// 🔄 MIGRATED: Import centralized constants
+import {
+  PHILIPPINE_AIRPORTS,
+} from '../data/airports';
+
+import {
+  REGIONAL_COST_INDEX,
+  DESTINATION_MULTIPLIERS,
+  ACCOMMODATION_RANGES,
+  MEAL_COSTS,
+  TRANSPORT_COSTS,
+  ACTIVITY_COSTS,
+  getDestinationMultiplier,
+} from '../constants/budgetConstants';
 
 // ✅ CENTRALIZED: Get inactive airport data from single source
 // Helper to check if a city/airport code is inactive
@@ -99,100 +79,29 @@ const checkInactiveAirport = (cityOrCode) => {
   return null;
 };
 
-// Regional cost of living indexes for Philippines (relative to Manila = 100)
-const REGIONAL_COST_INDEX = {
-  'ncr': 100,           // National Capital Region (Manila, Quezon City, Makati, BGC, Taguig)
-  'r01': 85,            // Ilocos Region (Vigan, Laoag, La Union)
-  'r02': 80,            // Cagayan Valley
-  'r03': 90,            // Central Luzon (Pampanga, Zambales, Subic, Bataan)
-  'r04a': 95,           // CALABARZON (Batangas, Tagaytay, Cavite, Laguna)
-  'r04b': 75,           // MIMAROPA (Palawan, Marinduque, Romblon)
-  'r05': 80,            // Bicol Region (Albay, Camarines, Sorsogon)
-  'r06': 85,            // Western Visayas (Iloilo, Bacolod, Boracay, Aklan)
-  'r07': 95,            // Central Visayas (Cebu, Bohol, Negros Oriental, Siquijor)
-  'r08': 75,            // Eastern Visayas (Leyte, Samar, Biliran)
-  'r09': 80,            // Zamboanga Peninsula
-  'r10': 85,            // Northern Mindanao (Camiguin, Cagayan de Oro)
-  'r11': 90,            // Davao Region (Davao City, Samal Island)
-  'r12': 80,            // SOCCSKSARGEN
-  'r13': 70,            // Caraga (Siargao, Surigao)
-  'barmm': 70,          // BARMM
-  'car': 85,            // Cordillera (Baguio, Sagada, Benguet)
-};
-
-// Popular tourist destinations with cost multipliers (1.0 = average, higher = more expensive)
-const DESTINATION_MULTIPLIERS = {
-  // Premium island destinations (higher costs due to tourism)
-  'boracay': 1.4,
-  'palawan': 1.3,
-  'el nido': 1.35,
-  'coron': 1.3,
-  'siargao': 1.25,
-  'amanpulo': 2.0,
-  
-  // Major cities (higher costs, more options)
-  'manila': 1.1,
-  'makati': 1.2,
-  'bgc': 1.25,
-  'bonifacio global city': 1.25,
-  'taguig': 1.15,
-  'quezon city': 1.05,
-  'cebu': 1.15,
-  'cebu city': 1.15,
-  'davao': 1.0,
-  'davao city': 1.0,
-  'baguio': 1.1,
-  
-  // Mid-range tourist destinations
-  'bohol': 1.0,
-  'panglao': 1.1,
-  'tagbilaran': 0.95,
-  'iloilo': 0.95,
-  'iloilo city': 0.95,
-  'puerto princesa': 1.1,
-  'tagaytay': 1.05,
-  'batangas': 0.95,
-  'nasugbu': 0.9,
-  'zambales': 0.9,
-  'la union': 0.95,
-  'san juan': 0.95,
-  'hundred islands': 0.85,
-  
-  // Budget-friendly destinations
-  'vigan': 0.85,
-  'sagada': 0.85,
-  'dumaguete': 0.9,
-  'camiguin': 0.85,
-  'siquijor': 0.8,
-  'banaue': 0.85,
-  'pagudpud': 0.9,
-  'albay': 0.85,
-  'legazpi': 0.85,
-  'donsol': 0.8,
-};
-
-// Base daily costs per person (in PHP) - realistic Philippines pricing
+// 🔄 MIGRATED: Now using centralized constants from budgetConstants.js
+// Legacy exports maintained for backward compatibility
 const BASE_DAILY_COSTS = {
   'budget-friendly': {
-    accommodation: 800,      // Budget-friendly hotels/hostels (₱600-1000/night)
-    food: 600,              // Local eateries, street food (₱150-250 per meal)
-    activities: 400,        // Basic entrance fees, local tours
-    transport: 300,         // Jeepney, tricycle, local buses
-    miscellaneous: 200,     // Snacks, tips, small purchases
+    accommodation: ACCOMMODATION_RANGES.BUDGET.average,
+    food: MEAL_COSTS.CASUAL.average * 3, // 3 meals per day
+    activities: ACTIVITY_COSTS.STANDARD_ACTIVITY.average,
+    transport: TRANSPORT_COSTS.JEEPNEY.average * 10, // Multiple trips
+    miscellaneous: 200,
   },
   moderate: {
-    accommodation: 2500,    // Mid-range hotels (₱2000-3000/night)
-    food: 1200,            // Mix of local and tourist restaurants (₱300-500 per meal)
-    activities: 800,       // Popular attractions, island hopping, guided tours
-    transport: 500,        // Taxis, Grab, van rentals
-    miscellaneous: 500,    // Shopping, extras, tips
+    accommodation: ACCOMMODATION_RANGES.MODERATE.average,
+    food: MEAL_COSTS.MID_RANGE.average * 3,
+    activities: ACTIVITY_COSTS.ISLAND_TOUR.average,
+    transport: TRANSPORT_COSTS.GRAB_AIRPORT.average,
+    miscellaneous: 500,
   },
   luxury: {
-    accommodation: 6000,    // High-end hotels/resorts (₱5000-8000+/night)
-    food: 2500,            // Fine dining, resort restaurants (₱600-1000+ per meal)
-    activities: 1500,      // Premium experiences, private tours, water sports
-    transport: 1000,       // Private car/van, premium services
-    miscellaneous: 1000,   // Shopping, spa, premium services
+    accommodation: ACCOMMODATION_RANGES.LUXURY.average,
+    food: MEAL_COSTS.FINE_DINING.average * 3,
+    activities: ACTIVITY_COSTS.DIVING.average,
+    transport: TRANSPORT_COSTS.TAXI.average * 5, // Multiple trips
+    miscellaneous: 1000,
   },
 };
 
@@ -277,23 +186,7 @@ export const getRegionCode = (location) => {
   return 'ncr'; // Default to NCR if no match
 };
 
-/**
- * Get destination-specific cost multiplier
- */
-export const getDestinationMultiplier = (destination) => {
-  if (!destination) return 1.0;
-  
-  const destLower = destination.toLowerCase();
-  
-  // Check for exact or partial matches
-  for (const [keyword, multiplier] of Object.entries(DESTINATION_MULTIPLIERS)) {
-    if (destLower.includes(keyword)) {
-      return multiplier;
-    }
-  }
-  
-  return 1.0; // Default multiplier (average cost)
-};
+// 🔄 REMOVED: getDestinationMultiplier now imported from budgetConstants.js
 
 /**
  * Estimate flight costs based on route

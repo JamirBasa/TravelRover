@@ -1,4 +1,5 @@
-import { HOTEL_CONFIG, API_CONFIG } from "../constants/options";
+import { HOTEL_CONFIG } from "../constants/options";
+// Note: API_CONFIG moved to centralized apiConfig.js but not used in this file
 
 export class HotelAgent {
   static async searchHotels(params) {

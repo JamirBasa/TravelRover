@@ -1,6 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { Cloud, CloudRain, Sun, Wind, Droplets, AlertCircle } from 'lucide-react';
-import { getWeatherForecast, getWeatherRecommendation, isForecastAvailable } from '@/services/weatherService';
+import React, { useState, useEffect } from "react";
+import {
+  Cloud,
+  CloudRain,
+  Sun,
+  Wind,
+  Droplets,
+  AlertCircle,
+} from "lucide-react";
+import {
+  getWeatherForecast,
+  getWeatherRecommendation,
+  isForecastAvailable,
+} from "@/services/weatherService";
 
 function WeatherForecast({ trip }) {
   const [weatherData, setWeatherData] = useState(null);
@@ -9,7 +20,7 @@ function WeatherForecast({ trip }) {
 
   // Add component mount logging
   useEffect(() => {
-    console.log('🎬 WeatherForecast component mounted with trip:', trip);
+    console.log("🎬 WeatherForecast component mounted with trip:", trip);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -17,46 +28,51 @@ function WeatherForecast({ trip }) {
       const location = trip?.userSelection?.location;
       const startDate = trip?.userSelection?.startDate;
 
-      console.log('🌤️ WeatherForecast useEffect triggered');
-      console.log('📍 Location:', location);
-      console.log('📅 Start Date:', startDate);
+      console.log("🌤️ WeatherForecast useEffect triggered");
+      console.log("📍 Location:", location);
+      console.log("📅 Start Date:", startDate);
 
       if (!location || !startDate) {
-        console.log('⚠️ Missing location or startDate');
+        console.log("⚠️ Missing location or startDate");
         setLoading(false);
         return;
       }
 
       // Check if forecast is available for this date
       const available = isForecastAvailable(startDate);
-      console.log('🔍 Forecast available?', available);
-      
+      console.log("🔍 Forecast available?", available);
+
       if (!available) {
-        console.log('❌ Forecast not available for this date');
+        console.log("❌ Forecast not available for this date");
         setLoading(false);
         return;
       }
 
       try {
         setLoading(true);
-        console.log('⏳ Fetching weather data...');
+        console.log("⏳ Fetching weather data...");
         const data = await getWeatherForecast(location, startDate);
-        
-        console.log('📦 Weather data received:', data);
-        
+
+        console.log("📦 Weather data received:", data);
+
         if (data.available) {
-          console.log('✅ Weather data is available, setting state');
+          console.log("✅ Weather data is available, setting state");
           setWeatherData(data);
         } else {
-          console.log('❌ Weather data not available:', data.reason, '-', data.message);
+          console.log(
+            "❌ Weather data not available:",
+            data.reason,
+            "-",
+            data.message
+          );
           setError(data.message);
         }
       } catch (err) {
-        console.error('❌ Weather fetch error:', err);
-        setError('Unable to load weather data');
+        console.error("❌ Weather fetch error:", err);
+        setError("Unable to load weather data");
       } finally {
         setLoading(false);
-        console.log('✅ Weather fetch complete');
+        console.log("✅ Weather fetch complete");
       }
     };
 
@@ -65,41 +81,49 @@ function WeatherForecast({ trip }) {
 
   // Don't render anything if loading or no data
   if (loading) {
-    console.log('⏳ WeatherForecast: Still loading...');
-    // Show loading state briefly
+    console.log("⏳ WeatherForecast: Still loading...");
+    // Show unified minimal loading state
     return (
       <div className="bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 dark:from-sky-950/30 dark:via-blue-950/30 dark:to-indigo-950/30 rounded-lg border border-sky-200 dark:border-sky-800 p-6 shadow-md">
-        <div className="flex items-center gap-3">
-          <Cloud className="h-5 w-5 text-sky-600 dark:text-sky-400 animate-pulse" />
-          <p className="text-sm text-gray-600 dark:text-gray-400">Loading weather forecast...</p>
+        <div className="flex items-center justify-center gap-3">
+          <div className="w-5 h-5 border-2 border-sky-500 dark:border-sky-400 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-gray-600 dark:text-gray-400 tracking-wide">
+            Loading weather forecast...
+          </p>
         </div>
       </div>
     );
   }
-  
+
   // Show helpful message if forecast not available
   if (error || !weatherData || !weatherData.available) {
-    console.log('❌ WeatherForecast: Not available due to:', { error, hasData: !!weatherData, available: weatherData?.available });
-    
+    console.log("❌ WeatherForecast: Not available due to:", {
+      error,
+      hasData: !!weatherData,
+      available: weatherData?.available,
+    });
+
     const location = trip?.userSelection?.location;
     const startDate = trip?.userSelection?.startDate;
-    
+
     // Calculate days until trip
     let daysUntilTrip = null;
-    let forecastMessage = 'Weather forecast not available';
-    
+    let forecastMessage = "Weather forecast not available";
+
     if (startDate) {
       const start = new Date(startDate);
       const now = new Date();
       daysUntilTrip = Math.ceil((start - now) / (1000 * 60 * 60 * 24));
-      
+
       if (daysUntilTrip > 14) {
-        forecastMessage = `Weather forecast will be available ${daysUntilTrip - 14} days before your trip`;
+        forecastMessage = `Weather forecast will be available ${
+          daysUntilTrip - 14
+        } days before your trip`;
       } else if (daysUntilTrip < 0) {
-        forecastMessage = 'Weather forecast only available for upcoming trips';
+        forecastMessage = "Weather forecast only available for upcoming trips";
       }
     }
-    
+
     return (
       <div className="bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100 dark:from-gray-900/30 dark:via-slate-900/30 dark:to-gray-900/30 rounded-lg border border-gray-300 dark:border-gray-700 p-6 shadow-md">
         <div className="flex items-start gap-3">
@@ -111,7 +135,7 @@ function WeatherForecast({ trip }) {
               Weather Forecast
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              {location || 'Your destination'}
+              {location || "Your destination"}
             </p>
             <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
@@ -120,12 +144,11 @@ function WeatherForecast({ trip }) {
                   {forecastMessage}
                 </p>
                 <p className="text-xs text-blue-700 dark:text-blue-400">
-                  {daysUntilTrip > 14 
+                  {daysUntilTrip > 14
                     ? `Your trip is ${daysUntilTrip} days away. Weather forecasts are available for trips within 14 days.`
-                    : error 
-                      ? 'Unable to load weather data at this time.'
-                      : 'Weather information will appear closer to your trip date.'
-                  }
+                    : error
+                    ? "Unable to load weather data at this time."
+                    : "Weather information will appear closer to your trip date."}
                 </p>
               </div>
             </div>
@@ -135,7 +158,11 @@ function WeatherForecast({ trip }) {
     );
   }
 
-  console.log('✅ WeatherForecast: Rendering component with', weatherData.forecast.length, 'days');
+  console.log(
+    "✅ WeatherForecast: Rendering component with",
+    weatherData.forecast.length,
+    "days"
+  );
 
   const recommendation = getWeatherRecommendation(weatherData.forecast);
 
@@ -179,11 +206,11 @@ function WeatherForecast({ trip }) {
             <div className="text-center mb-2">
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                 {index === 0
-                  ? 'Today'
-                  : new Date(day.date).toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
+                  ? "Today"
+                  : new Date(day.date).toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
                     })}
               </p>
             </div>
@@ -228,7 +255,7 @@ function WeatherForecast({ trip }) {
                   {day.windSpeed} km/h
                 </span>
               </div>
-              {day.rainChance === 'Yes' && (
+              {day.rainChance === "Yes" && (
                 <div className="flex items-center justify-center gap-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded px-2 py-1 mt-2">
                   <CloudRain className="h-3 w-3" />
                   <span>Rain likely</span>

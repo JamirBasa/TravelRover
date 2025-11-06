@@ -1,5 +1,5 @@
 // src/config/langGraphAgent.jsx - Client-side adapter for Django LangGraph
-import { API_CONFIG } from "../constants/options";
+import { API_CONFIG, buildApiUrl, getTimeout } from "./apiConfig";
 
 /**
  * LangGraph Travel Agent - Client Adapter for Django Backend
@@ -7,8 +7,8 @@ import { API_CONFIG } from "../constants/options";
  */
 export class LangGraphTravelAgent {
   constructor() {
-    this.baseUrl = `${API_CONFIG.BASE_URL}/langgraph`;
-    this.timeout = API_CONFIG.TIMEOUT_MAX; // Use maximum timeout for complex LangGraph operations
+    this.baseUrl = buildApiUrl('/langgraph');
+    this.timeout = getTimeout('max'); // Use maximum timeout for complex LangGraph operations
   }
 
   /**

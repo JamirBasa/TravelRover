@@ -966,8 +966,8 @@ const Admin = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-100 flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-blue-700 font-medium text-sm sm:text-base">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-sky-700 font-medium text-sm sm:text-base">
             Verifying admin access...
           </p>
         </div>

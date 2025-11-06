@@ -27,7 +27,7 @@ function SortPopover({ sortBy, setSortBy }) {
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-56 p-3 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700"
+        className="w-56 p-3 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 z-[100]"
         align="end"
       >
         <div className="space-y-1">

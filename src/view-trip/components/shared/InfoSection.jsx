@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { GetPlaceDetails, PHOTO_REF_URL } from "@/config/GlobalApi";
+import { GetPlaceDetails, fetchPlacePhoto } from "@/config/GlobalApi";
 import { Badge } from "@/components/ui/badge";
 import {
   MapPin,
@@ -21,6 +21,8 @@ function InfoSection({ trip }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let currentPhotoUrl = null;
+
     const GetPlacePhoto = async () => {
       if (!trip?.userSelection?.location) {
         console.warn("No location provided for photo search");
@@ -48,8 +50,16 @@ function InfoSection({ trip }) {
 
         const photoReference = place.photos[0]?.name;
         if (photoReference) {
-          const photoUrl = PHOTO_REF_URL.replace("{NAME}", photoReference);
-          setPhotoUrl(photoUrl);
+          try {
+            // ✅ Fetch photo as blob URL for proper loading
+            const blobUrl = await fetchPlacePhoto(photoReference);
+            currentPhotoUrl = blobUrl;
+            setPhotoUrl(blobUrl);
+            console.log("✅ InfoSection - Photo loaded successfully");
+          } catch (photoError) {
+            console.warn("📸 Failed to fetch photo:", photoError.message);
+            setPhotoUrl("");
+          }
         }
       } catch (error) {
         console.error("Error fetching place photo:", error);
@@ -63,6 +73,13 @@ function InfoSection({ trip }) {
     if (trip?.userSelection?.location) {
       GetPlacePhoto();
     }
+
+    // Cleanup blob URL on unmount
+    return () => {
+      if (currentPhotoUrl) {
+        URL.revokeObjectURL(currentPhotoUrl);
+      }
+    };
   }, [trip?.userSelection?.location]);
 
   return (
@@ -73,9 +90,16 @@ function InfoSection({ trip }) {
         <div className="relative h-[400px] md:h-[480px]">
           {isLoading ? (
             <div className="absolute inset-0 bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-950 dark:to-blue-950 flex items-center justify-center">
-              <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-sky-600 dark:border-sky-400"></div>
-                <p className="mt-4 text-sky-700 dark:text-sky-300 font-semibold text-lg">
+              <div className="text-center space-y-4">
+                <div className="relative flex items-center justify-center">
+                  <div className="relative w-16 h-16">
+                    <div className="absolute inset-0 brand-gradient rounded-full opacity-20 animate-ping" />
+                    <div className="absolute inset-0 brand-gradient rounded-full shadow-xl flex items-center justify-center">
+                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sky-700 dark:text-sky-300 font-semibold text-lg tracking-wide">
                   Loading destination...
                 </p>
               </div>
