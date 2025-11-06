@@ -55,6 +55,7 @@ function SpecificRequests({
       formData.travelers,
       formData.categoryName,
       formData.startDate,
+      formData.endDate,
       customBudget,
       startDate,
       endDate,
@@ -78,12 +79,14 @@ function SpecificRequests({
       };
       return generateContextSuggestions(context);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [context.location, context.categoryName, context.budget, context.travelers]
   );
 
   // ✅ PERFORMANCE: Memoize placeholder (changes less frequently)
   const smartPlaceholder = useMemo(
     () => generateSmartPlaceholder(context),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [context.location, context.categoryName, context.budget, context.travelers]
   );
 
