@@ -851,38 +851,6 @@ const Admin = () => {
     }
   };
 
-  // ✅ Delete Trip
-  const deleteTrip = async (tripId) => {
-    const trip = trips.find((t) => t.id === tripId);
-    if (!trip) {
-      toast.error("Trip not found");
-      return;
-    }
-
-    if (
-      !confirm(`Are you sure you want to delete trip to "${trip.destination}"?`)
-    )
-      return;
-
-    try {
-      console.log("🗑️ Deleting trip:", tripId);
-
-      const tripDocRef = doc(db, "AITrips", tripId);
-      await deleteDoc(tripDocRef);
-
-      setTrips(trips.filter((t) => t.id !== tripId));
-
-      toast.success(`Successfully deleted trip to "${trip.destination}"`);
-
-      if (activeTab === "dashboard") {
-        setTimeout(() => fetchDashboardStats(), 1000);
-      }
-    } catch (error) {
-      console.error("❌ Error deleting trip:", error);
-      toast.error(`Failed to delete trip: ${error.message}`);
-    }
-  };
-
   // Handle logout
   const handleLogout = () => {
     localStorage.removeItem("adminUser");
@@ -2021,30 +1989,18 @@ const Admin = () => {
                               </Badge>
                             </td>
 
-                            {/* Actions */}
+                            {/* Actions - View Only */}
                             <td className="px-4 py-3">
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() =>
-                                    navigate(`/view-trip/${trip.id}`)
-                                  }
-                                  className="border-sky-500 text-sky-700 hover:bg-sky-50 cursor-pointer"
-                                  title="View trip details"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => deleteTrip(trip.id)}
-                                  className="bg-red-600 hover:bg-red-700 cursor-pointer"
-                                  title="Delete trip"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigate(`/view-trip/${trip.id}`)}
+                                className="border-sky-500 text-sky-700 hover:bg-sky-50 cursor-pointer"
+                                title="View trip details"
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                <span className="hidden sm:inline">View</span>
+                              </Button>
                             </td>
                           </tr>
                         ))
