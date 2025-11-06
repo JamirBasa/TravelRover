@@ -498,25 +498,35 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
         return null;
       }
 
-      // ✅ Add Philippines context for better accuracy
+      // ✅ Use Django backend proxy for geocoding (secure, no API key exposure)
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+      const geocodeUrl = `${apiBaseUrl}/langgraph/geocoding/`;
       const searchQuery = `${placeName}, Philippines`;
-      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        searchQuery
-      )}&key=${apiKey}`;
 
-      const response = await fetch(geocodeUrl, { signal });
-      const data = await response.json();
+      const response = await fetch(geocodeUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: searchQuery,
+          components: 'country:PH' // Restrict to Philippines for accuracy
+        }),
+        signal
+      });
 
-      if (data.status === "REQUEST_DENIED") {
+      const result = await response.json();
+
+      if (!result.success) {
         console.error(
-          "❌ Geocoding API key error:",
-          data.error_message || "Permission denied. Check API key restrictions."
+          "❌ Geocoding proxy error:",
+          result.error || "Unknown error"
         );
         return null;
       }
 
-      if (data.results && data.results.length > 0) {
-        const location = data.results[0].geometry.location;
+      if (result.data?.results && result.data.results.length > 0) {
+        const location = result.data.results[0].geometry.location;
         const coords = {
           latitude: location.lat,
           longitude: location.lng,
@@ -535,7 +545,7 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       } else {
         console.warn(
           `⚠️ No geocode results for: "${locationName}"`,
-          data.status
+          result.data?.status
         );
         return null;
       }
@@ -690,14 +700,25 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
     }
 
     try {
-      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        destination
-      )}&key=${apiKey}`;
-      const response = await fetch(geocodeUrl);
-      const data = await response.json();
+      // ✅ Use Django backend proxy for geocoding
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+      const geocodeUrl = `${apiBaseUrl}/langgraph/geocoding/`;
+      
+      const response = await fetch(geocodeUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: destination,
+          components: 'country:PH'
+        })
+      });
 
-      if (data.results && data.results.length > 0) {
-        const location = data.results[0].geometry.location;
+      const result = await response.json();
+
+      if (result.success && result.data?.results && result.data.results.length > 0) {
+        const location = result.data.results[0].geometry.location;
         return { lat: location.lat, lng: location.lng };
       }
     } catch (error) {
