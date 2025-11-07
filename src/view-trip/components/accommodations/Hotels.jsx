@@ -4,37 +4,21 @@ import {
   verifySingleHotel,
   getDatabaseStats,
 } from "../../../services/AccommodationVerification";
+import { logDebug } from "../../../utils/productionLogger";
+import { parseDataArray } from "../../../utils/jsonParsers";
 
 function Hotels({ trip }) {
   const [verifiedHotels, setVerifiedHotels] = useState([]);
   const [isVerifying, setIsVerifying] = useState(false);
 
   // ========================================
-  // PARSE DATA ARRAY UTILITY
-  // ========================================
-  const parseDataArray = useCallback((data, fieldName) => {
-    if (Array.isArray(data)) return data;
-    if (typeof data === "string") {
-      try {
-        const parsed = JSON.parse(data);
-        return Array.isArray(parsed) ? parsed : [parsed];
-      } catch (error) {
-        console.error(`Failed to parse ${fieldName}:`, error);
-        return [];
-      }
-    }
-    if (typeof data === "object" && data !== null) return [data];
-    return [];
-  }, []);
-
-  // ========================================
   // GET HOTELS DATA (Real + AI)
   // ========================================
   const getHotelsData = useCallback(() => {
     // Debug: Log the entire trip structure
-    console.log("🔍 DEBUG: Full trip object:", trip);
-    console.log("🔍 DEBUG: trip.tripData:", trip?.tripData);
-    console.log("🔍 DEBUG: trip.realHotelData:", trip?.realHotelData);
+    logDebug("Hotels", "Full trip object", trip);
+    logDebug("Hotels", "trip.tripData", trip?.tripData);
+    logDebug("Hotels", "trip.realHotelData", trip?.realHotelData);
 
     // Get AI-generated hotels from trip data
     const possiblePaths = [
@@ -44,7 +28,7 @@ function Hotels({ trip }) {
       trip?.tripData?.tripData?.accommodations,
     ];
 
-    console.log("🔍 DEBUG: Possible paths:", possiblePaths);
+    logDebug("Hotels", "Possible paths", possiblePaths);
 
     const aiHotelsRaw = possiblePaths.find((path) => path !== undefined) || [];
     const aiHotels = parseDataArray(aiHotelsRaw, "hotels");
@@ -61,35 +45,38 @@ function Hotels({ trip }) {
 
         if (Array.isArray(parsed)) {
           realHotelsRaw = parsed;
-          console.log(
-            `🔧 Parsed ${parsed.length} hotels from JSON array string`
+          logDebug(
+            "Hotels",
+            `Parsed ${parsed.length} hotels from JSON array string`
           );
         } else if (typeof parsed === "object") {
           realHotelsRaw = [parsed];
-          console.log("🔧 Parsed single hotel from JSON object string");
+          logDebug("Hotels", "Parsed single hotel from JSON object string");
         }
       } catch (error) {
         // If direct parsing fails, try wrapping in brackets (malformed JSON case)
-        console.warn(
-          "⚠️  Initial JSON parse failed, trying alternative format:",
-          error.message
+        logDebug(
+          "Hotels",
+          "Initial JSON parse failed, trying alternative format",
+          { error: error.message }
         );
         try {
           const wrappedParsed = JSON.parse(`[${realHotelsRaw}]`);
           if (Array.isArray(wrappedParsed)) {
             realHotelsRaw = wrappedParsed;
-            console.log(
-              `🔧 Parsed ${wrappedParsed.length} hotels from malformed JSON (added brackets)`
+            logDebug(
+              "Hotels",
+              `Parsed ${wrappedParsed.length} hotels from malformed JSON (added brackets)`
             );
           }
         } catch (error2) {
-          console.error(
-            "❌ Failed to parse realHotelData.hotels string after all attempts:",
-            error2
-          );
-          console.error(
-            "Raw string (first 500 chars):",
-            realHotelsRaw.substring(0, 500)
+          logDebug(
+            "Hotels",
+            "Failed to parse realHotelData.hotels string after all attempts",
+            {
+              error: error2.message,
+              rawPreview: realHotelsRaw.substring(0, 500),
+            }
           );
           realHotelsRaw = [];
         }
@@ -98,11 +85,12 @@ function Hotels({ trip }) {
 
     const realHotels = parseDataArray(realHotelsRaw, "real hotels");
 
-    console.log(
-      `🏨 Hotels found - Real: ${realHotels.length}, AI: ${aiHotels.length}`
+    logDebug(
+      "Hotels",
+      `Hotels found - Real: ${realHotels.length}, AI: ${aiHotels.length}`
     );
-    console.log("🔍 DEBUG: AI Hotels:", aiHotels);
-    console.log("🔍 DEBUG: Real Hotels:", realHotels);
+    logDebug("Hotels", "AI Hotels", aiHotels);
+    logDebug("Hotels", "Real Hotels", realHotels);
 
     // ========================================
     // PRIORITY LOGIC: Real Hotels vs AI Hotels
@@ -115,16 +103,18 @@ function Hotels({ trip }) {
 
     // CASE 1: User did NOT request hotel search → Show ONLY AI hotels
     if (!hotelSearchRequested) {
-      console.log(
-        `ℹ️ Hotel search not requested - Showing ${aiHotels.length} AI-generated hotels from tripData.hotels`
+      logDebug(
+        "Hotels",
+        `Hotel search not requested - Showing ${aiHotels.length} AI-generated hotels from tripData.hotels`
       );
       finalRealHotels = []; // Don't show real hotels section
       finalAiHotels = aiHotels; // Show AI hotels
     }
     // CASE 2: User requested hotel search AND real hotels available → Show ONLY real hotels
     else if (hotelSearchRequested && hasRealHotels && realHotels.length > 0) {
-      console.log(
-        `✅ User requested hotel search - Showing ONLY ${realHotels.length} verified real hotels (hiding ${aiHotels.length} AI recommendations)`
+      logDebug(
+        "Hotels",
+        `User requested hotel search - Showing ONLY ${realHotels.length} verified real hotels (hiding ${aiHotels.length} AI recommendations)`
       );
       finalAiHotels = []; // Hide AI hotels - user wants real data
       finalRealHotels = realHotels; // Show real hotels
@@ -134,8 +124,9 @@ function Hotels({ trip }) {
       hotelSearchRequested &&
       (!hasRealHotels || realHotels.length === 0)
     ) {
-      console.log(
-        `⚠️ Real hotel search requested but failed/empty - Showing ${aiHotels.length} AI recommendations as fallback`
+      logDebug(
+        "Hotels",
+        `Real hotel search requested but failed/empty - Showing ${aiHotels.length} AI recommendations as fallback`
       );
       finalRealHotels = []; // Don't show empty real section
       finalAiHotels = aiHotels; // Show AI fallback
@@ -156,7 +147,7 @@ function Hotels({ trip }) {
 
     // Return real hotels first, then AI hotels
     return [...markedRealHotels, ...markedAiHotels];
-  }, [trip, parseDataArray]);
+  }, [trip]);
 
   // ========================================
   // VERIFY ALL HOTELS (WITH SMART LIMITING)
@@ -165,39 +156,48 @@ function Hotels({ trip }) {
     const hotelsData = getHotelsData();
 
     if (hotelsData.length === 0) {
-      console.warn("⚠️  No hotels found in trip data");
+      logDebug("Hotels", "No hotels found in trip data");
       setVerifiedHotels([]);
       return;
     }
 
     // ✅ OPTIMIZATION: Limit hotels BEFORE verification to save API calls
     const MAX_HOTELS_TO_VERIFY = 5;
-    
+
     // Separate real and AI hotels
-    const realHotels = hotelsData.filter(h => h.isRealHotel);
-    const aiHotels = hotelsData.filter(h => !h.isRealHotel);
-    
+    const realHotels = hotelsData.filter((h) => h.isRealHotel);
+    const aiHotels = hotelsData.filter((h) => !h.isRealHotel);
+
     // Real hotels: Already verified, show all (no API calls needed)
     // AI hotels: Limit to MAX before verification (saves API calls)
     let hotelsToVerify = [];
-    
+
     if (realHotels.length > 0) {
-      console.log(`✅ Displaying ${realHotels.length} real hotels (pre-verified)`);
+      logDebug(
+        "Hotels",
+        `Displaying ${realHotels.length} real hotels (pre-verified)`
+      );
       hotelsToVerify = realHotels.slice(0, MAX_HOTELS_TO_VERIFY);
     } else if (aiHotels.length > 0) {
       const originalCount = aiHotels.length;
       const limitedCount = Math.min(aiHotels.length, MAX_HOTELS_TO_VERIFY);
-      console.log(`🎯 Selecting top ${limitedCount} hotels from ${originalCount} AI recommendations`);
+      logDebug(
+        "Hotels",
+        `Selecting top ${limitedCount} hotels from ${originalCount} AI recommendations`
+      );
       hotelsToVerify = aiHotels.slice(0, MAX_HOTELS_TO_VERIFY);
     }
-    
+
     if (hotelsToVerify.length === 0) {
       setVerifiedHotels([]);
       return;
     }
 
     setIsVerifying(true);
-    console.log(`🔍 Verifying ${hotelsToVerify.length} hotels for quality and availability`);
+    logDebug(
+      "Hotels",
+      `Verifying ${hotelsToVerify.length} hotels for quality and availability`
+    );
 
     // Batch process in chunks of 5 for better performance
     const BATCH_SIZE = 5;
@@ -205,7 +205,7 @@ function Hotels({ trip }) {
 
     for (let i = 0; i < hotelsToVerify.length; i += BATCH_SIZE) {
       const batch = hotelsToVerify.slice(i, i + BATCH_SIZE);
-      
+
       // ✅ FIXED: ALL hotels need verification to get hotel_id from accommodations.json
       const batchResults = await Promise.all(
         batch.map((hotel) => {
@@ -219,11 +219,16 @@ function Hotels({ trip }) {
         const hotel = batch[idx];
         if (result.verified && result.firestoreData) {
           // ✅ DEBUG: Check if hotel_id exists in firestoreData
-          console.log(`🔍 Merging hotel: ${hotel.hotelName || hotel.name}`);
-          console.log("   Original hotel.hotel_id:", hotel.hotel_id);
-          console.log("   firestoreData.hotel_id:", result.firestoreData.hotel_id);
-          console.log("   firestoreData keys:", Object.keys(result.firestoreData));
-          
+          logDebug(
+            "Hotels",
+            `Merging hotel: ${hotel.hotelName || hotel.name}`,
+            {
+              originalHotelId: hotel.hotel_id,
+              firestoreHotelId: result.firestoreData.hotel_id,
+              firestoreKeys: Object.keys(result.firestoreData),
+            }
+          );
+
           // ✅ FIX: Spread firestoreData LAST to preserve hotel_id and other enriched data
           const mergedHotel = {
             ...hotel,
@@ -232,10 +237,12 @@ function Hotels({ trip }) {
             matchScore: result.matchScore,
             verificationResult: result,
           };
-          
-          console.log("   Merged hotel.hotel_id:", mergedHotel.hotel_id);
-          console.log("   Merged hotel.hotelId:", mergedHotel.hotelId);
-          
+
+          logDebug("Hotels", "Merged hotel IDs", {
+            hotel_id: mergedHotel.hotel_id,
+            hotelId: mergedHotel.hotelId,
+          });
+
           verified.push(mergedHotel);
         } else {
           verified.push({
@@ -252,10 +259,10 @@ function Hotels({ trip }) {
     setVerifiedHotels(verified);
     setIsVerifying(false);
 
-    console.log("✅ Hotel verification complete:", {
+    logDebug("Hotels", "Hotel verification complete", {
       displayed: verified.length,
       verified: verifiedCount,
-      qualityScore: ((verifiedCount / verified.length) * 100).toFixed(0) + "%"
+      qualityScore: ((verifiedCount / verified.length) * 100).toFixed(0) + "%",
     });
   }, [getHotelsData]);
 
@@ -331,52 +338,55 @@ function Hotels({ trip }) {
   // ========================================
   const generateAgodaBookingURL = useCallback(
     (hotel) => {
-      // ✅ DEBUG: Log the entire hotel object to see all available IDs
-      console.log("🔍 DEBUG: Full hotel object:", hotel);
-      console.log("🔍 DEBUG: hotel.hotel_id:", hotel?.hotel_id);
-      console.log("🔍 DEBUG: hotel.hotelId:", hotel?.hotelId);
-      console.log("🔍 DEBUG: hotel.id:", hotel?.id);
-      console.log("🔍 DEBUG: hotel.place_id:", hotel?.place_id);
-      console.log("🔍 DEBUG: hotel.google_place_id:", hotel?.google_place_id);
-      console.log("🔍 DEBUG: hotel.verified:", hotel?.verified);
-      console.log("🔍 DEBUG: hotel.verificationResult:", hotel?.verificationResult);
-      console.log("🔍 DEBUG: firestoreData.hotel_id:", hotel?.verificationResult?.firestoreData?.hotel_id);
-      
+      // Debug: Log the entire hotel object to see all available IDs
+      logDebug("Hotels", "Full hotel object", hotel);
+      logDebug("Hotels", "Hotel ID fields", {
+        hotel_id: hotel?.hotel_id,
+        hotelId: hotel?.hotelId,
+        id: hotel?.id,
+        place_id: hotel?.place_id,
+        google_place_id: hotel?.google_place_id,
+        verified: hotel?.verified,
+        verificationResult: hotel?.verificationResult,
+        firestoreHotelId: hotel?.verificationResult?.firestoreData?.hotel_id,
+      });
+
       // ✅ CRITICAL: Extract hotel_id and validate it's numeric (Agoda format)
       // Priority order: hotel_id > hotelId > id (but only if numeric)
       let hotelId = null;
-      
+
       // Check hotel_id first
       if (hotel?.hotel_id && !String(hotel.hotel_id).startsWith("ChIJ")) {
         hotelId = hotel.hotel_id;
-        console.log("✅ Using hotel.hotel_id:", hotelId);
+        logDebug("Hotels", "Using hotel.hotel_id", { hotelId });
       }
       // Check hotelId (camelCase)
       else if (hotel?.hotelId && !String(hotel.hotelId).startsWith("ChIJ")) {
         hotelId = hotel.hotelId;
-        console.log("✅ Using hotel.hotelId:", hotelId);
+        logDebug("Hotels", "Using hotel.hotelId", { hotelId });
       }
       // Check id (but verify it's not a Google Place ID)
       else if (hotel?.id && !String(hotel.id).startsWith("ChIJ")) {
         hotelId = hotel.id;
-        console.log("✅ Using hotel.id:", hotelId);
+        logDebug("Hotels", "Using hotel.id", { hotelId });
       }
-      
+
       // ✅ VALIDATION: Ensure we have a valid numeric Agoda hotel ID
       const isValidAgodaId = hotelId && /^\d+$/.test(String(hotelId));
 
       if (!hotelId || !isValidAgodaId) {
-        console.error("❌ No valid Agoda hotel ID available");
-        console.error("   Found ID:", hotelId);
-        console.error("   Is numeric?", /^\d+$/.test(String(hotelId)));
-        console.error("   Hotel verified?", hotel?.verified);
-        console.error("   Hotel name:", hotel?.hotel_name || hotel?.name);
-        console.error("   Available keys:", Object.keys(hotel).join(", "));
-        
+        logDebug("Hotels", "No valid Agoda hotel ID available", {
+          foundId: hotelId,
+          isNumeric: /^\d+$/.test(String(hotelId)),
+          verified: hotel?.verified,
+          hotelName: hotel?.hotel_name || hotel?.name,
+          availableKeys: Object.keys(hotel).join(", "),
+        });
+
         // ✅ Fallback: Search by city if no hotel ID
         const cityName =
           hotel?.city || trip?.userSelection?.location?.split(",")[0] || "";
-        console.warn(`⚠️ Falling back to city search: ${cityName}`);
+        logDebug("Hotels", `Falling back to city search: ${cityName}`);
         return generateCitySearchURL(cityName);
       }
 
@@ -410,10 +420,10 @@ function Hotels({ trip }) {
 
       const finalUrl = `https://www.agoda.com/partners/partnersearch.aspx?${params.toString()}`;
 
-      console.log("🔗 Generated Agoda URL:", {
+      logDebug("Hotels", "Generated Agoda URL", {
         hotelId,
         hotelName: hotel?.hotel_name || hotel?.name,
-        verified: hotel?.verified ? "✅" : "❌",
+        verified: hotel?.verified,
         url: finalUrl,
       });
 
@@ -464,10 +474,11 @@ function Hotels({ trip }) {
   // ========================================
   const handleBookHotel = useCallback(
     (hotel) => {
-      console.log("=== BOOKING CLICKED ===");
-      console.log("🏨 Hotel:", hotel.hotel_name || hotel.name);
-      console.log("🆔 Hotel ID:", hotel.hotel_id);
-      console.log("✅ Verified:", hotel.verified);
+      logDebug("Hotels", "Booking clicked", {
+        hotelName: hotel.hotel_name || hotel.name,
+        hotelId: hotel.hotel_id,
+        verified: hotel.verified,
+      });
 
       const bookingUrl = generateAgodaBookingURL(hotel);
       window.open(bookingUrl, "_blank");
@@ -480,7 +491,7 @@ function Hotels({ trip }) {
   // ========================================
   useEffect(() => {
     const stats = getDatabaseStats();
-    console.log("📚 Hotel Database Stats:", stats);
+    logDebug("Hotels", "Hotel Database Stats", stats);
   }, []);
 
   useEffect(() => {
@@ -628,7 +639,8 @@ function Hotels({ trip }) {
                 </h2>
                 <div className="flex items-center gap-2 flex-wrap text-white/90 text-xs md:text-sm">
                   <span className="font-medium">
-                    {hotels.allHotels.length} top choice{hotels.allHotels.length !== 1 ? "s" : ""}
+                    {hotels.allHotels.length} top choice
+                    {hotels.allHotels.length !== 1 ? "s" : ""}
                   </span>
                   {hotels.realHotels.length > 0 && (
                     <>

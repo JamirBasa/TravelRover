@@ -13,6 +13,9 @@ import {
   isForecastAvailable,
 } from "@/services/weatherService";
 
+// ✅ Import production logging
+import { logDebug, logError } from "@/utils/productionLogger";
+
 function WeatherForecast({ trip }) {
   const [weatherData, setWeatherData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +23,10 @@ function WeatherForecast({ trip }) {
 
   // Add component mount logging
   useEffect(() => {
-    console.log("🎬 WeatherForecast component mounted with trip:", trip);
+    logDebug("WeatherForecast", "Component mounted", {
+      hasTrip: !!trip,
+      location: trip?.userSelection?.location,
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -28,51 +34,60 @@ function WeatherForecast({ trip }) {
       const location = trip?.userSelection?.location;
       const startDate = trip?.userSelection?.startDate;
 
-      console.log("🌤️ WeatherForecast useEffect triggered");
-      console.log("📍 Location:", location);
-      console.log("📅 Start Date:", startDate);
+      logDebug("WeatherForecast", "useEffect triggered", {
+        location,
+        startDate: startDate?.toString(),
+      });
 
       if (!location || !startDate) {
-        console.log("⚠️ Missing location or startDate");
+        logDebug("WeatherForecast", "Missing location or startDate");
         setLoading(false);
         return;
       }
 
       // Check if forecast is available for this date
       const available = isForecastAvailable(startDate);
-      console.log("🔍 Forecast available?", available);
+      logDebug("WeatherForecast", "Forecast availability checked", {
+        available,
+      });
 
       if (!available) {
-        console.log("❌ Forecast not available for this date");
+        logDebug("WeatherForecast", "Forecast not available for this date");
         setLoading(false);
         return;
       }
 
       try {
         setLoading(true);
-        console.log("⏳ Fetching weather data...");
+        logDebug("WeatherForecast", "Fetching weather data");
         const data = await getWeatherForecast(location, startDate);
 
-        console.log("📦 Weather data received:", data);
+        logDebug("WeatherForecast", "Weather data received", {
+          available: data.available,
+          hasData: !!data,
+        });
 
         if (data.available) {
-          console.log("✅ Weather data is available, setting state");
+          logDebug(
+            "WeatherForecast",
+            "Weather data is available, setting state"
+          );
           setWeatherData(data);
         } else {
-          console.log(
-            "❌ Weather data not available:",
-            data.reason,
-            "-",
-            data.message
-          );
+          logDebug("WeatherForecast", "Weather data not available", {
+            reason: data.reason,
+            message: data.message,
+          });
           setError(data.message);
         }
       } catch (err) {
-        console.error("❌ Weather fetch error:", err);
+        logError("WeatherForecast", "Weather fetch error", {
+          error: err.message,
+        });
         setError("Unable to load weather data");
       } finally {
         setLoading(false);
-        console.log("✅ Weather fetch complete");
+        logDebug("WeatherForecast", "Weather fetch complete");
       }
     };
 
@@ -81,7 +96,7 @@ function WeatherForecast({ trip }) {
 
   // Don't render anything if loading or no data
   if (loading) {
-    console.log("⏳ WeatherForecast: Still loading...");
+    logDebug("WeatherForecast", "Still loading");
     // Show unified minimal loading state
     return (
       <div className="bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 dark:from-sky-950/30 dark:via-blue-950/30 dark:to-indigo-950/30 rounded-lg border border-sky-200 dark:border-sky-800 p-6 shadow-md">
@@ -97,8 +112,8 @@ function WeatherForecast({ trip }) {
 
   // Show helpful message if forecast not available
   if (error || !weatherData || !weatherData.available) {
-    console.log("❌ WeatherForecast: Not available due to:", {
-      error,
+    logDebug("WeatherForecast", "Not available due to error or missing data", {
+      hasError: !!error,
       hasData: !!weatherData,
       available: weatherData?.available,
     });
@@ -158,11 +173,9 @@ function WeatherForecast({ trip }) {
     );
   }
 
-  console.log(
-    "✅ WeatherForecast: Rendering component with",
-    weatherData.forecast.length,
-    "days"
-  );
+  logDebug("WeatherForecast", "Rendering component with forecast", {
+    forecastDays: weatherData.forecast.length,
+  });
 
   const recommendation = getWeatherRecommendation(weatherData.forecast);
 

@@ -61,7 +61,7 @@ export function parseTimeToMinutes(timeString) {
 
     return hours * 60 + minutes;
   } catch (error) {
-    console.error("Error parsing time:", timeString, error);
+    // Silently fail for time parsing - return null for invalid times
     return null;
   }
 }

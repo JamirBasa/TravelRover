@@ -21,6 +21,7 @@ import {
   resolveAllFlightReferences,
 } from "@/utils/flightNameResolver";
 import { getLimitedServiceInfo } from "@/utils/flightRecommendations";
+import { logDebug, logError } from "@/utils/productionLogger";
 
 // ✅ PERSISTENT GEOCODING CACHE
 const GEOCODE_CACHE_KEY = "travelrover_geocode_cache_v1";
@@ -35,15 +36,21 @@ const loadGeocodeCache = () => {
     const ageInDays = (Date.now() - timestamp) / (24 * 60 * 60 * 1000);
 
     if (ageInDays > CACHE_EXPIRY_DAYS) {
-      console.log("🗑️ Geocode cache expired, clearing...");
+      logDebug("OptimizedRouteMap", "Geocode cache expired, clearing", {
+        ageInDays,
+      });
       localStorage.removeItem(GEOCODE_CACHE_KEY);
       return {};
     }
 
-    console.log(`✅ Loaded ${Object.keys(data).length} cached geocode entries`);
+    logDebug("OptimizedRouteMap", "Loaded cached geocode entries", {
+      count: Object.keys(data).length,
+    });
     return data;
   } catch (error) {
-    console.warn("Failed to load geocode cache:", error);
+    logDebug("OptimizedRouteMap", "Failed to load geocode cache", {
+      error: error.message,
+    });
     return {};
   }
 };
@@ -54,7 +61,10 @@ const saveGeocodeCache = (cache) => {
 
     // Limit cache size to prevent localStorage overflow
     if (cacheSize > 500) {
-      console.warn("⚠️ Geocode cache too large, trimming...");
+      logDebug("OptimizedRouteMap", "Geocode cache too large, trimming", {
+        original: cacheSize,
+        trimmedTo: 400,
+      });
       const entries = Object.entries(cache);
       const trimmed = Object.fromEntries(entries.slice(-400)); // Keep newest 400
       cache = trimmed;
@@ -68,9 +78,13 @@ const saveGeocodeCache = (cache) => {
       })
     );
 
-    console.log(`💾 Saved ${cacheSize} geocode entries to cache`);
+    logDebug("OptimizedRouteMap", "Saved geocode entries to cache", {
+      count: cacheSize,
+    });
   } catch (error) {
-    console.warn("Failed to save geocode cache:", error);
+    logDebug("OptimizedRouteMap", "Failed to save geocode cache", {
+      error: error.message,
+    });
     // If localStorage is full, try clearing old cache
     try {
       localStorage.removeItem(GEOCODE_CACHE_KEY);
@@ -130,12 +144,10 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
     return extractFlightDetails(trip); // ← Changed from trip?.tripData to trip
   }, [trip]); // ← Changed dependency from trip?.tripData to trip
 
-  console.log("🏨 Recommended Hotel Name:", recommendedHotelName);
-  console.log(
-    "✈️ Flight Details:",
-    flightDetails ||
-      "(No flight data - see Flights tab for inactive airport info)"
-  );
+  logDebug("OptimizedRouteMap", "Map data extracted", {
+    recommendedHotelName,
+    hasFlightDetails: !!flightDetails,
+  });
 
   // ✅ Check if destination is an inactive airport (no commercial flights)
   // Now using centralized data from flightRecommendations.js
@@ -195,8 +207,9 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
             : `[${fixedData}]`;
           return JSON.parse(wrappedData);
         } catch {
-          console.error("Failed to parse itinerary");
-          console.log("Raw itinerary data:", data.substring(0, 500));
+          logError("OptimizedRouteMap", "Failed to parse itinerary", {
+            rawDataSample: data.substring(0, 500),
+          });
           return [];
         }
       }
@@ -326,7 +339,7 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
   const allLocations = useMemo(() => {
     const parsedItinerary = parseItinerary(itinerary);
     if (!parsedItinerary || parsedItinerary.length === 0) {
-      console.log("📍 No itinerary data available for map");
+      logDebug("OptimizedRouteMap", "No itinerary data available for map");
       return [];
     }
 
@@ -364,7 +377,9 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
         );
 
         if (shouldExclude) {
-          console.log(`⏭️ Skipping excluded activity: ${placeName}`);
+          logDebug("OptimizedRouteMap", "Skipping excluded activity", {
+            placeName,
+          });
           return; // Skip this activity
         }
 
@@ -390,9 +405,10 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       });
     });
 
-    console.log(
-      `📍 Extracted ${locations.length} locations from itinerary (before resolution)`
-    );
+    logDebug("OptimizedRouteMap", "Extracted locations from itinerary", {
+      count: locations.length,
+      stage: "before resolution",
+    });
 
     // ✅ Step 1: Batch resolve all hotel references to specific hotel names
     let resolvedLocations = resolveAllHotelReferences(
@@ -406,7 +422,10 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       flightDetails
     );
 
-    console.log(`✅ Fully resolved locations:`, resolvedLocations.slice(0, 3));
+    logDebug("OptimizedRouteMap", "Fully resolved locations", {
+      count: resolvedLocations.length,
+      sample: resolvedLocations.slice(0, 3).map((l) => l.name),
+    });
 
     return resolvedLocations;
   }, [itinerary, recommendedHotelName, flightDetails]);
@@ -480,21 +499,25 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       const placeName = extractPlaceName(locationName);
 
       if (!placeName) {
-        console.log(`⏭️ Skipping generic activity: "${locationName}"`);
+        logDebug("OptimizedRouteMap", "Skipping generic activity", {
+          locationName,
+        });
         return null;
       }
 
       // Check cache first (use original name as key)
       if (geocodeCache[locationName]) {
-        console.log(`✅ Using cached coordinates for: "${locationName}"`);
+        logDebug("OptimizedRouteMap", "Using cached coordinates", {
+          locationName,
+        });
         return geocodeCache[locationName];
       }
 
       // ✅ Validate place name before geocoding
       if (placeName.trim().length < 3) {
-        console.warn(
-          `⚠️ Skipping geocoding for invalid location: "${locationName}"`
-        );
+        logDebug("OptimizedRouteMap", "Skipping invalid location name", {
+          locationName,
+        });
         return null;
       }
 
@@ -519,10 +542,10 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       const result = await response.json();
 
       if (!result.success) {
-        console.error(
-          "❌ Geocoding proxy error:",
-          result.error || "Unknown error"
-        );
+        logError("OptimizedRouteMap", "Geocoding proxy error", {
+          error: result.error || "Unknown error",
+          locationName,
+        });
         return null;
       }
 
@@ -539,23 +562,28 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           [locationName]: coords,
         }));
 
-        console.log(
-          `✅ Geocoded: "${locationName}" → ${location.lat}, ${location.lng}`
-        );
+        logDebug("OptimizedRouteMap", "Geocoded successfully", {
+          locationName,
+          lat: location.lat,
+          lng: location.lng,
+        });
         return coords;
       } else {
-        console.warn(
-          `⚠️ No geocode results for: "${locationName}"`,
-          result.data?.status
-        );
+        logDebug("OptimizedRouteMap", "No geocode results", {
+          locationName,
+          status: result.data?.status,
+        });
         return null;
       }
     } catch (error) {
       if (error.name === "AbortError") {
-        console.log(`🛑 Geocoding aborted for: "${locationName}"`);
+        logDebug("OptimizedRouteMap", "Geocoding aborted", { locationName });
         return null;
       }
-      console.error(`❌ Geocoding error for "${locationName}":`, error);
+      logError("OptimizedRouteMap", "Geocoding error", {
+        locationName,
+        error: error.message,
+      });
       return null;
     }
   };
@@ -571,13 +599,16 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       // Check if itinerary actually changed
       const currentHash = generateItineraryHash(allLocations);
       if (currentHash === lastItineraryHash && geocodedLocations.length > 0) {
-        console.log("✅ Itinerary unchanged, skipping geocoding");
+        logDebug(
+          "OptimizedRouteMap",
+          "Itinerary unchanged, skipping geocoding"
+        );
         return;
       }
 
-      console.log(
-        `🔍 Starting smart geocoding for ${allLocations.length} locations...`
-      );
+      logDebug("OptimizedRouteMap", "Starting smart geocoding", {
+        locationCount: allLocations.length,
+      });
 
       setIsUpdating(true);
       setLastItineraryHash(currentHash);
@@ -594,7 +625,10 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       );
 
       if (locationsToGeocode.length === 0) {
-        console.log("✅ All locations cached or have coordinates");
+        logDebug(
+          "OptimizedRouteMap",
+          "All locations cached or have coordinates"
+        );
 
         // Apply cached coordinates
         const updatedLocations = allLocations.map((loc) => {
@@ -623,15 +657,12 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           total: locationsToGeocode.length,
         });
 
-        console.log(
-          `🔍 Geocoding (${i + 1}/${locationsToGeocode.length}): "${
-            location.name
-          }"${
-            location.wasResolved
-              ? ` (resolved from "${location.originalName}")`
-              : ""
-          }`
-        );
+        logDebug("OptimizedRouteMap", "Geocoding location", {
+          progress: `${i + 1}/${locationsToGeocode.length}`,
+          name: location.name,
+          wasResolved: location.wasResolved,
+          originalName: location.originalName,
+        });
 
         const coords = await geocodeLocation(
           location.name,
@@ -655,9 +686,10 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       }
 
       const successCount = updatedLocations.filter((l) => l.coordinates).length;
-      console.log(
-        `✅ Geocoding complete! ${successCount}/${allLocations.length} locations have coordinates`
-      );
+      logDebug("OptimizedRouteMap", "Geocoding complete", {
+        successCount,
+        totalCount: allLocations.length,
+      });
 
       setGeocodedLocations(updatedLocations);
       setIsGeocoding(false);
@@ -728,7 +760,9 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
         return { lat: location.lat, lng: location.lng };
       }
     } catch (error) {
-      console.error("Geocoding error:", error);
+      logError("OptimizedRouteMap", "Geocoding error in calculateCenter", {
+        error: error.message,
+      });
     }
 
     return { lat: 14.5995, lng: 120.9842 };
@@ -981,14 +1015,16 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       });
 
       setTimeout(() => {
-        console.log(`🔍 Focused on: ${location.name}`);
+        logDebug("OptimizedRouteMap", "Focused on location", {
+          name: location.name,
+        });
       }, 500);
     }
   };
 
   // Manual refresh handler
   const handleManualRefresh = useCallback(() => {
-    console.log("🔄 Manual refresh requested");
+    logDebug("OptimizedRouteMap", "Manual refresh requested");
     setLastItineraryHash(""); // Force re-geocoding
     setGeocodeCache({}); // Clear cache
   }, []);

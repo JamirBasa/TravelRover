@@ -69,22 +69,36 @@ export const FILIPINO_PRICE_RANGES = {
  * @returns {number} Numeric budget amount in PHP
  */
 export const calculateBudgetAmount = (budgetTier, customBudget) => {
+  // ✅ FIX: Better custom budget parsing with logging
   if (customBudget) {
     const cleaned =
       typeof customBudget === "string"
         ? customBudget.replace(/[^0-9]/g, "")
         : customBudget;
-    return parseInt(cleaned) || 50000;
+    const parsed = parseInt(cleaned);
+    
+    if (!isNaN(parsed) && parsed > 0) {
+      console.log('💰 Budget from custom amount:', parsed);
+      return parsed;
+    } else {
+      console.warn('⚠️ Failed to parse custom budget:', customBudget, '→ defaulting to tier');
+    }
   }
 
   // Budget tier ranges (using upper bound for safety margin)
+  // ✅ FIXED: Match exact tier names from UI (Budget-Friendly, not Budget)
   const budgetMap = {
-    Budget: 8000, // ₱2,000-8,000 per day range
-    Moderate: 20000, // ₱8,000-20,000 per day range
-    Luxury: 100000, // ₱20,000+ per day range
+    'Budget-Friendly': 8000, // ₱2,000-8,000 per day range
+    'Budget': 8000, // Alias for backward compatibility
+    'Moderate': 20000, // ₱8,000-20,000 per day range
+    'Luxury': 100000, // ₱20,000+ per day range
   };
 
-  return budgetMap[budgetTier] || 50000;
+  const tierAmount = budgetMap[budgetTier];
+  console.log('💰 Budget from tier:', budgetTier, '→', tierAmount || 20000);
+  
+  // ✅ FIX: Fallback to Moderate (20,000) instead of arbitrary 50,000
+  return tierAmount || 20000;
 };
 
 /**

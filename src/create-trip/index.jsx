@@ -14,13 +14,12 @@ import {
   VALIDATION_RULES,
   calculateProgress,
   validateAIResponse,
-  sanitizeJSONString,
 } from "../constants/options";
 import { buildOptimizedPrompt } from "../constants/optimizedPrompt";
 import { TRIP_DURATION } from "../constants/tripDurationLimits";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
-import { safeJsonParse } from "../utils/jsonParsers";
+import { safeJsonParse, sanitizeJSONString } from "../utils/jsonParsers";
 import {
   validateItinerary,
   validateActivityCount,
@@ -80,6 +79,11 @@ import {
   clearDraft,
   formatDraftAge,
 } from "../utils/formPersistence";
+import {
+  validateFirebaseDocSize,
+  safeFirebaseSave,
+} from "../utils/firebaseSizeValidator";
+import { deduplicateTripGeneration } from "../utils/requestDeduplicator";
 
 // Use centralized step configuration
 const STEPS = STEP_CONFIGS.CREATE_TRIP;
@@ -923,450 +927,469 @@ function CreateTrip() {
       return;
     }
 
-    setLoading(true);
+    // ✅ NEW: Wrap entire trip generation in deduplication
+    return deduplicateTripGeneration(formData, async () => {
+      setLoading(true);
 
-    let langGraphResults = null;
-    let flightResults = null;
-    let hotelResults = null;
+      let langGraphResults = null;
+      let flightResults = null;
+      let hotelResults = null;
 
-    try {
-      // ✅ STEP 1: Backend health check before starting
-      console.log("🔍 Checking backend connection...");
       try {
-        const API_BASE_URL =
-          import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
-        const healthCheck = await axios.get(
-          `${API_BASE_URL}/langgraph/health/`,
-          {
-            timeout: 5000,
+        // ✅ STEP 1: Backend health check before starting
+        console.log("🔍 Checking backend connection...");
+        try {
+          const API_BASE_URL =
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+          const healthCheck = await axios.get(
+            `${API_BASE_URL}/langgraph/health/`,
+            {
+              timeout: 5000,
+            }
+          );
+
+          if (!healthCheck.data || healthCheck.data.status !== "healthy") {
+            throw new Error("Backend health check failed");
           }
-        );
-
-        if (!healthCheck.data || healthCheck.data.status !== "healthy") {
-          throw new Error("Backend health check failed");
+          console.log("✅ Backend connection verified");
+        } catch (healthError) {
+          console.error("❌ Backend connection failed:", healthError);
+          toast.error("Backend Connection Failed", {
+            description:
+              "Unable to connect to the AI service. Please ensure the Django server is running on port 8000.",
+            duration: 6000,
+          });
+          setLoading(false);
+          setLangGraphLoading(false);
+          setFlightLoading(false);
+          setHotelLoading(false);
+          return; // ✅ STOP execution immediately
         }
-        console.log("✅ Backend connection verified");
-      } catch (healthError) {
-        console.error("❌ Backend connection failed:", healthError);
-        toast.error("Backend Connection Failed", {
-          description:
-            "Unable to connect to the AI service. Please ensure the Django server is running on port 8000.",
-          duration: 6000,
-        });
-        setLoading(false);
-        setLangGraphLoading(false);
-        setFlightLoading(false);
-        setHotelLoading(false);
-        return; // ✅ STOP execution immediately
-      }
 
-      const flightValidation = validateFlightData(flightData);
-      const hotelValidation = validateHotelData(hotelData, formData); // ✅ Pass formData here!
-      const activeServices = getActiveServices(flightData, hotelData);
+        const flightValidation = validateFlightData(flightData);
+        const hotelValidation = validateHotelData(hotelData, formData); // ✅ Pass formData here!
+        const activeServices = getActiveServices(flightData, hotelData);
 
-      // ✅ NEW: Validate trip duration (1-15 days)
-      const { validateDuration } = await import(
-        "../constants/tripDurationLimits"
-      );
-      const durationValidation = validateDuration(formData.duration);
-
-      if (!durationValidation.valid) {
-        toast.error("Invalid Trip Duration", {
-          description: `${durationValidation.error} ${durationValidation.suggestion}`,
-          duration: 8000,
-        });
-        setLoading(false);
-        return;
-      }
-
-      if (!flightValidation.isValid) {
-        toast.error("Flight Preferences Incomplete", {
-          description: flightValidation.errors.join(", "),
-        });
-        setLoading(false);
-        return;
-      }
-
-      if (!hotelValidation.isValid) {
-        toast.error("Hotel Preferences Incomplete", {
-          description: hotelValidation.errors.join(", "),
-        });
-        setLoading(false);
-        return;
-      }
-
-      setLangGraphLoading(true);
-
-      if (activeServices.hasAnyAgent) {
-        console.log("🤖 Starting LangGraph with flights/hotels search...");
-      } else {
-        console.log(
-          "🤖 Starting LangGraph GA-First itinerary generation (no flights/hotels)..."
+        // ✅ NEW: Validate trip duration (1-15 days)
+        const { validateDuration } = await import(
+          "../constants/tripDurationLimits"
         );
-      }
+        const durationValidation = validateDuration(formData.duration);
 
-      const travelDates = calculateTravelDates({
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        includeFlights: flightData.includeFlights,
-        departureCity: flightData.departureCity,
-        destination: formData.location,
-        travelers: formData.travelers,
-      });
+        if (!durationValidation.valid) {
+          toast.error("Invalid Trip Duration", {
+            description: `${durationValidation.error} ${durationValidation.suggestion}`,
+            duration: 8000,
+          });
+          setLoading(false);
+          return;
+        }
 
-      console.log("📅 Smart travel dates calculated:", travelDates);
-      console.log("💡 Date explanation:", getDateExplanation(travelDates));
+        if (!flightValidation.isValid) {
+          toast.error("Flight Preferences Incomplete", {
+            description: flightValidation.errors.join(", "),
+          });
+          setLoading(false);
+          return;
+        }
 
-      const langGraphAgent = new LangGraphTravelAgent();
+        if (!hotelValidation.isValid) {
+          toast.error("Hotel Preferences Incomplete", {
+            description: hotelValidation.errors.join(", "),
+          });
+          setLoading(false);
+          return;
+        }
 
-      const tripParams = {
-        destination: formData.location,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        duration: formData.duration,
-        travelers: formData.travelers,
-        budget: customBudget ? `Custom: ₱${customBudget}` : formData.budget,
-        flightData: {
-          ...flightData,
-          searchDepartureDate: travelDates.flightDepartureDate,
-          searchReturnDate: travelDates.flightReturnDate,
-        },
-        hotelData: {
-          ...hotelData,
-          checkInDate: travelDates.hotelCheckInDate,
-          checkOutDate: travelDates.hotelCheckOutDate,
-        },
-        travelDates: travelDates,
-        userProfile: userProfile,
-      };
+        setLangGraphLoading(true);
 
-      langGraphResults = await langGraphAgent.orchestrateTrip(tripParams);
+        if (activeServices.hasAnyAgent) {
+          console.log("🤖 Starting LangGraph with flights/hotels search...");
+        } else {
+          console.log(
+            "🤖 Starting LangGraph GA-First itinerary generation (no flights/hotels)..."
+          );
+        }
 
-      flightResults = langGraphResults.flights;
-      hotelResults = langGraphResults.hotels;
+        const travelDates = calculateTravelDates({
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          includeFlights: flightData.includeFlights,
+          departureCity: flightData.departureCity,
+          destination: formData.location,
+          travelers: formData.travelers,
+        });
 
-      if (flightResults?.success) {
-        console.log(
-          "✈️ Flight search completed:",
-          flightResults.fallback ? "recommendations" : "live data"
-        );
-      }
+        console.log("📅 Smart travel dates calculated:", travelDates);
+        console.log("💡 Date explanation:", getDateExplanation(travelDates));
 
-      if (hotelResults?.success) {
-        console.log(
-          "🏨 Hotel search completed:",
-          hotelResults.fallback ? "recommendations" : "live data"
-        );
-      }
+        const langGraphAgent = new LangGraphTravelAgent();
 
-      if (langGraphResults.optimized_plan) {
-        console.log(
-          "🤖 LangGraph optimization completed with score:",
-          langGraphResults.optimized_plan.optimization_score
-        );
-      }
-
-      setLangGraphLoading(false);
-
-      // 🚀 OPTIMIZED PROMPT SYSTEM
-      console.log("🎯 Building optimized prompt with reduced token usage...");
-
-      let combinedRequests = formData?.specificRequests || "";
-
-      if (formData.categoryFocus && formData.categoryName) {
-        const categoryInstructions = {
-          Adventure:
-            "70%+ outdoor/adventure activities, hiking, extreme sports",
-          Beach: "70%+ coastal/island activities, water sports, beach resorts",
-          Cultural:
-            "70%+ historical sites, museums, heritage tours, local traditions",
-          "Food Trip":
-            "70%+ food experiences, local restaurants, cooking classes, food markets",
+        const tripParams = {
+          destination: formData.location,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          duration: formData.duration,
+          travelers: formData.travelers,
+          budget: customBudget ? `Custom: ₱${customBudget}` : formData.budget,
+          flightData: {
+            ...flightData,
+            searchDepartureDate: travelDates.flightDepartureDate,
+            searchReturnDate: travelDates.flightReturnDate,
+          },
+          hotelData: {
+            ...hotelData,
+            checkInDate: travelDates.hotelCheckInDate,
+            checkOutDate: travelDates.hotelCheckOutDate,
+          },
+          travelDates: travelDates,
+          userProfile: userProfile,
         };
 
-        combinedRequests += `\n🎯 ${formData.categoryName?.toUpperCase()} FOCUSED TRIP: ${
-          categoryInstructions[formData.categoryName] ||
-          "Category-specific activities"
-        }`;
-      }
+        langGraphResults = await langGraphAgent.orchestrateTrip(tripParams);
 
-      // 💰 Calculate numeric budget amount for enforcement
-      const budgetAmount = calculateBudgetAmount(formData.budget, customBudget);
-      console.log(`💰 Budget cap enforced: ₱${budgetAmount.toLocaleString()}`);
+        flightResults = langGraphResults.flights;
+        hotelResults = langGraphResults.hotels;
 
-      // ✅ NEW: Validate budget is reasonable (₱1,000/day/person minimum)
-      const minReasonableBudget = 1000; // Absolute minimum per day per person
-      // ✅ travelers is now guaranteed to be integer
-      const calculatedMinimum =
-        minReasonableBudget * formData.duration * (formData.travelers || 1);
+        if (flightResults?.success) {
+          console.log(
+            "✈️ Flight search completed:",
+            flightResults.fallback ? "recommendations" : "live data"
+          );
+        }
 
-      if (budgetAmount < calculatedMinimum) {
-        toast.error("Budget Too Low", {
-          description: `Your budget (₱${budgetAmount.toLocaleString()}) is unrealistically low for ${
-            formData.duration
-          } day${formData.duration > 1 ? "s" : ""} and ${
-            formData.travelers
-          } traveler${
-            formData.travelers > 1 ? "s" : ""
-          }. Minimum recommended: ₱${calculatedMinimum.toLocaleString()} (₱1,000/day/person)`,
-          duration: 10000,
-        });
+        if (hotelResults?.success) {
+          console.log(
+            "🏨 Hotel search completed:",
+            hotelResults.fallback ? "recommendations" : "live data"
+          );
+        }
+
+        if (langGraphResults.optimized_plan) {
+          console.log(
+            "🤖 LangGraph optimization completed with score:",
+            langGraphResults.optimized_plan.optimization_score
+          );
+        }
+
         setLangGraphLoading(false);
-        setLoading(false);
-        return;
-      }
 
-      const enhancedPrompt = buildOptimizedPrompt({
-        location: formData?.location,
-        duration: `${formData?.duration} days`,
-        travelers: formatTravelersDisplay(formData?.travelers),
-        budget: customBudget ? `Custom: ₱${customBudget}` : formData?.budget,
-        budgetAmount: `₱${budgetAmount.toLocaleString()}`, // 🔥 NEW: Explicit budget cap
-        activityPreference: formData?.activityPreference || "2",
-        userProfile: userProfile,
-        dateInfo: travelDates,
-        flightRecommendations: shouldIncludeFlights(flightData)
-          ? flightResults
-          : null,
-        hotelRecommendations: shouldIncludeHotels(hotelData)
-          ? hotelResults
-          : null,
-        specialRequests: combinedRequests || "None",
-        customBudget,
-        flightData,
-        hotelData,
-        langGraphResults,
-      });
+        // 🚀 OPTIMIZED PROMPT SYSTEM
+        console.log("🎯 Building optimized prompt with reduced token usage...");
 
-      console.log(
-        "📝 Optimized prompt generated:",
-        enhancedPrompt.length,
-        "characters"
-      );
-      console.log("📊 Estimated tokens:", Math.ceil(enhancedPrompt.length / 4));
+        let combinedRequests = formData?.specificRequests || "";
 
-      // AI Generation with Retry Logic
-      let aiResponseText = null;
-      let lastError = null;
+        if (formData.categoryFocus && formData.categoryName) {
+          const categoryInstructions = {
+            Adventure:
+              "70%+ outdoor/adventure activities, hiking, extreme sports",
+            Beach:
+              "70%+ coastal/island activities, water sports, beach resorts",
+            Cultural:
+              "70%+ historical sites, museums, heritage tours, local traditions",
+            "Food Trip":
+              "70%+ food experiences, local restaurants, cooking classes, food markets",
+          };
 
-      for (
-        let attempt = 1;
-        attempt <= VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS;
-        attempt++
-      ) {
-        try {
-          console.log(
-            `🔄 AI Generation Attempt ${attempt}/${VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS}`
-          );
+          combinedRequests += `\n🎯 ${formData.categoryName?.toUpperCase()} FOCUSED TRIP: ${
+            categoryInstructions[formData.categoryName] ||
+            "Category-specific activities"
+          }`;
+        }
 
-          // ✅ Pass trip duration to chatSession for proper timeout calculation
-          const result = await chatSession.sendMessage(enhancedPrompt, {
-            tripDuration: formData.duration,
+        // 💰 Calculate numeric budget amount for enforcement
+        const budgetAmount = calculateBudgetAmount(
+          formData.budget,
+          customBudget
+        );
+        console.log(
+          `💰 Budget cap enforced: ₱${budgetAmount.toLocaleString()}`
+        );
+
+        // ✅ NEW: Validate budget is reasonable (₱1,000/day/person minimum)
+        const minReasonableBudget = 1000; // Absolute minimum per day per person
+        // ✅ travelers is now guaranteed to be integer
+        const calculatedMinimum =
+          minReasonableBudget * formData.duration * (formData.travelers || 1);
+
+        if (budgetAmount < calculatedMinimum) {
+          toast.error("Budget Too Low", {
+            description: `Your budget (₱${budgetAmount.toLocaleString()}) is unrealistically low for ${
+              formData.duration
+            } day${formData.duration > 1 ? "s" : ""} and ${
+              formData.travelers
+            } traveler${
+              formData.travelers > 1 ? "s" : ""
+            }. Minimum recommended: ₱${calculatedMinimum.toLocaleString()} (₱1,000/day/person)`,
+            duration: 10000,
           });
-          const rawResponse = result?.response.text();
+          setLangGraphLoading(false);
+          setLoading(false);
+          return;
+        }
 
-          console.log(
-            `🎉 AI Raw Response (Attempt ${attempt}):`,
-            rawResponse?.substring(0, 200) + "..."
-          );
+        const enhancedPrompt = buildOptimizedPrompt({
+          location: formData?.location,
+          duration: `${formData?.duration} days`,
+          travelers: formatTravelersDisplay(formData?.travelers),
+          budget: customBudget ? `Custom: ₱${customBudget}` : formData?.budget,
+          budgetAmount: `₱${budgetAmount.toLocaleString()}`, // 🔥 NEW: Explicit budget cap
+          activityPreference: formData?.activityPreference || "2",
+          userProfile: userProfile,
+          dateInfo: travelDates,
+          flightRecommendations: shouldIncludeFlights(flightData)
+            ? flightResults
+            : null,
+          hotelRecommendations: shouldIncludeHotels(hotelData)
+            ? hotelResults
+            : null,
+          specialRequests: combinedRequests || "None",
+          customBudget,
+          flightData,
+          hotelData,
+          langGraphResults,
+        });
 
-          const cleanedResponse = sanitizeJSONString(rawResponse);
+        console.log(
+          "📝 Optimized prompt generated:",
+          enhancedPrompt.length,
+          "characters"
+        );
+        console.log(
+          "📊 Estimated tokens:",
+          Math.ceil(enhancedPrompt.length / 4)
+        );
 
-          if (!cleanedResponse) {
-            throw new Error("Failed to extract valid JSON from AI response");
-          }
+        // AI Generation with Retry Logic
+        let aiResponseText = null;
+        let lastError = null;
 
-          const testParse = safeJsonParse(cleanedResponse);
-          const validationError = validateAIResponse(testParse);
-
-          if (validationError) {
-            throw new Error(validationError);
-          }
-
-          // ✅ NEW: Check if itinerary has activities
-          const hasActivities = testParse?.itinerary?.some((day) =>
-            day?.plan?.some(
-              (activity) =>
-                activity?.placeName &&
-                !activity.placeName.toLowerCase().includes("return to hotel") &&
-                !activity.placeName.toLowerCase().includes("check-in") &&
-                !activity.placeName.toLowerCase().includes("check-out") &&
-                !activity.placeName.toLowerCase().includes("flight")
-            )
-          );
-
-          if (!hasActivities) {
-            console.warn(
-              `⚠️ Attempt ${attempt}: Itinerary has no activities, retrying...`
+        for (
+          let attempt = 1;
+          attempt <= VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS;
+          attempt++
+        ) {
+          try {
+            console.log(
+              `🔄 AI Generation Attempt ${attempt}/${VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS}`
             );
-            if (attempt < VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS) {
-              await new Promise((resolve) => setTimeout(resolve, 2000));
-              continue;
+
+            // ✅ Pass trip duration to chatSession for proper timeout calculation
+            const result = await chatSession.sendMessage(enhancedPrompt, {
+              tripDuration: formData.duration,
+            });
+            const rawResponse = result?.response.text();
+
+            console.log(
+              `🎉 AI Raw Response (Attempt ${attempt}):`,
+              rawResponse?.substring(0, 200) + "..."
+            );
+
+            const cleanedResponse = sanitizeJSONString(rawResponse);
+
+            if (!cleanedResponse) {
+              throw new Error("Failed to extract valid JSON from AI response");
             }
-            throw new Error("Generated itinerary contains no activities");
-          }
 
-          // � AUTO-FIX: Correct grand total if it doesn't match calculated sum
-          if (testParse.dailyCosts && Array.isArray(testParse.dailyCosts)) {
-            const calculatedGrandTotal = testParse.dailyCosts.reduce(
-              (sum, day) => sum + (day.breakdown?.subtotal || 0),
-              0
+            const testParse = safeJsonParse(cleanedResponse);
+            const validationError = validateAIResponse(testParse);
+
+            if (validationError) {
+              throw new Error(validationError);
+            }
+
+            // ✅ NEW: Check if itinerary has activities
+            const hasActivities = testParse?.itinerary?.some((day) =>
+              day?.plan?.some(
+                (activity) =>
+                  activity?.placeName &&
+                  !activity.placeName
+                    .toLowerCase()
+                    .includes("return to hotel") &&
+                  !activity.placeName.toLowerCase().includes("check-in") &&
+                  !activity.placeName.toLowerCase().includes("check-out") &&
+                  !activity.placeName.toLowerCase().includes("flight")
+              )
             );
 
-            // If grand total doesn't match (off by more than ₱1), auto-correct it
-            if (Math.abs(testParse.grandTotal - calculatedGrandTotal) > 1) {
+            if (!hasActivities) {
               console.warn(
-                `⚠️ Auto-correcting grand total: ₱${testParse.grandTotal.toLocaleString()} → ₱${calculatedGrandTotal.toLocaleString()}`
+                `⚠️ Attempt ${attempt}: Itinerary has no activities, retrying...`
               );
-              testParse.grandTotal = calculatedGrandTotal;
-
-              // Also update budgetCompliance.totalCost if present
-              if (testParse.budgetCompliance) {
-                testParse.budgetCompliance.totalCost = calculatedGrandTotal;
-
-                // Recalculate remaining
-                if (testParse.budgetCompliance.userBudget) {
-                  testParse.budgetCompliance.remaining =
-                    testParse.budgetCompliance.userBudget -
-                    calculatedGrandTotal;
-                  testParse.budgetCompliance.withinBudget =
-                    calculatedGrandTotal <=
-                    testParse.budgetCompliance.userBudget;
-                }
+              if (attempt < VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS) {
+                await new Promise((resolve) => setTimeout(resolve, 2000));
+                continue;
               }
+              throw new Error("Generated itinerary contains no activities");
+            }
 
-              toast.info("Budget Auto-Corrected", {
-                description: `Adjusted total to match daily breakdown: ₱${calculatedGrandTotal.toLocaleString()}`,
-                duration: 4000,
+            // � AUTO-FIX: Correct grand total if it doesn't match calculated sum
+            if (testParse.dailyCosts && Array.isArray(testParse.dailyCosts)) {
+              const calculatedGrandTotal = testParse.dailyCosts.reduce(
+                (sum, day) => sum + (day.breakdown?.subtotal || 0),
+                0
+              );
+
+              // If grand total doesn't match (off by more than ₱1), auto-correct it
+              if (Math.abs(testParse.grandTotal - calculatedGrandTotal) > 1) {
+                console.warn(
+                  `⚠️ Auto-correcting grand total: ₱${testParse.grandTotal.toLocaleString()} → ₱${calculatedGrandTotal.toLocaleString()}`
+                );
+                testParse.grandTotal = calculatedGrandTotal;
+
+                // Also update budgetCompliance.totalCost if present
+                if (testParse.budgetCompliance) {
+                  testParse.budgetCompliance.totalCost = calculatedGrandTotal;
+
+                  // Recalculate remaining
+                  if (testParse.budgetCompliance.userBudget) {
+                    testParse.budgetCompliance.remaining =
+                      testParse.budgetCompliance.userBudget -
+                      calculatedGrandTotal;
+                    testParse.budgetCompliance.withinBudget =
+                      calculatedGrandTotal <=
+                      testParse.budgetCompliance.userBudget;
+                  }
+                }
+
+                toast.info("Budget Auto-Corrected", {
+                  description: `Adjusted total to match daily breakdown: ₱${calculatedGrandTotal.toLocaleString()}`,
+                  duration: 4000,
+                });
+              }
+            }
+
+            // �💰 Validate budget compliance (after auto-correction)
+            const budgetValidation = validateBudgetCompliance(testParse);
+            if (!budgetValidation.isValid) {
+              console.error(
+                "❌ Budget validation failed:",
+                budgetValidation.errors
+              );
+              throw new Error(
+                `Budget compliance check failed: ${budgetValidation.errors.join(
+                  "; "
+                )}`
+              );
+            }
+
+            // ⚠️ Check for warnings (unrealistic pricing, missing data)
+            if (
+              budgetValidation.warnings &&
+              budgetValidation.warnings.length > 0
+            ) {
+              console.warn(
+                "⚠️ Budget validation warnings:",
+                budgetValidation.warnings
+              );
+              budgetValidation.warnings.forEach((warning) => {
+                toast.warning("Pricing Notice", {
+                  description: warning,
+                  duration: 5000,
+                });
               });
             }
-          }
 
-          // �💰 Validate budget compliance (after auto-correction)
-          const budgetValidation = validateBudgetCompliance(testParse);
-          if (!budgetValidation.isValid) {
-            console.error(
-              "❌ Budget validation failed:",
-              budgetValidation.errors
-            );
-            throw new Error(
-              `Budget compliance check failed: ${budgetValidation.errors.join(
-                "; "
-              )}`
-            );
-          }
-
-          // ⚠️ Check for warnings (unrealistic pricing, missing data)
-          if (
-            budgetValidation.warnings &&
-            budgetValidation.warnings.length > 0
-          ) {
-            console.warn(
-              "⚠️ Budget validation warnings:",
-              budgetValidation.warnings
-            );
-            budgetValidation.warnings.forEach((warning) => {
-              toast.warning("Pricing Notice", {
-                description: warning,
-                duration: 5000,
+            // 🔍 Detect unrealistic pricing patterns
+            const pricingCheck = detectUnrealisticPricing(testParse);
+            if (pricingCheck.hasIssues) {
+              console.warn("⚠️ Pricing issues detected:", pricingCheck.issues);
+              pricingCheck.issues.forEach((issue) => {
+                toast.warning("Pricing Alert", {
+                  description: issue,
+                  duration: 5000,
+                });
               });
+            }
+
+            console.log("✅ Budget compliance validated:", {
+              totalCost: testParse.budgetCompliance?.totalCost,
+              userBudget: testParse.budgetCompliance?.userBudget,
+              remaining: testParse.budgetCompliance?.remaining,
+              withinBudget: testParse.budgetCompliance?.withinBudget,
+              uncertainPrices: testParse.missingPrices?.length || 0,
+              pricingSource: testParse.pricingNotes,
             });
-          }
 
-          // 🔍 Detect unrealistic pricing patterns
-          const pricingCheck = detectUnrealisticPricing(testParse);
-          if (pricingCheck.hasIssues) {
-            console.warn("⚠️ Pricing issues detected:", pricingCheck.issues);
-            pricingCheck.issues.forEach((issue) => {
-              toast.warning("Pricing Alert", {
-                description: issue,
-                duration: 5000,
-              });
-            });
-          }
+            aiResponseText = cleanedResponse;
+            console.log(`✅ AI Generation successful on attempt ${attempt}`);
+            break;
+          } catch (error) {
+            console.warn(`⚠️ Attempt ${attempt} failed:`, error.message);
+            lastError = error;
 
-          console.log("✅ Budget compliance validated:", {
-            totalCost: testParse.budgetCompliance?.totalCost,
-            userBudget: testParse.budgetCompliance?.userBudget,
-            remaining: testParse.budgetCompliance?.remaining,
-            withinBudget: testParse.budgetCompliance?.withinBudget,
-            uncertainPrices: testParse.missingPrices?.length || 0,
-            pricingSource: testParse.pricingNotes,
-          });
-
-          aiResponseText = cleanedResponse;
-          console.log(`✅ AI Generation successful on attempt ${attempt}`);
-          break;
-        } catch (error) {
-          console.warn(`⚠️ Attempt ${attempt} failed:`, error.message);
-          lastError = error;
-
-          if (attempt < VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS) {
-            console.log("🔄 Retrying with enhanced prompt...");
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            if (attempt < VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS) {
+              console.log("🔄 Retrying with enhanced prompt...");
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
           }
         }
-      }
 
-      if (!aiResponseText) {
-        throw new Error(
-          `AI generation failed after ${VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS} attempts: ${lastError?.message}`
+        if (!aiResponseText) {
+          throw new Error(
+            `AI generation failed after ${VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS} attempts: ${lastError?.message}`
+          );
+        }
+
+        console.log(
+          "🧹 Final cleaned Response:",
+          aiResponseText?.substring(0, 200) + "..."
         );
+
+        SaveAiTrip(
+          aiResponseText,
+          flightResults,
+          hotelResults,
+          langGraphResults
+        );
+      } catch (error) {
+        console.error("❌ Trip generation error:", error);
+
+        // ✅ ENHANCED: Immediately stop all loading states
+        setLoading(false);
+        setFlightLoading(false);
+        setHotelLoading(false);
+        setLangGraphLoading(false);
+
+        // ✅ ENHANCED: Better error messages based on error type
+        if (error.code === "ECONNABORTED") {
+          toast.error("Request Timeout", {
+            description:
+              "The generation took too long. Try reducing the trip duration or simplifying requirements.",
+            duration: 6000,
+          });
+        } else if (
+          error.code === "ERR_NETWORK" ||
+          error.message?.includes("Network Error")
+        ) {
+          toast.error("Connection Failed", {
+            description:
+              "Unable to reach the backend server. Ensure Django is running on http://localhost:8000",
+            duration: 6000,
+          });
+        } else if (error.response?.status === 500) {
+          toast.error("Server Error", {
+            description:
+              error.response?.data?.error ||
+              "Internal server error. Check Django logs for details.",
+            duration: 6000,
+          });
+        } else if (error.response?.status === 408) {
+          toast.error("Invalid API Configuration", {
+            description:
+              "AI service timeout. Please check your Gemini API key in Django settings.",
+            duration: 6000,
+          });
+        } else {
+          toast.error("Unable to create your trip", {
+            description:
+              error.message ||
+              "Something went wrong while generating your itinerary. Please try again.",
+            duration: 6000,
+          });
+        }
       }
-
-      console.log(
-        "🧹 Final cleaned Response:",
-        aiResponseText?.substring(0, 200) + "..."
-      );
-
-      SaveAiTrip(aiResponseText, flightResults, hotelResults, langGraphResults);
-    } catch (error) {
-      console.error("❌ Trip generation error:", error);
-
-      // ✅ ENHANCED: Immediately stop all loading states
-      setLoading(false);
-      setFlightLoading(false);
-      setHotelLoading(false);
-      setLangGraphLoading(false);
-
-      // ✅ ENHANCED: Better error messages based on error type
-      if (error.code === "ECONNABORTED") {
-        toast.error("Request Timeout", {
-          description:
-            "The generation took too long. Try reducing the trip duration or simplifying requirements.",
-          duration: 6000,
-        });
-      } else if (
-        error.code === "ERR_NETWORK" ||
-        error.message?.includes("Network Error")
-      ) {
-        toast.error("Connection Failed", {
-          description:
-            "Unable to reach the backend server. Ensure Django is running on http://localhost:8000",
-          duration: 6000,
-        });
-      } else if (error.response?.status === 500) {
-        toast.error("Server Error", {
-          description:
-            error.response?.data?.error ||
-            "Internal server error. Check Django logs for details.",
-          duration: 6000,
-        });
-      } else if (error.response?.status === 408) {
-        toast.error("Invalid API Configuration", {
-          description:
-            "AI service timeout. Please check your Gemini API key in Django settings.",
-          duration: 6000,
-        });
-      } else {
-        toast.error("Unable to create your trip", {
-          description:
-            error.message ||
-            "Something went wrong while generating your itinerary. Please try again.",
-          duration: 6000,
-        });
-      }
-    }
+    }); // Close deduplicateTripGeneration wrapper
   };
 
   // Function to sanitize data for Firebase
@@ -2011,10 +2034,15 @@ function CreateTrip() {
         });
       }
 
-      // ✅ FIX 1: Ensure budget field is always included in userSelection
+      // ✅ FIX 1: Ensure budget field is always included in userSelection with multiple formats
       const budgetValue = customBudget
         ? `Custom: ₱${customBudget}`
         : formData.budget || "Moderate";
+
+      // ✅ NEW: Store numeric budget amount separately for easy access
+      const numericBudgetAmount = customBudget
+        ? parseFloat(String(customBudget).replace(/[^0-9.]/g, ""))
+        : null;
 
       // ✅ FIX 2: Flatten nested tripData if it exists (prevents tripData.tripData structure)
       let finalTripData = parsedTripData;
@@ -2048,8 +2076,9 @@ function CreateTrip() {
       const tripDocument = {
         userSelection: {
           ...formData,
-          budget: budgetValue, // ✅ Always include budget field
-          customBudget: customBudget, // Keep custom budget for reference
+          budget: budgetValue, // ✅ Display format: "Custom: ₱18990" or "Moderate"
+          customBudget: customBudget, // ✅ Raw input: "18990"
+          budgetAmount: numericBudgetAmount, // ✅ NEW: Parsed numeric: 18990 (for easy access)
         },
         flightPreferences: flightData,
         hotelPreferences: hotelData,
@@ -2074,7 +2103,33 @@ function CreateTrip() {
 
       console.log("📋 Saving sanitized trip document:", sanitizedTripDocument);
 
-      await setDoc(doc(db, "AITrips", docId), sanitizedTripDocument);
+      // ✅ Validate document size before saving to Firebase
+      const sizeValidation = validateFirebaseDocSize(sanitizedTripDocument);
+      console.log(
+        `📊 Document Size: ${sizeValidation.sizeFormatted} (${sizeValidation.percentOfLimit}% of limit)`
+      );
+
+      if (sizeValidation.warning) {
+        console.warn(`⚠️ ${sizeValidation.warningMessage}`);
+      }
+
+      // Use safe save with automatic optimization if needed
+      const saveResult = await safeFirebaseSave(
+        async (data) => await setDoc(doc(db, "AITrips", docId), data),
+        sanitizedTripDocument,
+        {
+          autoOptimize: true,
+          onSizeWarning: (validation) => {
+            toast.warning("Large Trip Data", {
+              description: `Your trip data is ${validation.sizeFormatted}. We've optimized it for storage.`,
+            });
+          },
+        }
+      );
+
+      if (!saveResult.success) {
+        throw new Error(saveResult.error || "Failed to save trip document");
+      }
 
       // ✅ NEW: Clear draft after successful trip creation
       clearDraft();

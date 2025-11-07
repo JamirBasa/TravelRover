@@ -7,7 +7,12 @@
  * - Caches results to minimize API calls
  * - Graceful error handling
  * - Supports Philippine locations
+ * 
+ * 🔄 MIGRATION NOTE (2025-11-07):
+ * - Replaced console.log with logDebug for production cleanup
  */
+
+import { logDebug, logError } from '../utils/productionLogger';
 
 // OpenWeatherMap API (free tier: 1000 calls/day, 5-day forecast)
 const WEATHER_API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
@@ -38,7 +43,7 @@ const getCachedWeather = (cacheKey) => {
   const cached = weatherCache.get(cacheKey);
   
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    console.log('📦 Using cached weather data');
+    logDebug('WeatherService', 'Using cached weather data', { cacheKey });
     return cached.data;
   }
   
@@ -62,28 +67,28 @@ export const getLocationCoordinates = async (locationName) => {
   
   for (const format of formats) {
     try {
-      console.log(`🔍 Trying ${format.name}:`, format.query);
+      logDebug('WeatherService', 'Trying location format', { format: format.name, query: format.query });
       const response = await fetch(
         `${WEATHER_API_URL}/weather?q=${encodeURIComponent(format.query)}&appid=${WEATHER_API_KEY}`
       );
       
       if (response.ok) {
         const data = await response.json();
-        console.log(`✅ Location found using ${format.name}:`, data.name);
+        logDebug('WeatherService', 'Location found', { format: format.name, location: data.name });
         return {
           lat: data.coord.lat,
           lon: data.coord.lon,
           name: data.name,
         };
       } else {
-        console.log(`❌ ${format.name} failed with status:`, response.status);
+        logDebug('WeatherService', 'Location format failed', { format: format.name, status: response.status });
       }
     } catch (error) {
-      console.log(`❌ ${format.name} threw error:`, error.message);
+      logDebug('WeatherService', 'Location format error', { format: format.name, error: error.message });
     }
   }
   
-  console.error('❌ All location formats failed for:', originalLocation);
+  logError('WeatherService', 'All location formats failed', { originalLocation });
   return null;
 };
 
@@ -92,11 +97,11 @@ export const getLocationCoordinates = async (locationName) => {
  */
 export const getWeatherForecast = async (location, startDate) => {
   try {
-    console.log('🌤️ getWeatherForecast called with:', { location, startDate });
+    logDebug('WeatherService', 'getWeatherForecast called', { location, startDate });
     
     // Check if forecast is available for this date
     if (!isForecastAvailable(startDate)) {
-      console.log('❌ Date too far:', startDate);
+      logDebug('WeatherService', 'Date too far for forecast', { startDate });
       return {
         available: false,
         reason: 'too_far',
@@ -105,9 +110,9 @@ export const getWeatherForecast = async (location, startDate) => {
     }
 
     // Check if API key is configured
-    console.log('🔑 API Key status:', WEATHER_API_KEY ? `Configured (${WEATHER_API_KEY.substring(0, 10)}...)` : 'Missing');
+    logDebug('WeatherService', 'API Key status', { configured: !!WEATHER_API_KEY });
     if (!WEATHER_API_KEY || WEATHER_API_KEY === 'your_api_key_here') {
-      console.warn('⚠️ OpenWeatherMap API key not configured');
+      logDebug('WeatherService', 'OpenWeatherMap API key not configured');
       return {
         available: false,
         reason: 'no_api_key',
@@ -123,11 +128,11 @@ export const getWeatherForecast = async (location, startDate) => {
     }
 
     // Get coordinates for location
-    console.log('📍 Fetching coordinates for:', location);
+    logDebug('WeatherService', 'Fetching coordinates', { location });
     const coords = await getLocationCoordinates(location);
     
     if (!coords) {
-      console.log('❌ Location not found:', location);
+      logDebug('WeatherService', 'Location not found', { location });
       return {
         available: false,
         reason: 'location_not_found',
@@ -135,21 +140,21 @@ export const getWeatherForecast = async (location, startDate) => {
       };
     }
     
-    console.log('✅ Coordinates found:', coords);
+    logDebug('WeatherService', 'Coordinates found', { coords });
 
     // Fetch 5-day forecast
-    console.log('🌡️ Fetching forecast from API...');
+    logDebug('WeatherService', 'Fetching forecast from API');
     const response = await fetch(
       `${WEATHER_API_URL}/forecast?lat=${coords.lat}&lon=${coords.lon}&appid=${WEATHER_API_KEY}&units=metric`
     );
 
     if (!response.ok) {
-      console.error('❌ API response not OK:', response.status, response.statusText);
+      logError('WeatherService', 'API response not OK', { status: response.status, statusText: response.statusText });
       throw new Error('Failed to fetch weather data');
     }
 
     const data = await response.json();
-    console.log('✅ Weather data received:', data.list.length, 'forecasts');
+    logDebug('WeatherService', 'Weather data received', { forecastCount: data.list.length });
 
     // Parse and format weather data
     const weatherData = {
@@ -158,7 +163,7 @@ export const getWeatherForecast = async (location, startDate) => {
       forecast: parseForecastData(data, startDate),
     };
     
-    console.log('✅ Weather forecast ready:', weatherData.forecast.length, 'days');
+    logDebug('WeatherService', 'Weather forecast ready', { forecastDays: weatherData.forecast.length });
 
     // Cache the result
     weatherCache.set(cacheKey, {
@@ -168,7 +173,7 @@ export const getWeatherForecast = async (location, startDate) => {
 
     return weatherData;
   } catch (error) {
-    console.error('Error fetching weather forecast:', error);
+    logError('WeatherService', 'Error fetching weather forecast', { error: error.message });
     return {
       available: false,
       reason: 'error',

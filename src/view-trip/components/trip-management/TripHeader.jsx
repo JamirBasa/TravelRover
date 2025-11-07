@@ -2,7 +2,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Users, DollarSign, Clock, MapPin } from "lucide-react";
 import TripActions from "./TripActions";
-import { calculateTotalBudget, formatCurrency } from "@/utils/budgetCalculator";
+import { calculateTotalBudget, formatCurrency } from "@/utils";
 
 function TripHeader({ trip, onShare, onDownload, onEdit }) {
   const formatDate = (dateString) => {

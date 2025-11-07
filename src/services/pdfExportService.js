@@ -51,7 +51,97 @@ const PDF_CONFIG = {
     body: 10,
     small: 8,
     tiny: 7,
+  },
+  
+  // Spacing constants for consistency
+  spacing: {
+    sectionGap: 10,
+    paragraphGap: 5,
+    lineHeight: 4.5,
+    cardGap: 8,
   }
+};
+
+// ========================================
+// HELPER FUNCTIONS
+// ========================================
+
+/**
+ * Safe GState constructor resolver
+ * Handles different jsPDF bundle configurations
+ */
+const getGState = (pdf) => {
+  // Try instance method first (some bundles)
+  if (pdf.GState) return pdf.GState;
+  // Try class constructor (most bundles)
+  if (typeof jsPDF !== 'undefined' && jsPDF.GState) return jsPDF.GState;
+  // Fallback: return null and caller should handle gracefully
+  return null;
+};
+
+/**
+ * Set opacity with fallback
+ */
+const withOpacity = (pdf, opacity, drawFn) => {
+  const GState = getGState(pdf);
+  if (GState) {
+    pdf.setGState(new GState({ opacity }));
+    drawFn();
+    pdf.setGState(new GState({ opacity: 1 }));
+  } else {
+    // No opacity support, just draw normally
+    drawFn();
+  }
+};
+
+/**
+ * Centralized currency formatter (ASCII-safe)
+ */
+const fmtPHP = (amount) => {
+  const num = parseFloat(amount || 0);
+  return `PHP ${num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+};
+
+/**
+ * Check if we need a new page with minimum space
+ */
+const ensureSpace = (pdf, currentY, requiredSpace) => {
+  const { pageHeight, margin } = PDF_CONFIG;
+  if (currentY + requiredSpace > pageHeight - margin - 20) { // 20mm safety for footer
+    pdf.addPage();
+    return margin;
+  }
+  return currentY;
+};
+
+/**
+ * Normalize time format to 12-hour with AM/PM
+ * Handles: "20:00", "8:00 PM", "8:00PM", "20:00:00", etc.
+ */
+const normalizeTime = (timeString) => {
+  if (!timeString || timeString === 'Flexible') return 'Flexible';
+  
+  // Already in 12-hour format with AM/PM
+  if (/\d{1,2}:\d{2}\s*(AM|PM)/i.test(timeString)) {
+    return timeString.replace(/\s*(AM|PM)/i, ' $1').toUpperCase();
+  }
+  
+  // Parse 24-hour format (20:00, 20:00:00)
+  const match24 = timeString.match(/^(\d{1,2}):(\d{2})/);
+  if (match24) {
+    let hours = parseInt(match24[1]);
+    const minutes = match24[2];
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    
+    // Convert to 12-hour
+    if (hours === 0) hours = 12; // Midnight
+    else if (hours > 12) hours -= 12;
+    
+    return `${hours}:${minutes} ${ampm}`;
+  }
+  
+  // If can't parse, return as-is
+  return timeString;
 };
 
 // ========================================
@@ -84,13 +174,12 @@ export const generateTripPDF = async (tripData) => {
     // 4. Add Budget Breakdown (Accurate calculation from itinerary)
     currentY = addBudgetSection(pdf, tripData, currentY);
     
-    // 5. Add Daily Itinerary
-    pdf.addPage();
-    currentY = PDF_CONFIG.margin;
+    // 5. Add Daily Itinerary - Only add page if needed
+    currentY = ensureSpace(pdf, currentY, 80); // Need ~80mm for itinerary start
     addDailyItinerary(pdf, tripData, currentY);
     
     // 6. Add Footer & Page Numbers to all pages
-    addFooterToAllPages(pdf, tripData);
+    addFooterToAllPages(pdf);
     
     // 7. Save PDF
     const filename = generateFilename(tripData);
@@ -119,16 +208,16 @@ const addCoverPage = (pdf, tripData) => {
   
   // Accent gradient overlay
   pdf.setFillColor(...colors.secondary);
-  pdf.setGState(new pdf.GState({opacity: 0.3}));
-  pdf.rect(0, 40, pageWidth, 40, 'F');
-  pdf.setGState(new pdf.GState({opacity: 1}));
+  withOpacity(pdf, 0.3, () => {
+    pdf.rect(0, 40, pageWidth, 40, 'F');
+  });
   
   // Diagonal design elements
   pdf.setFillColor(255, 255, 255);
-  pdf.setGState(new pdf.GState({opacity: 0.1}));
-  pdf.circle(pageWidth - 20, 20, 40, 'F');
-  pdf.circle(20, 60, 25, 'F');
-  pdf.setGState(new pdf.GState({opacity: 1}));
+  withOpacity(pdf, 0.1, () => {
+    pdf.circle(pageWidth - 20, 20, 40, 'F');
+    pdf.circle(20, 60, 25, 'F');
+  });
   
   // ===== Branding =====
   pdf.setTextColor(255, 255, 255);
@@ -188,36 +277,42 @@ const addCoverPage = (pdf, tripData) => {
     tripData?.userSelection?.traveler || 'Solo Trip', 
     colors.accent);
   
-  // Card 4: Budget - Enhanced split design
+  // Card 4: Budget - Enhanced split design showing ACTUAL COST
   cardX += cardWidth + cardSpacing;
   
   // Get budget info - handle multiple formats
   const budgetType = tripData?.userSelection?.budget || 'Flexible';
   
-  // Extract numeric budget from multiple possible sources
-  let budgetAmount = null;
+  // ✅ CALCULATE ACTUAL TRIP COST from itinerary (most accurate)
+  const { total: actualTripCost } = calculateTotalBudget(tripData);
   
-  // Try userSelection.budgetAmount first
-  if (tripData?.userSelection?.budgetAmount) {
-    budgetAmount = parseFloat(String(tripData.userSelection.budgetAmount).replace(/[^0-9.]/g, ''));
-  }
-  // Try userSelection.customBudget
-  else if (tripData?.userSelection?.customBudget) {
-    budgetAmount = parseFloat(String(tripData.userSelection.customBudget).replace(/[^0-9.]/g, ''));
-  }
-  // Try tripData.budget
-  else if (tripData?.tripData?.budget) {
-    if (typeof tripData.tripData.budget === 'string') {
-      budgetAmount = parseFloat(tripData.tripData.budget.replace(/[^0-9.]/g, ''));
-    } else if (typeof tripData.tripData.budget === 'number') {
-      budgetAmount = tripData.tripData.budget;
+  // ✅ Try to get user's budget preference (custom amount or tier default)
+  let userBudgetPreference = null;
+  
+  // Priority 1: customBudget (user entered specific amount)
+  if (tripData?.userSelection?.customBudget) {
+    const parsed = parseFloat(String(tripData.userSelection.customBudget).replace(/[^0-9.]/g, ''));
+    if (!isNaN(parsed) && parsed > 0) {
+      userBudgetPreference = parsed;
     }
   }
-  // Try extracting from budget string "Custom: ₱18990"
-  else if (typeof budgetType === 'string' && budgetType.includes('₱')) {
+  
+  // Priority 2: budgetAmount field
+  if (!userBudgetPreference && tripData?.userSelection?.budgetAmount) {
+    const parsed = parseFloat(String(tripData.userSelection.budgetAmount).replace(/[^0-9.]/g, ''));
+    if (!isNaN(parsed) && parsed > 0) {
+      userBudgetPreference = parsed;
+    }
+  }
+  
+  // Priority 3: Extract from budget string
+  if (!userBudgetPreference && typeof budgetType === 'string' && budgetType.includes('₱')) {
     const match = budgetType.match(/₱[\d,]+/);
     if (match) {
-      budgetAmount = parseFloat(match[0].replace(/[^0-9.]/g, ''));
+      const parsed = parseFloat(match[0].replace(/[^0-9.]/g, ''));
+      if (!isNaN(parsed) && parsed > 0) {
+        userBudgetPreference = parsed;
+      }
     }
   }
   
@@ -240,88 +335,148 @@ const addCoverPage = (pdf, tripData) => {
   pdf.setFillColor(...colors.success);
   pdf.rect(budgetCardX, budgetCardY, budgetCardWidth, 3, 'F');
   
-  // Label
-  pdf.setFontSize(fonts.tiny);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(...colors.success);
-  pdf.text('BUDGET TYPE', budgetCardX + budgetCardWidth / 2, budgetCardY + 10, { align: 'center' });
-  
-  // Budget type (smaller) - clean tier name only
-  pdf.setFontSize(fonts.body);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(31, 41, 55);
-  // Extract only the tier name (e.g., "Custom" from "Custom: ±18990")
-  const cleanBudgetTier = budgetType.split(':')[0].trim();
-  pdf.text(cleanBudgetTier, budgetCardX + budgetCardWidth / 2, budgetCardY + 15, { align: 'center' });
-  
-  // Budget amount (larger, prominent)
-  if (budgetAmount) {
+  // ✅ IMPROVED: Show actual trip cost, not tier default
+  if (actualTripCost > 0) {
+    // Label: "TRIP COST"
+    pdf.setFontSize(fonts.tiny);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(...colors.success);
+    pdf.text('TRIP COST', budgetCardX + budgetCardWidth / 2, budgetCardY + 9, { align: 'center' });
+    
+    // Budget tier (smaller text)
+    pdf.setFontSize(fonts.small - 1);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(107, 114, 128); // Gray-500
+    // Clean budget tier text aggressively - remove all special chars and normalize Unicode
+    const cleanBudgetTier = budgetType
+      .split(':')[0]
+      .trim()
+      .replace(/[±₱\u00B1\u2213\u00D8\u00DE\u2014\u2013\u200B\u200C\u200D\uFEFF!'"]/g, '') // Remove special chars including !, ', "
+      .replace(/[^\x20-\x7E]/g, '') // Keep only printable ASCII
+      .replace(/\s+/g, ' ') // Normalize multiple spaces to single space
+      .trim();
+    pdf.text(`${cleanBudgetTier} Tier`, budgetCardX + budgetCardWidth / 2, budgetCardY + 13, { align: 'center' });
+    
+    // Actual cost (large, prominent)
     pdf.setFontSize(fonts.subheading);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(...colors.success);
-    const formattedAmount = `P ${budgetAmount.toLocaleString()}`;
-    pdf.text(formattedAmount, budgetCardX + budgetCardWidth / 2, budgetCardY + 21, { align: 'center' });
+    const formattedCost = `P ${actualTripCost.toLocaleString()}`;
+    pdf.text(formattedCost, budgetCardX + budgetCardWidth / 2, budgetCardY + 20, { align: 'center' });
+  } else {
+    // Fallback: Show tier name only if no cost calculated
+    pdf.setFontSize(fonts.tiny);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(...colors.success);
+    pdf.text('BUDGET TYPE', budgetCardX + budgetCardWidth / 2, budgetCardY + 10, { align: 'center' });
+    
+    pdf.setFontSize(fonts.body);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(31, 41, 55);
+    // Clean budget tier text aggressively - remove all special chars and normalize Unicode
+    const cleanBudgetTier = budgetType
+      .split(':')[0]
+      .trim()
+      .replace(/[±₱\u00B1\u2213\u00D8\u00DE\u2014\u2013\u200B\u200C\u200D\uFEFF!'"]/g, '') // Remove special chars including !, ', "
+      .replace(/[^\x20-\x7E]/g, '') // Keep only printable ASCII
+      .replace(/\s+/g, ' ') // Normalize multiple spaces to single space
+      .trim();
+    pdf.text(cleanBudgetTier, budgetCardX + budgetCardWidth / 2, budgetCardY + 17, { align: 'center' });
   }
   
-  // ===== Special Preferences Badge (if exists) =====
+  // ===== Special Preferences Badge (if exists) - OPTIMIZED =====
+  let currentY = card2Y + cardHeight + 15; // Start after budget card
+  
   if (tripData?.userSelection?.specificRequests) {
-    const badgeY = card2Y + cardHeight + 15;
-    pdf.setFillColor(...colors.warning);
-    pdf.setGState(new pdf.GState({opacity: 0.1}));
-    pdf.roundedRect(margin, badgeY, pageWidth - (margin * 2), 20, 3, 3, 'F');
-    pdf.setGState(new pdf.GState({opacity: 1}));
+    const requestText = tripData.userSelection.specificRequests.trim();
     
+    // Calculate dynamic height based on text content
+    const maxTextWidth = pageWidth - (margin * 3);
+    const wrappedText = pdf.splitTextToSize(requestText, maxTextWidth);
+    const textHeight = wrappedText.length * 4.5; // 4.5mm per line
+    const badgeHeight = Math.max(28, textHeight + 14); // Min 28mm, or content + padding
+    
+    // Reserve space for badge + "What's Inside" box + spacing
+    const infoBoxHeight = 38;
+    const requiredSpace = badgeHeight + 10 + infoBoxHeight + 5; // badge + gap + info box + buffer
+    currentY = ensureSpace(pdf, currentY, requiredSpace);
+    
+    // Background with gradient effect
+    pdf.setFillColor(...colors.warning);
+    withOpacity(pdf, 0.1, () => {
+      pdf.roundedRect(margin, currentY, pageWidth - (margin * 2), badgeHeight, 3, 3, 'F');
+    });
+    
+    // Left accent bar
+    pdf.setFillColor(...colors.warning);
+    pdf.rect(margin, currentY, 3, badgeHeight, 'F');
+    
+    // Title
     pdf.setFontSize(fonts.small);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(...colors.warning);
-    pdf.text('CUSTOMIZED ITINERARY', centerX, badgeY + 6, { align: 'center' });
+    pdf.text('CUSTOMIZED ITINERARY', margin + 8, currentY + 7);
     
+    // Full content (no truncation)
+    pdf.setFontSize(fonts.small);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(...colors.text);
-    const requestText = pdf.splitTextToSize(
-      tripData.userSelection.specificRequests.substring(0, 120) + '...',
-      pageWidth - (margin * 3)
-    );
-    pdf.text(requestText, centerX, badgeY + 13, { align: 'center' });
+    pdf.text(wrappedText, margin + 8, currentY + 13);
+    
+    currentY += badgeHeight + 10; // Update Y position for next section
   }
   
-  // ===== PDF Contents Info =====
-  const infoY = pageHeight - 75;
-  const infoBoxHeight = 35; // Increased from 25 to 35
+  // ===== PDF Contents Info - SEQUENTIAL LAYOUT =====
+  // Always position sequentially below previous content (no upward movement)
+  const infoBoxHeight = 38;
+  // Ensure space for the info box (prevents collision with footer)
+  currentY = ensureSpace(pdf, currentY, infoBoxHeight + 5);
+  let infoY = currentY;
+  
+  // Box with subtle shadow
+  pdf.setFillColor(245, 245, 245);
+  pdf.roundedRect(margin + 0.5, infoY + 0.5, pageWidth - (margin * 2), infoBoxHeight, 2, 2, 'F');
   
   pdf.setFillColor(249, 250, 251); // Gray-50
-  pdf.roundedRect(margin, infoY, pageWidth - (margin * 2), infoBoxHeight, 2, 2, 'F');
+  pdf.setDrawColor(...colors.border);
+  pdf.setLineWidth(0.3);
+  pdf.roundedRect(margin, infoY, pageWidth - (margin * 2), infoBoxHeight, 2, 2, 'FD');
   
-  // Left side: "What's Inside" content
+  // Icon/Badge effect
+  pdf.setFillColor(...colors.primary);
+  pdf.circle(margin + 8, infoY + 8, 2.5, 'F');
+  
+  // Title with better positioning
   pdf.setFontSize(fonts.small);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(...colors.text);
-  pdf.text('What\'s Inside This Guide:', margin + 5, infoY + 7);
+  pdf.text('What\'s Inside This Guide:', margin + 13, infoY + 9);
   
+  // Content list with consistent spacing
   pdf.setFontSize(fonts.tiny);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(...colors.lightText);
   const contents = [
-    '✓ Complete daily itinerary with timings',
-    '✓ Budget breakdown from activities',
-    '✓ Travel logistics and estimated costs',
-    '✓ Activity details with pricing'
+    '- Complete daily itinerary with timings',
+    '- Budget breakdown from activities',
+    '- Travel logistics and estimated costs',
+    '- Activity details with pricing'
   ];
-  let contentY = infoY + 12;
+  let contentY = infoY + 15;
   contents.forEach(item => {
-    pdf.text(item, margin + 5, contentY);
-    contentY += 4.5;
+    pdf.text(item, margin + 8, contentY);
+    contentY += 4.8; // Slightly increased spacing
   });
   
-  // Bottom note - proper spacing
+  // Bottom note with better wrapping
   pdf.setFontSize(fonts.tiny);
   pdf.setFont('helvetica', 'italic');
   pdf.setTextColor(...colors.lightText);
   const noteText = pdf.splitTextToSize(
     'Complete hotel and attraction details with photos available in the TravelRover app.',
-    pageWidth - (margin * 2) - 10
+    pageWidth - (margin * 2) - 16
   );
-  pdf.text(noteText, centerX, infoY + 30, { align: 'center' });
+  pdf.text(noteText, margin + 8, infoY + 33, { align: 'left' });
   
   // ===== Footer Section =====
   const footerY = pageHeight - 35;
@@ -335,7 +490,7 @@ const addCoverPage = (pdf, tripData) => {
   pdf.setFontSize(fonts.small);
   pdf.setTextColor(...colors.lightText);
   pdf.setFont('helvetica', 'normal');
-  const generatedDate = new Date().toLocaleDateString('en-US', {
+  const generatedDate = new Date().toLocaleString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -352,35 +507,39 @@ const addCoverPage = (pdf, tripData) => {
   return pageHeight; // Cover page uses full page
 };
 
-// Helper function to draw info cards
+// Helper function to draw info cards - OPTIMIZED
 const drawInfoCard = (pdf, x, y, width, height, label, value, color) => {
   const { fonts } = PDF_CONFIG;
   
-  // Card background with subtle shadow effect
-  pdf.setFillColor(250, 250, 250);
-  pdf.roundedRect(x + 1, y + 1, width, height, 2, 2, 'F'); // Shadow
+  // Shadow effect (subtle)
+  pdf.setFillColor(240, 240, 240);
+  withOpacity(pdf, 0.5, () => {
+    pdf.roundedRect(x + 0.8, y + 0.8, width, height, 2, 2, 'F');
+  });
   
+  // Card background with border
   pdf.setFillColor(255, 255, 255);
   pdf.setDrawColor(...color);
   pdf.setLineWidth(0.5);
   pdf.roundedRect(x, y, width, height, 2, 2, 'FD');
   
-  // Colored top bar
+  // Colored top accent bar
   pdf.setFillColor(...color);
   pdf.rect(x, y, width, 3, 'F');
   
-  // Label
+  // Label (uppercase for consistency)
   pdf.setFontSize(fonts.tiny);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(...color);
   pdf.text(label, x + width / 2, y + 10, { align: 'center' });
   
-  // Value
+  // Value with better wrapping
   pdf.setFontSize(fonts.body + 1);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(31, 41, 55);
-  const valueLines = pdf.splitTextToSize(value, width - 4);
-  pdf.text(valueLines, x + width / 2, y + 17, { align: 'center' });
+  const valueLines = pdf.splitTextToSize(value, width - 6);
+  const valueY = y + (valueLines.length > 1 ? 15 : 17); // Adjust for multi-line
+  pdf.text(valueLines, x + width / 2, valueY, { align: 'center' });
 };
 
 // ========================================
@@ -417,31 +576,88 @@ const addTripOverview = (pdf, tripData, startY) => {
   const getBudgetInfo = (tripData) => {
     const budgetTypeText = tripData?.userSelection?.budget || 'Flexible';
     
-    // Extract budget amount from multiple sources
-    let displayBudgetAmount = null;
-    if (tripData?.userSelection?.budgetAmount) {
-      displayBudgetAmount = parseFloat(String(tripData.userSelection.budgetAmount).replace(/[^0-9.]/g, ''));
-    } else if (tripData?.userSelection?.customBudget) {
-      displayBudgetAmount = parseFloat(String(tripData.userSelection.customBudget).replace(/[^0-9.]/g, ''));
-    } else if (tripData?.tripData?.budget) {
-      if (typeof tripData.tripData.budget === 'string') {
-        displayBudgetAmount = parseFloat(tripData.tripData.budget.replace(/[^0-9.]/g, ''));
-      } else if (typeof tripData.tripData.budget === 'number') {
-        displayBudgetAmount = tripData.tripData.budget;
+    console.log('💰 PDF Budget Extraction Debug:', {
+      budgetTypeText,
+      customBudget: tripData?.userSelection?.customBudget,
+      budgetAmount: tripData?.userSelection?.budgetAmount,
+      tripDataBudget: tripData?.tripData?.budget
+    });
+    
+    // ✅ CALCULATE ACTUAL TRIP COST (most accurate)
+    const { total: actualTripCost } = calculateTotalBudget(tripData);
+    
+    // ✅ Try to get user's budget preference/limit
+    let userBudgetPreference = null;
+    
+    // Priority 1: customBudget (user entered specific amount)
+    if (tripData?.userSelection?.customBudget) {
+      const parsed = parseFloat(String(tripData.userSelection.customBudget).replace(/[^0-9.]/g, ''));
+      if (!isNaN(parsed) && parsed > 0) {
+        userBudgetPreference = parsed;
+        console.log('✅ Budget preference from customBudget:', userBudgetPreference);
       }
-    } else if (typeof budgetTypeText === 'string' && budgetTypeText.includes('₱')) {
+    }
+    
+    // Priority 2: budgetAmount field
+    if (!userBudgetPreference && tripData?.userSelection?.budgetAmount) {
+      const parsed = parseFloat(String(tripData.userSelection.budgetAmount).replace(/[^0-9.]/g, ''));
+      if (!isNaN(parsed) && parsed > 0) {
+        userBudgetPreference = parsed;
+        console.log('✅ Budget preference from budgetAmount:', userBudgetPreference);
+      }
+    }
+    
+    // Priority 3: Extract from budget string (e.g., "Custom: ₱18990")
+    if (!userBudgetPreference && typeof budgetTypeText === 'string' && budgetTypeText.includes('₱')) {
       const match = budgetTypeText.match(/₱[\d,]+/);
       if (match) {
-        displayBudgetAmount = parseFloat(match[0].replace(/[^0-9.]/g, ''));
+        const parsed = parseFloat(match[0].replace(/[^0-9.]/g, ''));
+        if (!isNaN(parsed) && parsed > 0) {
+          userBudgetPreference = parsed;
+          console.log('✅ Budget preference from budget string:', userBudgetPreference);
+        }
       }
     }
     
-    if (displayBudgetAmount && !isNaN(displayBudgetAmount)) {
-      const cleanBudgetType = budgetTypeText.split(':')[0].trim();
-      return `${cleanBudgetType} (P ${displayBudgetAmount.toLocaleString()})`;
+    // ✅ ALWAYS show actual trip cost (primary info)
+    if (actualTripCost > 0) {
+      // Clean budget type text aggressively - remove all special chars
+      const cleanBudgetType = budgetTypeText
+        .split(':')[0]
+        .trim()
+        .replace(/[±₱\u00B1\u2213\u00D8\u00DE\u2014\u2013\u200B\u200C\u200D\uFEFF!'"]/g, '')
+        .replace(/[^\x20-\x7E]/g, '') // Keep only printable ASCII
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .trim();
+      
+      // If user set custom budget, show comparison
+      if (userBudgetPreference && userBudgetPreference !== actualTripCost) {
+        return `${cleanBudgetType} (${fmtPHP(userBudgetPreference)} budget) → Actual: ${fmtPHP(actualTripCost)}`;
+      }
+      
+      // Otherwise just show actual cost with tier label
+      return `${cleanBudgetType} Tier → ${fmtPHP(actualTripCost)}`;
     }
     
-    return budgetTypeText.replace(/[±₱]/g, '').trim();
+    // ✅ Fallback: Show preference or tier only
+    if (userBudgetPreference) {
+      const cleanBudgetType = budgetTypeText
+        .split(':')[0]
+        .trim()
+        .replace(/[±₱\u00B1\u2213\u00D8\u00DE\u2014\u2013\u200B\u200C\u200D\uFEFF!'"]/g, '')
+        .replace(/[^\x20-\x7E]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      return `${cleanBudgetType} (${fmtPHP(userBudgetPreference)})`;
+    }
+    
+    console.warn('⚠️ No budget info found, returning tier only:', budgetTypeText);
+    // Clean all special characters before returning
+    return budgetTypeText
+      .replace(/[±₱\u00B1\u2213\u00D8\u00DE\u2014\u2013\u200B\u200C\u200D\uFEFF!'"]/g, '')
+      .replace(/[^\x20-\x7E]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
   };
   
   // Info card drawing helper
@@ -524,7 +740,7 @@ const addTripOverview = (pdf, tripData, startY) => {
   
   y = Math.max(leftY, rightY);
   
-  // === Special Preferences Box (if exists) ===
+  // === Special Preferences Box (if exists) - OPTIMIZED ===
   if (tripData?.userSelection?.specificRequests) {
     y += 5;
     if (y > pageHeight - 60) {
@@ -532,49 +748,66 @@ const addTripOverview = (pdf, tripData, startY) => {
       y = margin;
     }
     
-    // Box with colored border
+    const requestText = tripData.userSelection.specificRequests.trim();
+    const requestLines = pdf.splitTextToSize(requestText, contentWidth - 12);
+    const boxHeight = Math.max(32, requestLines.length * 4.5 + 18);
+    
+    // Background box with border
     pdf.setFillColor(...colors.bgLight);
     pdf.setDrawColor(...colors.warning);
     pdf.setLineWidth(0.5);
-    pdf.roundedRect(margin, y, contentWidth, 30, 2, 2, 'FD');
+    pdf.roundedRect(margin, y, contentWidth, boxHeight, 2, 2, 'FD');
     
-    // Colored side accent
+    // Left accent bar
     pdf.setFillColor(...colors.warning);
-    pdf.rect(margin, y, 2, 30, 'F');
+    pdf.rect(margin, y, 3, boxHeight, 'F');
     
+    // Icon circle
+    pdf.setFillColor(...colors.warning);
+    pdf.circle(margin + 10, y + 8, 2, 'F');
+    
+    // Title
     pdf.setFontSize(fonts.small);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(...colors.warning);
-    pdf.text('YOUR SPECIAL PREFERENCES', margin + 5, y + 6);
+    pdf.text('YOUR SPECIAL PREFERENCES', margin + 15, y + 9);
     
+    // Content (full text, no truncation)
     pdf.setFontSize(fonts.small);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(...colors.text);
-    const requestLines = pdf.splitTextToSize(
-      tripData.userSelection.specificRequests, 
-      contentWidth - 10
-    );
-    pdf.text(requestLines, margin + 5, y + 12);
+    pdf.text(requestLines, margin + 8, y + 16);
     
-    y += 35;
+    y += boxHeight + 8;
   }
   
   return y;
 };
 
-// Helper function to add section headers
+// Helper function to add section headers - OPTIMIZED
 const addSectionHeader = (pdf, title, y, color) => {
   const { margin, contentWidth, fonts } = PDF_CONFIG;
   
-  // Colored rectangle background
+  // Gradient background effect
   pdf.setFillColor(...color);
-  pdf.rect(margin, y, contentWidth, 8, 'F');
+  pdf.rect(margin, y, contentWidth, 9, 'F');
   
-  // White text
+  // Lighter overlay for gradient effect
+  withOpacity(pdf, 0.3, () => {
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(margin, y, contentWidth / 3, 9, 'F');
+  });
+  
+  // Border accent
+  pdf.setDrawColor(...color);
+  pdf.setLineWidth(0.5);
+  pdf.line(margin, y + 9, margin + contentWidth, y + 9);
+  
+  // Title text
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(fonts.subheading);
   pdf.setFont('helvetica', 'bold');
-  pdf.text(title, margin + 3, y + 5.5);
+  pdf.text(title, margin + 4, y + 6.5);
 };
 
 // ========================================
@@ -720,8 +953,8 @@ const addBudgetSection = (pdf, tripData, startY) => {
     return y;
   }
   
-  // Display budget items with visual bars
-  const maxBarWidth = contentWidth - 80;
+  // Display budget items with enhanced visual bars
+  const maxBarWidth = contentWidth - 85;
   const maxAmount = Math.max(...budgetItems.map(i => i.value));
   
   budgetItems.forEach((item, index) => {
@@ -735,19 +968,21 @@ const addBudgetSection = (pdf, tripData, startY) => {
     
     // Category name
     pdf.setTextColor(...colors.text);
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(fonts.body);
-    pdf.text(item.label, margin + 3, y + 4);
+    pdf.text(item.label, margin + 5, y + 4);
     
-    // Visual bar
-    const barY = y + 6;
-    const barHeight = 4;
+    // Visual bar with enhanced design
+    const barY = y + 7;
+    const barHeight = 5;
     
-    // Bar background
-    pdf.setFillColor(240, 240, 240);
-    pdf.roundedRect(margin + 3, barY, maxBarWidth, barHeight, 1, 1, 'F');
+    // Bar background with border
+    pdf.setFillColor(245, 245, 245);
+    pdf.setDrawColor(220, 220, 220);
+    pdf.setLineWidth(0.2);
+    pdf.roundedRect(margin + 5, barY, maxBarWidth, barHeight, 1.5, 1.5, 'FD');
     
-    // Bar fill (gradient effect with multiple colors)
+    // Bar fill with gradient colors
     const barColors = [
       [14, 165, 233],   // primary
       [2, 132, 199],    // secondary
@@ -756,121 +991,197 @@ const addBudgetSection = (pdf, tripData, startY) => {
     ];
     const colorIndex = index % barColors.length;
     pdf.setFillColor(...barColors[colorIndex]);
-    pdf.roundedRect(margin + 3, barY, barWidth, barHeight, 1, 1, 'F');
+    pdf.roundedRect(margin + 5, barY, barWidth, barHeight, 1.5, 1.5, 'F');
     
-    // Amount and percentage
+    // Amount and percentage (aligned right)
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(fonts.small);
     pdf.setTextColor(...colors.text);
-    const priceText = `P ${formatNumber(item.value)} (${percentage}%)`;
-    pdf.text(priceText, pageWidth - margin - 3, y + 4, { align: 'right' });
+    const priceText = fmtPHP(item.value);
+    const percentText = `(${percentage}%)`;
+    pdf.text(priceText, pageWidth - margin - 25, y + 4, { align: 'right' });
     
-    y += 14;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(fonts.tiny);
+    pdf.setTextColor(...colors.lightText);
+    pdf.text(percentText, pageWidth - margin - 5, y + 4, { align: 'right' });
+    
+    y += 16;
   });
   
-  // Total budget card (prominent)
+  // Total budget card (prominent) - ENHANCED FOR CLARITY
   y += 5;
   
-  // Check if user provided a custom budget amount - extract from multiple sources
+  // ✅ ROBUST EXTRACTION: Check if user provided a custom budget amount
   let userBudgetAmount = null;
-  if (tripData?.userSelection?.budgetAmount) {
-    userBudgetAmount = parseFloat(String(tripData.userSelection.budgetAmount).replace(/[^0-9.]/g, ''));
-  } else if (tripData?.userSelection?.customBudget) {
-    userBudgetAmount = parseFloat(String(tripData.userSelection.customBudget).replace(/[^0-9.]/g, ''));
-  } else if (tripData?.tripData?.budget && typeof tripData.tripData.budget === 'string') {
-    userBudgetAmount = parseFloat(tripData.tripData.budget.replace(/[^0-9.]/g, ''));
-  } else if (tripData?.userSelection?.budget && typeof tripData.userSelection.budget === 'string') {
+  
+  // Priority 1: customBudget (most reliable)
+  if (tripData?.userSelection?.customBudget) {
+    const parsed = parseFloat(String(tripData.userSelection.customBudget).replace(/[^0-9.]/g, ''));
+    if (!isNaN(parsed) && parsed > 0) {
+      userBudgetAmount = parsed;
+    }
+  }
+  
+  // Priority 2: budgetAmount field
+  if (!userBudgetAmount && tripData?.userSelection?.budgetAmount) {
+    const parsed = parseFloat(String(tripData.userSelection.budgetAmount).replace(/[^0-9.]/g, ''));
+    if (!isNaN(parsed) && parsed > 0) {
+      userBudgetAmount = parsed;
+    }
+  }
+  
+  // Priority 3: Extract from budget string
+  if (!userBudgetAmount && tripData?.userSelection?.budget && typeof tripData.userSelection.budget === 'string') {
     const match = tripData.userSelection.budget.match(/₱[\d,]+/);
     if (match) {
-      userBudgetAmount = parseFloat(match[0].replace(/[^0-9.]/g, ''));
+      const parsed = parseFloat(match[0].replace(/[^0-9.]/g, ''));
+      if (!isNaN(parsed) && parsed > 0) {
+        userBudgetAmount = parsed;
+      }
+    }
+  }
+  
+  // Priority 4: tripData.budget
+  if (!userBudgetAmount && tripData?.tripData?.budget && typeof tripData.tripData.budget === 'string') {
+    const parsed = parseFloat(tripData.tripData.budget.replace(/[^0-9.]/g, ''));
+    if (!isNaN(parsed) && parsed > 0) {
+      userBudgetAmount = parsed;
     }
   }
   
   const hasCustomBudget = userBudgetAmount && !isNaN(userBudgetAmount) && userBudgetAmount !== total;
   
-  // Large total card with gradient
-  const cardHeight = hasCustomBudget ? 30 : 20;
+  // Large total card with gradient - REDESIGNED FOR CLARITY
+  const cardHeight = hasCustomBudget ? 35 : 22;
   pdf.setFillColor(...colors.success);
   pdf.roundedRect(margin, y, contentWidth, cardHeight, 3, 3, 'F');
   
   // Gradient overlay effect
-  pdf.setGState(new pdf.GState({opacity: 0.2}));
-  pdf.setFillColor(255, 255, 255);
-  pdf.roundedRect(margin, y, contentWidth / 2, cardHeight, 3, 3, 'F');
-  pdf.setGState(new pdf.GState({opacity: 1}));
+  withOpacity(pdf, 0.2, () => {
+    pdf.setFillColor(255, 255, 255);
+    pdf.roundedRect(margin, y, contentWidth / 2, cardHeight, 3, 3, 'F');
+  });
   
-  // Total text
-  pdf.setFontSize(fonts.heading);
+  // Total text - IMPROVED CLARITY
+  pdf.setFontSize(fonts.heading - 2);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(255, 255, 255);
   
   if (hasCustomBudget) {
-    // Show custom budget with clear breakdown
-    pdf.text('YOUR TRIP BUDGET', margin + 8, y + 8);
+    // Show clear distinction between budget limit and actual cost
+    pdf.text('TOTAL TRIP COST', margin + 8, y + 8);
     pdf.setFontSize(fonts.title);
-    pdf.text(`P ${formatNumber(userBudgetAmount)}`, margin + 8, y + 16);
+    pdf.text(fmtPHP(total), margin + 8, y + 18);
     
-    // Show what's included in simple terms
-    pdf.setFontSize(fonts.tiny);
+    // Show budget comparison clearly
+    pdf.setFontSize(fonts.small);
     pdf.setFont('helvetica', 'normal');
+    const variance = userBudgetAmount - total;
     const percentUsed = ((total / userBudgetAmount) * 100).toFixed(0);
+    
+    if (variance >= 0) {
+      // Under budget - show positive message
+      pdf.text(
+        `Your budget: ${fmtPHP(userBudgetAmount)} | Under by ${fmtPHP(variance)} (${percentUsed}% used)`,
+        margin + 8,
+        y + 26
+      );
+    } else {
+      // Over budget - show clear warning
+      pdf.text(
+        `Your budget: ${fmtPHP(userBudgetAmount)} | Over by ${fmtPHP(Math.abs(variance))} (${percentUsed}% used)`,
+        margin + 8,
+        y + 26
+      );
+    }
+    
+    // Additional clarity line
+    pdf.setFontSize(fonts.tiny);
+    pdf.setFont('helvetica', 'italic');
     pdf.text(
-      `Daily Activities: P ${formatNumber(total)} (${percentUsed}% of budget)`,
+      'This is what you will actually spend based on your itinerary',
       margin + 8,
-      y + 23
+      y + 31
     );
   } else {
-    // Show calculated total only
-    pdf.text('ESTIMATED DAILY COSTS', margin + 8, y + 8);
+    // Show calculated total only - CLEARER LABEL
+    pdf.text('TOTAL TRIP COST', margin + 8, y + 8);
     pdf.setFontSize(fonts.title);
-    pdf.text(`P ${formatNumber(total)}`, margin + 8, y + 16);
+    pdf.text(fmtPHP(total), margin + 8, y + 18);
   }
   
   y += cardHeight + 5;
   
-  // Clear explanation with visual layout
+  // Clear explanation with visual layout - ENHANCED
   if (total > 0) {
-    const boxHeight = hasCustomBudget ? 30 : 22;
+    const boxHeight = hasCustomBudget ? 38 : 26;
+    
+    // Ensure space for explanation box
+    y = ensureSpace(pdf, y, boxHeight + 5);
+    
     pdf.setFillColor(254, 249, 195); // Yellow-100 (attention color)
-    pdf.roundedRect(margin, y, contentWidth, boxHeight, 2, 2, 'F');
+    pdf.setDrawColor(251, 191, 36); // Yellow-400 border
+    pdf.setLineWidth(0.5);
+    pdf.roundedRect(margin, y, contentWidth, boxHeight, 2, 2, 'FD');
+    
+    // Info icon
+    pdf.setFillColor(251, 191, 36);
+    pdf.circle(margin + 6, y + 7, 2.5, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(fonts.tiny);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('i', margin + 6, y + 8, { align: 'center' });
     
     // Title
     pdf.setFontSize(fonts.small);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(133, 77, 14); // Yellow-800
-    pdf.text('ABOUT THIS BUDGET:', margin + 3, y + 5);
+    pdf.text('WHAT\'S INCLUDED IN THIS COST:', margin + 11, y + 8);
     
     pdf.setFontSize(fonts.tiny);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(113, 63, 18); // Yellow-900
     
-    // Explain the total calculation
+    // Explain the total calculation clearly
     const duration = tripData?.userSelection?.duration || 1;
     const numNights = Math.max(1, duration - 1);
     const explanationLines = [
-      `This is your complete trip cost including:`,
       `- Accommodation: ${numNights} night${numNights > 1 ? 's' : ''} of hotel stays`,
-      `- Food & Activities: All meals and attractions in your itinerary`,
-      `- Transportation: Flights and local transportation within your trip`
+      `- Food & Dining: All meals listed in your itinerary`,
+      `- Activities: Entrance fees and tickets for attractions`,
+      `- Transportation: Flights and local travel between locations`
     ];
     
-    let textY = y + 10;
+    let textY = y + 14;
     explanationLines.forEach((line) => {
-      pdf.text(line, margin + 3, textY);
-      textY += 4;
+      pdf.text(line, margin + 6, textY);
+      textY += 4.5;
     });
     
     if (hasCustomBudget) {
+      textY += 1;
       const variance = userBudgetAmount - total;
       pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(variance >= 0 ? 22 : 153, variance >= 0 ? 101 : 27, variance >= 0 ? 52 : 27);
-      pdf.text(
-        variance >= 0 
-          ? `Under budget by P ${formatNumber(Math.abs(variance))}` 
-          : `Over budget by P ${formatNumber(Math.abs(variance))}`,
-        margin + 3,
-        textY + 1
-      );
+      pdf.setFontSize(fonts.small);
+      
+      if (variance >= 0) {
+        // Under budget - positive green
+        pdf.setTextColor(22, 101, 52); // Green-800
+        pdf.text(
+          `[OK] Great! You're ${fmtPHP(Math.abs(variance))} under your budget limit`,
+          margin + 6,
+          textY
+        );
+      } else {
+        // Over budget - warning red
+        pdf.setTextColor(153, 27, 27); // Red-800
+        pdf.text(
+          `[!] Note: This exceeds your budget by ${fmtPHP(Math.abs(variance))}`,
+          margin + 6,
+          textY
+        );
+      }
     }
     
     y += boxHeight + 3;
@@ -923,10 +1234,10 @@ const addDailyItinerary = (pdf, tripData, startY) => {
     pdf.roundedRect(margin, y, PDF_CONFIG.pageWidth - (margin * 2), headerHeight, 2, 2, 'F');
     
     // Subtle gradient overlay
-    pdf.setGState(new pdf.GState({opacity: 0.2}));
-    pdf.setFillColor(...colors.secondary);
-    pdf.roundedRect(margin, y + headerHeight / 2, PDF_CONFIG.pageWidth - (margin * 2), headerHeight / 2, 2, 2, 'F');
-    pdf.setGState(new pdf.GState({opacity: 1}));
+    withOpacity(pdf, 0.2, () => {
+      pdf.setFillColor(...colors.secondary);
+      pdf.roundedRect(margin, y + headerHeight / 2, PDF_CONFIG.pageWidth - (margin * 2), headerHeight / 2, 2, 2, 'F');
+    });
     
     // Day number and title
     pdf.setTextColor(255, 255, 255);
@@ -958,16 +1269,60 @@ const addDailyItinerary = (pdf, tripData, startY) => {
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(fonts.tiny);
       pdf.setTextColor(255, 255, 255);
-      pdf.setGState(new pdf.GState({opacity: 0.9}));
-      const themeText = dayTheme.length > 50 ? dayTheme.substring(0, 47) + '...' : dayTheme;
-      pdf.text(themeText, margin + 5, y + 10.5);
-      pdf.setGState(new pdf.GState({opacity: 1}));
+      withOpacity(pdf, 0.9, () => {
+        const themeText = dayTheme.length > 50 ? dayTheme.substring(0, 47) + '...' : dayTheme;
+        pdf.text(themeText, margin + 5, y + 10.5);
+      });
     }
     
     y += headerHeight + 5; // Add spacing after header
     
-    // Day activities
-    const activities = day.plan || [];
+    // Day activities - with duplicate filtering
+    let activities = day.plan || [];
+    
+    // Filter out duplicate "return to hotel" activities
+    // Keep only the FIRST occurrence (it has better quality data with full hotel names)
+    const hotelReturnKeywords = ['return to hotel', 'back to hotel', 'return to accommodation', 'end of day'];
+    const hotelReturnIndices = [];
+    
+    activities.forEach((activity, index) => {
+      const activityText = (
+        activity.placeName || 
+        activity.placeDetails || 
+        activity.activity || 
+        ''
+      ).toLowerCase();
+      
+      // Enhanced detection with multiple patterns for hotel returns
+      const hasReturnToHotel = 
+        // Pattern 1: Direct hotel return phrases
+        activityText.includes('return to hotel') ||
+        activityText.includes('back to hotel') ||
+        activityText.includes('return to accommodation') ||
+        
+        // Pattern 2: "Return to [Hotel Name]" format
+        (activityText.includes('return to') && activityText.includes('hotel')) ||
+        
+        // Pattern 3: "End of day" ALWAYS means hotel return (standalone)
+        activityText.includes('end of day') ||
+        
+        // Pattern 4: Common rest/prepare patterns (end of itinerary)
+        (activityText.includes('return') && activityText.includes('rest')) ||
+        (activityText.includes('end of day') && activityText.includes('rest')) ||
+        
+        // Pattern 5: Generic hotel arrival text
+        (activityText.includes('back to') && activityText.includes('accommodation'));
+      
+      if (hasReturnToHotel) {
+        hotelReturnIndices.push(index);
+      }
+    });
+    
+    // If there are multiple hotel returns, keep only the FIRST one (has complete hotel details)
+    if (hotelReturnIndices.length > 1) {
+      const indicesToRemove = hotelReturnIndices.slice(1); // Remove all except first
+      activities = activities.filter((_, index) => !indicesToRemove.includes(index));
+    }
     
     if (activities.length === 0) {
       pdf.setFontSize(fonts.small);
@@ -982,23 +1337,31 @@ const addDailyItinerary = (pdf, tripData, startY) => {
           y = margin;
         }
         
-        // Activity number and time on same line
-        pdf.setFontSize(fonts.body);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(...colors.primary);
+        // Activity card with subtle background
+        const activityStartY = y;
         
-        // Activity number
+        // Light background for activity
+        pdf.setFillColor(252, 252, 253);
+        withOpacity(pdf, 0.5, () => {
+          pdf.roundedRect(margin + 2, y - 2, PDF_CONFIG.pageWidth - (margin * 2) - 4, 1, 1, 1, 'F');
+        });
+        
+        // Activity number badge
         pdf.setFillColor(...colors.primary);
-        pdf.circle(margin + 7, y - 1, 3, 'F');
+        pdf.circle(margin + 7, y - 1, 3.5, 'F');
+        
+        // White number in badge
         pdf.setTextColor(255, 255, 255);
         pdf.setFontSize(fonts.small);
+        pdf.setFont('helvetica', 'bold');
         pdf.text(`${actIndex + 1}`, margin + 7, y + 1, { align: 'center' });
         
-        // Time
+        // Time - normalized to 12-hour format
         pdf.setTextColor(...colors.primary);
         pdf.setFontSize(fonts.body);
         pdf.setFont('helvetica', 'bold');
-        pdf.text(`${activity.time || 'Flexible'}`, margin + 15, y);
+        const displayTime = normalizeTime(activity.time);
+        pdf.text(displayTime, margin + 16, y);
         
         y += 6;
         
@@ -1006,8 +1369,8 @@ const addDailyItinerary = (pdf, tripData, startY) => {
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(...colors.text);
         const activityName = activity.placeName || activity.placeDetails || `Activity ${actIndex + 1}`;
-        const splitName = pdf.splitTextToSize(activityName, PDF_CONFIG.pageWidth - (margin * 2) - 10);
-        pdf.text(splitName, margin + 5, y);
+        const splitName = pdf.splitTextToSize(activityName, PDF_CONFIG.pageWidth - (margin * 2) - 12);
+        pdf.text(splitName, margin + 6, y);
         y += splitName.length * 5;
         
         // Activity details
@@ -1016,33 +1379,33 @@ const addDailyItinerary = (pdf, tripData, startY) => {
           pdf.setTextColor(...colors.lightText);
           pdf.setFontSize(fonts.small);
           
-          // Clean the details: remove ± symbols (including unicode variants) and pricing info
+          // Clean the details
           let cleanDetails = String(activity.placeDetails)
             .replace(/±/g, '')
-            .replace(/[\u00B1\u2213]/g, '') // Remove ± unicode variants (U+00B1, U+2213)
+            .replace(/[\u00B1\u2213]/g, '')
             .replace(/₱/g, 'P')
             .trim();
           
           const splitDetails = pdf.splitTextToSize(
             cleanDetails,
-            PDF_CONFIG.pageWidth - (margin * 2) - 10
+            PDF_CONFIG.pageWidth - (margin * 2) - 12
           );
-          pdf.text(splitDetails, margin + 5, y);
+          pdf.text(splitDetails, margin + 6, y);
           y += splitDetails.length * 4;
         }
         
-        // Activity metadata
+        // Activity metadata with better formatting and comprehensive cleaning
         const metadata = [];
+        
+        // Price metadata
         if (activity.ticketPricing && activity.ticketPricing !== 'P 0' && activity.ticketPricing !== '₱0' && activity.ticketPricing.toLowerCase() !== 'free') {
-          // Clean price: remove ± and ₱, parentheses, replace with P, add comma formatting
           let cleanPrice = String(activity.ticketPricing)
             .replace(/±/g, '')
             .replace(/₱/g, '')
-            .replace(/[()]/g, '') // Remove parentheses
-            .replace(/[\u00B1\u2213]/g, '') // Remove ± unicode variants
+            .replace(/[()]/g, '')
+            .replace(/[\u00B1\u2213\u00D8\u00DE\u2014\u2013]/g, '') // Remove ±, Ø, Þ, —, – etc.
             .trim();
           
-          // Try to parse and format with commas
           const priceNum = parseFloat(cleanPrice.replace(/,/g, ''));
           if (!isNaN(priceNum) && priceNum > 0) {
             cleanPrice = `P ${priceNum.toLocaleString()}`;
@@ -1051,20 +1414,29 @@ const addDailyItinerary = (pdf, tripData, startY) => {
             metadata.push(`Price: P ${cleanPrice}`);
           }
         }
-        if (activity.timeTravel && activity.timeTravel !== 'Varies' && activity.timeTravel !== '0 minutes') {
-          // Clean travel time: remove ± and parentheses, unicode variants
+        
+        // Travel time metadata - with aggressive cleaning
+        if (activity.timeTravel && activity.timeTravel !== 'Varies') {
           let cleanTravel = String(activity.timeTravel)
             .replace(/±/g, '')
+            .replace(/₱/g, '')
             .replace(/[()]/g, '')
-            .replace(/[\u00B1\u2213]/g, '') // Remove ± unicode variants
-            .replace(/free$/i, '') // Remove "free" suffix
+            .replace(/[\u00B1\u2213\u00D8\u00DE\u2014\u2013]/g, '') // Remove all problematic unicode
+            .replace(/free$/i, '')
+            .replace(/\s+/g, ' ') // Normalize whitespace
             .trim();
           
-          // Only add if not "0 minutes" or empty after cleaning
-          if (cleanTravel && cleanTravel !== '0 minutes' && !cleanTravel.match(/^0\s*minutes?\s*$/i)) {
+          // Only show if it's meaningful travel time
+          if (cleanTravel && 
+              cleanTravel !== '0 minutes' && 
+              !cleanTravel.match(/^0\s*minutes?\s*$/i) &&
+              cleanTravel.length > 0 &&
+              !cleanTravel.match(/^[^a-zA-Z0-9\s]+$/)) { // Skip if only special chars remain
             metadata.push(`Travel: ${cleanTravel}`);
           }
         }
+        
+        // Rating metadata
         if (activity.rating) {
           metadata.push(`Rating: ${activity.rating}/5`);
         }
@@ -1072,15 +1444,30 @@ const addDailyItinerary = (pdf, tripData, startY) => {
         if (metadata.length > 0) {
           pdf.setFontSize(fonts.small);
           pdf.setTextColor(...colors.lightText);
-          // Ensure proper string formatting and clean any remaining special chars
+          // Final cleaning pass to remove any remaining problematic characters
           const metadataText = metadata
-            .map(item => String(item).replace(/[\u00B1\u2213]/g, ''))
+            .map(item => String(item)
+              .replace(/[\u00B1\u2213\u00D8\u00DE\u2014\u2013]/g, '')
+              .replace(/\s+/g, ' ')
+              .trim()
+            )
+            .filter(item => item.length > 0) // Remove empty items
             .join('  |  ');
-          pdf.text(metadataText, margin + 5, y);
-          y += 5;
+          
+          if (metadataText.length > 0) {
+            pdf.text(metadataText, margin + 6, y);
+            y += 5;
+          }
         }
         
-        y += 5; // Spacing between activities
+        // Update background height
+        const activityHeight = y - activityStartY + 3;
+        withOpacity(pdf, 0.3, () => {
+          pdf.setFillColor(248, 250, 252);
+          pdf.roundedRect(margin + 2, activityStartY - 2, PDF_CONFIG.pageWidth - (margin * 2) - 4, activityHeight, 1, 1, 'F');
+        });
+        
+        y += 6; // Spacing between activities
       });
     }
     
@@ -1094,7 +1481,7 @@ const addDailyItinerary = (pdf, tripData, startY) => {
 // FOOTER (Added to all pages)
 // ========================================
 const addFooterToAllPages = (pdf) => {
-  const { pageHeight, margin, colors, fonts } = PDF_CONFIG;
+  const { pageHeight, margin, colors, fonts, pageWidth } = PDF_CONFIG;
   const totalPages = pdf.internal.getNumberOfPages();
   
   for (let i = 1; i <= totalPages; i++) {
@@ -1102,7 +1489,7 @@ const addFooterToAllPages = (pdf) => {
     
     // Footer line
     pdf.setDrawColor(...colors.border);
-    pdf.line(margin, pageHeight - 15, PDF_CONFIG.pageWidth - margin, pageHeight - 15);
+    pdf.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
     
     // Footer text
     pdf.setFontSize(fonts.small);
@@ -1112,14 +1499,15 @@ const addFooterToAllPages = (pdf) => {
     // Left: TravelRover
     pdf.text('Generated by TravelRover', margin, pageHeight - 10);
     
-    // Right: Page number
-    pdf.text(`Page ${i} of ${totalPages}`, PDF_CONFIG.pageWidth - margin - 20, pageHeight - 10);
+    // Right: Page number (properly aligned)
+    pdf.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
   }
 };
 
 // ========================================
 // UTILITY FUNCTIONS
 // ========================================
+
 const parseDataArray = (data) => {
   if (Array.isArray(data)) return data;
   if (typeof data === 'string') {

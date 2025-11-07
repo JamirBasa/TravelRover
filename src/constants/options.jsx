@@ -369,34 +369,10 @@ export const validateCoordinates = (lat, lng) => {
   return null;
 };
 
-export const sanitizeJSONString = (jsonString) => {
-  if (!jsonString) return null;
-
-  try {
-    // Remove markdown code blocks
-    let cleaned = jsonString
-      .replace(/```json\s*/g, "")
-      .replace(/```\s*$/g, "")
-      .trim();
-
-    // Find JSON boundaries
-    const startIndex = cleaned.indexOf("{");
-    const endIndex = cleaned.lastIndexOf("}");
-
-    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-      cleaned = cleaned.substring(startIndex, endIndex + 1);
-    }
-
-    return cleaned;
-  } catch (error) {
-    console.error("JSON sanitization error:", error);
-    return null;
-  }
-};
-
 // ===============================
 // EXISTING OPTIONS DATA
 // ===============================
+// NOTE: sanitizeJSONString moved to src/utils/jsonParsers.js for consolidation
 
 export const SelectTravelList = [
   {

@@ -5,6 +5,8 @@ import {
   buildApiUrl,
   getTimeout,
 } from "./apiConfig";
+import { criticalApiCall } from "../utils/exponentialBackoff";
+import { logDebug, logError } from "../utils/productionLogger";
 
 /**
  * LangGraph Travel Agent - Client Adapter for Django Backend
@@ -22,10 +24,11 @@ export class LangGraphTravelAgent {
    * @returns {Object} Comprehensive travel plan with flights and hotels
    */
   async orchestrateTrip(tripParams) {
-    console.log(
-      "🤖 LangGraph: Starting Django backend orchestration",
-      tripParams
-    );
+    logDebug("LangGraphAgent", "Starting Django backend orchestration", {
+      destination: tripParams.destination,
+      duration: tripParams.duration,
+      budget: tripParams.budget,
+    });
 
     try {
       // Prepare request data for Django API
@@ -33,27 +36,45 @@ export class LangGraphTravelAgent {
 
       // ✅ Build the request URL using canonical endpoints to avoid env mismatch
       const requestUrl = buildApiUrl(API_ENDPOINTS.LANGGRAPH.EXECUTE);
-      console.log("🔍 Request URL:", requestUrl);
-      console.log("🔍 Request Data:", requestData);
-
-      // Create a promise that races between fetch and timeout
-      const fetchPromise = fetch(requestUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestData),
+      logDebug("LangGraphAgent", "Request prepared", {
+        requestUrl,
+        hasData: !!requestData,
       });
 
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error(`Request timeout after ${this.timeout}ms`)),
-          this.timeout
-        )
-      );
+      // ✅ Wrap API call with exponential backoff for resilience
+      const makeApiCall = async () => {
+        // Create a promise that races between fetch and timeout
+        const fetchPromise = fetch(requestUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestData),
+        });
 
-      // Race between fetch and timeout
-      const response = await Promise.race([fetchPromise, timeoutPromise]);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`Request timeout after ${this.timeout}ms`)),
+            this.timeout
+          )
+        );
+
+        // Race between fetch and timeout
+        return await Promise.race([fetchPromise, timeoutPromise]);
+      };
+
+      // Use exponential backoff for critical trip generation
+      const response = await criticalApiCall(
+        makeApiCall,
+        (error, attempt, delayMs) => {
+          logDebug("LangGraphAgent", "Retry attempt", {
+            attempt,
+            maxAttempts: 5,
+            delaySeconds: Math.round(delayMs / 1000),
+            error: error.message,
+          });
+        }
+      );
 
       if (!response.ok) {
         // ✅ Try to get detailed error from response body
@@ -63,7 +84,7 @@ export class LangGraphTravelAgent {
         try {
           errorData = await response.json();
           errorDetail = errorData.error || errorData.message || errorDetail;
-          console.error("🔍 Django API Error Details:", {
+          logError("LangGraphAgent", "Django API error", {
             status: response.status,
             statusText: response.statusText,
             url: requestUrl,
@@ -71,7 +92,7 @@ export class LangGraphTravelAgent {
           });
         } catch (parseError) {
           // If response is not JSON, log raw response
-          console.error("🔍 Non-JSON Error Response:", {
+          logError("LangGraphAgent", "Non-JSON error response", {
             status: response.status,
             statusText: response.statusText,
             url: requestUrl,
@@ -96,20 +117,23 @@ export class LangGraphTravelAgent {
       const data = await response.json();
 
       if (!data.success) {
-        console.error("🔍 Django Response Error:", data);
+        logError("LangGraphAgent", "Django response error", data);
         throw new Error(data.error || "LangGraph execution failed");
       }
 
       // Transform Django response to expected format
       const transformedResults = this.transformDjangoResponse(data);
 
-      console.log(
-        "✅ LangGraph Django orchestration completed",
-        transformedResults
-      );
+      logDebug("LangGraphAgent", "Orchestration completed", {
+        sessionId: transformedResults.session_id,
+        hasFlights: !!transformedResults.flights,
+        hasHotels: !!transformedResults.hotels,
+      });
       return transformedResults;
     } catch (error) {
-      console.error("❌ LangGraph Django orchestration failed:", error);
+      logError("LangGraphAgent", "Orchestration failed", {
+        error: error.message,
+      });
 
       const errorMessage = error.message || "Unknown error occurred";
 
@@ -150,10 +174,12 @@ export class LangGraphTravelAgent {
         Luxury: "luxury",
         luxury: "luxury",
       };
-
       // Try exact match first
       if (budgetMap[budget]) {
-        console.log(`💰 Budget mapped: "${budget}" → "${budgetMap[budget]}"`);
+        logDebug("LangGraphAgent", "Budget mapped", {
+          from: budget,
+          to: budgetMap[budget],
+        });
         return budgetMap[budget];
       }
 
@@ -164,9 +190,10 @@ export class LangGraphTravelAgent {
         lowerBudget.includes("cheap") ||
         lowerBudget.includes("affordable")
       ) {
-        console.log(
-          `💰 Budget mapped (contains 'budget'): "${budget}" → "budget"`
-        );
+        logDebug("LangGraphAgent", "Budget mapped (contains budget)", {
+          from: budget,
+          to: "budget",
+        });
         return "budget";
       }
       if (
@@ -174,14 +201,18 @@ export class LangGraphTravelAgent {
         lowerBudget.includes("premium") ||
         lowerBudget.includes("upscale")
       ) {
-        console.log(
-          `💰 Budget mapped (contains 'luxury'): "${budget}" → "luxury"`
-        );
+        logDebug("LangGraphAgent", "Budget mapped (contains luxury)", {
+          from: budget,
+          to: "luxury",
+        });
         return "luxury";
       }
 
       // Default to moderate
-      console.log(`💰 Budget defaulted: "${budget}" → "moderate"`);
+      logDebug("LangGraphAgent", "Budget defaulted", {
+        from: budget,
+        to: "moderate",
+      });
       return "moderate";
     };
 
@@ -235,7 +266,9 @@ export class LangGraphTravelAgent {
       if (userStr) {
         try {
           const user = JSON.parse(userStr);
-          console.log("🔍 Parsed localStorage user:", user);
+          logDebug("LangGraphAgent", "Parsed localStorage user", {
+            hasEmail: !!user.email,
+          });
 
           // Try multiple nested paths
           email =
@@ -244,7 +277,9 @@ export class LangGraphTravelAgent {
             user.providerData?.[0]?.email ||
             user.reloadUserInfo?.email;
         } catch (parseError) {
-          console.warn("⚠️ Could not parse localStorage user:", parseError);
+          logDebug("LangGraphAgent", "Could not parse localStorage user", {
+            error: parseError.message,
+          });
         }
       }
 
@@ -261,7 +296,7 @@ export class LangGraphTravelAgent {
             const parsed = JSON.parse(sessionUser);
             email = parsed.email || parsed.user?.email;
           } catch {
-            console.warn("⚠️ Could not parse sessionStorage user");
+            logDebug("LangGraphAgent", "Could not parse sessionStorage user");
           }
         }
       }
@@ -273,23 +308,22 @@ export class LangGraphTravelAgent {
         // Basic email format validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (emailRegex.test(email)) {
-          console.log("✅ Valid email found:", email);
+          logDebug("LangGraphAgent", "Valid email found", { email });
           return email;
         } else {
-          console.warn("⚠️ Invalid email format:", email);
+          logDebug("LangGraphAgent", "Invalid email format", { email });
         }
       }
 
       // 5. Use fallback for development/testing
-      console.warn(
-        "⚠️ No valid user email found, using fallback for development"
-      );
-      console.warn(
-        "💡 TIP: Make sure user is logged in via Firebase Authentication"
-      );
+      logDebug("LangGraphAgent", "No valid email found, using fallback", {
+        tip: "Make sure user is logged in via Firebase Authentication",
+      });
       return "guest@travelrover.com"; // Valid format fallback
     } catch (error) {
-      console.error("❌ Error getting user email:", error);
+      logError("LangGraphAgent", "Error getting user email", {
+        error: error.message,
+      });
       return "guest@travelrover.com"; // Valid format fallback
     }
   }
