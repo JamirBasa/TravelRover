@@ -108,10 +108,10 @@ const FoodCultureStep = ({
     <div className="max-w-2xl mx-auto">
       {/* Main Question */}
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">
+        <h2 className="text-2xl font-bold brand-gradient-text mb-2">
           What are your preferences?
         </h2>
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-gray-400">
           Help us recommend culturally appropriate destinations and dining
         </p>
       </div>
@@ -119,8 +119,10 @@ const FoodCultureStep = ({
       <div className="space-y-6">
         {/* Dietary Restrictions */}
         <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FaUtensils className="mr-2" />
+          <h3 className="text-lg font-semibold brand-gradient-text mb-4 flex items-center">
+            <div className="brand-gradient p-1.5 rounded-lg mr-2">
+              <FaUtensils className="text-white" />
+            </div>
             What are your dietary needs?
           </h3>
           <div className="space-y-3">
@@ -134,19 +136,37 @@ const FoodCultureStep = ({
                   key={diet.id}
                   className={`flex items-center p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
                     isSelected
-                      ? "border-black bg-black text-white"
-                      : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-500"
+                      ? "border-sky-500 brand-gradient text-white"
+                      : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-sky-400 dark:hover:border-sky-500"
                   }`}
                   onClick={() =>
                     handleMultiSelect("dietaryRestrictions", diet.id)
                   }
                 >
-                  <IconComponent className="text-2xl mr-4" />
+                  <div
+                    className={`${
+                      isSelected
+                        ? "bg-white/20"
+                        : "bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900/30 dark:to-blue-900/30"
+                    } p-2 rounded-lg mr-4`}
+                  >
+                    <IconComponent
+                      className={`text-2xl ${
+                        isSelected ? "text-white" : "text-sky-600 dark:text-sky-400"
+                      }`}
+                    />
+                  </div>
                   <div className="flex-1">
-                    <span className="font-medium">{diet.label}</span>
+                    <span
+                      className={`font-medium ${
+                        isSelected ? "text-white" : "text-gray-800 dark:text-gray-200"
+                      }`}
+                    >
+                      {diet.label}
+                    </span>
                     <p
                       className={`text-sm ${
-                        isSelected ? "text-gray-300" : "text-gray-500"
+                        isSelected ? "text-white/90" : "text-gray-600 dark:text-gray-400"
                       }`}
                     >
                       {diet.desc}
@@ -160,21 +180,23 @@ const FoodCultureStep = ({
         </div>
 
         {/* Halal Preference */}
-        <div className="mb-8 bg-gray-50 p-4 rounded-xl">
+        <div className="mb-8 brand-card p-4 border-sky-200 dark:border-sky-700">
           <label className="flex items-center space-x-3 cursor-pointer">
             <input
               type="checkbox"
               checked={profileData.isHalal}
               onChange={(e) => handleInputChange("isHalal", e.target.checked)}
-              className="w-5 h-5 text-black focus:ring-black border-gray-300 rounded"
+              className="w-5 h-5 text-sky-600 focus:ring-sky-500 border-gray-300 dark:border-slate-600 rounded"
             />
             <div className="flex items-center space-x-3">
-              <FaMosque className="text-gray-700 text-xl" />
+              <div className="brand-gradient p-1.5 rounded-lg">
+                <FaMosque className="text-white text-xl" />
+              </div>
               <div>
-                <span className="font-semibold text-gray-800">
+                <span className="font-semibold brand-gradient-text">
                   Halal Food Required
                 </span>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Only recommend destinations with halal food options
                 </p>
               </div>
@@ -184,8 +206,10 @@ const FoodCultureStep = ({
 
         {/* Cultural Preferences */}
         <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FaHeart className="mr-2" />
+          <h3 className="text-lg font-semibold brand-gradient-text mb-4 flex items-center">
+            <div className="brand-gradient p-1.5 rounded-lg mr-2">
+              <FaHeart className="text-white" />
+            </div>
             Cultural considerations?
           </h3>
           <div className="space-y-3">
@@ -199,19 +223,37 @@ const FoodCultureStep = ({
                   key={culture.id}
                   className={`flex items-center p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
                     isSelected
-                      ? "border-black bg-black text-white"
-                      : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-500"
+                      ? "border-sky-500 brand-gradient text-white"
+                      : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-sky-400 dark:hover:border-sky-500"
                   }`}
                   onClick={() =>
                     handleMultiSelect("culturalPreferences", culture.id)
                   }
                 >
-                  <IconComponent className="text-2xl mr-4" />
+                  <div
+                    className={`${
+                      isSelected
+                        ? "bg-white/20"
+                        : "bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900/30 dark:to-blue-900/30"
+                    } p-2 rounded-lg mr-4`}
+                  >
+                    <IconComponent
+                      className={`text-2xl ${
+                        isSelected ? "text-white" : "text-sky-600 dark:text-sky-400"
+                      }`}
+                    />
+                  </div>
                   <div className="flex-1">
-                    <span className="font-medium">{culture.label}</span>
+                    <span
+                      className={`font-medium ${
+                        isSelected ? "text-white" : "text-gray-800 dark:text-gray-200"
+                      }`}
+                    >
+                      {culture.label}
+                    </span>
                     <p
                       className={`text-sm ${
-                        isSelected ? "text-gray-300" : "text-gray-500"
+                        isSelected ? "text-white/90" : "text-gray-600 dark:text-gray-400"
                       }`}
                     >
                       {culture.desc}
@@ -226,8 +268,10 @@ const FoodCultureStep = ({
 
         {/* Language Preferences */}
         <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FaLanguage className="mr-2" />
+          <h3 className="text-lg font-semibold brand-gradient-text mb-4 flex items-center">
+            <div className="brand-gradient p-1.5 rounded-lg mr-2">
+              <FaLanguage className="text-white" />
+            </div>
             Which languages do you speak?
           </h3>
           <div className="grid grid-cols-2 gap-3">
@@ -240,15 +284,21 @@ const FoodCultureStep = ({
                   key={lang.id}
                   className={`p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
                     isSelected
-                      ? "border-black bg-black text-white"
-                      : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-500"
+                      ? "border-sky-500 brand-gradient text-white"
+                      : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-sky-400 dark:hover:border-sky-500"
                   }`}
                   onClick={() =>
                     handleMultiSelect("languagePreferences", lang.id)
                   }
                 >
                   <div className="text-center">
-                    <span className="font-medium">{lang.label}</span>
+                    <span
+                      className={`font-medium ${
+                        isSelected ? "text-white" : "text-gray-800 dark:text-gray-200"
+                      }`}
+                    >
+                      {lang.label}
+                    </span>
                     {isSelected && <span className="ml-2 text-white">✓</span>}
                   </div>
                 </div>
