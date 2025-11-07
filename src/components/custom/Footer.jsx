@@ -111,7 +111,7 @@ function Footer() {
               </li>
               <li>
                 <a
-                  href="/user-profile"
+                  href="/set-profile"
                   className="text-blue-200 hover:text-white transition-colors duration-200 text-sm"
                 >
                   Profile Settings

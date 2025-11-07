@@ -191,11 +191,11 @@ class CoordinatorAgent(BaseAgent):
         from_airport = self._extract_airport_code(departure_city) if departure_city else 'ZAM'  # Default to Zamboanga
         to_airport = self._extract_airport_code(destination)
         
-        # Parse number of adults
-        travelers = trip_params.get('travelers', 'Just Me')
-        adults = self._parse_adults(travelers)
+        # Parse number of adults - now expects integer from validators
+        travelers = trip_params.get('travelers', 1)
+        adults = travelers if isinstance(travelers, int) else self._parse_adults(travelers)
         
-        logger.info(f"Flight params: {departure_city} ({from_airport}) → {destination} ({to_airport})")
+        logger.info(f"Flight params: {departure_city} ({from_airport}) → {destination} ({to_airport}), adults={adults}")
         
         return {
             'from_airport': from_airport,
@@ -211,14 +211,20 @@ class CoordinatorAgent(BaseAgent):
         
         hotel_data = trip_params.get('hotel_data', {})
         
-        # Guest mapping
-        guest_mapping = {
-            'Just Me': 1,
-            'A Couple': 2,
-            'Family': 4,
-            'Friends': 3
-        }
-        guests = guest_mapping.get(trip_params.get('travelers', 'Just Me'), 1)
+        # Use numeric travelers directly, fallback to legacy mapping for backward compatibility
+        travelers = trip_params.get('travelers', 1)
+        if isinstance(travelers, int):
+            guests = travelers
+        else:
+            # Legacy string format mapping
+            guest_mapping = {
+                'Just Me': 1,
+                'A Couple': 2,
+                'Duo': 2,
+                'Family': 4,
+                'Friends': 3
+            }
+            guests = guest_mapping.get(travelers, 1)
         
         return {
             'destination': trip_params.get('destination'),
@@ -231,38 +237,144 @@ class CoordinatorAgent(BaseAgent):
         }
     
     def _extract_airport_code(self, location: str) -> str:
-        """Extract airport code from location (simplified)"""
-        # This is a simplified version - you might want to use a proper airport database
+        """
+        Extract airport code from location with comprehensive Philippine airport coverage
+        Synced with frontend flightAgent.jsx mapping
+        """
         airport_mapping = {
+            # Metro Manila and nearby
             'Manila': 'MNL',
-            'Intramuros': 'MNL',  # Intramuros is in Manila
             'Metro Manila': 'MNL',
-            'Zamboanga': 'ZAM',
+            'Manila City': 'MNL',
+            'Quezon': 'MNL',
+            'Quezon City': 'MNL',
+            'Pasay': 'MNL',
+            'Makati': 'MNL',
+            'Taguig': 'MNL',
+            'San Juan': 'MNL',
+            'Las Piñas': 'MNL',
+            'Caloocan': 'MNL',
+            'Parañaque': 'MNL',
+            'Intramuros': 'MNL',
+            
+            # Central Luzon
+            'Pampanga': 'CRK',
+            'Angeles': 'CRK',
+            'Angeles City': 'CRK',
+            'Clark': 'CRK',
+            'Subic': 'SFS',
+            'Bulacan': 'MNL',
+            'Tarlac': 'CRK',
+            'Nueva Ecija': 'CRK',
+            'Cabanatuan': 'CRK',
+            
+            # North Luzon (Cordillera + Ilocos)
+            'Baguio': 'BAG',
+            'Baguio City': 'BAG',
+            'La Trinidad': 'BAG',
+            'Benguet': 'BAG',
+            'Mountain Province': 'TUG',
+            'Ifugao': 'TUG',
+            'Abra': 'LAO',
+            'Ilocos Norte': 'LAO',
+            'Laoag': 'LAO',
+            'Ilocos Sur': 'LAO',
+            'Vigan': 'LAO',
+            'Dagupan': 'CRK',
+            'San Fernando': 'CRK',
+            
+            # Southern Luzon
+            'Laguna': 'MNL',
+            'San Pablo': 'MNL',
+            'Batangas': 'BSO',
+            'Batangas City': 'BSO',
+            'Lucena': 'MNL',
+            'Quezon Province': 'MNL',
+            'Naga': 'WNP',
+            'Naga City': 'WNP',
+            'Legazpi': 'LGP',
+            'Legazpi City': 'LGP',
+            'Sorsogon': 'DRP',
+            
+            # Visayas
             'Cebu': 'CEB',
-            'Davao': 'DVO',
-            'Puerto Princesa': 'PPS',
+            'Cebu City': 'CEB',
+            'Dumaguete': 'DGT',
+            'Dumaguete City': 'DGT',
+            'Iloilo': 'ILO',
+            'Iloilo City': 'ILO',
+            'Bacolod': 'BCD',
+            'Bacolod City': 'BCD',
+            'Bohol': 'TAG',
+            'Tagbilaran': 'TAG',
+            'Tagbilaran City': 'TAG',
             'Kalibo': 'KLO',
             'Boracay': 'KLO',
-            'Tagbilaran': 'TAG',
-            'Bohol': 'TAG',
+            'Roxas': 'RXS',
+            'Roxas City': 'RXS',
+            
+            # Mindanao
+            'Davao': 'DVO',
+            'Davao City': 'DVO',
+            'Cagayan': 'CGY',
+            'Cagayan de Oro': 'CGY',
+            'Butuan': 'BXU',
+            'Surigao': 'SUG',
+            'City of Mati': 'DVO',
+            'Zamboanga': 'ZAM',
+            'Zamboanga City': 'ZAM',
+            'Cotabato': 'CBO',
+            'GenSan': 'GES',
+            'General Santos': 'GES',
+            
+            # Tourist destinations
             'Siargao': 'IAO',
-            'Clark': 'CRK',
-            'Iloilo': 'ILO',
-            'Bacolod': 'BCD'
+            'Puerto Princesa': 'PPS',
+            'Palawan': 'PPS',
+            'El Nido': 'PPS',
+            'Coron': 'USU',
         }
         
-        # Check for exact matches first
+        # Normalize location for flexible matching
+        location_lower = location.lower() if location else ''
+        
+        # Check for exact matches first (case-insensitive)
         for city, code in airport_mapping.items():
-            if city.lower() in location.lower():
+            if city.lower() == location_lower:
+                logger.info(f"✈️ Exact airport match: {location} → {code}")
                 return code
         
-        return 'MNL'  # Default to Manila
+        # Check for partial matches (city name in location string)
+        for city, code in airport_mapping.items():
+            if city.lower() in location_lower or location_lower in city.lower():
+                logger.info(f"✈️ Partial airport match: {location} → {code} (from {city})")
+                return code
+        
+        # Default to Manila
+        logger.warning(f"⚠️ No airport code found for '{location}', defaulting to MNL")
+        return 'MNL'
     
-    def _parse_adults(self, travelers: str) -> int:
-        """Parse number of adults from travelers string"""
+    def _parse_adults(self, travelers) -> int:
+        """
+        Parse number of adults from travelers input (LEGACY - for backward compatibility)
+        Note: New code should pass numeric values directly. This maintains compatibility with old data.
+        """
+        # If already numeric, return it
+        if isinstance(travelers, int):
+            return travelers
+            
+        # Try string-to-int conversion
+        if isinstance(travelers, str):
+            try:
+                return int(travelers)
+            except ValueError:
+                pass
+        
+        # Legacy preset mapping
         mapping = {
             'Just Me': 1,
             'A Couple': 2,
+            'Duo': 2,
             'Family': 3,
             'Friends': 4
         }
@@ -347,6 +459,7 @@ class CoordinatorAgent(BaseAgent):
                 merged['recommended_flight'] = cheapest_flight
         
         # Extract hotel cost
+        # 🔧 FIX: Ensure first hotel (index 0) is marked as primary check-in hotel
         if merged['hotels'] and merged['hotels'].get('success'):
             hotels = merged['hotels'].get('hotels', [])
             if hotels:
@@ -354,6 +467,12 @@ class CoordinatorAgent(BaseAgent):
                 best_hotel = max(hotels, key=lambda h: h.get('langgraph_score', 0))
                 hotel_cost = self._estimate_hotel_cost(best_hotel.get('price_range', ''))
                 merged['recommended_hotel'] = best_hotel
+                
+                # 🆕 Mark first hotel as primary for Day 1 check-in
+                if len(hotels) > 0:
+                    hotels[0]['is_primary_checkin'] = True
+                    hotels[0]['usage_note'] = 'Default hotel for Day 1 check-in in itinerary'
+                    logger.info(f"✅ Marked {hotels[0].get('name', 'Unknown')} as primary check-in hotel")
         
         merged['total_estimated_cost'] = flight_cost + hotel_cost
         merged['cost_breakdown'] = {

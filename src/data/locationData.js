@@ -154,6 +154,7 @@ export const philippines = {
           'Bais',
           'Bayawan',
           'Bogo',
+          'Buenavista', // Bohol
           'Canlaon',
           'Carcar',
           'Cebu City',
@@ -163,11 +164,13 @@ export const philippines = {
           'Lapu-Lapu',
           'Mandaue',
           'Naga',
-          'Tagbilaran',
+          'Panglao', // Bohol
+          'Tagbilaran', // Bohol capital
           'Talisay',
           'Tanjay',
           'Toledo',
-          'Tomohon'
+          'Tomohon',
+          'Tubigon' // Bohol
         ]
       },
       {

@@ -4,6 +4,7 @@
  */
 
 import { HOTEL_CONFIG } from "../constants/options";
+import { parseTravelersToNumber, validateTravelers } from "./travelersParsers";
 
 /**
  * Validates hotel data for consistency and completeness
@@ -57,22 +58,20 @@ export function validateHotelData(hotelData, formData) {
     }
   }
 
-  // Enhanced travelers validation with better error message
-  // formData.travelers should now be an integer
-  const travelersCount = typeof formData?.travelers === 'number' 
-    ? formData.travelers 
-    : parseInt(formData?.travelers, 10) || 0;
+  // Enhanced travelers validation with centralized parser
+  const travelersCount = parseTravelersToNumber(formData?.travelers);
+  const travelersValidation = validateTravelers(travelersCount);
   
   // Debug logging
   console.log('🔍 validateHotelData - Travelers Debug:', {
     raw: formData?.travelers,
     type: typeof formData?.travelers,
     parsed: travelersCount,
-    isValid: travelersCount >= 1
+    isValid: travelersValidation.isValid
   });
   
-  if (travelersCount < 1) {
-    errors.push("Number of travelers is required for hotel search. Please go back to Step 3 to set the number of guests.");
+  if (!travelersValidation.isValid) {
+    errors.push(travelersValidation.error || "Number of travelers is required for hotel search. Please go back to Step 3 to set the number of guests.");
   }
 
   const warnings = [];
@@ -126,14 +125,12 @@ export function mapToGooglePlacesTypes(accommodationType) {
  * Calculate realistic hotel budget estimate
  * @param {number} budgetLevel - Budget level (1-6)
  * @param {number} nights - Number of nights
- * @param {number} travelers - Number of travelers (integer)
+ * @param {number|string} travelers - Number of travelers (integer or parseable format)
  * @returns {object} - { min, max, perNight, total, currency }
  */
 export function calculateHotelBudget(budgetLevel, nights, travelers = 1) {
-  // Parse travelers to ensure it's a number (for backward compatibility)
-  const travelersCount = typeof travelers === 'number' 
-    ? travelers 
-    : parseInt(travelers, 10) || 1;
+  // Use centralized parser to handle any format
+  const travelersCount = parseTravelersToNumber(travelers);
 
   // Base price ranges per night (in PHP)
   const priceRanges = {

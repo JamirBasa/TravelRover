@@ -3,8 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import {
   MoreVertical,
-  Eye,
-  Edit,
   Trash2,
   MapPin,
   Calendar,
@@ -14,12 +12,12 @@ import {
   Sparkles,
   DollarSign,
   Clock,
+  Zap,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -171,20 +169,44 @@ function TripCard({ trip, onDelete }) {
 
           // Get photo URL if available
           if (place.photos && place.photos.length > 0) {
-            const photoReference = place.photos[0].photo_reference;
-            const photoUrl = googlePlacesService.getPhotoUrl(
-              photoReference,
-              800
-            );
+            // ✅ Handle both old (photo_reference) and new (name) formats
+            const photoReference =
+              place.photos[0].name || place.photos[0].photo_reference;
 
-            if (photoUrl) {
-              console.log(`✅ Found Google Places image for ${location}`);
+            if (photoReference) {
+              // ✅ Use backend proxy for photos
+              try {
+                const backendPhotoUrl = `http://localhost:8000/api/langgraph/photo-proxy/?photo_ref=${encodeURIComponent(
+                  photoReference
+                )}&maxHeightPx=800&maxWidthPx=800`;
 
-              // Cache the photo URL for future use (30 days)
-              GooglePlacesImageCache.setCache(location, photoUrl);
-              setImageUrl(photoUrl);
-              setIsLoading(false);
-              return;
+                // ✅ Test if the URL actually works before caching
+                console.log(`🔍 Testing photo URL for ${location}...`);
+                const testResponse = await fetch(backendPhotoUrl, {
+                  method: "HEAD",
+                });
+
+                if (testResponse.ok) {
+                  console.log(
+                    `✅ Photo URL verified for ${location} (Status: ${testResponse.status})`
+                  );
+
+                  // Cache the photo URL for future use (30 days)
+                  GooglePlacesImageCache.setCache(location, backendPhotoUrl);
+                  setImageUrl(backendPhotoUrl);
+                  setIsLoading(false);
+                  return;
+                } else {
+                  console.error(
+                    `❌ Photo URL failed: ${testResponse.status} ${testResponse.statusText}`
+                  );
+                }
+              } catch (photoError) {
+                console.error(
+                  "❌ Error fetching/verifying photo URL:",
+                  photoError
+                );
+              }
             }
           }
         }
@@ -269,6 +291,24 @@ function TripCard({ trip, onDelete }) {
   const getTripHighlights = () => {
     const highlights = [];
 
+    // Check activity preference (new in updated flow)
+    const activityPref = trip.userSelection?.activityPreference;
+    if (activityPref !== undefined && activityPref !== null) {
+      const paceLabels = {
+        1: "Relaxed Pace",
+        2: "Balanced",
+        3: "Action-Packed",
+      };
+      const paceLabel = paceLabels[activityPref] || "Balanced";
+
+      highlights.push({
+        icon: Zap,
+        text: paceLabel,
+        color: "text-orange-600 dark:text-orange-400",
+        bg: "bg-orange-50 dark:bg-orange-950/50",
+      });
+    }
+
     // Check accommodations
     const accommodationsCount =
       trip.tripData?.tripData?.accommodations?.length || 0;
@@ -329,74 +369,61 @@ function TripCard({ trip, onDelete }) {
     setIsLoading(false);
   };
 
-  const handleViewTrip = (e) => {
-    if (e) e.stopPropagation();
+  const handleViewTrip = () => {
     if (trip?.id) {
       navigate(`/view-trip/${trip.id}`);
     }
   };
 
-  const handleEditTrip = (e) => {
-    e.stopPropagation();
-    if (trip?.id) {
-      navigate(`/edit-trip/${trip.id}`);
-    }
-  };
-
-  const handleDeleteTrip = (e) => {
-    e.stopPropagation();
+  const handleDeleteTrip = () => {
     onDelete(trip);
   };
 
   return (
-    <div className="group border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden shadow hover:shadow-lg dark:shadow-sky-500/10 dark:hover:shadow-sky-500/20 transition-all bg-white dark:bg-slate-900 relative">
-      {/* Action Menu */}
-      <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+    <div
+      className="group brand-card border-gray-200/80 dark:border-slate-700/50 rounded-xl overflow-hidden shadow-md hover:shadow-2xl dark:shadow-slate-900/50 dark:hover:shadow-sky-500/20 transition-all duration-300 bg-white dark:bg-slate-900/80 backdrop-blur-sm relative cursor-pointer hover:-translate-y-1 flex flex-col"
+      onClick={handleViewTrip}
+    >
+      {/* Action Menu with Enhanced Positioning and Higher Z-Index */}
+      <div
+        className="absolute top-4 right-4 z-30 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-100 scale-95"
+        onClick={(e) => e.stopPropagation()}
+      >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm hover:bg-white dark:hover:bg-slate-800 shadow-sm border border-gray-200 dark:border-slate-600 cursor-pointer"
-              onClick={(e) => e.stopPropagation()}
+              className="h-9 w-9 p-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md hover:bg-white dark:hover:bg-slate-700 shadow-lg border border-gray-200/50 dark:border-slate-600/50 rounded-lg transition-all duration-200 hover:shadow-xl hover:scale-110"
+              aria-label="Trip options"
             >
-              <MoreVertical className="h-4 w-4" />
+              <MoreVertical className="h-4 w-4 text-gray-700 dark:text-gray-200" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem
-              onClick={handleViewTrip}
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              <Eye className="h-4 w-4" />
-              View Details
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={handleEditTrip}
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              <Edit className="h-4 w-4" />
-              Edit Trip
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
+          <DropdownMenuContent
+            align="end"
+            alignOffset={-5}
+            sideOffset={8}
+            className="w-48 shadow-xl z-50"
+          >
             <DropdownMenuItem
               onClick={handleDeleteTrip}
-              className="flex items-center gap-2 text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 cursor-pointer"
+              className="text-red-600 dark:text-red-400 focus:text-red-700 dark:focus:text-red-300 focus:bg-red-50 dark:focus:bg-red-950/30 cursor-pointer"
             >
               <Trash2 className="h-4 w-4" />
-              Delete Trip
+              <span>Delete Trip</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      {/* Trip Photo with loading state */}
-      <div className="cursor-pointer" onClick={handleViewTrip}>
-        {isLoading ? (
-          <div className="h-48 bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
-            <AiOutlineLoading3Quarters className="h-6 w-6 animate-spin text-blue-500 dark:text-sky-400" />
+      {/* Professional Image with Smooth Hover Animation */}
+      <div className="relative overflow-hidden h-56 bg-gradient-to-br from-gray-100 via-blue-50 to-sky-50 dark:from-slate-800 dark:via-slate-800/50 dark:to-slate-700">
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <AiOutlineLoading3Quarters className="h-7 w-7 animate-spin text-sky-500 dark:text-sky-400" />
           </div>
-        ) : null}
+        )}
         <img
           src={
             imageUrl ||
@@ -404,104 +431,136 @@ function TripCard({ trip, onDelete }) {
             "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&h=300&fit=crop&q=80"
           }
           alt={trip.userSelection?.location || "Trip destination"}
-          className={`w-full h-48 object-cover transition-opacity duration-300 ${
+          className={`w-full h-full object-cover transition-all duration-500 ease-out group-hover:scale-105 group-hover:brightness-110 ${
             isLoading ? "opacity-0" : "opacity-100"
           }`}
           onLoad={handleImageLoad}
           onError={handleImageError}
         />
+        {/* Subtle Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent opacity-60 group-hover:opacity-70 transition-opacity duration-500"></div>
+
+        {/* Optional: Destination Label Overlay (appears on hover) */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out">
+          <div className="flex items-center gap-2 text-white">
+            <MapPin className="h-4 w-4 flex-shrink-0" />
+            <span className="text-sm font-semibold truncate tracking-wide">
+              {trip.userSelection?.location || "Unknown Destination"}
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Enhanced Trip Summary */}
-      <div className="p-5">
-        {/* Destination Title */}
-        <h3 className="font-bold text-lg mb-2 text-gray-800 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-sky-400 transition-colors duration-200 flex items-center gap-2 overflow-hidden">
-          <MapPin className="h-5 w-5 flex-shrink-0 text-blue-500 dark:text-sky-400" />
-          <span
-            className="truncate cursor-pointer"
-            style={{
-              display: "-webkit-box",
-              WebkitLineClamp: 1,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-            onClick={handleViewTrip}
-          >
-            {trip.userSelection?.location || "Unknown Destination"}
-          </span>
-        </h3>
+      {/* Enhanced Trip Content with Optimized Spacing */}
+      <div className="p-6 space-y-5">
+        {/* Destination Title with Icon */}
+        <div className="space-y-4">
+          <h3 className="font-bold text-xl text-gray-900 dark:text-gray-50 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors duration-300 flex items-start gap-3 leading-snug tracking-tight">
+            <MapPin className="h-5 w-5 flex-shrink-0 text-sky-500 dark:text-sky-400 mt-1 group-hover:scale-110 transition-transform duration-300" />
+            <span
+              className="line-clamp-2"
+              style={{
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {trip.userSelection?.location || "Unknown Destination"}
+            </span>
+          </h3>
 
-        {/* Travel Dates */}
-        {dateRange && (
-          <div className="flex items-center gap-2 mb-3 text-sm text-gray-600 dark:text-gray-400">
-            <Calendar className="h-4 w-4 flex-shrink-0" />
-            <span className="font-medium">{dateRange}</span>
-          </div>
-        )}
+          {/* Travel Dates Badge */}
+          {dateRange && (
+            <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800/50 rounded-lg text-sm font-medium text-sky-700 dark:text-sky-300">
+              <Calendar className="h-4 w-4 flex-shrink-0" />
+              <span className="tracking-wide">{dateRange}</span>
+            </div>
+          )}
+        </div>
 
-        {/* Creation Date */}
+        {/* Creation Date - Subtle */}
         {creationDate && (
-          <div className="flex items-center gap-2 mb-3 text-xs text-gray-500 dark:text-gray-500">
+          <div className="flex items-center gap-2.5 text-xs text-gray-500 dark:text-gray-500 border-l-2 border-gray-200 dark:border-slate-700 pl-3.5 py-1">
             <Clock className="h-3.5 w-3.5 flex-shrink-0" />
-            <span>{creationDate}</span>
+            <span className="tracking-wide">{creationDate}</span>
           </div>
         )}
 
-        {/* Show AI-generated trip summary if available */}
+        {/* AI-Generated Summary with Better Typography */}
         {trip.tripData?.trip_summary && (
           <p
-            className="text-gray-600 dark:text-gray-400 text-sm mb-3 leading-relaxed cursor-pointer"
+            className="text-gray-600 dark:text-gray-400 text-sm leading-loose line-clamp-2 tracking-wide"
             style={{
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
               overflow: "hidden",
             }}
-            onClick={handleViewTrip}
           >
             {trip.tripData.trip_summary}
           </p>
         )}
 
-        {/* Trip details - Duration, Budget, Travelers */}
-        <div className="flex flex-wrap items-center gap-3 mb-3 text-sm">
+        {/* Trip Metadata Pills with Better Spacing */}
+        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-100 dark:border-slate-800">
           {/* Duration */}
           {trip.userSelection?.duration && (
-            <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
-              <Calendar className="h-3.5 w-3.5" />
-              <span>{trip.userSelection.duration} days</span>
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-slate-800/50 rounded-lg text-sm text-gray-700 dark:text-gray-300">
+              <Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <span className="font-medium tracking-wide">
+                {trip.userSelection.duration} days
+              </span>
             </div>
           )}
 
-          {/* Budget */}
+          {/* Budget - Enhanced Display */}
           {trip.userSelection?.budget && (
-            <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
-              <DollarSign className="h-3.5 w-3.5" />
-              <span>{trip.userSelection.budget}</span>
+            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg text-sm text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
+              <DollarSign className="h-4 w-4" />
+              <span className="font-medium tracking-wide">
+                {trip.userSelection.budget.startsWith("Custom:")
+                  ? trip.userSelection.budget.replace("Custom: ", "")
+                  : trip.userSelection.budget === "Budget"
+                  ? "Budget-Friendly"
+                  : trip.userSelection.budget}
+              </span>
             </div>
           )}
 
           {/* Travelers */}
           {trip.userSelection?.travelers &&
             trip.userSelection.travelers !== "Just Me" && (
-              <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
-                <Users className="h-3.5 w-3.5" />
-                <span>{trip.userSelection.travelers}</span>
+              <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-950/30 rounded-lg text-sm text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50">
+                <Users className="h-4 w-4" />
+                <span className="font-medium tracking-wide">
+                  {trip.userSelection.travelers}
+                </span>
               </div>
             )}
         </div>
 
-        {/* Show trip highlights */}
+        {/* Trip Highlights - Enhanced Badges with Better Spacing */}
         {highlights.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2.5 pt-4 border-t border-gray-50 dark:border-slate-800/50">
             {highlights.map((highlight, index) => {
               const IconComponent = highlight.icon;
               return (
                 <div
                   key={index}
-                  className={`${highlight.bg} ${highlight.color} px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5`}
+                  className={`${highlight.bg} ${
+                    highlight.color
+                  } px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 border ${
+                    highlight.color.includes("orange")
+                      ? "border-orange-200 dark:border-orange-800/50"
+                      : highlight.color.includes("purple")
+                      ? "border-purple-200 dark:border-purple-800/50"
+                      : highlight.color.includes("blue")
+                      ? "border-blue-200 dark:border-blue-800/50"
+                      : "border-sky-200 dark:border-sky-800/50"
+                  } transition-all duration-200 hover:scale-105 tracking-wide`}
                 >
-                  <IconComponent className="h-3.5 w-3.5" />
+                  <IconComponent className="h-4 w-4" />
                   <span>{highlight.text}</span>
                 </div>
               );

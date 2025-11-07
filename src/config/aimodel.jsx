@@ -16,19 +16,22 @@ if (!USE_PROXY && !apiKey) {
   );
 }
 
-console.log("API KEY configured:", apiKey ? "✓" : "✗");
-console.log(
-  "Gemini Proxy Mode:",
-  USE_PROXY ? "ENABLED (secure)" : "DISABLED (direct)"
-);
+// ✅ SECURITY: Never log API keys or sensitive configuration
+// Only log proxy mode status for debugging
+if (import.meta.env.MODE === "development") {
+  console.log(
+    "Gemini Proxy Mode:",
+    USE_PROXY ? "ENABLED (secure)" : "DISABLED (direct)"
+  );
+}
 
 const genAI = USE_PROXY ? null : new GoogleGenerativeAI(apiKey);
 
 // Ultra-strict generation config for maximum JSON reliability
 const generationConfig = {
-  temperature: 0.3, // Balanced for consistency and creativity
-  topP: 0.9,
-  topK: 20,
+  temperature: 0.2, // ✅ REDUCED from 0.3 (faster, more consistent)
+  topP: 0.85, // ✅ REDUCED from 0.9 (less exploration)
+  topK: 15, // ✅ REDUCED from 20 (faster token selection)
   maxOutputTokens: 32768,
   responseMimeType: "application/json",
   responseSchema: {
@@ -138,6 +141,58 @@ const generationConfig = {
           ],
         },
       },
+      dailyCosts: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            day: { type: "integer" },
+            breakdown: {
+              type: "object",
+              properties: {
+                accommodation: { type: "number" },
+                meals: { type: "number" },
+                activities: { type: "number" },
+                transport: { type: "number" },
+                subtotal: { type: "number" },
+              },
+              required: [
+                "accommodation",
+                "meals",
+                "activities",
+                "transport",
+                "subtotal",
+              ],
+            },
+          },
+          required: ["day", "breakdown"],
+        },
+      },
+      grandTotal: {
+        type: "number",
+        description: "Sum of all daily costs - MUST NOT EXCEED user budget",
+      },
+      budgetCompliance: {
+        type: "object",
+        properties: {
+          userBudget: { type: "number" },
+          totalCost: { type: "number" },
+          remaining: { type: "number" },
+          withinBudget: { type: "boolean" },
+        },
+        required: ["userBudget", "totalCost", "remaining", "withinBudget"],
+      },
+      missingPrices: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "List of items with uncertain pricing (₱???) - can be non-empty if prices need confirmation",
+      },
+      pricingNotes: {
+        type: "string",
+        description:
+          "Source of pricing data and any pricing assumptions or warnings",
+      },
     },
     required: [
       "tripName",
@@ -149,6 +204,11 @@ const generationConfig = {
       "hotels",
       "itinerary",
       "placesToVisit",
+      "dailyCosts",
+      "grandTotal",
+      "budgetCompliance",
+      "missingPrices",
+      "pricingNotes",
     ],
   },
 };

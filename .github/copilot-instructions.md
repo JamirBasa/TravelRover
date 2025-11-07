@@ -7,7 +7,7 @@
 **Frontend** (`src/`):
 
 - `create-trip/index.jsx` - 5-step trip wizard
-- `user-profile/index.jsx` - User profiling with auto-population
+- `set-profile/index.jsx` - User profiling with auto-population
 - `view-trip/[tripId]/index.jsx` - Trip display with maps, hotels, activities
 - `config/langGraphAgent.jsx` - Django API adapter
 - `constants/options.jsx` - Validation rules & constants

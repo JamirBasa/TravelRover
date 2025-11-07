@@ -1,18 +1,12 @@
 /**
  * TravelRover Application Constants
  * 
- * Application-wide constants for API, storage, and system configuration.
+ * Application-wide constants for storage and system configuration.
  * UI-specific constants (budget options, traveler types, etc.) are in src/constants/options.jsx
+ * 
+ * 🔄 API Configuration moved to src/config/apiConfig.js (2025-11-06)
+ * Import from: import { API_CONFIG } from '../config/apiConfig';
  */
-
-// ==========================================
-// API Configuration
-// ==========================================
-export const API_CONFIG = {
-  TIMEOUT: 30000, // 30 seconds
-  MAX_RETRY_ATTEMPTS: 3,
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
-};
 
 // ==========================================
 // Storage Keys (LocalStorage/SessionStorage)

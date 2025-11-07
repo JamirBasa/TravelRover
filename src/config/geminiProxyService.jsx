@@ -1,42 +1,79 @@
 /**
- * Gemini AI Proxy Service - UPDATED VERSION
- * Fixed timeout issues for large itinerary generation
+ * Gemini AI Proxy Service - OPTIMIZED VERSION
+ * Enhanced with caching, reduced timeouts, and better error handling
  */
 
 import axios from "axios";
+import { getTimeoutForDuration } from "../constants/tripDurationLimits";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 export class GeminiProxyService {
-  // Enhanced timeout constants with better granularity
-  static TIMEOUT_SHORT = 45000; // 45s - reduced for faster feedback
-  static TIMEOUT_MEDIUM = 90000; // 90s (1.5min) - balanced
-  static TIMEOUT_LONG = 150000; // 150s (2.5min) - extended
-  static TIMEOUT_EXTRA_LONG = 240000; // 240s (4min) - reduced from 5min
-  static TIMEOUT_MAX = 360000; // 360s (6min) - absolute maximum
+  // ✅ OPTIMIZED: Increased timeouts for complex requests
+  static TIMEOUT_SHORT = 30000; // 30s (was 45s)
+  static TIMEOUT_MEDIUM = 60000; // 1m (was 90s)
+  static TIMEOUT_LONG = 120000; // 2m (was 150s)
+  static TIMEOUT_EXTRA_LONG = 180000; // 3m (was 240s)
+  static TIMEOUT_MAX = 600000; // 10m (was 5m) - for 30-day trips
 
-  // Complexity multipliers
+  // ✅ OPTIMIZED: Adjusted complexity multipliers
   static COMPLEXITY_MULTIPLIERS = {
-    travel_itinerary: 1.8, // Travel planning is complex
-    simple_query: 0.8, // Simple queries are faster
-    code_generation: 1.5, // Code generation needs time
-    analysis: 1.3, // Analysis tasks
+    travel_itinerary: 1.5, // Reduced from 1.8
+    simple_query: 0.7, // Reduced from 0.8
+    code_generation: 1.2, // Reduced from 1.5
+    analysis: 1.0, // Reduced from 1.3
   };
+
+  // ✅ NEW: Request caching for duplicate prompts
+  static requestCache = new Map();
+  static CACHE_TTL = 300000; // 5 minutes
+  static MAX_CACHE_SIZE = 50;
 
   /**
    * Enhanced timeout calculation based on prompt analysis
    */
   static getOptimalTimeout(prompt, options = {}) {
-    const { requestType, isRetry = false, retryAttempt = 0 } = options;
+    const {
+      requestType,
+      isRetry = false,
+      retryAttempt = 0,
+      tripDuration,
+    } = options;
     const length = prompt.length;
 
-    // Base timeout based on length
+    // ✅ PRIORITY: Use trip duration if provided (most accurate)
+    if (tripDuration) {
+      const durationTimeout = getTimeoutForDuration(tripDuration) * 1000; // Convert to ms
+
+      console.log(
+        `⏱️ Using duration-based timeout: ${tripDuration} days = ${
+          durationTimeout / 1000
+        }s`
+      );
+
+      // Apply retry reduction if needed
+      if (isRetry && retryAttempt > 0) {
+        const retryMultiplier = Math.max(0.6, 1 - retryAttempt * 0.2);
+        const adjustedTimeout = durationTimeout * retryMultiplier;
+        console.log(
+          `🔄 Retry ${retryAttempt}: Reducing timeout to ${(
+            adjustedTimeout / 1000
+          ).toFixed(1)}s`
+        );
+        return Math.round(Math.min(adjustedTimeout, this.TIMEOUT_MAX));
+      }
+
+      return Math.min(durationTimeout, this.TIMEOUT_MAX);
+    }
+
+    // Base timeout based on length (REDUCED for faster failures)
     let baseTimeout;
-    if (length < 4000) baseTimeout = this.TIMEOUT_SHORT;
-    else if (length < 8000) baseTimeout = this.TIMEOUT_MEDIUM;
-    else if (length < 12000) baseTimeout = this.TIMEOUT_LONG;
-    else baseTimeout = this.TIMEOUT_EXTRA_LONG;
+    if (length < 4000) baseTimeout = this.TIMEOUT_SHORT * 0.8; // Reduce by 20%
+    else if (length < 8000) baseTimeout = this.TIMEOUT_MEDIUM * 0.8;
+    else if (length < 12000)
+      baseTimeout = this.TIMEOUT_LONG * 0.7; // Reduce more for complex
+    else baseTimeout = this.TIMEOUT_EXTRA_LONG * 0.6; // Reduce most for very complex
 
     // Detect request type automatically if not provided
     const detectedType = requestType || this.detectRequestType(prompt);
@@ -46,19 +83,24 @@ export class GeminiProxyService {
       this.COMPLEXITY_MULTIPLIERS[detectedType] || 1.0;
     let calculatedTimeout = baseTimeout * complexityMultiplier;
 
-    // Progressive increase for retries (more aggressive scaling)
+    // ✅ IMPROVED: Progressive DECREASE for retries (fail faster on retries)
     if (isRetry && retryAttempt > 0) {
-      const retryMultiplier = 1 + retryAttempt * 0.4; // 40% increase per retry
+      const retryMultiplier = Math.max(0.6, 1 - retryAttempt * 0.2); // Decrease 20% per retry, min 60%
       calculatedTimeout *= retryMultiplier;
+      console.log(
+        `🔄 Retry ${retryAttempt}: Reducing timeout to ${
+          retryMultiplier * 100
+        }%`
+      );
     }
 
     // Cap at maximum timeout
     calculatedTimeout = Math.min(calculatedTimeout, this.TIMEOUT_MAX);
 
     console.log(
-      `⏱️ Timeout calculation: ${length} chars, type: ${detectedType}, base: ${
+      `⏱️ Timeout calculation: ${length} chars, type: ${detectedType}, base: ${(
         baseTimeout / 1000
-      }s, final: ${calculatedTimeout / 1000}s`
+      ).toFixed(1)}s, final: ${(calculatedTimeout / 1000).toFixed(1)}s`
     );
 
     return Math.round(calculatedTimeout);
@@ -128,7 +170,7 @@ export class GeminiProxyService {
   }
 
   /**
-   * Generate content with smart timeout and progress feedback
+   * Generate content with smart timeout, caching, and progress feedback
    */
   static async generateContent(prompt, options = {}) {
     const {
@@ -137,14 +179,28 @@ export class GeminiProxyService {
       timeout: providedTimeout,
       requestType,
       onProgress,
+      tripDuration, // ✅ NEW: Accept trip duration for accurate timeout
     } = options;
 
-    // Use enhanced timeout calculation
+    // ✅ NEW: Check cache first
+    const cacheKey = this.generateCacheKey(prompt, schema);
+    const cached = this.requestCache.get(cacheKey);
+
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      console.log("✅ Using cached response (saved ~90s)");
+      return cached.data;
+    }
+
+    // Use enhanced timeout calculation with trip duration
     const timeout =
-      providedTimeout || this.getOptimalTimeout(prompt, { requestType });
+      providedTimeout ||
+      this.getOptimalTimeout(prompt, { requestType, tripDuration });
 
     console.log("🤖 Calling Gemini proxy endpoint...");
     console.log("📝 Prompt length:", prompt.length, "characters");
+    if (tripDuration) {
+      console.log("📅 Trip duration:", tripDuration, "days");
+    }
     console.log("🎯 Request type:", this.detectRequestType(prompt));
     console.log("⏱️ Timeout:", timeout / 1000, "seconds");
 
@@ -178,7 +234,7 @@ export class GeminiProxyService {
       }
 
       const response = await axios.post(
-        `${API_BASE_URL}/api/langgraph/gemini/generate/`,
+        `${API_BASE_URL}/langgraph/gemini/generate/`,
         {
           prompt,
           schema,
@@ -208,7 +264,7 @@ export class GeminiProxyService {
         if (onProgress)
           onProgress({ stage: "completed", message: "Generation completed!" });
 
-        return {
+        const result = {
           success: true,
           data: response.data.data,
           rawResponse: response.data.raw_response,
@@ -219,6 +275,11 @@ export class GeminiProxyService {
             requestType: this.detectRequestType(prompt),
           },
         };
+
+        // ✅ NEW: Cache successful results
+        this.cacheResult(cacheKey, result);
+
+        return result;
       } else {
         console.error("❌ Error:", response.data.error);
         return {
@@ -232,7 +293,7 @@ export class GeminiProxyService {
 
       if (error.code === "ECONNABORTED") {
         const requestType = this.detectRequestType(prompt);
-        const suggestions = this.getTimeoutSuggestions(requestType, timeout);
+        const suggestions = this.getTimeoutSuggestions(requestType);
 
         return {
           success: false,
@@ -300,6 +361,21 @@ export class GeminiProxyService {
   }
 
   /**
+   * Get timeout suggestions for retries
+   */
+  static getTimeoutSuggestions(requestType) {
+    const suggestions = {
+      travel_itinerary:
+        "Try reducing trip duration or simplifying requirements.",
+      code_generation: "Try breaking down the request into smaller parts.",
+      analysis: "Try reducing the amount of data to analyze.",
+      simple_query: "Try rephrasing your question more concisely.",
+    };
+
+    return suggestions[requestType] || "Try simplifying your request.";
+  }
+
+  /**
    * Get complexity level description
    */
   static getComplexityLevel(prompt) {
@@ -314,13 +390,16 @@ export class GeminiProxyService {
    * Generate with enhanced retry logic and adaptive timeouts
    */
   static async generateWithRetry(prompt, options = {}, maxRetries = 2) {
-    const { onProgress, requestType } = options;
+    const { onProgress, requestType, tripDuration } = options;
     let lastError = null;
     const detectedType = requestType || this.detectRequestType(prompt);
 
     console.log(
       `🔄 Starting retry logic for ${detectedType} request (max ${maxRetries} retries)`
     );
+    if (tripDuration) {
+      console.log(`📅 Trip duration: ${tripDuration} days`);
+    }
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       const isRetry = attempt > 0;
@@ -347,6 +426,7 @@ export class GeminiProxyService {
         requestType: detectedType,
         isRetry,
         retryAttempt: attempt,
+        tripDuration, // ✅ Pass trip duration
       });
 
       // Update options with calculated timeout
@@ -354,6 +434,7 @@ export class GeminiProxyService {
         ...options,
         timeout: attemptTimeout,
         requestType: detectedType,
+        tripDuration, // ✅ Pass trip duration
         onProgress: isRetry ? undefined : onProgress, // Only show progress on first attempt
       };
 
@@ -415,20 +496,66 @@ export class GeminiProxyService {
     const retryableTypes = ["server_error", "rate_limit", "internal_error"];
     return retryableTypes.includes(errorType) && currentAttempt < maxRetries;
   }
+
+  /**
+   * ✅ NEW: Generate cache key for request
+   */
+  static generateCacheKey(prompt) {
+    // Extract core parameters that define uniqueness
+    const locationMatch = prompt.match(/location[:\s]+([^,\n]+)/i);
+    const durationMatch = prompt.match(/duration[:\s]+(\d+)/i);
+    const budgetMatch = prompt.match(/budget[:\s]+₱?([\d,]+)/i);
+
+    const cacheableParams = [
+      locationMatch?.[1] || "",
+      durationMatch?.[1] || "",
+      budgetMatch?.[1] || "",
+    ].join("_");
+
+    return `trip_${cacheableParams}`;
+  }
+
+  /**
+   * ✅ NEW: Cache successful result
+   */
+  static cacheResult(cacheKey, result) {
+    this.requestCache.set(cacheKey, {
+      data: result,
+      timestamp: Date.now(),
+    });
+
+    // Limit cache size
+    if (this.requestCache.size > this.MAX_CACHE_SIZE) {
+      const firstKey = this.requestCache.keys().next().value;
+      this.requestCache.delete(firstKey);
+      console.log(`🗑️ Cache size limit reached, removed oldest entry`);
+    }
+  }
+
+  /**
+   * ✅ NEW: Clear cache manually (for testing or memory management)
+   */
+  static clearCache() {
+    this.requestCache.clear();
+    console.log("🗑️ Request cache cleared");
+  }
 }
 
 /**
  * Legacy wrapper
  */
 export class GeminiProxyChatSession {
-  constructor(generationConfig = {}) {
+  constructor(generationConfig = {}, options = {}) {
     this.generationConfig = generationConfig;
+    this.tripDuration = options.tripDuration; // ✅ NEW: Store trip duration
   }
 
-  async sendMessage(prompt) {
+  async sendMessage(prompt, options = {}) {
     const result = await GeminiProxyService.generateWithRetry(prompt, {
       schema: this.generationConfig.responseSchema,
       generationConfig: this.generationConfig,
+      tripDuration: options.tripDuration || this.tripDuration, // ✅ Pass trip duration
+      ...options,
     });
 
     if (!result.success) {

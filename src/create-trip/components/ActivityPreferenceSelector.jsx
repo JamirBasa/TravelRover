@@ -15,8 +15,33 @@ const ActivityPreferenceSelector = ({
   activityPreference,
   onActivityPreferenceChange,
   formData,
-  userProfile,
 }) => {
+  // ✅ NEW: Calculate estimated activity count based on duration
+  const calculateEstimatedActivities = (pace, duration) => {
+    if (!duration || duration < 1) return null;
+
+    // Day 1 (Arrival): max 2 activities
+    // Middle days: pace activities each
+    // Last day (Departure): max 1 activity
+    const day1Activities = Math.min(pace, 2);
+    const middleDays = Math.max(0, duration - 2);
+    const middleActivities = middleDays * pace;
+    const lastDayActivities = duration > 1 ? 1 : 0;
+
+    const total = day1Activities + middleActivities + lastDayActivities;
+
+    return {
+      total,
+      perDay: pace,
+      breakdown: {
+        day1: day1Activities,
+        middle: middleActivities,
+        middleDays,
+        lastDay: lastDayActivities,
+      },
+    };
+  };
+
   const activityOptions = [
     {
       value: 1,
@@ -86,6 +111,10 @@ const ActivityPreferenceSelector = ({
         {activityOptions.map((option) => {
           const IconComponent = option.icon;
           const isSelected = activityPreference === option.value;
+          const estimate = calculateEstimatedActivities(
+            option.value,
+            formData?.duration
+          );
 
           return (
             <Card
@@ -149,6 +178,31 @@ const ActivityPreferenceSelector = ({
                   <p className="text-xs text-gray-500 dark:text-gray-500 italic">
                     ⏰ {option.dailySchedule}
                   </p>
+
+                  {/* ✅ NEW: Activity Estimate Display */}
+                  {estimate && (
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+                          <span className="text-xs font-semibold text-sky-700 dark:text-sky-400">
+                            Estimated Activities
+                          </span>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className="bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300 border-sky-300 dark:border-sky-700"
+                        >
+                          ~{estimate.total} total
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                        Over {formData.duration} days ({estimate.breakdown.day1}{" "}
+                        on arrival + {estimate.breakdown.middle} main +{" "}
+                        {estimate.breakdown.lastDay} on departure)
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

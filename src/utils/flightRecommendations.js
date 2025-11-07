@@ -18,14 +18,429 @@ const AIRPORTS_WITH_COMMERCIAL_FLIGHTS = [
   "MBT", "OMC", "SWL", "IAO", "SUG", "TDG", "TBH", "VRC", "LGP"
 ];
 
-// Special cases: Airports with limited or no regular commercial service
+// Special cases: Destinations with limited/no regular commercial service
 const LIMITED_SERVICE_AIRPORTS = {
+  // === NORTHERN LUZON ===
   "BAG": {
     name: "Baguio",
     alternatives: ["CRK", "MNL"],
+    alternativeNames: ["Clark", "Manila"],
     transport: "bus",
-    travelTime: "4-6 hours",
-    notes: "Loakan Airport suspended commercial flights in July 2024"
+    travelTime: "4-6 hours from Manila, 3-4 hours from Clark",
+    notes: "Loakan Airport suspended commercial flights in July 2024",
+    recommendation: "Take a bus from Pasay or Cubao (Manila) or from Dau Terminal (Clark)"
+  },
+  "VIG": {
+    name: "Vigan",
+    alternatives: ["LAO", "MNL"],
+    alternativeNames: ["Laoag", "Manila"],
+    transport: "bus",
+    travelTime: "2 hours from Laoag, 8-9 hours from Manila",
+    recommendation: "Fly to Laoag, then bus to Vigan (most convenient)"
+  },
+  "SAG": {
+    name: "Sagada",
+    alternatives: ["TUG", "MNL"],
+    alternativeNames: ["Tuguegarao", "Manila"],
+    transport: "bus/van",
+    travelTime: "8-10 hours from Manila, 6 hours from Baguio",
+    recommendation: "Travel to Baguio first, then local bus/van to Sagada"
+  },
+  "BAN": {
+    name: "Banaue",
+    alternatives: ["TUG", "MNL"],
+    alternativeNames: ["Tuguegarao", "Manila"],
+    transport: "bus/van",
+    travelTime: "9-10 hours from Manila",
+    recommendation: "Direct overnight bus from Manila or via Baguio"
+  },
+  "PAG": {
+    name: "Pagudpud",
+    alternatives: ["LAO"],
+    alternativeNames: ["Laoag"],
+    transport: "bus/van",
+    travelTime: "2 hours from Laoag",
+    recommendation: "Fly to Laoag, then bus/van to Pagudpud"
+  },
+  "HUN": {
+    name: "Hundred Islands (Alaminos)",
+    alternatives: ["MNL"],
+    alternativeNames: ["Manila"],
+    transport: "bus",
+    travelTime: "4-5 hours from Manila",
+    recommendation: "Bus from Manila to Alaminos, Pangasinan"
+  },
+  
+  // === CENTRAL LUZON ===
+  "SFE": {
+    name: "San Fernando, La Union",
+    alternatives: ["MNL"],
+    alternativeNames: ["Manila"],
+    transport: "bus",
+    travelTime: "4-5 hours from Manila",
+    recommendation: "Direct bus from Manila to La Union (surfing destination)"
+  },
+  "ANC": {
+    name: "Anilao",
+    alternatives: ["MNL"],
+    alternativeNames: ["Manila"],
+    transport: "bus/van",
+    travelTime: "2-3 hours from Manila",
+    recommendation: "Bus to Batangas, then tricycle to Anilao (diving destination)"
+  },
+  
+  // === SOUTHERN LUZON / BICOL ===
+  "LGZ": {
+    name: "Legaspi/Legazpi",
+    alternatives: ["LGP", "MNL"],
+    alternativeNames: ["Legazpi Airport", "Manila"],
+    transport: "flight/bus",
+    travelTime: "1 hour flight or 10-12 hours bus from Manila",
+    recommendation: "Fly to Legazpi Airport (gateway to Mayon Volcano)"
+  },
+  "DAR": {
+    name: "Daet/Camarines Norte",
+    alternatives: ["LGP", "MNL"],
+    alternativeNames: ["Legazpi", "Manila"],
+    transport: "bus",
+    travelTime: "8-10 hours from Manila",
+    recommendation: "Bus from Manila to Daet (gateway to Calaguas)"
+  },
+  "CAL": {
+    name: "Calaguas Island",
+    alternatives: ["LGP", "MNL"],
+    alternativeNames: ["Legazpi", "Manila"],
+    transport: "bus + boat",
+    travelTime: "8-10 hours bus to Daet, then 2 hours boat",
+    recommendation: "Travel to Daet, then boat to Calaguas"
+  },
+  "DON": {
+    name: "Donsol",
+    alternatives: ["LGP"],
+    alternativeNames: ["Legazpi"],
+    transport: "bus/van",
+    travelTime: "2 hours from Legazpi",
+    recommendation: "Fly to Legazpi, then bus to Donsol (whale shark watching)"
+  },
+  "MSB": {
+    name: "Masbate",
+    alternatives: ["MBT"],
+    alternativeNames: ["Masbate Airport"],
+    transport: "flight/ferry",
+    travelTime: "1 hour flight from Manila or ferry from various ports",
+    recommendation: "Fly to Masbate or take ferry from Lucena/Pilar"
+  },
+  
+  // === MINDORO ===
+  "SJO": {
+    name: "San Jose, Occidental Mindoro",
+    alternatives: ["MNL"],
+    alternativeNames: ["Manila"],
+    transport: "bus + ferry",
+    travelTime: "6-8 hours from Manila",
+    recommendation: "Bus to Batangas Pier, then ferry to San Jose"
+  },
+  "PUG": {
+    name: "Puerto Galera",
+    alternatives: ["MNL"],
+    alternativeNames: ["Manila"],
+    transport: "bus + ferry",
+    travelTime: "4-5 hours from Manila",
+    recommendation: "Bus to Batangas, then ferry to Puerto Galera"
+  },
+  
+  // === PALAWAN ===
+  "ELN": {
+    name: "El Nido",
+    alternatives: ["PPS"],
+    alternativeNames: ["Puerto Princesa"],
+    transport: "bus/van",
+    travelTime: "5-6 hours from Puerto Princesa",
+    recommendation: "Fly to Puerto Princesa, then shuttle van to El Nido"
+  },
+  "COR": {
+    name: "Coron",
+    alternatives: ["USU", "PPS"],
+    alternativeNames: ["Busuanga (Coron)", "Puerto Princesa"],
+    transport: "ferry/flight",
+    travelTime: "30min flight to Busuanga or 14-16 hours overnight ferry from Manila",
+    recommendation: "Fly to Busuanga (Coron) Airport or take overnight ferry from Manila"
+  },
+  "SAB": {
+    name: "Sabang (Underground River)",
+    alternatives: ["PPS"],
+    alternativeNames: ["Puerto Princesa"],
+    transport: "van",
+    travelTime: "2 hours from Puerto Princesa",
+    recommendation: "Fly to Puerto Princesa, then van to Sabang"
+  },
+  "BAL": {
+    name: "Balabac",
+    alternatives: ["PPS"],
+    alternativeNames: ["Puerto Princesa"],
+    transport: "bus + boat",
+    travelTime: "10-12 hours from Puerto Princesa",
+    recommendation: "Fly to Puerto Princesa, then bus + boat to Balabac"
+  },
+  
+  // === VISAYAS - PANAY ===
+  "BOR": {
+    name: "Boracay",
+    alternatives: ["KLO", "MPH"],
+    alternativeNames: ["Kalibo", "Caticlan"],
+    transport: "flight + boat",
+    travelTime: "2 hours from Kalibo or 30min from Caticlan + 15min boat",
+    recommendation: "Fly to Caticlan (closest) or Kalibo, then boat to Boracay"
+  },
+  "GIM": {
+    name: "Guimaras",
+    alternatives: ["ILO"],
+    alternativeNames: ["Iloilo"],
+    transport: "ferry",
+    travelTime: "15-20 minutes ferry from Iloilo",
+    recommendation: "Fly to Iloilo, then ferry to Guimaras"
+  },
+  "ANT": {
+    name: "Antique",
+    alternatives: ["ILO"],
+    alternativeNames: ["Iloilo"],
+    transport: "bus",
+    travelTime: "2-3 hours from Iloilo",
+    recommendation: "Fly to Iloilo, then bus to Antique towns"
+  },
+  
+  // === VISAYAS - NEGROS ===
+  "DUM": {
+    name: "Dumaguete",
+    alternatives: ["DGT"],
+    alternativeNames: ["Dumaguete Airport"],
+    transport: "flight",
+    travelTime: "1 hour from Manila/Cebu",
+    recommendation: "Fly direct to Dumaguete (Sibulan Airport)"
+  },
+  "SIQ": {
+    name: "Siquijor",
+    alternatives: ["DGT", "TAG"],
+    alternativeNames: ["Dumaguete", "Tagbilaran (Bohol)"],
+    transport: "ferry",
+    travelTime: "1 hour ferry from Dumaguete",
+    recommendation: "Fly to Dumaguete, then fast ferry to Siquijor"
+  },
+  "DAU": {
+    name: "Dauin (Apo Island)",
+    alternatives: ["DGT"],
+    alternativeNames: ["Dumaguete"],
+    transport: "ferry/van",
+    travelTime: "30min from Dumaguete + 30min boat to Apo Island",
+    recommendation: "Fly to Dumaguete, then van to Dauin pier for Apo Island"
+  },
+  
+  // === VISAYAS - BOHOL ===
+  "PAN": {
+    name: "Panglao Island",
+    alternatives: ["TAG"],
+    alternativeNames: ["Tagbilaran"],
+    transport: "flight",
+    travelTime: "Direct flights to Panglao Airport",
+    recommendation: "Fly direct to Panglao-Bohol International Airport"
+  },
+  "CHO": {
+    name: "Chocolate Hills",
+    alternatives: ["TAG"],
+    alternativeNames: ["Tagbilaran"],
+    transport: "van",
+    travelTime: "2 hours from Tagbilaran",
+    recommendation: "Fly to Tagbilaran/Panglao, then van to Carmen for Chocolate Hills"
+  },
+  "AMO": {
+    name: "Anda",
+    alternatives: ["TAG"],
+    alternativeNames: ["Tagbilaran"],
+    transport: "van",
+    travelTime: "3 hours from Tagbilaran",
+    recommendation: "Fly to Tagbilaran, then van to Anda (off-the-beaten-path beaches)"
+  },
+  
+  // === VISAYAS - CEBU ===
+  "BANT": {
+    name: "Bantayan Island",
+    alternatives: ["CEB"],
+    alternativeNames: ["Cebu"],
+    transport: "bus + ferry",
+    travelTime: "4 hours from Cebu City",
+    recommendation: "Fly to Cebu, then bus to Hagnaya Port + ferry to Bantayan"
+  },
+  "MAL": {
+    name: "Malapascua Island",
+    alternatives: ["CEB"],
+    alternativeNames: ["Cebu"],
+    transport: "bus + boat",
+    travelTime: "4 hours from Cebu City",
+    recommendation: "Fly to Cebu, then bus to Maya Port + boat to Malapascua"
+  },
+  "OSL": {
+    name: "Oslob (Whale Sharks)",
+    alternatives: ["CEB"],
+    alternativeNames: ["Cebu"],
+    transport: "bus",
+    travelTime: "3 hours from Cebu City",
+    recommendation: "Fly to Cebu, then bus to Oslob for whale shark watching"
+  },
+  "MOA": {
+    name: "Moalboal",
+    alternatives: ["CEB"],
+    alternativeNames: ["Cebu"],
+    transport: "bus",
+    travelTime: "2.5 hours from Cebu City",
+    recommendation: "Fly to Cebu, then bus to Moalboal (sardine run diving)"
+  },
+  
+  // === VISAYAS - LEYTE/SAMAR ===
+  "TUB": {
+    name: "Tubigon/Padre Burgos",
+    alternatives: ["TAC"],
+    alternativeNames: ["Tacloban"],
+    transport: "van",
+    travelTime: "2 hours from Tacloban",
+    recommendation: "Fly to Tacloban, then van to Padre Burgos (diving)"
+  },
+  "SOH": {
+    name: "Sohoton Cave",
+    alternatives: ["TAC"],
+    alternativeNames: ["Tacloban"],
+    transport: "van + boat",
+    travelTime: "4 hours from Tacloban",
+    recommendation: "Fly to Tacloban, then van + boat to Sohoton, Samar"
+  },
+  "KAL": {
+    name: "Kalanggaman Island",
+    alternatives: ["TAC"],
+    alternativeNames: ["Tacloban"],
+    transport: "van + boat",
+    travelTime: "3 hours from Tacloban",
+    recommendation: "Fly to Tacloban, then van to Palompon + boat to Kalanggaman"
+  },
+  
+  // === MINDANAO - NORTHERN ===
+  "CAM": {
+    name: "Camiguin",
+    alternatives: ["CGY"],
+    alternativeNames: ["Cagayan de Oro"],
+    transport: "ferry",
+    travelTime: "2 hours ferry from Balingoan Port",
+    recommendation: "Fly to Cagayan de Oro, then 2-hour bus + ferry to Camiguin"
+  },
+  "BUK": {
+    name: "Bukidnon (Dahilayan)",
+    alternatives: ["CGY"],
+    alternativeNames: ["Cagayan de Oro"],
+    transport: "van",
+    travelTime: "2 hours from Cagayan de Oro",
+    recommendation: "Fly to Cagayan de Oro, then van to Manolo Fortich/Dahilayan"
+  },
+  "ILG": {
+    name: "Iligan (Tinago Falls)",
+    alternatives: ["CGY"],
+    alternativeNames: ["Cagayan de Oro"],
+    transport: "bus",
+    travelTime: "2 hours from Cagayan de Oro",
+    recommendation: "Fly to Cagayan de Oro, then bus to Iligan"
+  },
+  
+  // === MINDANAO - CARAGA (SIARGAO) ===
+  "GLE": {
+    name: "General Luna (Siargao)",
+    alternatives: ["IAO", "DGT"],
+    alternativeNames: ["Siargao Airport", "Siargao Airport"],
+    transport: "flight",
+    travelTime: "Direct flights available",
+    recommendation: "Fly direct to Siargao (Sayak Airport)"
+  },
+  "BUR": {
+    name: "Burgos (Siargao)",
+    alternatives: ["IAO"],
+    alternativeNames: ["Siargao Airport"],
+    transport: "van",
+    travelTime: "1 hour from Siargao Airport",
+    recommendation: "Fly to Siargao, then van to Burgos (Magpupungko Rock Pools)"
+  },
+  "BIS": {
+    name: "Bislig (Tinuy-an Falls)",
+    alternatives: ["DVO", "BXU"],
+    alternativeNames: ["Davao", "Butuan"],
+    transport: "bus",
+    travelTime: "4-5 hours from Davao or Butuan",
+    recommendation: "Fly to Davao or Butuan, then bus to Bislig"
+  },
+  "BRI": {
+    name: "Britania Islands",
+    alternatives: ["BXU"],
+    alternativeNames: ["Butuan"],
+    transport: "van + boat",
+    travelTime: "4 hours from Butuan",
+    recommendation: "Fly to Butuan, then van + boat to Britania Islands"
+  },
+  
+  // === MINDANAO - DAVAO REGION ===
+  "SAM": {
+    name: "Samal Island",
+    alternatives: ["DVO"],
+    alternativeNames: ["Davao"],
+    transport: "ferry",
+    travelTime: "15 minutes from Davao City",
+    recommendation: "Fly to Davao, then ferry to Samal Island"
+  },
+  "MAT": {
+    name: "Mati (Dahican Beach)",
+    alternatives: ["DVO"],
+    alternativeNames: ["Davao"],
+    transport: "bus",
+    travelTime: "3 hours from Davao City",
+    recommendation: "Fly to Davao, then bus to Mati"
+  },
+  "TBL": {
+    name: "Lake Sebu",
+    alternatives: ["GES"],
+    alternativeNames: ["General Santos"],
+    transport: "van",
+    travelTime: "2.5 hours from General Santos",
+    recommendation: "Fly to General Santos, then van to Lake Sebu"
+  },
+  
+  // === MINDANAO - WESTERN (ZAMBOANGA) ===
+  "SAN": {
+    name: "Santa Cruz Island (Pink Beach)",
+    alternatives: ["ZAM"],
+    alternativeNames: ["Zamboanga"],
+    transport: "boat",
+    travelTime: "30 minutes from Zamboanga City",
+    recommendation: "Fly to Zamboanga, then boat to Santa Cruz Island"
+  },
+  "BAS": {
+    name: "Basilan",
+    alternatives: ["ZAM"],
+    alternativeNames: ["Zamboanga"],
+    transport: "ferry",
+    travelTime: "2 hours from Zamboanga",
+    recommendation: "Fly to Zamboanga, then ferry to Basilan (check travel advisories)"
+  },
+  
+  // === MINDANAO - SOUTHERN (SULU/TAWI-TAWI) ===
+  "TAW": {
+    name: "Tawi-Tawi",
+    alternatives: ["TWT"],
+    alternativeNames: ["Tawi-Tawi Airport"],
+    transport: "flight",
+    travelTime: "Direct flights from Manila/Zamboanga",
+    recommendation: "Fly direct to Tawi-Tawi (southernmost Philippines)"
+  },
+  "SIT": {
+    name: "Sitangkai",
+    alternatives: ["TWT"],
+    alternativeNames: ["Tawi-Tawi"],
+    transport: "boat",
+    travelTime: "3-4 hours from Bongao",
+    recommendation: "Fly to Tawi-Tawi, then boat to Sitangkai (Venice of the South)"
   }
 };
 
@@ -63,7 +478,7 @@ function hasCommercialFlights(airportCode) {
 // Helper to check if airport has limited service
 function hasLimitedService(airportCode) {
   if (!airportCode) return false;
-  return LIMITED_SERVICE_AIRPORTS.hasOwnProperty(airportCode.toUpperCase());
+  return airportCode.toUpperCase() in LIMITED_SERVICE_AIRPORTS;
 }
 
 /**
@@ -109,19 +524,50 @@ export function isSameCity(departureCity, destination) {
   return false;
 }
 
-// Remote destinations requiring early departure
+// Remote destinations requiring early departure (updated with ALL regions)
 const REMOTE_DESTINATIONS = [
   // Northern Luzon
-  "batanes", "basco", "itbayat", "baguio", "sagada", "banaue",
+  "batanes", "basco", "itbayat", "baguio", "sagada", "banaue", "vigan", "pagudpud",
+  "hundred islands", "alaminos",
   
-  // Mindanao
-  "zamboanga", "basilan", "sulu", "tawi-tawi", "siquijor",
+  // Central Luzon
+  "san fernando", "la union", "anilao",
+  
+  // Southern Luzon / Bicol
+  "legaspi", "legazpi", "donsol", "calaguas", "camarines", "daet", "masbate",
+  
+  // Mindoro
+  "puerto galera", "san jose", "occidental mindoro",
   
   // Palawan
-  "palawan", "puerto princesa", "el nido", "coron", "busuanga",
+  "palawan", "puerto princesa", "el nido", "coron", "busuanga", "balabac", "sabang",
   
-  // Island destinations
-  "siargao", "surigao", "camiguin", "catanduanes", "masbate"
+  // Panay
+  "boracay", "guimaras", "antique",
+  
+  // Negros
+  "siquijor", "dauin", "apo island",
+  
+  // Bohol
+  "anda", "chocolate hills",
+  
+  // Cebu Islands
+  "bantayan", "malapascua", "moalboal",
+  
+  // Leyte/Samar
+  "kalanggaman", "sohoton", "padre burgos",
+  
+  // Mindanao North
+  "camiguin", "bukidnon", "dahilayan",
+  
+  // Caraga
+  "siargao", "burgos", "britania", "bislig", "tinuy-an",
+  
+  // Davao Region
+  "samal", "mati", "dahican", "lake sebu",
+  
+  // Western/Southern Mindanao
+  "zamboanga", "basilan", "sulu", "tawi-tawi", "sitangkai", "santa cruz island"
 ];
 
 export function isRemoteDestination(destination) {
@@ -354,6 +800,17 @@ export function getFlightContextTips({
   return tips;
 }
 
+/**
+ * Get detailed info for a limited service airport
+ * @param {string} airportCode - 3-letter airport code
+ * @returns {Object|null} - Airport info object or null if not found
+ */
+export function getLimitedServiceInfo(airportCode) {
+  if (!airportCode) return null;
+  const code = airportCode.toUpperCase();
+  return LIMITED_SERVICE_AIRPORTS[code] || null;
+}
+
 export default {
   isSameCity,
   isRemoteDestination,
@@ -365,4 +822,5 @@ export default {
   hasLimitedService,
   getAirportStatus,
   getAirportCity,
+  getLimitedServiceInfo,  // ✅ NEW: Export for other components
 };

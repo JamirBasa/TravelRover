@@ -25,6 +25,9 @@ class GooglePlacesPhotoProxyView(View):
     Returns:
         - Image file (JPEG) if successful
         - JSON error response if failed
+    
+    Note: photo_ref should be the full photo name like:
+          places/ChIJ.../photos/AWn5SU...
     """
     
     GOOGLE_PLACES_PHOTO_URL = "https://places.googleapis.com/v1/{photo_ref}/media"
@@ -56,7 +59,7 @@ class GooglePlacesPhotoProxyView(View):
             # Build the photo URL
             photo_url = f"{self.GOOGLE_PLACES_PHOTO_URL.format(photo_ref=photo_ref)}"
             
-            # Add query parameters
+            # Add query parameters (note: key goes in query params, not headers for media endpoint)
             params = {
                 'maxHeightPx': request.GET.get('maxHeightPx', '600'),
                 'maxWidthPx': request.GET.get('maxWidthPx', '600'),
@@ -64,14 +67,62 @@ class GooglePlacesPhotoProxyView(View):
             }
             
             logger.info(f"🔄 Proxying photo request: {photo_ref[:50]}...")
+            logger.info(f"📸 Photo URL: {photo_url}")
             
-            # Fetch the photo from Google Places API
-            response = requests.get(
-                photo_url,
-                params=params,
-                timeout=10,
-                stream=True
-            )
+            # Fetch the photo from Google Places API with SSL verification
+            # Try multiple SSL strategies to handle Windows SSL issues
+            response = None
+            ssl_errors = []
+            
+            # Strategy 1: Try with certifi (best practice)
+            try:
+                import certifi
+                verify_ssl = certifi.where()
+                logger.info(f"🔐 Trying SSL with certifi")
+                response = requests.get(
+                    photo_url,
+                    params=params,
+                    timeout=10,
+                    stream=True,
+                    verify=verify_ssl
+                )
+                if response.status_code == 200:
+                    logger.info("✅ SSL with certifi succeeded")
+            except Exception as e:
+                ssl_errors.append(f"certifi: {str(e)[:100]}")
+                logger.warning(f"⚠️ SSL with certifi failed: {str(e)[:150]}")
+                response = None
+            
+            # Strategy 2: Last resort - disable SSL verification (dev only)
+            if not response and settings.DEBUG:
+                try:
+                    logger.warning("🔓 Falling back to unverified SSL (development only)")
+                    import urllib3
+                    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                    response = requests.get(
+                        photo_url,
+                        params=params,
+                        timeout=10,
+                        stream=True,
+                        verify=False
+                    )
+                    if response.status_code == 200:
+                        logger.info("✅ Unverified SSL succeeded (development mode)")
+                except Exception as e:
+                    ssl_errors.append(f"no-verify: {str(e)[:100]}")
+                    logger.error(f"❌ All SSL strategies failed: {ssl_errors}")
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'SSL connection failed: {"; ".join(ssl_errors)}'
+                    }, status=500)
+            
+            if not response:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to connect to Places API. SSL errors: {"; ".join(ssl_errors)}'
+                }, status=500)
+            
+            logger.info(f"📊 Google API Response Status: {response.status_code}")
             
             if response.status_code == 200:
                 logger.info(f"✅ Photo fetched successfully: {photo_ref[:50]}...")
@@ -91,9 +142,11 @@ class GooglePlacesPhotoProxyView(View):
             
             else:
                 logger.error(f"❌ Google Places API error: {response.status_code}")
+                logger.error(f"📄 Response content: {response.text[:200]}")
                 return JsonResponse({
                     'success': False,
-                    'error': f'Failed to fetch photo: {response.status_code}'
+                    'error': f'Failed to fetch photo: {response.status_code}',
+                    'details': response.text[:200]
                 }, status=response.status_code)
                 
         except requests.Timeout:

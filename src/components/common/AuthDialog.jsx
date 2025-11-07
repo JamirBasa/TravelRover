@@ -92,7 +92,7 @@ const AuthDialog = ({
           toast.success("Welcome back!");
         } else {
           toast.success("Welcome! Let's set up your travel profile...");
-          setTimeout(() => navigate("/user-profile"), 1000);
+          setTimeout(() => navigate("/set-profile"), 1000);
         }
       }
     } catch (error) {

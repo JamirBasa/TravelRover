@@ -122,7 +122,7 @@ export class UserProfileConfig {
           'BARMM': 'Bangsamoro Autonomous Region in Muslim Mindanao'
         };
         regionName = regionMapping[profileRegionCode] || profileRegionCode;
-      } catch (error) {
+      } catch {
         console.log("Could not get region name, using code as name");
         regionName = profileRegionCode;
       }
@@ -168,43 +168,6 @@ export class UserProfileConfig {
     });
     
     return hasInfo;
-  }
-
-  /**
-   * Auto-populate flight data from user profile
-   * @param {Object} userProfile - User profile object
-   * @param {Object} currentFlightData - Current flight data state
-   * @returns {Object} Updated flight data or current data if no changes needed
-   */
-  static autoPopulateFlightData(userProfile, currentFlightData) {
-    if (!this.hasFlightInfo(userProfile)) {
-      console.log("⚠️ Insufficient profile data for flight auto-population");
-      return currentFlightData;
-    }
-
-    // Only auto-populate if flight data is empty
-    if (currentFlightData.departureCity || currentFlightData.departureRegionCode) {
-      console.log("✋ Flight data already populated, skipping auto-population");
-      return currentFlightData;
-    }
-
-    const departureInfo = this.extractDepartureInfo(userProfile);
-    
-    console.log("🔄 Auto-populating flight data:", {
-      from: currentFlightData,
-      to: {
-        departureCity: departureInfo.city,
-        departureRegion: departureInfo.region,
-        departureRegionCode: departureInfo.regionCode,
-      }
-    });
-
-    return {
-      ...currentFlightData,
-      departureCity: departureInfo.city,
-      departureRegion: departureInfo.region,
-      departureRegionCode: departureInfo.regionCode,
-    };
   }
 }
 

@@ -1,11 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { GetPlaceDetails, PHOTO_REF_URL } from "@/config/GlobalApi";
+import { GetPlaceDetails, fetchPlacePhoto } from "@/config/GlobalApi";
 
 function PlaceCardItem({ place }) {
   const [photoUrl, setPhotoUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   const GetPlacePhoto = useCallback(async () => {
     const placeName = place?.placeName || place?.activity;
@@ -14,26 +13,69 @@ function PlaceCardItem({ place }) {
       return;
     }
 
+    // ✅ Extract actual place name from activity description
+    const extractPlaceName = (activityName) => {
+      if (!activityName) return null;
+
+      // Remove common activity prefixes
+      const cleaned = activityName
+        .replace(
+          /^(Breakfast|Lunch|Dinner|Snack|Check-in|Check out|Visit|Explore|Tour|Shopping|Relax)\s+(at|to)?\s+/i,
+          ""
+        )
+        .replace(/^(and check in|and check-in|for the day)\s*/i, "")
+        .trim();
+
+      // If too short or generic, return original
+      if (cleaned.length < 3) return activityName;
+
+      // Skip generic activities and just use original
+      const skipTerms = [
+        "hotel",
+        "rest",
+        "return",
+        "end of day",
+        "free time",
+        "leisure",
+        "accommodation",
+      ];
+      if (skipTerms.some((term) => cleaned.toLowerCase() === term)) {
+        return null; // Will skip photo search for generic activities
+      }
+
+      return cleaned;
+    };
+
+    const cleanedPlaceName = extractPlaceName(placeName);
+
+    if (!cleanedPlaceName) {
+      console.log("⏭️ Skipping photo search for generic activity:", placeName);
+      setPhotoUrl(""); // Use placeholder for generic activities
+      return;
+    }
+
     console.log(
       "🔍 PlaceCardItem - Fetching Google Places photo for:",
-      placeName
+      cleanedPlaceName
     );
 
     // Always use Google Places API for accurate, real photos
     // Skip the AI-generated imageUrl and get actual place photos
     setIsLoading(true);
-    setError(null);
 
     try {
       // Create more specific search query by adding location context
-      let searchQuery = placeName;
+      let searchQuery = cleanedPlaceName;
 
       // Add Manila, Philippines context for better location accuracy
       if (
         !searchQuery.toLowerCase().includes("manila") &&
-        !searchQuery.toLowerCase().includes("philippines")
+        !searchQuery.toLowerCase().includes("philippines") &&
+        !searchQuery.toLowerCase().includes("cebu") &&
+        !searchQuery.toLowerCase().includes("davao") &&
+        !searchQuery.toLowerCase().includes("baguio")
       ) {
-        searchQuery += ", Manila, Philippines";
+        searchQuery += ", Philippines";
       }
 
       console.log("🔍 PlaceCardItem - Search query:", searchQuery);
@@ -59,9 +101,23 @@ function PlaceCardItem({ place }) {
       const photoReference = placeData.photos[0]?.name;
 
       if (photoReference) {
-        const photoUrl = PHOTO_REF_URL.replace("{NAME}", photoReference);
-        console.log("🔍 PlaceCardItem - Google Places photo URL:", photoUrl);
-        setPhotoUrl(photoUrl);
+        try {
+          // ✅ Fetch photo as blob URL for proper loading
+          const blobUrl = await fetchPlacePhoto(photoReference);
+          console.log("🔍 PlaceCardItem - Photo loaded successfully");
+          setPhotoUrl(blobUrl);
+        } catch (photoError) {
+          console.warn(
+            "📸 PlaceCardItem - Failed to fetch photo:",
+            photoError.message
+          );
+          // Fallback to AI-generated image
+          if (place?.imageUrl) {
+            setPhotoUrl(place.imageUrl);
+          } else {
+            setPhotoUrl("");
+          }
+        }
       } else {
         console.warn("🔍 PlaceCardItem - No photo reference found");
         setPhotoUrl(""); // Will use placeholder
@@ -76,9 +132,7 @@ function PlaceCardItem({ place }) {
       // Fallback to AI-generated image only if Google Places fails
       if (place?.imageUrl) {
         setPhotoUrl(place.imageUrl);
-        setError(null); // Clear error since we have fallback
       } else {
-        setError(error.message);
         setPhotoUrl(""); // Use placeholder
       }
     } finally {
@@ -125,119 +179,76 @@ function PlaceCardItem({ place }) {
 
   return (
     <Link to={generateMapsURL()} target="_blank" className="block group">
-      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg p-4 sm:p-6 hover:shadow-md transition-all duration-300 group-hover:border-sky-300 dark:group-hover:border-sky-600 group-hover:shadow-sky-200/20 dark:group-hover:shadow-sky-500/10 relative overflow-hidden">
-        {/* Enhanced gradient overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50/0 via-blue-50/0 to-sky-50/0 dark:from-sky-950/0 dark:via-blue-950/0 dark:to-sky-950/0 group-hover:from-sky-50/30 group-hover:via-blue-50/20 group-hover:to-sky-50/10 dark:group-hover:from-sky-950/20 dark:group-hover:via-blue-950/10 dark:group-hover:to-sky-950/5 transition-all duration-300 pointer-events-none"></div>
+      <div className="bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-xl p-5 hover:shadow-lg hover:border-sky-400 dark:hover:border-sky-500 transition-all duration-300 relative">
+        <div className="flex gap-4">
+          {/* Place Image */}
+          <div className="flex-shrink-0">
+            {isLoading ? (
+              <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-800 dark:to-slate-700 rounded-lg flex items-center justify-center">
+                <div className="w-6 h-6 border-2 border-sky-500 dark:border-sky-400 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : photoUrl ? (
+              <img
+                src={photoUrl}
+                className="w-24 h-24 rounded-lg object-cover transition-transform duration-300 group-hover:scale-105 shadow-sm"
+                alt={placeName}
+                onError={(e) => {
+                  e.target.src = "/placeholder.png";
+                }}
+              />
+            ) : (
+              <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-800 dark:to-slate-700 rounded-lg flex items-center justify-center border border-gray-200 dark:border-slate-600">
+                <span className="text-gray-400 dark:text-gray-500 text-3xl">
+                  📍
+                </span>
+              </div>
+            )}
+          </div>
 
-        {/* Decorative corner element */}
-        <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-sky-100/0 to-blue-200/0 dark:from-sky-900/0 dark:to-blue-800/0 group-hover:from-sky-100/20 group-hover:to-blue-200/30 dark:group-hover:from-sky-900/20 dark:group-hover:to-blue-800/30 rounded-bl-3xl transition-all duration-500"></div>
+          {/* Place Details */}
+          <div className="flex-1 min-w-0 space-y-2.5">
+            {/* Title */}
+            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg leading-tight group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors line-clamp-2">
+              {placeName}
+            </h3>
 
-        <div className="relative">
-          <div className="flex gap-4">
-            {/* Place Image */}
-            <div className="flex-shrink-0">
-              {isLoading ? (
-                <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-150 dark:from-slate-800 dark:to-slate-700 rounded-lg flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-sky-300 dark:border-sky-600 border-t-sky-600 dark:border-t-sky-400"></div>
-                  </div>
-                </div>
-              ) : (
-                <div className="relative overflow-hidden rounded-lg group-hover:shadow-sm transition-shadow duration-300">
-                  <img
-                    src={photoUrl || "/placeholder.png"}
-                    className="w-20 h-20 rounded-lg object-cover transition-transform duration-300 group-hover:scale-105"
-                    alt={placeName}
-                    onError={(e) => {
-                      e.target.src = "/placeholder.png";
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </div>
+            {/* Description */}
+            {placeDetails && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
+                {placeDetails}
+              </p>
+            )}
+
+            {/* Info Badges - Only show if data exists */}
+            <div className="flex flex-wrap gap-2">
+              {place?.ticketPricing && (
+                <span className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 px-2.5 py-1 rounded-md text-xs font-semibold border border-green-200 dark:border-green-800">
+                  <span>💰</span>
+                  <span>{place.ticketPricing}</span>
+                </span>
               )}
 
-              {error && (
-                <div className="w-20 h-20 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-slate-600">
-                  <span className="text-gray-400 dark:text-gray-500 text-2xl">
-                    📍
-                  </span>
-                </div>
+              {place?.timeTravel && (
+                <span className="inline-flex items-center gap-1.5 bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-md text-xs font-semibold border border-orange-200 dark:border-orange-800">
+                  <span>⏰</span>
+                  <span>{place.timeTravel}</span>
+                </span>
+              )}
+
+              {place?.rating && (
+                <span className="inline-flex items-center gap-1.5 bg-yellow-50 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-400 px-2.5 py-1 rounded-md text-xs font-semibold border border-yellow-200 dark:border-yellow-800">
+                  <span>⭐</span>
+                  <span>{place.rating}/5</span>
+                </span>
               )}
             </div>
 
-            {/* Place Details */}
-            <div className="flex-1 min-w-0 space-y-2">
-              <div>
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg mb-2 group-hover:text-sky-600 dark:group-hover:text-sky-400 line-clamp-2 leading-tight transition-colors duration-300 flex-1">
-                    {placeName}
-                  </h3>
-                  <div className="ml-3 w-8 h-8 bg-sky-100 dark:bg-sky-950/50 rounded-full flex items-center justify-center group-hover:bg-sky-200 dark:group-hover:bg-sky-900/70 transition-colors duration-300 flex-shrink-0">
-                    <span className="text-sky-600 dark:text-sky-400 text-base">
-                      📍
-                    </span>
-                  </div>
-                </div>
-                {placeDetails && (
-                  <p className="text-base font-medium text-gray-600 dark:text-gray-400 line-clamp-3 leading-relaxed mb-2">
-                    {placeDetails}
-                  </p>
-                )}
-
-                {/* Location type indicator */}
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="inline-flex items-center gap-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-full text-sm font-semibold">
-                    <span className="text-base">🎯</span>
-                    <span>Tourist Attraction</span>
-                  </span>
-                  {place?.category && (
-                    <span className="inline-flex items-center gap-2 bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 px-3 py-1.5 rounded-full text-sm font-semibold">
-                      <span className="text-base">📂</span>
-                      <span>{place.category}</span>
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Badges Container */}
-              <div className="flex flex-wrap gap-2">
-                {place?.ticketPricing && (
-                  <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-950/30 text-green-800 dark:text-green-400 border border-green-300 dark:border-green-800 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors">
-                    <span className="text-green-600 dark:text-green-400 text-base">💰</span>
-                    <span>{place.ticketPricing}</span>
-                  </div>
-                )}
-
-                {place?.timeTravel && (
-                  <div className="inline-flex items-center gap-2 bg-orange-100 dark:bg-orange-950/30 text-orange-800 dark:text-orange-400 border border-orange-300 dark:border-orange-800 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors">
-                    <span className="text-orange-600 dark:text-orange-400 text-base">⏰</span>
-                    <span>{place.timeTravel}</span>
-                  </div>
-                )}
-
-                {place?.rating && (
-                  <div className="inline-flex items-center gap-2 bg-yellow-100 dark:bg-yellow-950/30 text-yellow-800 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-800 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-yellow-200 dark:hover:bg-yellow-900/50 transition-colors">
-                    <span className="text-yellow-600 dark:text-yellow-400 text-base">⭐</span>
-                    <span>{place.rating}/5</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Enhanced Action indicator */}
-              <div className="flex items-center justify-between pt-2 mt-2 border-t border-gray-100 dark:border-slate-700">
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400">
-                  <span className="text-blue-500 dark:text-blue-400 text-base">🌐</span>
-                  <span>Interactive map view</span>
-                </div>
-                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-sm group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-all duration-200">
-                  <span>Open Maps</span>
-                  <div className="w-6 h-6 bg-blue-100 dark:bg-blue-950/50 rounded-full flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/70 transition-colors duration-200">
-                    <span className="text-blue-600 dark:text-blue-400 text-sm transform group-hover:translate-x-0.5 transition-transform duration-200">
-                      →
-                    </span>
-                  </div>
-                </div>
-              </div>
+            {/* Action Indicator */}
+            <div className="flex items-center gap-2 text-xs text-sky-600 dark:text-sky-400 font-semibold pt-1">
+              <span>View on Maps</span>
+              <span className="transform group-hover:translate-x-1 transition-transform">
+                →
+              </span>
             </div>
           </div>
         </div>

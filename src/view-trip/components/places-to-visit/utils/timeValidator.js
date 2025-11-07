@@ -2,6 +2,44 @@
  * Time Validation Utility
  * Validates if activities in a day are realistically achievable
  * based on time constraints, travel time, and activity duration
+ * 
+ * INTELLIGENT TRAVEL TIME ESTIMATION STRATEGY:
+ * ============================================
+ * This validator uses a 6-tier priority system to estimate travel time between activities:
+ * 
+ * Priority 1: Logistics Activities (0 minutes)
+ *   - Activities like "Taxi to hotel", "Return to hotel", "Check-in", "Departure"
+ *   - These ARE the travel itself, so no buffer needed before them
+ * 
+ * Priority 2: Same Location Detection (0 minutes)
+ *   - Exact name match: "Hotel ABC" → "Hotel ABC"
+ *   - Smart extraction: "Check-in at Hotel ABC" → "Return to Hotel ABC"
+ *   - Uses venue name extraction and contains-matching
+ * 
+ * Priority 3: Metadata Extraction (varies)
+ *   - Reads activity.travelFromPrevious field if available
+ *   - Parses activity names: "30 min drive to Beach"
+ *   - Scans descriptions for travel time mentions
+ * 
+ * Priority 4: Proximity Detection (10 minutes)
+ *   - Keyword similarity analysis (40% threshold)
+ *   - "Rizal Park" + "National Museum in Rizal Park" = nearby
+ *   - Substring containment for compound names
+ * 
+ * Priority 5: Category-Based Estimation (8-12 minutes)
+ *   - Tourist attractions → Tourist attractions = 12 min (clustered zones)
+ *   - Attraction → Restaurant = 10 min (eateries near attractions)
+ *   - Uses activity.category field when available
+ * 
+ * Priority 6: Time Gap Analysis (8-30 minutes)
+ *   - Large gap (>2 hours) = 30 min travel expected
+ *   - Tight schedule (<30 min) = 8 min minimal travel
+ *   - Infers user's travel planning from schedule patterns
+ * 
+ * Default Fallback: 15 minutes (conservative buffer)
+ * 
+ * This multi-layered approach works for ALL Philippine destinations without
+ * hardcoding specific locations, making it scalable and maintainable.
  */
 
 /**
@@ -65,30 +103,191 @@ function parseSingleDuration(durationString) {
 }
 
 /**
+ * Check if an activity is a logistics/travel type that doesn't need travel time before it
+ */
+function isLogisticsActivity(activity) {
+  if (!activity?.placeName) return false;
+  
+  const logisticsKeywords = [
+    'taxi', 'drive', 'bus', 'transport', 'transfer', 'travel',
+    'return', 'departure', 'arrival', 'check-in', 'check-out',
+    'ride', 'uber', 'grab', 'shuttle', 'flight', 'train'
+  ];
+  
+  const placeName = activity.placeName.toLowerCase();
+  return logisticsKeywords.some(keyword => placeName.includes(keyword));
+}
+
+/**
+ * Check if two activities are at the same location
+ */
+function isSameLocation(activity1, activity2) {
+  if (!activity1?.placeName || !activity2?.placeName) return false;
+  
+  // Exact match
+  if (activity1.placeName === activity2.placeName) return true;
+  
+  // Check if both contain the same hotel/venue name
+  const extractVenueName = (name) => {
+    // Extract main venue name (e.g., "Check-in at Hotel ABC" -> "hotel abc")
+    const cleaned = name.toLowerCase()
+      .replace(/check-in at|check-out from|return to|departure from|arrival at/gi, '')
+      .trim();
+    return cleaned;
+  };
+  
+  const venue1 = extractVenueName(activity1.placeName);
+  const venue2 = extractVenueName(activity2.placeName);
+  
+  // If one venue name contains the other (e.g., "Hotel ABC" and "ABC")
+  if (venue1.includes(venue2) || venue2.includes(venue1)) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Extract actual travel time from activity metadata
+ */
+function extractTravelTimeFromActivity(activity) {
+  // Check for explicit travel time field
+  if (activity.travelFromPrevious) {
+    return parseDurationToMinutes(activity.travelFromPrevious);
+  }
+  
+  // Check for travel time in activity name (e.g., "30 min drive to...")
+  if (activity.placeName) {
+    const travelMatch = activity.placeName.match(/(\d+)\s*(min|minute|minutes|mins)/i);
+    if (travelMatch) {
+      return parseInt(travelMatch[1]);
+    }
+  }
+  
+  // Check description field if available
+  if (activity.placeDetails) {
+    const travelMatch = activity.placeDetails.match(/(\d+)\s*(min|minute|minutes|mins)\s*(drive|travel|away)/i);
+    if (travelMatch) {
+      return parseInt(travelMatch[1]);
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Detect if activities share common location keywords (nearby attractions)
+ * Uses intelligent pattern matching instead of hardcoded locations
+ */
+function detectNearbyActivities(activity1, activity2) {
+  if (!activity1?.placeName || !activity2?.placeName) return false;
+  
+  const place1 = activity1.placeName.toLowerCase();
+  const place2 = activity2.placeName.toLowerCase();
+  
+  // Extract significant location keywords (nouns that likely indicate places)
+  const extractLocationKeywords = (placeName) => {
+    // Remove common prefixes/suffixes
+    const cleaned = placeName
+      .replace(/visit|explore|tour|walk around|see|view|at|in|the|a|an/gi, '')
+      .trim();
+    
+    // Split into words and filter out common words
+    const words = cleaned.split(/[\s,\-()]+/).filter(word => 
+      word.length > 3 && // Meaningful words
+      !['hotel', 'restaurant', 'cafe', 'shop', 'store', 'market'].includes(word) // Exclude generic terms
+    );
+    
+    return words;
+  };
+  
+  const keywords1 = extractLocationKeywords(place1);
+  const keywords2 = extractLocationKeywords(place2);
+  
+  // Check if they share significant keywords (likely same area)
+  const sharedKeywords = keywords1.filter(k => keywords2.includes(k));
+  
+  // If they share 40% or more keywords, they're likely in the same area
+  if (sharedKeywords.length > 0) {
+    const similarity = sharedKeywords.length / Math.max(keywords1.length, keywords2.length);
+    if (similarity >= 0.4) {
+      return true;
+    }
+  }
+  
+  // Check if one place name is contained in the other (e.g., "Intramuros" and "Fort Santiago in Intramuros")
+  const shorterName = place1.length < place2.length ? place1 : place2;
+  const longerName = place1.length < place2.length ? place2 : place1;
+  
+  if (longerName.includes(shorterName) && shorterName.length > 5) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
  * Estimate travel time between two activities (in minutes)
- * This is a simplified estimation - in production, you'd use Google Maps Distance Matrix API
+ * Now with intelligent activity type detection and metadata extraction
  */
 export function estimateTravelTime(activity1, activity2) {
-  // Default travel time assumptions
-  const DEFAULT_TRAVEL_TIME = 30; // 30 minutes average
-  const MIN_TRAVEL_TIME = 10; // Minimum buffer between activities
-  const MAX_TRAVEL_TIME = 90; // Maximum realistic travel time within a day
-
-  // If we have actual coordinates, we could calculate distance
-  // For now, use intelligent defaults based on activity types
-  
-  // Check if activities are likely in the same location
-  if (
-    activity1?.placeName &&
-    activity2?.placeName &&
-    activity1.placeName === activity2.placeName
-  ) {
-    return 0; // Same location, no travel time
+  // Priority 1: If current activity IS a logistics/travel activity, no travel time needed before it
+  if (isLogisticsActivity(activity2)) {
+    return 0;
   }
-
-  // If we have location names, we can make educated guesses
-  // For now, return a reasonable default
-  return DEFAULT_TRAVEL_TIME;
+  
+  // Priority 2: If both activities are at the exact same location
+  if (isSameLocation(activity1, activity2)) {
+    return 0;
+  }
+  
+  // Priority 3: Try to extract actual travel time from activity metadata
+  const extractedTime = extractTravelTimeFromActivity(activity2);
+  if (extractedTime !== null) {
+    return extractedTime;
+  }
+  
+  // Priority 4: Intelligent proximity detection
+  if (detectNearbyActivities(activity1, activity2)) {
+    return 10; // Nearby attractions within walking distance
+  }
+  
+  // Priority 5: Category-based estimation
+  const category1 = activity1?.category?.toLowerCase() || '';
+  const category2 = activity2?.category?.toLowerCase() || '';
+  
+  // If both are tourist attractions, likely in the same tourist zone
+  if ((category1.includes('attraction') || category1.includes('landmark')) &&
+      (category2.includes('attraction') || category2.includes('landmark'))) {
+    return 12; // Tourist spots often clustered
+  }
+  
+  // If going from attraction to restaurant/cafe (likely nearby)
+  if ((category1.includes('attraction') || category1.includes('landmark')) &&
+      (category2.includes('restaurant') || category2.includes('food'))) {
+    return 10; // Restaurants near attractions
+  }
+  
+  // Priority 6: Time-based patterns
+  const time1 = parseTimeToMinutes(activity1.time);
+  const time2 = parseTimeToMinutes(activity2.time);
+  
+  if (time1 && time2) {
+    const gap = time2 - time1 - parseDurationToMinutes(activity1.timeTravel || "1 hour");
+    
+    // If there's a large gap (>2 hours), user probably planned for longer travel
+    if (gap > 120) {
+      return 30; // Significant travel time expected
+    }
+    
+    // If tight schedule (<30 min gap), assume nearby
+    if (gap < 30 && gap > 0) {
+      return 8; // Minimal travel time
+    }
+  }
+  
+  // Default: Conservative 15-minute buffer for unknown distances
+  return 15;
 }
 
 /**
@@ -125,14 +324,38 @@ export function validateDaySchedule(activities, startTime = "08:00 AM", endTime 
     // Check if scheduled time is realistic based on previous activity
     if (previousActivity && activityTime) {
       const minimumTime = currentTime + travelTime;
-      if (activityTime < minimumTime) {
+      
+      // Only warn if there's actual travel time needed and activity starts too early
+      if (travelTime > 0 && activityTime < minimumTime) {
         const diff = minimumTime - activityTime;
+        
+        // Get context for better warning messages
+        const isLogistics = isLogisticsActivity(activity);
+        const isSameLoc = isSameLocation(previousActivity, activity);
+        
+        // Build contextual warning message
+        let warningMsg = `Activity "${activity.placeName}" starts at ${activity.time}, but you need at least ${Math.round(diff)} more minutes`;
+        
+        if (isLogistics) {
+          warningMsg += ` (Note: This is a travel/logistics activity - consider if travel time is already accounted for)`;
+        } else if (isSameLoc) {
+          warningMsg += ` (Note: This appears to be at the same location as the previous activity)`;
+        } else {
+          warningMsg += ` to travel from the previous activity`;
+        }
+        
         warnings.push({
           type: "timing",
-          severity: "high",
+          severity: travelTime > 0 ? "high" : "medium",
           activityIndex: index,
-          message: `Activity "${activity.placeName}" starts at ${activity.time}, but you need at least ${Math.round(diff)} more minutes to travel from the previous activity.`,
-          suggestion: `Consider moving this activity to ${formatMinutesToTime(minimumTime)} or later.`,
+          message: warningMsg,
+          suggestion: `Consider moving this activity to ${formatMinutesToTime(minimumTime)} or later, or adjust the previous activity's duration.`,
+          context: {
+            requiredTravelTime: travelTime,
+            timeDifference: diff,
+            isLogisticsActivity: isLogistics,
+            isSameLocation: isSameLoc
+          }
         });
       }
     }

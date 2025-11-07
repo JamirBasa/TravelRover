@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, forwardRef, useImperativeHandle } from "react";
 import {
   Calendar,
   MapPin,
@@ -16,9 +16,45 @@ import { PlacesToVisit } from "../places-to-visit";
 import { FlightBooking } from "../travel-bookings";
 import { RouteOptimizationStatus } from "../optimization";
 import { OptimizedRouteMap } from "../maps";
+import WeatherForecast from "../weather/WeatherForecast";
 
-function TabbedTripView({ trip, onTripUpdate }) {
+function TabbedTripView({ trip, onTripUpdate }, ref) {
   const [activeTab, setActiveTab] = useState("overview");
+  
+  // ✅ Create ref for PlacesToVisit component
+  const placesToVisitRef = React.useRef(null);
+
+  // ✅ Debug: Log when component mounts
+  React.useEffect(() => {
+    console.log("🎬 TabbedTripView mounted");
+    return () => console.log("💀 TabbedTripView unmounting");
+  }, []);
+
+  // ✅ Expose methods to parent component via ref
+  useImperativeHandle(ref, () => {
+    console.log("🔗 useImperativeHandle: Setting up ref methods");
+    return {
+      switchToItinerary: () => {
+        console.log("🎯 switchToItinerary called! Current tab:", activeTab);
+        setActiveTab("itinerary");
+        console.log("✅ Tab switched to: itinerary");
+        
+        // After tab switch, expand and focus Day 1
+        setTimeout(() => {
+          if (placesToVisitRef.current && placesToVisitRef.current.expandAndFocusDay) {
+            console.log("� Calling expandAndFocusDay on PlacesToVisit");
+            placesToVisitRef.current.expandAndFocusDay(0);
+          }
+        }, 300);
+      },
+    };
+  });
+
+  // ✅ Check if user enabled flights but has no real flight data (inactive airports show alternatives)
+  const showsFlightAlternatives =
+    trip?.flightPreferences?.includeFlights &&
+    !trip?.realFlightData?.success &&
+    !trip?.hasRealFlights;
 
   const tabs = [
     {
@@ -28,6 +64,12 @@ function TabbedTripView({ trip, onTripUpdate }) {
       component: (
         <div className="space-y-6">
           <InfoSection trip={trip} />
+          
+          {/* Weather Forecast - Shows for trips within 14 days */}
+          <div id="weather-forecast-section">
+            <WeatherForecast trip={trip} />
+          </div>
+          
           {trip?.routeOptimization && (
             <RouteOptimizationStatus
               routeOptimization={trip.routeOptimization}
@@ -43,7 +85,9 @@ function TabbedTripView({ trip, onTripUpdate }) {
       icon: <Hotel className="h-4 w-4" />,
       component: <Hotels trip={trip} />,
     },
-    ...(trip?.hasRealFlights ||
+    // ✅ Show Flights tab if user ENABLED flights (even if no data for inactive airports)
+    ...(trip?.flightPreferences?.includeFlights ||
+    trip?.hasRealFlights ||
     trip?.realFlightData?.success ||
     trip?.flightResults?.success
       ? [
@@ -59,7 +103,7 @@ function TabbedTripView({ trip, onTripUpdate }) {
       id: "itinerary",
       label: "Itinerary",
       icon: <Calendar className="h-4 w-4" />,
-      component: <PlacesToVisit trip={trip} onTripUpdate={onTripUpdate} />,
+      component: <PlacesToVisit ref={placesToVisitRef} trip={trip} onTripUpdate={onTripUpdate} />,
     },
     {
       id: "map",
@@ -196,6 +240,12 @@ function TabbedTripView({ trip, onTripUpdate }) {
                     {tab.icon}
                   </span>
                   <span>{tab.label}</span>
+                  {/* ✅ Show "Alternatives" badge on Flights tab when no direct flights */}
+                  {tab.id === "flights" && showsFlightAlternatives && (
+                    <span className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 border border-orange-300 dark:border-orange-700">
+                      Alternatives
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -367,6 +417,37 @@ function TabbedTripView({ trip, onTripUpdate }) {
                 </span>
               </p>
               <button
+                onClick={() => {
+                  console.log('🌤️ View Forecast clicked - switching to Overview tab');
+                  console.log('📊 Current trip data:', {
+                    location: trip?.userSelection?.location,
+                    startDate: trip?.userSelection?.startDate,
+                    duration: trip?.userSelection?.duration
+                  });
+                  console.log('🔑 API Key:', import.meta.env.VITE_OPENWEATHER_API_KEY ? 'Configured' : 'NOT SET');
+                  
+                  setActiveTab("overview");
+                  // Scroll to weather forecast section
+                  setTimeout(() => {
+                    const weatherSection = document.getElementById('weather-forecast-section');
+                    console.log('📍 Weather section element:', weatherSection);
+                    
+                    if (weatherSection) {
+                      console.log('✅ Scrolling to weather section');
+                      weatherSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      
+                      // Add a subtle highlight effect
+                      weatherSection.style.transition = 'transform 0.3s ease';
+                      weatherSection.style.transform = 'scale(1.02)';
+                      setTimeout(() => {
+                        weatherSection.style.transform = 'scale(1)';
+                      }, 300);
+                    } else {
+                      console.log('⚠️ Weather section not found - may not be displayed');
+                      console.log('💡 Check the debug panel on Overview tab for details');
+                    }
+                  }, 150);
+                }}
                 className="w-full bg-sky-600 hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600 text-white px-3 py-2.5 rounded text-sm font-medium transition-all duration-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 cursor-pointer"
                 aria-label="View detailed weather forecast"
               >
@@ -380,4 +461,8 @@ function TabbedTripView({ trip, onTripUpdate }) {
   );
 }
 
-export default TabbedTripView;
+// Wrap with forwardRef and set display name
+const TabbedTripViewWithRef = forwardRef(TabbedTripView);
+TabbedTripViewWithRef.displayName = "TabbedTripView";
+
+export default TabbedTripViewWithRef;

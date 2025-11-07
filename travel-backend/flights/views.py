@@ -38,6 +38,13 @@ class FlightSearchView(APIView):
                     from_airport, to_airport, departure_date, return_date, adults, trip_type
                 )
                 
+                # ✅ NEW: Log raw SERP API response for monitoring
+                logger.info(f"📊 SERP API returned {len(flights_data.get('flights', []))} flights")
+                
+                # ✅ NEW: Validate pricing data
+                if flights_data.get('flights'):
+                    self._log_price_validation(flights_data['flights'], from_airport, to_airport)
+                
                 # If no flights found, use fallback
                 if not flights_data.get('flights'):
                     logger.info("No flights found in SerpAPI, using fallback")
@@ -257,6 +264,49 @@ class FlightSearchView(APIView):
                 'type': trip_type
             }
         }
+    
+    def _log_price_validation(self, flights, from_airport, to_airport):
+        """
+        ✅ NEW: Log price validation metrics for monitoring
+        Helps track SERP API data quality over time
+        """
+        prices = []
+        invalid_count = 0
+        
+        for flight in flights:
+            try:
+                price_str = flight.get('price', '₱0').replace('₱', '').replace(',', '').strip()
+                price = int(price_str)
+                
+                # Validate price range
+                if price > 0 and 500 <= price <= 100000:
+                    prices.append(price)
+                else:
+                    invalid_count += 1
+                    if price <= 0:
+                        logger.warning(f"⚠️ Invalid price (≤0) for flight: {flight.get('name', 'Unknown')}")
+                    elif price < 500:
+                        logger.warning(f"⚠️ Unrealistic low price (₱{price}) for flight: {flight.get('name', 'Unknown')}")
+                    elif price > 100000:
+                        logger.warning(f"⚠️ Unrealistic high price (₱{price:,}) for flight: {flight.get('name', 'Unknown')}")
+                        
+            except (ValueError, TypeError, AttributeError) as e:
+                invalid_count += 1
+                logger.warning(f"⚠️ Price parsing error for flight: {flight.get('name', 'Unknown')} - {str(e)}")
+                continue
+        
+        if prices:
+            avg_price = sum(prices) / len(prices)
+            logger.info(
+                f"✅ Price validation - Route: {from_airport}→{to_airport}, "
+                f"Total flights: {len(flights)}, Valid prices: {len(prices)}, Invalid: {invalid_count}, "
+                f"Avg: ₱{avg_price:,.0f}, Range: ₱{min(prices):,} - ₱{max(prices):,}"
+            )
+        else:
+            logger.error(
+                f"❌ Price validation failed - Route: {from_airport}→{to_airport}, "
+                f"No valid prices found among {len(flights)} flights"
+            )
 
 
 class AirportSearchView(APIView):

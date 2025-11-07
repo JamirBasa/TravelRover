@@ -22,13 +22,9 @@ class GooglePlacesService {
   }
 
   /**
-   * Get real coordinates for a place name using Geocoding API
+   * Get real coordinates for a place name using Geocoding API (via Django proxy)
    */
   async getPlaceCoordinates(placeName, location = '') {
-    if (!await this.initialize()) {
-      return this.getFallbackCoordinates(placeName, location);
-    }
-
     const cacheKey = `geocode_${placeName}_${location}`;
     if (this.cache.has(cacheKey)) {
       return this.cache.get(cacheKey);
@@ -36,19 +32,32 @@ class GooglePlacesService {
 
     try {
       const query = location ? `${placeName}, ${location}` : placeName;
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${this.apiKey}`;
       
-      const response = await fetch(url);
-      const data = await response.json();
+      // ✅ Use Django proxy for geocoding (secure, no API key exposure)
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+      const url = `${apiBaseUrl}/langgraph/geocoding/`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: query,
+          components: 'country:PH' // Restrict to Philippines for accuracy
+        })
+      });
 
-      if (data.status === 'OK' && data.results?.length > 0) {
-        const result = data.results[0];
+      const result = await response.json();
+
+      if (result.success && result.data?.status === 'OK' && result.data.results?.length > 0) {
+        const geocodeResult = result.data.results[0];
         const coordinates = {
-          lat: result.geometry.location.lat,
-          lng: result.geometry.location.lng,
-          formatted_address: result.formatted_address,
-          place_id: result.place_id,
-          source: 'google_geocoding'
+          lat: geocodeResult.geometry.location.lat,
+          lng: geocodeResult.geometry.location.lng,
+          formatted_address: geocodeResult.formatted_address,
+          place_id: geocodeResult.place_id,
+          source: 'google_geocoding_proxy'
         };
 
         this.cache.set(cacheKey, coordinates);
@@ -60,7 +69,7 @@ class GooglePlacesService {
       return this.getFallbackCoordinates(placeName, location);
 
     } catch (error) {
-      console.error('❌ Geocoding API error:', error);
+      console.error('❌ Geocoding proxy error:', error);
       return this.getFallbackCoordinates(placeName, location);
     }
   }
@@ -114,25 +123,36 @@ class GooglePlacesService {
 
     try {
       const searchQuery = location ? `${query} in ${location}` : query;
-      const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${this.apiKey}`;
       
-      const response = await fetch(url);
+      // ✅ Use backend proxy instead of direct API call
+      const backendUrl = 'http://localhost:8000/api/langgraph/places-search/';
+      
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          textQuery: searchQuery,
+        }),
+      });
+      
       const data = await response.json();
 
-      if (data.status === 'OK' && data.results?.length > 0) {
-        const results = data.results.map(place => ({
-          place_id: place.place_id,
-          name: place.name,
+      if (data.success && data.data?.places?.length > 0) {
+        const results = data.data.places.map(place => ({
+          place_id: place.id,
+          name: place.displayName?.text || place.displayName,
           rating: place.rating,
-          formatted_address: place.formatted_address,
+          formatted_address: place.formattedAddress,
           coordinates: {
-            lat: place.geometry.location.lat,
-            lng: place.geometry.location.lng
+            lat: place.location?.latitude,
+            lng: place.location?.longitude
           },
-          price_level: place.price_level,
+          price_level: place.priceLevel,
           types: place.types,
           photos: place.photos,
-          source: 'google_places_search'
+          source: 'google_places_backend_proxy'
         }));
 
         // Cache the results

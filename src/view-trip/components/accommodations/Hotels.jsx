@@ -159,7 +159,7 @@ function Hotels({ trip }) {
   }, [trip, parseDataArray]);
 
   // ========================================
-  // VERIFY ALL HOTELS
+  // VERIFY ALL HOTELS (WITH SMART LIMITING)
   // ========================================
   const verifyAllHotels = useCallback(async () => {
     const hotelsData = getHotelsData();
@@ -170,17 +170,58 @@ function Hotels({ trip }) {
       return;
     }
 
+    // ✅ OPTIMIZATION: Limit hotels BEFORE verification to save API calls
+    const MAX_HOTELS_TO_VERIFY = 5;
+    
+    // Separate real and AI hotels
+    const realHotels = hotelsData.filter(h => h.isRealHotel);
+    const aiHotels = hotelsData.filter(h => !h.isRealHotel);
+    
+    // Real hotels: Already verified, show all (no API calls needed)
+    // AI hotels: Limit to MAX before verification (saves API calls)
+    let hotelsToVerify = [];
+    
+    if (realHotels.length > 0) {
+      console.log(`✅ Displaying ${realHotels.length} real hotels (pre-verified)`);
+      hotelsToVerify = realHotels.slice(0, MAX_HOTELS_TO_VERIFY);
+    } else if (aiHotels.length > 0) {
+      const originalCount = aiHotels.length;
+      const limitedCount = Math.min(aiHotels.length, MAX_HOTELS_TO_VERIFY);
+      console.log(`🎯 Selecting top ${limitedCount} hotels from ${originalCount} AI recommendations`);
+      hotelsToVerify = aiHotels.slice(0, MAX_HOTELS_TO_VERIFY);
+    }
+    
+    if (hotelsToVerify.length === 0) {
+      setVerifiedHotels([]);
+      return;
+    }
+
     setIsVerifying(true);
-    console.log(`🔍 Starting verification of ${hotelsData.length} hotels`);
+    console.log(`🔍 Verifying ${hotelsToVerify.length} hotels for quality and availability`);
 
     // Batch process in chunks of 5 for better performance
     const BATCH_SIZE = 5;
     const verified = [];
 
-    for (let i = 0; i < hotelsData.length; i += BATCH_SIZE) {
-      const batch = hotelsData.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < hotelsToVerify.length; i += BATCH_SIZE) {
+      const batch = hotelsToVerify.slice(i, i + BATCH_SIZE);
+      
+      // ✅ Only verify AI hotels (real hotels skip verification)
       const batchResults = await Promise.all(
-        batch.map((hotel) => verifySingleHotel(hotel))
+        batch.map((hotel) => {
+          if (hotel.isRealHotel) {
+            // Real hotel - no verification needed, return as-is
+            return Promise.resolve({
+              verified: true,
+              firestoreData: hotel,
+              matchScore: 100,
+              source: 'real'
+            });
+          } else {
+            // AI hotel - verify with API call
+            return verifySingleHotel(hotel);
+          }
+        })
       );
 
       batchResults.forEach((result, idx) => {
@@ -204,16 +245,14 @@ function Hotels({ trip }) {
     }
 
     const verifiedCount = verified.filter((h) => h.verified).length;
-    const unverifiedCount = verified.filter((h) => !h.verified).length;
 
     setVerifiedHotels(verified);
     setIsVerifying(false);
 
-    console.log("📊 Verification complete:", {
-      total: verified.length,
+    console.log("✅ Hotel verification complete:", {
+      displayed: verified.length,
       verified: verifiedCount,
-      unverified: unverifiedCount,
-      percentage: ((verifiedCount / verified.length) * 100).toFixed(1) + "%",
+      qualityScore: ((verifiedCount / verified.length) * 100).toFixed(0) + "%"
     });
   }, [getHotelsData]);
 
@@ -414,11 +453,11 @@ function Hotels({ trip }) {
     return (
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-12 text-center">
         <div className="w-16 h-16 bg-sky-100 dark:bg-sky-950/50 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-          <span className="text-2xl">🔍</span>
+          <span className="text-2xl">🏨</span>
         </div>
-        <h3 className="text-lg font-bold mb-2">Verifying Hotels...</h3>
+        <h3 className="text-lg font-bold mb-2">Finding the Best Hotels...</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Checking hotel availability and accuracy
+          We're selecting top accommodations for you
         </p>
       </div>
     );
@@ -429,69 +468,93 @@ function Hotels({ trip }) {
   // ========================================
   if (!hotels || hotels.allHotels.length === 0) {
     const hotelSearchRequested = trip?.hotelSearchRequested || false;
-    const hasRealHotels = trip?.hasRealHotels || false;
-
-    // 🔍 DEBUG: Log detailed empty state analysis
-    console.log("🏨 EMPTY STATE ANALYSIS:", {
-      hotelSearchRequested,
-      hasRealHotels,
-      realHotelDataExists: !!trip?.realHotelData,
-      realHotelDataType: typeof trip?.realHotelData?.hotels,
-      realHotelDataIsString: typeof trip?.realHotelData?.hotels === "string",
-      realHotelDataLength: trip?.realHotelData?.hotels?.length || 0,
-      aiHotelsExists: !!trip?.tripData?.hotels,
-      aiHotelsType: typeof trip?.tripData?.hotels,
-      aiHotelsCount: Array.isArray(trip?.tripData?.hotels)
-        ? trip.tripData.hotels.length
-        : 0,
-      verifiedHotelsCount: verifiedHotels.length,
-      allHotelsCount: hotels?.allHotels?.length || 0,
-    });
 
     return (
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-12 text-center">
-        <div className="w-16 h-16 bg-sky-100 dark:bg-sky-950/50 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-2xl text-sky-600 dark:text-sky-400">🏨</span>
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
+        {/* Header */}
+        <div className="brand-gradient px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+              <span className="text-white text-xl">🏨</span>
+            </div>
+            <h2 className="text-xl font-bold text-white">Hotels</h2>
+          </div>
         </div>
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
-          No Hotels Found
-        </h3>
 
-        {!hotelSearchRequested ? (
-          <div className="text-gray-600 dark:text-gray-400 text-sm max-w-md mx-auto space-y-3">
-            <p>Hotel search was not enabled when this trip was created.</p>
-            <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-              <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-2">
-                💡 Want hotel recommendations?
-              </p>
-              <p className="text-xs text-blue-700 dark:text-blue-400">
-                Create a new trip and enable "Include Hotel Search" in Step 5 to
-                get personalized hotel recommendations.
-              </p>
-            </div>
+        {/* Empty State Content */}
+        <div className="p-8 sm:p-12 text-center">
+          <div className="w-20 h-20 bg-gray-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <span className="text-4xl">🏨</span>
           </div>
-        ) : (
-          <div className="text-gray-600 dark:text-gray-400 text-sm max-w-md mx-auto space-y-3">
-            <p>We couldn't find hotels for this destination.</p>
-            {hasRealHotels && (
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                Real hotel data was requested but couldn't be retrieved. This
-                may be due to API limitations or the destination not being in
-                our database.
+
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+            No Hotels Available
+          </h3>
+
+          {!hotelSearchRequested ? (
+            <div className="max-w-md mx-auto space-y-4">
+              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                Hotel search was not enabled when this trip was created.
               </p>
-            )}
-            <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
-              <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-2">
-                🔍 Troubleshooting
-              </p>
-              <ul className="text-xs text-amber-700 dark:text-amber-400 text-left space-y-1">
-                <li>• Check browser console for error messages</li>
-                <li>• Try regenerating the trip</li>
-                <li>• Search for hotels manually on Agoda or Booking.com</li>
-              </ul>
+              <div className="bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 rounded-xl p-5 border-2 border-sky-200 dark:border-sky-800">
+                <div className="flex items-start gap-3 text-left">
+                  <div className="w-8 h-8 bg-sky-100 dark:bg-sky-950/50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <span className="text-sky-600 dark:text-sky-400">💡</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-sky-900 dark:text-sky-300 text-sm mb-2">
+                      Want Hotel Recommendations?
+                    </h4>
+                    <p className="text-sky-800 dark:text-sky-400 text-xs leading-relaxed">
+                      Create a new trip and enable{" "}
+                      <strong>"Include Hotel Search"</strong> in the preferences
+                      step to get personalized hotel recommendations with real
+                      data.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="max-w-md mx-auto space-y-4">
+              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                We couldn't retrieve hotels for this destination. This may be
+                temporary.
+              </p>
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl p-5 border-2 border-amber-200 dark:border-amber-800">
+                <div className="flex items-start gap-3 text-left">
+                  <div className="w-8 h-8 bg-amber-100 dark:bg-amber-950/50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <span className="text-amber-600 dark:text-amber-400">
+                      🔍
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-amber-900 dark:text-amber-300 text-sm mb-2">
+                      What You Can Do
+                    </h4>
+                    <ul className="text-amber-800 dark:text-amber-400 text-xs space-y-1.5">
+                      <li className="flex items-start gap-2">
+                        <span className="mt-0.5">•</span>
+                        <span>Try regenerating this trip</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="mt-0.5">•</span>
+                        <span>
+                          Search manually on <strong>Agoda</strong> or{" "}
+                          <strong>Booking.com</strong>
+                        </span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="mt-0.5">•</span>
+                        <span>Contact support if the issue persists</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -501,233 +564,197 @@ function Hotels({ trip }) {
   // ========================================
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md border border-gray-100 dark:border-slate-700 overflow-hidden">
-        {/* Header Section */}
-        <div className="brand-gradient px-4 sm:px-6 py-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white dark:bg-white/10 opacity-5 rounded-full -translate-y-4 translate-x-4"></div>
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white dark:bg-white/10 opacity-5 rounded-full translate-y-2 -translate-x-2"></div>
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
+        {/* Unified Professional Header */}
+        <div className="brand-gradient px-4 sm:px-6 py-5 relative overflow-hidden">
+          {/* Decorative Background Elements */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-8 translate-x-8"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-6 -translate-x-6"></div>
 
-          <div className="relative">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white dark:bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-white text-lg">🏨</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-xl font-bold text-white mb-1">
-                    {hotels.realHotels.length > 0
-                      ? "Best Value Hotels"
-                      : "Hotel Recommendations"}
-                  </h2>
-                  <p className="text-white/90 text-xs flex items-center gap-2 flex-wrap">
-                    {hotels.realHotels.length > 0 ? (
-                      <>
-                        <span>Top {hotels.allHotels.length} most affordable options</span>
-                        {hotels.totalAllHotels > hotels.allHotels.length && (
-                          <>
-                            <span>•</span>
-                            <span>{hotels.totalAllHotels} hotels found</span>
-                          </>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <span>{hotels.allHotels.length} carefully selected for your trip</span>
-                      </>
-                    )}
-                  </p>
+          <div className="relative flex items-center justify-between gap-4">
+            {/* Left: Title & Info */}
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                <span className="text-white text-2xl">🏨</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl md:text-2xl font-bold text-white mb-1.5">
+                  {hotels.realHotels.length > 0
+                    ? "Verified Accommodations"
+                    : "Recommended Hotels"}
+                </h2>
+                <div className="flex items-center gap-2 flex-wrap text-white/90 text-xs md:text-sm">
+                  <span className="font-medium">
+                    {hotels.allHotels.length} top choice{hotels.allHotels.length !== 1 ? "s" : ""}
+                  </span>
+                  {hotels.realHotels.length > 0 && (
+                    <>
+                      <span className="hidden sm:inline">•</span>
+                      <span className="hidden sm:inline">
+                        Sorted by best value
+                      </span>
+                    </>
+                  )}
+                  {hotels.totalAllHotels > hotels.allHotels.length && (
+                    <>
+                      <span className="hidden sm:inline">•</span>
+                      <span className="hidden sm:inline text-white/80">
+                        Selected from {hotels.totalAllHotels} options
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
-
-              {avgPrice > 0 && (
-                <div className="hidden sm:flex items-center gap-3 text-white">
-                  <div className="text-center">
-                    <div className="text-base font-bold">
-                      ₱{Math.round(avgPrice).toLocaleString()}
-                    </div>
-                    <div className="text-xs text-white/80">avg/night</div>
-                  </div>
-                </div>
-              )}
             </div>
+
+            {/* Right: Average Price Badge */}
+            {avgPrice > 0 && (
+              <div className="hidden md:flex flex-col items-end bg-white/20 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/30">
+                <div className="text-xs text-white/80 font-medium mb-0.5">
+                  Average
+                </div>
+                <div className="text-xl font-bold text-white">
+                  ₱{Math.round(avgPrice).toLocaleString()}
+                </div>
+                <div className="text-xs text-white/75">per night</div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Hotels List */}
-        <div className="p-4 sm:p-6 bg-gray-50 dark:bg-slate-950 space-y-8">
-          {/* Real Hotels Section (Google Places API) */}
-          {hotels.realHotels.length > 0 && (
-            <div>
-              <div className="grid gap-6">
-                {hotels.realHotels.map((hotel, index) => (
-                  <div
-                    key={hotel?.hotel_id || hotel?.id || `real-hotel-${index}`}
-                    className="group relative"
-                  >
-                    {/* Rank Badge */}
+        <div className="p-4 sm:p-6 bg-gray-50 dark:bg-slate-950">
+          <div className="space-y-6">
+            {/* Combined Hotels Display - No Separation Between Real/AI */}
+            {hotels.allHotels.map((hotel, index) => {
+              const isFirstHotel = index === 0;
+              const isBestValue = isFirstHotel && hotels.allHotels.length > 1;
+
+              return (
+                <div
+                  key={hotel?.hotel_id || hotel?.id || `hotel-${index}`}
+                  className="group relative"
+                >
+                  {/* Best Value Badge - Only on #1 Hotel */}
+                  {isBestValue && (
                     <div className="absolute -top-3 -left-3 z-10">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg ${
-                          index === 0
-                            ? "bg-gradient-to-br from-amber-400 to-amber-600"
-                            : index === 1
-                            ? "bg-gradient-to-br from-gray-300 to-gray-500"
-                            : index === 2
-                            ? "bg-gradient-to-br from-orange-400 to-orange-600"
-                            : "brand-gradient"
-                        }`}
-                      >
-                        #{index + 1}
+                      <div className="bg-gradient-to-br from-amber-400 to-amber-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+                        <span className="text-lg">⭐</span>
+                        <span className="font-bold text-sm">Best Value</span>
                       </div>
                     </div>
-                    <HotelCardItem
-                      hotel={hotel}
-                      onBookHotel={handleBookHotel}
-                    />
-                    {index < hotels.realHotels.length - 1 && (
-                      <div className="mt-6 border-b border-gray-100 dark:border-slate-800"></div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+                  )}
 
-          {/* AI Generated Hotels Section */}
-          {hotels.aiHotels.length > 0 && (
-            <div>
-              {/* Show divider only if real hotels exist above */}
-              {hotels.realHotels.length > 0 && (
-                <div className="border-t-2 border-dashed border-gray-200 dark:border-slate-700 mb-6 pt-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="bg-sky-100 dark:bg-sky-950/50 px-3 py-1.5 rounded-full">
-                      <span className="text-sky-700 dark:text-sky-400 text-sm font-semibold flex items-center gap-1.5">
-                        <span>✨</span>
-                        <span>AI Recommendations</span>
-                      </span>
+                  {/* Check-in Badge - Only on First Hotel Overall */}
+                  {isFirstHotel && (
+                    <div className="absolute -top-3 -right-3 z-10">
+                      <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+                        <span>✓</span>
+                        <span>Day 1 Check-in</span>
+                      </div>
                     </div>
-                    <span className="text-gray-500 dark:text-gray-400 text-xs">
-                      Alternative options & hidden gems
-                    </span>
-                  </div>
+                  )}
+
+                  <HotelCardItem hotel={hotel} onBookHotel={handleBookHotel} />
+
+                  {/* Divider - Except Last Item */}
+                  {index < hotels.allHotels.length - 1 && (
+                    <div className="mt-6 border-b border-gray-200 dark:border-slate-800"></div>
+                  )}
                 </div>
-              )}
+              );
+            })}
+          </div>
 
-              {/* Show warning only if hotel search was requested but failed */}
-              {hotels.realHotels.length === 0 && trip?.hotelSearchRequested && (
-                <div className="mb-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="bg-amber-100 dark:bg-amber-950/50 px-3 py-1.5 rounded-full">
-                      <span className="text-amber-700 dark:text-amber-400 text-sm font-semibold flex items-center gap-1.5">
-                        <span>✨</span>
-                        <span>AI Recommendations</span>
-                      </span>
-                    </div>
-                    <span className="text-amber-600 dark:text-amber-400 text-xs">
-                      Real hotel data unavailable - using AI suggestions
-                    </span>
-                  </div>
-                  <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 border border-amber-200 dark:border-amber-800 mb-4">
-                    <p className="text-xs text-amber-700 dark:text-amber-400">
-                      💡 <strong>Note:</strong> These are AI-generated
-                      recommendations. For real-time availability and pricing,
-                      click "Book Hotel" to search on Agoda.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Show simple header if hotel search was NOT requested (normal AI hotels) */}
-              {hotels.realHotels.length === 0 &&
-                !trip?.hotelSearchRequested && (
-                  <div className="mb-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="bg-sky-100 dark:bg-sky-950/50 px-3 py-1.5 rounded-full">
-                        <span className="text-sky-700 dark:text-sky-400 text-sm font-semibold flex items-center gap-1.5">
-                          <span>🏨</span>
-                          <span>Recommended Hotels</span>
-                        </span>
-                      </div>
-                      <span className="text-gray-500 dark:text-gray-400 text-xs">
-                        Curated by AI • Sorted by best value
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-              <div className="grid gap-6">
-                {hotels.aiHotels.map((hotel, index) => (
-                  <div
-                    key={hotel?.hotel_id || hotel?.id || `ai-hotel-${index}`}
-                    className="group relative"
-                  >
-                    {/* Rank Badge */}
-                    <div className="absolute -top-3 -left-3 z-10">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg ${
-                          index === 0
-                            ? "bg-gradient-to-br from-amber-400 to-amber-600"
-                            : index === 1
-                            ? "bg-gradient-to-br from-gray-300 to-gray-500"
-                            : index === 2
-                            ? "bg-gradient-to-br from-orange-400 to-orange-600"
-                            : "brand-gradient"
-                        }`}
-                      >
-                        #{index + 1}
-                      </div>
-                    </div>
-                    <HotelCardItem
-                      hotel={hotel}
-                      onBookHotel={handleBookHotel}
-                    />
-                    {index < hotels.aiHotels.length - 1 && (
-                      <div className="mt-6 border-b border-gray-100 dark:border-slate-800"></div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Booking Tips */}
-          <div className="mt-8 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 rounded-lg p-4 border border-sky-200 dark:border-sky-800 shadow-sm">
+          {/* Context-Aware Booking Tips */}
+          <div className="mt-8 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 rounded-xl p-5 border-2 border-sky-200 dark:border-sky-800 shadow-sm">
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-sky-100 dark:bg-sky-950/50 rounded flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-sky-600 dark:text-sky-400 text-xs">
+              <div className="w-10 h-10 bg-sky-100 dark:bg-sky-950/50 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span className="text-sky-600 dark:text-sky-400 text-xl">
                   💡
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-sky-900 dark:text-sky-300 mb-2 text-sm">
-                  Booking Tips
+                <h4 className="font-bold text-sky-900 dark:text-sky-300 mb-3 text-base">
+                  {hotels.realHotels.length > 0
+                    ? "Verified Hotels"
+                    : "Booking Tips"}
                 </h4>
-                <ul className="text-xs text-sky-800 dark:text-sky-400 space-y-1.5 font-medium">
-                  <li className="flex items-start gap-2">
-                    <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
-                      •
-                    </span>
-                    <span>Click "Book Hotel" to view prices on Agoda</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
-                      •
-                    </span>
-                    <span>Compare prices and amenities before booking</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
-                      •
-                    </span>
-                    <span>Check cancellation policies for flexibility</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
-                      •
-                    </span>
-                    <span>Book early for better rates</span>
-                  </li>
-                </ul>
+
+                {hotels.realHotels.length > 0 ? (
+                  <ul className="text-sm text-sky-800 dark:text-sky-400 space-y-2 font-medium">
+                    <li className="flex items-start gap-2">
+                      <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
+                        ✓
+                      </span>
+                      <span>
+                        These hotels are verified through Google Places API with
+                        real ratings and reviews
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
+                        ✓
+                      </span>
+                      <span>
+                        Click "Book Now" to check live availability and prices
+                        on Agoda
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
+                        ✓
+                      </span>
+                      <span>
+                        Hotels are sorted by best value - lower prices appear
+                        first
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
+                        ✓
+                      </span>
+                      <span>
+                        Check cancellation policies before booking for
+                        flexibility
+                      </span>
+                    </li>
+                  </ul>
+                ) : (
+                  <ul className="text-sm text-sky-800 dark:text-sky-400 space-y-2 font-medium">
+                    <li className="flex items-start gap-2">
+                      <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
+                        •
+                      </span>
+                      <span>
+                        Click "Book Now" to view current prices and availability
+                        on Agoda
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
+                        •
+                      </span>
+                      <span>
+                        Compare amenities and guest reviews before booking
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
+                        •
+                      </span>
+                      <span>
+                        Book early for better rates and more availability
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
+                        •
+                      </span>
+                      <span>Check cancellation policies for flexibility</span>
+                    </li>
+                  </ul>
+                )}
               </div>
             </div>
           </div>
