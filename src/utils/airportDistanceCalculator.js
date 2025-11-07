@@ -1,11 +1,18 @@
 /**
- * Airport Distance Calculator
- * Calculates actual distances between cities and airports using Haversine formula
- * Provides terrain-aware travel time estimates
+ * Airport Distance Calculator (LEGACY)
  * 
- * Purpose: Ensure users get the NEAREST airport recommendation with accurate travel times
+ * ⚠️ DEPRECATED: Use airportDistanceCalculatorEnhanced.js instead
  * 
- * Features:
+ * This legacy calculator only supports 70 hardcoded cities.
+ * The enhanced version supports all 1,634 Philippine municipalities via geocoding
+ * and includes province-aware sorting for better recommendations.
+ * 
+ * Kept for:
+ * - Test file compatibility
+ * - Fallback if enhanced calculator has issues
+ * - Reference for expected behavior
+ * 
+ * Original Features:
  * - Haversine distance calculation (straight-line distance)
  * - Terrain-aware travel time estimates (mountainous, urban, island, highway)
  * - Alternative airport suggestions
@@ -574,6 +581,15 @@ export function getTransportRecommendations(cityName, airportCode) {
     recommendation: nearest.recommendation,
     alternatives: nearest.alternatives
   };
+}
+
+// ⚠️ LEGACY EXPORTS - Use airportDistanceCalculatorEnhanced.js for new code
+// Deprecated warning only shows in dev mode
+if (import.meta.env?.DEV) {
+  console.warn(
+    '⚠️ airportDistanceCalculator.js is DEPRECATED\n' +
+    'Use airportDistanceCalculatorEnhanced.js instead for better coverage and province-aware recommendations'
+  );
 }
 
 // Export all utilities

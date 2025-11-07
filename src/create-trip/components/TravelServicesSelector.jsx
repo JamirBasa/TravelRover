@@ -56,17 +56,24 @@ const TravelServicesSelector = ({
     );
   }, [flightData.departureRegionCode]);
 
-  const airportInfo = useMemo(() => {
+  // ✅ FIXED: Use useState + useEffect for async airport recommendations
+  const [airportInfo, setAirportInfo] = React.useState(null);
+  
+  React.useEffect(() => {
     if (
       !flightData.includeFlights ||
       !flightData.departureCity ||
       !formData?.location
-    )
-      return null;
-    return getAirportRecommendations(
+    ) {
+      setAirportInfo(null);
+      return;
+    }
+    
+    // Fetch airport recommendations asynchronously
+    getAirportRecommendations(
       flightData.departureCity,
       formData.location
-    );
+    ).then(setAirportInfo);
   }, [flightData.includeFlights, flightData.departureCity, formData?.location]);
 
   const flightRecommendation = useMemo(() => {
