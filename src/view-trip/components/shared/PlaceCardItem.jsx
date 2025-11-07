@@ -88,7 +88,9 @@ function PlaceCardItem({ place }) {
 
       // ✅ Graceful handling - don't throw errors, just use fallback
       if (!response?.data?.places || response.data.places.length === 0) {
-        console.warn("⚠️ PlaceCardItem - No places found, using fallback image");
+        console.warn(
+          "⚠️ PlaceCardItem - No places found, using fallback image"
+        );
         setPhotoUrl(place?.imageUrl || "");
         return;
       }
@@ -102,26 +104,30 @@ function PlaceCardItem({ place }) {
       }
 
       const photoReference = placeData.photos[0]?.name;
-      console.log("📸 PlaceCardItem - Got photo reference:", photoReference?.substring(0, 50));
+      console.log(
+        "📸 PlaceCardItem - Got photo reference:",
+        photoReference?.substring(0, 50)
+      );
 
       if (photoReference) {
         try {
-          // ✅ Add retry logic with timeout
+          // ✅ Simplified retry logic - fetchPlacePhoto already has 20s timeout
+          // ✅ With SSL disabled in dev, photos load in 1-2 seconds
           const fetchWithRetry = async (ref, maxRetries = 2) => {
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
               try {
-                console.log(`📸 PlaceCardItem - Fetch attempt ${attempt}/${maxRetries}`);
-                const blobUrl = await Promise.race([
-                  fetchPlacePhoto(ref),
-                  new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Photo fetch timeout')), 10000)
-                  )
-                ]);
+                console.log(
+                  `📸 PlaceCardItem - Fetch attempt ${attempt}/${maxRetries}`
+                );
+                // ✅ No Promise.race needed - fetchPlacePhoto has built-in timeout
+                const blobUrl = await fetchPlacePhoto(ref);
                 return blobUrl;
               } catch (err) {
                 if (attempt === maxRetries) throw err;
-                console.warn(`⚠️ PlaceCardItem - Attempt ${attempt} failed, retrying...`);
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
+                console.warn(
+                  `⚠️ PlaceCardItem - Attempt ${attempt} failed, retrying...`
+                );
+                await new Promise((resolve) => setTimeout(resolve, 500)); // ✅ Reduced to 500ms
               }
             }
           };

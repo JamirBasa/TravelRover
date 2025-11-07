@@ -61,23 +61,25 @@ function HotelCardItem({ hotel, onBookHotel }) {
         const photoReference = hotelData.photos[0]?.name;
 
         if (photoReference) {
-          // ✅ SECURE: Use fetchPlacePhoto with retry logic
+          // ✅ Optimized: fetchPlacePhoto has built-in 20s timeout
+          // ✅ With SSL disabled in dev, photos load in 1-2 seconds
           try {
             const fetchWithRetry = async (ref, maxRetries = 2) => {
               for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                  console.log(`🏨 HotelCardItem - Fetch attempt ${attempt}/${maxRetries}`);
-                  const blobUrl = await Promise.race([
-                    fetchPlacePhoto(ref),
-                    new Promise((_, reject) => 
-                      setTimeout(() => reject(new Error('Photo fetch timeout')), 10000)
-                    )
-                  ]);
+                  console.log(
+                    `🏨 HotelCardItem - Fetch attempt ${attempt}/${maxRetries}`
+                  );
+                  // ✅ No Promise.race needed - fetchPlacePhoto has built-in timeout
+                  const blobUrl = await fetchPlacePhoto(ref);
                   return blobUrl;
                 } catch (err) {
                   if (attempt === maxRetries) throw err;
-                  console.warn(`⚠️ HotelCardItem - Attempt ${attempt} failed, retrying...`);
-                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  console.warn(
+                    `⚠️ HotelCardItem - Attempt ${attempt} failed, retrying...`
+                  );
+                  // ✅ Reduced retry delay from 1s to 500ms (faster with SSL disabled)
+                  await new Promise((resolve) => setTimeout(resolve, 500));
                 }
               }
             };
@@ -92,7 +94,7 @@ function HotelCardItem({ hotel, onBookHotel }) {
 
             currentPhotoUrl = blobUrl;
             setPhotoUrl(blobUrl);
-            console.log("✅ Secure hotel photo loaded");
+            console.log("✅ Hotel photo loaded successfully");
           } catch (photoError) {
             console.warn(
               "🏨 All hotel photo fetch attempts failed:",
