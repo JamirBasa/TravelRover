@@ -27,16 +27,28 @@ class HotelAgent(BaseAgent):
                 'hotels': []
             }
         
+        # ✅ Log user preferences for debugging
+        preferred_type = hotel_params.get('preferred_type', 'Any')
+        budget_level = hotel_params.get('budget_level', 2)
+        logger.info(f"🏨 Hotel search preferences: Type={preferred_type}, Budget Level={budget_level}")
+        
         try:
             # Get location coordinates first
             coordinates = await self._get_location_coordinates(hotel_params.get('destination'))
             
             if not coordinates:
                 # Fall back to mock data
+                logger.warning(f"⚠️ Could not get coordinates, using mock data")
                 return self._generate_mock_hotels(hotel_params)
             
             # Search for hotels using Google Places API
             hotels = await self._search_nearby_hotels(coordinates, hotel_params)
+            
+            if not hotels:
+                logger.warning(f"⚠️ No hotels found, using mock data")
+                return self._generate_mock_hotels(hotel_params)
+            
+            logger.info(f"✅ Found {len(hotels)} hotels matching criteria")
             
             # Enhance with LangGraph analysis
             enhanced_results = self._analyze_hotel_options(hotels, hotel_params)
@@ -50,7 +62,11 @@ class HotelAgent(BaseAgent):
                 'checkout': hotel_params.get('checkout_date'),
                 'guests': hotel_params.get('guests'),
                 'agent_type': 'hotel',
-                'processing_time': getattr(self, 'execution_time_ms', None)
+                'processing_time': getattr(self, 'execution_time_ms', None),
+                'user_preferences': {
+                    'preferred_type': preferred_type,
+                    'budget_level': budget_level
+                }
             }
             
         except Exception as e:
@@ -98,12 +114,22 @@ class HotelAgent(BaseAgent):
         
         try:
             url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+            
+            # ✅ Map user's preferred type to Google Places search keywords
+            preferred_type = params.get('preferred_type', '')
+            search_keyword = self._get_search_keyword_for_type(preferred_type)
+            
             search_params = {
                 'location': f"{coordinates['lat']},{coordinates['lng']}",
                 'radius': 50000,  # 50km radius
                 'type': 'lodging',
                 'key': api_key
             }
+            
+            # Add keyword filter if user specified a preference
+            if search_keyword:
+                search_params['keyword'] = search_keyword
+                logger.info(f"🏨 Filtering hotels by type: {preferred_type} (keyword: {search_keyword})")
             
             response = requests.get(url, params=search_params, timeout=15)
             data = response.json()
@@ -113,13 +139,83 @@ class HotelAgent(BaseAgent):
                 for hotel_data in data['results'][:20]:  # Limit to 20 results
                     hotel = self._parse_hotel_data(hotel_data, coordinates, api_key)
                     if hotel:
+                        # ✅ Add accommodation type classification
+                        hotel['accommodation_type'] = self._classify_accommodation_type(hotel_data, preferred_type)
                         hotels.append(hotel)
+                
+                # ✅ Filter and prioritize by preferred type
+                if preferred_type:
+                    hotels = self._filter_by_accommodation_type(hotels, preferred_type)
             
             return hotels
             
         except Exception as e:
             logger.error(f"Hotel search API failed: {e}")
             return []
+    
+    def _get_search_keyword_for_type(self, preferred_type: str) -> str:
+        """Map user's accommodation preference to Google Places search keyword"""
+        keyword_mapping = {
+            'hotel': 'hotel',
+            'resort': 'resort',
+            'hostel': 'hostel',
+            'aparthotel': 'aparthotel serviced apartment',
+            'guesthouse': 'guesthouse inn',
+            'boutique': 'boutique hotel'
+        }
+        return keyword_mapping.get(preferred_type.lower(), '') if preferred_type else ''
+    
+    def _classify_accommodation_type(self, hotel_data: Dict[str, Any], preferred_type: str) -> str:
+        """Classify accommodation type based on name and types"""
+        name_lower = hotel_data.get('name', '').lower()
+        types = hotel_data.get('types', [])
+        
+        # Check name for type indicators
+        if 'resort' in name_lower:
+            return 'resort'
+        elif 'hostel' in name_lower or 'backpack' in name_lower:
+            return 'hostel'
+        elif 'apartment' in name_lower or 'aparthotel' in name_lower:
+            return 'aparthotel'
+        elif 'inn' in name_lower or 'guesthouse' in name_lower or 'guest house' in name_lower:
+            return 'guesthouse'
+        elif 'boutique' in name_lower:
+            return 'boutique'
+        elif 'hotel' in name_lower:
+            return 'hotel'
+        
+        # Check Google Places types
+        if 'resort' in types:
+            return 'resort'
+        elif 'hostel' in types:
+            return 'hostel'
+        
+        # Default to hotel if uncertain
+        return 'hotel'
+    
+    def _filter_by_accommodation_type(self, hotels: list, preferred_type: str) -> list:
+        """Filter and prioritize hotels by accommodation type"""
+        if not preferred_type:
+            return hotels
+        
+        # Separate exact matches from others
+        exact_matches = []
+        other_matches = []
+        
+        for hotel in hotels:
+            if hotel.get('accommodation_type') == preferred_type.lower():
+                exact_matches.append(hotel)
+            else:
+                other_matches.append(hotel)
+        
+        # If we have exact matches, prioritize them but keep some alternatives
+        if exact_matches:
+            logger.info(f"✅ Found {len(exact_matches)} {preferred_type} matches out of {len(hotels)} total")
+            # Return exact matches + top-rated alternatives (in case exact matches are limited)
+            return exact_matches[:15] + other_matches[:5]
+        else:
+            logger.warning(f"⚠️ No exact {preferred_type} matches found, returning all results")
+            return hotels
     
     def _parse_hotel_data(self, hotel_data: Dict[str, Any], center_coords: Dict[str, float], api_key: str) -> Dict[str, Any]:
         """Parse individual hotel data from Google Places API with enhanced photo handling"""
@@ -375,6 +471,13 @@ class HotelAgent(BaseAgent):
         else:
             score -= 10
         
+        # ✅ NEW: Accommodation type preference match
+        preferred_type = params.get('preferred_type', '')
+        accommodation_type = hotel.get('accommodation_type', '')
+        if preferred_type and accommodation_type == preferred_type.lower():
+            score += 20  # Bonus for matching user's preferred accommodation type
+            logger.debug(f"✅ Hotel {hotel.get('name')} matches preferred type: {preferred_type}")
+        
         # Price level factor (balance of value and quality)
         price_level = hotel.get('price_level', 2)
         budget_preference = params.get('budget_level', 2)
@@ -411,6 +514,11 @@ class HotelAgent(BaseAgent):
         """Generate recommendation reason"""
         reasons = []
         
+        # ✅ NEW: Mention accommodation type if it matches preference
+        accommodation_type = hotel.get('accommodation_type', '')
+        if accommodation_type:
+            reasons.append(f"{accommodation_type}")
+        
         if hotel.get('rating', 0) >= 4.5:
             reasons.append("excellent rating")
         elif hotel.get('rating', 0) >= 4.0:
@@ -427,11 +535,11 @@ class HotelAgent(BaseAgent):
             reasons.append("good value")
         
         if score >= 80:
-            return f"Highly recommended - {', '.join(reasons[:2])}"
+            return f"Highly recommended - {', '.join(reasons[:3])}"
         elif score >= 60:
-            return f"Good choice - {', '.join(reasons[:2])}"
+            return f"Good choice - {', '.join(reasons[:3])}"
         else:
-            return "Alternative option"
+            return f"Alternative option - {', '.join(reasons[:2]) if reasons else 'available'}"
     
     def _generate_hotel_analysis(self, hotels: list, params: Dict[str, Any]) -> Dict[str, Any]:
         """Generate overall hotel analysis"""

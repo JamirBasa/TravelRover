@@ -15,6 +15,9 @@ import React, { useState, useRef, useEffect, useId } from "react";
 import { cn } from "@/lib/utils";
 import { Check, X, Edit3 } from "lucide-react";
 
+// ✅ Import production logging
+import { logError } from "@/utils/productionLogger";
+
 function InlineEditableText({
   value,
   onSave,
@@ -87,7 +90,9 @@ function InlineEditableText({
       await onSave(trimmedValue);
       setIsEditing(false);
     } catch (error) {
-      console.error("Error saving:", error);
+      logError("InlineEditableText", "Error saving text", {
+        error: error.message,
+      });
       setHasError(true);
     } finally {
       setIsSaving(false);

@@ -506,6 +506,37 @@ export const enhanceActivityCoordinates = async (activity, tripLocation) => {
 };
 
 /**
+ * Sanitize JSON string by removing markdown and extracting JSON boundaries
+ * Used for cleaning AI-generated responses
+ * @param {string} jsonString - JSON string to sanitize
+ * @returns {string|null} Sanitized JSON string or null
+ */
+export const sanitizeJSONString = (jsonString) => {
+  if (!jsonString) return null;
+
+  try {
+    // Remove markdown code blocks
+    let cleaned = jsonString
+      .replace(/```json\s*/g, "")
+      .replace(/```\s*$/g, "")
+      .trim();
+
+    // Find JSON boundaries
+    const startIndex = cleaned.indexOf("{");
+    const endIndex = cleaned.lastIndexOf("}");
+
+    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+      cleaned = cleaned.substring(startIndex, endIndex + 1);
+    }
+
+    return cleaned;
+  } catch (error) {
+    console.error("JSON sanitization error:", error);
+    return null;
+  }
+};
+
+/**
  * Detect if coordinates appear to be dummy/fake data
  * @param {Object} coords - Coordinate object to check
  * @returns {boolean} True if coordinates appear fake
