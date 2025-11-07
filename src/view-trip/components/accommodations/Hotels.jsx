@@ -206,34 +206,37 @@ function Hotels({ trip }) {
     for (let i = 0; i < hotelsToVerify.length; i += BATCH_SIZE) {
       const batch = hotelsToVerify.slice(i, i + BATCH_SIZE);
       
-      // ✅ Only verify AI hotels (real hotels skip verification)
+      // ✅ FIXED: ALL hotels need verification to get hotel_id from accommodations.json
       const batchResults = await Promise.all(
         batch.map((hotel) => {
-          if (hotel.isRealHotel) {
-            // Real hotel - no verification needed, return as-is
-            return Promise.resolve({
-              verified: true,
-              firestoreData: hotel,
-              matchScore: 100,
-              source: 'real'
-            });
-          } else {
-            // AI hotel - verify with API call
-            return verifySingleHotel(hotel);
-          }
+          // ✅ Both real and AI hotels need to be matched against accommodations.json
+          // to extract the Agoda hotel_id for booking links
+          return verifySingleHotel(hotel);
         })
       );
 
       batchResults.forEach((result, idx) => {
         const hotel = batch[idx];
         if (result.verified && result.firestoreData) {
-          verified.push({
-            ...result.firestoreData,
+          // ✅ DEBUG: Check if hotel_id exists in firestoreData
+          console.log(`🔍 Merging hotel: ${hotel.hotelName || hotel.name}`);
+          console.log("   Original hotel.hotel_id:", hotel.hotel_id);
+          console.log("   firestoreData.hotel_id:", result.firestoreData.hotel_id);
+          console.log("   firestoreData keys:", Object.keys(result.firestoreData));
+          
+          // ✅ FIX: Spread firestoreData LAST to preserve hotel_id and other enriched data
+          const mergedHotel = {
             ...hotel,
+            ...result.firestoreData,
             verified: true,
             matchScore: result.matchScore,
             verificationResult: result,
-          });
+          };
+          
+          console.log("   Merged hotel.hotel_id:", mergedHotel.hotel_id);
+          console.log("   Merged hotel.hotelId:", mergedHotel.hotelId);
+          
+          verified.push(mergedHotel);
         } else {
           verified.push({
             ...hotel,
@@ -328,12 +331,52 @@ function Hotels({ trip }) {
   // ========================================
   const generateAgodaBookingURL = useCallback(
     (hotel) => {
-      const hotelId = hotel?.hotel_id || hotel?.hotelId || hotel?.id || "";
+      // ✅ DEBUG: Log the entire hotel object to see all available IDs
+      console.log("🔍 DEBUG: Full hotel object:", hotel);
+      console.log("🔍 DEBUG: hotel.hotel_id:", hotel?.hotel_id);
+      console.log("🔍 DEBUG: hotel.hotelId:", hotel?.hotelId);
+      console.log("🔍 DEBUG: hotel.id:", hotel?.id);
+      console.log("🔍 DEBUG: hotel.place_id:", hotel?.place_id);
+      console.log("🔍 DEBUG: hotel.google_place_id:", hotel?.google_place_id);
+      console.log("🔍 DEBUG: hotel.verified:", hotel?.verified);
+      console.log("🔍 DEBUG: hotel.verificationResult:", hotel?.verificationResult);
+      console.log("🔍 DEBUG: firestoreData.hotel_id:", hotel?.verificationResult?.firestoreData?.hotel_id);
+      
+      // ✅ CRITICAL: Extract hotel_id and validate it's numeric (Agoda format)
+      // Priority order: hotel_id > hotelId > id (but only if numeric)
+      let hotelId = null;
+      
+      // Check hotel_id first
+      if (hotel?.hotel_id && !String(hotel.hotel_id).startsWith("ChIJ")) {
+        hotelId = hotel.hotel_id;
+        console.log("✅ Using hotel.hotel_id:", hotelId);
+      }
+      // Check hotelId (camelCase)
+      else if (hotel?.hotelId && !String(hotel.hotelId).startsWith("ChIJ")) {
+        hotelId = hotel.hotelId;
+        console.log("✅ Using hotel.hotelId:", hotelId);
+      }
+      // Check id (but verify it's not a Google Place ID)
+      else if (hotel?.id && !String(hotel.id).startsWith("ChIJ")) {
+        hotelId = hotel.id;
+        console.log("✅ Using hotel.id:", hotelId);
+      }
+      
+      // ✅ VALIDATION: Ensure we have a valid numeric Agoda hotel ID
+      const isValidAgodaId = hotelId && /^\d+$/.test(String(hotelId));
 
-      if (!hotelId) {
-        console.error("❌ No hotel ID available");
+      if (!hotelId || !isValidAgodaId) {
+        console.error("❌ No valid Agoda hotel ID available");
+        console.error("   Found ID:", hotelId);
+        console.error("   Is numeric?", /^\d+$/.test(String(hotelId)));
+        console.error("   Hotel verified?", hotel?.verified);
+        console.error("   Hotel name:", hotel?.hotel_name || hotel?.name);
+        console.error("   Available keys:", Object.keys(hotel).join(", "));
+        
+        // ✅ Fallback: Search by city if no hotel ID
         const cityName =
           hotel?.city || trip?.userSelection?.location?.split(",")[0] || "";
+        console.warn(`⚠️ Falling back to city search: ${cityName}`);
         return generateCitySearchURL(cityName);
       }
 
@@ -369,7 +412,7 @@ function Hotels({ trip }) {
 
       console.log("🔗 Generated Agoda URL:", {
         hotelId,
-        hotelName: hotel?.hotel_name,
+        hotelName: hotel?.hotel_name || hotel?.name,
         verified: hotel?.verified ? "✅" : "❌",
         url: finalUrl,
       });
