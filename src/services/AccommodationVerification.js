@@ -247,18 +247,27 @@ async function createSuccessResult(matchedHotel, originalHotel, score, method) {
   //     reviews: realData.reviews_count
   //   });
   // }
+  // ✅ Log successful verification with hotel_id
+  console.log(`✅ Verified hotel: ${matchedHotel.hotel_name} (ID: ${matchedHotel.hotel_id})`);
+  
   return {
     verified: true,
     matchScore: score,
     firestoreData: {
-      // ✅ Start with original hotel data
+      // ✅ Start with original hotel data (but exclude conflicting id fields)
       ...originalHotel,
       
-      // ✅ Add database verification
+      // ✅ CRITICAL: Set the correct Agoda hotel_id from database
+      // This MUST come after spread to override any id/hotel_id from originalHotel
       hotel_id: matchedHotel.hotel_id,
       hotel_name: matchedHotel.hotel_name,
+      hotelId: matchedHotel.hotel_id, // ✅ Also set camelCase version for compatibility
       name: originalHotel.name || originalHotel.hotelName || matchedHotel.hotel_name,
       hotelName: originalHotel.hotelName || originalHotel.name || matchedHotel.hotel_name,
+      
+      // ✅ IMPORTANT: Don't let 'id' field be the Google Place ID
+      // Remove any generic 'id' that might conflict with hotel_id
+      id: matchedHotel.hotel_id, // ✅ Set to Agoda hotel_id, not Google Place ID
       
       // ✅ PRIORITY: Use real Google Places data if available, fallback to AI/original data
       amenities: realData?.amenities || originalHotel.amenities || originalHotel.facilities || [],
@@ -266,7 +275,7 @@ async function createSuccessResult(matchedHotel, originalHotel, score, method) {
       user_ratings_total: realData?.user_ratings_total || originalHotel.user_ratings_total || originalHotel.reviews_count || 0,
       reviews_count: realData?.reviews_count || originalHotel.reviews_count || originalHotel.user_ratings_total || 0,
       
-      // ✅ Additional real data from Google Places
+      // ✅ Additional real data from Google Places (stored separately, not as 'id')
       google_place_id: realData?.google_place_id,
       address: realData?.address || originalHotel.hotelAddress || originalHotel.address,
       editorialSummary: realData?.editorialSummary,
