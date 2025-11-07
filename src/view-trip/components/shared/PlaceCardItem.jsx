@@ -86,41 +86,66 @@ function PlaceCardItem({ place }) {
 
       const response = await GetPlaceDetails(data);
 
-      if (!response.data.places || response.data.places.length === 0) {
-        throw new Error("No places found for this activity");
+      // ✅ Graceful handling - don't throw errors, just use fallback
+      if (!response?.data?.places || response.data.places.length === 0) {
+        console.warn(
+          "⚠️ PlaceCardItem - No places found, using fallback image"
+        );
+        setPhotoUrl(place?.imageUrl || "");
+        return;
       }
 
       const placeData = response.data.places[0];
 
       if (!placeData.photos || placeData.photos.length === 0) {
-        console.warn("No photos available for this activity");
-        setPhotoUrl(""); // Use placeholder
+        console.warn("📸 PlaceCardItem - No photos available, using fallback");
+        setPhotoUrl(place?.imageUrl || "");
         return;
       }
 
       const photoReference = placeData.photos[0]?.name;
+      console.log(
+        "📸 PlaceCardItem - Got photo reference:",
+        photoReference?.substring(0, 50)
+      );
 
       if (photoReference) {
         try {
-          // ✅ Fetch photo as blob URL for proper loading
-          const blobUrl = await fetchPlacePhoto(photoReference);
-          console.log("🔍 PlaceCardItem - Photo loaded successfully");
+          // ✅ Simplified retry logic - fetchPlacePhoto already has 20s timeout
+          // ✅ With SSL disabled in dev, photos load in 1-2 seconds
+          const fetchWithRetry = async (ref, maxRetries = 2) => {
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+              try {
+                console.log(
+                  `📸 PlaceCardItem - Fetch attempt ${attempt}/${maxRetries}`
+                );
+                // ✅ No Promise.race needed - fetchPlacePhoto has built-in timeout
+                const blobUrl = await fetchPlacePhoto(ref);
+                return blobUrl;
+              } catch (err) {
+                if (attempt === maxRetries) throw err;
+                console.warn(
+                  `⚠️ PlaceCardItem - Attempt ${attempt} failed, retrying...`
+                );
+                await new Promise((resolve) => setTimeout(resolve, 500)); // ✅ Reduced to 500ms
+              }
+            }
+          };
+
+          const blobUrl = await fetchWithRetry(photoReference);
+          console.log("✅ PlaceCardItem - Photo loaded successfully");
           setPhotoUrl(blobUrl);
         } catch (photoError) {
           console.warn(
-            "📸 PlaceCardItem - Failed to fetch photo:",
+            "📸 PlaceCardItem - All photo fetch attempts failed:",
             photoError.message
           );
           // Fallback to AI-generated image
-          if (place?.imageUrl) {
-            setPhotoUrl(place.imageUrl);
-          } else {
-            setPhotoUrl("");
-          }
+          setPhotoUrl(place?.imageUrl || "");
         }
       } else {
-        console.warn("🔍 PlaceCardItem - No photo reference found");
-        setPhotoUrl(""); // Will use placeholder
+        console.warn("📸 PlaceCardItem - No photo reference found");
+        setPhotoUrl(place?.imageUrl || "");
       }
     } catch (error) {
       console.error("🔍 PlaceCardItem - Error fetching place photo:", error);

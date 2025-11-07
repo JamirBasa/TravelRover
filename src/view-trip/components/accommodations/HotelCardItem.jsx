@@ -61,9 +61,30 @@ function HotelCardItem({ hotel, onBookHotel }) {
         const photoReference = hotelData.photos[0]?.name;
 
         if (photoReference) {
-          // ✅ SECURE: Use fetchPlacePhoto with header authentication
+          // ✅ Optimized: fetchPlacePhoto has built-in 20s timeout
+          // ✅ With SSL disabled in dev, photos load in 1-2 seconds
           try {
-            const blobUrl = await fetchPlacePhoto(photoReference);
+            const fetchWithRetry = async (ref, maxRetries = 2) => {
+              for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                  console.log(
+                    `🏨 HotelCardItem - Fetch attempt ${attempt}/${maxRetries}`
+                  );
+                  // ✅ No Promise.race needed - fetchPlacePhoto has built-in timeout
+                  const blobUrl = await fetchPlacePhoto(ref);
+                  return blobUrl;
+                } catch (err) {
+                  if (attempt === maxRetries) throw err;
+                  console.warn(
+                    `⚠️ HotelCardItem - Attempt ${attempt} failed, retrying...`
+                  );
+                  // ✅ Reduced retry delay from 1s to 500ms (faster with SSL disabled)
+                  await new Promise((resolve) => setTimeout(resolve, 500));
+                }
+              }
+            };
+
+            const blobUrl = await fetchWithRetry(photoReference);
 
             if (!isMounted) {
               // Component unmounted, cleanup immediately
@@ -73,17 +94,17 @@ function HotelCardItem({ hotel, onBookHotel }) {
 
             currentPhotoUrl = blobUrl;
             setPhotoUrl(blobUrl);
-            console.log("✅ Secure hotel photo loaded");
+            console.log("✅ Hotel photo loaded successfully");
           } catch (photoError) {
             console.warn(
-              "🏨 Failed to fetch secure photo:",
+              "🏨 All hotel photo fetch attempts failed:",
               photoError.message
             );
-            setPhotoUrl("");
+            setPhotoUrl(hotel?.imageUrl || "");
           }
         } else {
           console.warn("🏨 No photo reference found");
-          setPhotoUrl("");
+          setPhotoUrl(hotel?.imageUrl || "");
         }
       } catch (error) {
         console.error("🏨 Error fetching hotel photo:", error);
