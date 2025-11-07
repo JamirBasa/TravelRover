@@ -214,13 +214,20 @@ export const PHILIPPINE_AIRPORTS = {
   'TAG': {
     code: 'TAG',
     name: 'Bohol-Panglao International Airport',
-    city: 'Tagbilaran',
+    city: 'Panglao',
     region: 'Bohol',
     regionCode: 'central-visayas',
     status: AIRPORT_STATUS.ACTIVE,
     type: 'international',
-    coordinates: { lat: 9.5907, lng: 123.8531 },
-    aliases: ['Bohol', 'Tagbilaran', 'Tagbilaran City', 'Panglao']
+    coordinates: { lat: 9.5757, lng: 123.8534 }, // New airport on Panglao Island (opened Nov 2018)
+    aliases: ['Bohol', 'Tagbilaran', 'Tagbilaran City', 'Panglao', 'Panglao Island'],
+    notes: 'Replaced old Tagbilaran Airport in November 2018. Located on Panglao Island, serving all of Bohol province.',
+    oldAirport: {
+      name: 'Old Tagbilaran Airport',
+      coordinates: { lat: 9.6641, lng: 123.8531 },
+      closedDate: 'November 2018',
+      status: 'Closed - replaced by Bohol-Panglao International Airport'
+    }
   },
 
   // === VISAYAS - AKLAN ===
