@@ -4,7 +4,7 @@ import { Calendar, Users, DollarSign, Clock, MapPin } from "lucide-react";
 import TripActions from "./TripActions";
 import { calculateTotalBudget, formatCurrency } from "@/utils";
 
-function TripHeader({ trip, onShare, onDownload, onEdit }) {
+function TripHeader({ trip, onShare, onDownload, onEdit, isDownloading }) {
   const formatDate = (dateString) => {
     if (!dateString) return "Recently";
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -90,6 +90,7 @@ function TripHeader({ trip, onShare, onDownload, onEdit }) {
               onShare={onShare}
               onDownload={onDownload}
               onEdit={onEdit}
+              isDownloading={isDownloading}
             />
           </div>
         </div>

@@ -268,7 +268,7 @@ const getWeatherIcon = (condition) => {
 };
 
 /**
- * Get weather recommendation message
+ * Get weather recommendation message with packing suggestions
  */
 export const getWeatherRecommendation = (forecast) => {
   if (!forecast || forecast.length === 0) return null;
@@ -277,23 +277,113 @@ export const getWeatherRecommendation = (forecast) => {
   const rainyDays = forecast.filter((day) => day.rainChance === 'Yes').length;
   const totalDays = forecast.length;
 
-  let recommendation = '';
+  const recommendations = {
+    summary: '',
+    packingList: [],
+    tips: []
+  };
 
-  // Temperature recommendation
+  // Temperature-based recommendations
   if (avgTemp > 32) {
-    recommendation += '🌡️ Hot weather expected - stay hydrated and use sunscreen. ';
-  } else if (avgTemp < 20) {
-    recommendation += '🧥 Cool weather expected - bring light jackets. ';
+    recommendations.summary = '🌡️ Hot & Humid Weather';
+    recommendations.packingList = [
+      '☀️ Sunscreen (SPF 50+)',
+      '🧢 Hat or cap',
+      '👕 Light, breathable clothing',
+      '💧 Reusable water bottle',
+      '😎 Sunglasses'
+    ];
+    recommendations.tips = [
+      'Stay hydrated - drink water regularly',
+      'Avoid outdoor activities during midday (11 AM - 3 PM)',
+      'Seek shade when possible'
+    ];
+  } else if (avgTemp > 28) {
+    recommendations.summary = '☀️ Warm & Pleasant';
+    recommendations.packingList = [
+      '👕 Light clothing',
+      '☀️ Sunscreen',
+      '� Sun protection',
+      '👟 Comfortable walking shoes'
+    ];
+    recommendations.tips = [
+      'Perfect weather for outdoor activities',
+      'Stay hydrated'
+    ];
+  } else if (avgTemp > 24) {
+    recommendations.summary = '🌤️ Comfortable Temperature';
+    recommendations.packingList = [
+      '👕 Casual clothing',
+      '👟 Walking shoes',
+      '🧥 Light jacket for evening'
+    ];
+    recommendations.tips = [
+      'Great weather for sightseeing',
+      'Evenings might be cooler'
+    ];
+  } else if (avgTemp > 20) {
+    recommendations.summary = '🧥 Cool & Pleasant';
+    recommendations.packingList = [
+      '🧥 Light jacket or sweater',
+      '👖 Long pants',
+      '👟 Closed shoes',
+      '🧣 Light scarf (optional)'
+    ];
+    recommendations.tips = [
+      'Layer your clothing',
+      'Perfect for outdoor exploration'
+    ];
   } else {
-    recommendation += '🌤️ Pleasant weather expected! ';
+    recommendations.summary = '🥶 Cool to Cold';
+    recommendations.packingList = [
+      '🧥 Jacket or hoodie',
+      '🧣 Scarf',
+      '👖 Long pants',
+      '👟 Comfortable shoes',
+      '🧤 Light gloves (optional)'
+    ];
+    recommendations.tips = [
+      'Dress in layers',
+      'Warm up with hot drinks'
+    ];
   }
 
-  // Rain recommendation
+  // Rain-based additions
   if (rainyDays > totalDays / 2) {
-    recommendation += '☔ Rain likely - pack umbrellas and waterproof gear.';
+    recommendations.summary += ' with Frequent Rain';
+    recommendations.packingList.unshift('☔ Umbrella (essential)', '🧥 Waterproof jacket', '👟 Waterproof shoes');
+    recommendations.tips.unshift('Rain expected most days - plan indoor activities');
   } else if (rainyDays > 0) {
-    recommendation += '🌦️ Some rain possible - bring a light umbrella.';
+    recommendations.summary += ' with Occasional Rain';
+    recommendations.packingList.push('☔ Compact umbrella', '🧥 Light rain jacket');
+    recommendations.tips.push('Brief showers possible - carry an umbrella');
   }
 
-  return recommendation.trim();
+  return recommendations;
+};
+
+/**
+ * Convert Celsius to Fahrenheit (for international travelers)
+ */
+export const celsiusToFahrenheit = (celsius) => {
+  return Math.round((celsius * 9/5) + 32);
+};
+
+/**
+ * Get simple weather description for users
+ */
+export const getSimpleWeatherDescription = (condition) => {
+  const descriptions = {
+    Clear: 'Sunny skies',
+    Clouds: 'Cloudy',
+    Rain: 'Rainy',
+    Drizzle: 'Light rain',
+    Thunderstorm: 'Thunderstorms',
+    Snow: 'Snowy',
+    Mist: 'Misty',
+    Fog: 'Foggy',
+    Haze: 'Hazy'
+  };
+  
+  return descriptions[condition] || condition;
 };

@@ -32,6 +32,7 @@ function ViewTrip() {
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false); // ✅ NEW: Track PDF download state
 
   // ✅ NEW: Ref to control TabbedTripView from parent
   const tabbedViewRef = useRef(null);
@@ -222,6 +223,14 @@ function ViewTrip() {
   };
 
   const handleDownload = async () => {
+    // ✅ GUARD: Prevent multiple simultaneous downloads
+    if (isDownloading) {
+      toast.info("PDF generation in progress", {
+        description: "Please wait for the current download to complete",
+      });
+      return;
+    }
+
     if (!trip) {
       toast.error("Unable to generate PDF", {
         description: "Trip data is not available",
@@ -229,6 +238,7 @@ function ViewTrip() {
       return;
     }
 
+    setIsDownloading(true); // ✅ Lock the download button
     const loadingToast = toast.loading("Generating your PDF itinerary...");
 
     try {
@@ -253,6 +263,8 @@ function ViewTrip() {
       toast.error("Failed to generate PDF", {
         description: error.message || "Please try again later",
       });
+    } finally {
+      setIsDownloading(false); // ✅ Always unlock the button
     }
   };
 
@@ -333,6 +345,7 @@ function ViewTrip() {
         onShare={handleShare}
         onDownload={handleDownload}
         onEdit={handleEdit}
+        isDownloading={isDownloading}
       />
 
       {/* Main Content with optimized spacing */}
