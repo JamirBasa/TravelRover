@@ -237,8 +237,7 @@ const Admin = () => {
     };
   };
 
-  // ✅ REPLACE the calculateAnalyticsData function with this:
-
+  // ✅ Calculate analytics data
   const calculateAnalyticsData = (tripsSnapshot, usersSnapshot) => {
     // 1. Trips created over last 30 days
     const now = new Date();
@@ -554,13 +553,10 @@ const Admin = () => {
       // Try Django backend first
       try {
         console.log("📡 Attempting to fetch users from Django backend...");
-        const backendResponse = await fetch(
-          `${API_BASE_URL}/admin/users/`,
-          {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-          }
-        );
+        const backendResponse = await fetch(`${API_BASE_URL}/admin/users/`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
 
         if (backendResponse.ok) {
           const backendData = await backendResponse.json();
@@ -846,38 +842,6 @@ const Admin = () => {
     } catch (error) {
       console.error("❌ Error deleting user:", error);
       toast.error(`Failed to delete user: ${error.message}`);
-    }
-  };
-
-  // ✅ Delete Trip
-  const deleteTrip = async (tripId) => {
-    const trip = trips.find((t) => t.id === tripId);
-    if (!trip) {
-      toast.error("Trip not found");
-      return;
-    }
-
-    if (
-      !confirm(`Are you sure you want to delete trip to "${trip.destination}"?`)
-    )
-      return;
-
-    try {
-      console.log("🗑️ Deleting trip:", tripId);
-
-      const tripDocRef = doc(db, "AITrips", tripId);
-      await deleteDoc(tripDocRef);
-
-      setTrips(trips.filter((t) => t.id !== tripId));
-
-      toast.success(`Successfully deleted trip to "${trip.destination}"`);
-
-      if (activeTab === "dashboard") {
-        setTimeout(() => fetchDashboardStats(), 1000);
-      }
-    } catch (error) {
-      console.error("❌ Error deleting trip:", error);
-      toast.error(`Failed to delete trip: ${error.message}`);
     }
   };
 
@@ -1772,7 +1736,7 @@ const Admin = () => {
           </Card>
         )}
 
-        {/* ✅ TRIPS TAB */}
+        {/* ✅ TRIPS TAB - FIXED VERSION */}
         {activeTab === "trips" && !loading && (
           <Card className="brand-card overflow-hidden border-sky-200">
             <div className="overflow-x-auto">
@@ -1788,6 +1752,15 @@ const Admin = () => {
                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
                       Duration
                     </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden xl:table-cell">
+                      Budget
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden xl:table-cell">
+                      Travelers
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden xl:table-cell">
+                      Created
+                    </th>
                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
                       Status
                     </th>
@@ -1800,7 +1773,7 @@ const Admin = () => {
                   {filteredTrips.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="5"
+                        colSpan="8"
                         className="px-4 py-8 text-center text-gray-500"
                       >
                         No trips found
@@ -1812,9 +1785,11 @@ const Admin = () => {
                         key={trip.id}
                         className="hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 transition-colors"
                       >
+                        {/* Destination */}
                         <td className="px-4 py-3">
                           <div>
-                            <div className="font-semibold text-gray-900">
+                            <div className="font-semibold text-gray-900 flex items-center gap-2">
+                              <span>📍</span>
                               {trip.destination}
                             </div>
                             <div className="text-sm text-gray-500 md:hidden">
@@ -1822,42 +1797,78 @@ const Admin = () => {
                             </div>
                           </div>
                         </td>
+
+                        {/* User Email */}
                         <td className="px-4 py-3 text-sm text-gray-700 hidden md:table-cell">
-                          {trip.user_email}
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">👤</span>
+                            {trip.user_email}
+                          </div>
                         </td>
+
+                        {/* Duration */}
                         <td className="px-4 py-3 text-sm font-medium text-gray-700 hidden lg:table-cell">
-                          {trip.duration} days
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">📅</span>
+                            {trip.duration} days
+                          </div>
                         </td>
+
+                        {/* Budget */}
+                        <td className="px-4 py-3 text-sm font-medium text-gray-700 hidden xl:table-cell">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">💰</span>
+                            <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                              {trip.budget}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Travelers */}
+                        <td className="px-4 py-3 text-sm font-medium text-gray-700 hidden xl:table-cell">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">👥</span>
+                            {trip.travelers}
+                          </div>
+                        </td>
+
+                        {/* Created Date */}
+                        <td className="px-4 py-3 text-sm text-gray-600 hidden xl:table-cell">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">🕒</span>
+                            {new Date(trip.created_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </div>
+                        </td>
+
+                        {/* Status */}
                         <td className="px-4 py-3 hidden lg:table-cell">
                           <Badge
                             className={
                               trip.has_itinerary
-                                ? "bg-green-100 text-green-700 border-green-300"
-                                : "bg-gray-100 text-gray-700 border-gray-300"
+                                ? "bg-green-100 text-green-700 border-green-300 font-semibold"
+                                : "bg-gray-100 text-gray-700 border-gray-300 font-semibold"
                             }
                           >
-                            {trip.has_itinerary ? "Complete" : "Incomplete"}
+                            {trip.has_itinerary ? "✓ Complete" : "⚠ Incomplete"}
                           </Badge>
                         </td>
+
+                        {/* Actions */}
                         <td className="px-4 py-3">
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigate(`/view-trip/${trip.id}`)}
-                              className="border-sky-500 text-sky-700 hover:bg-sky-50"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => deleteTrip(trip.id)}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/view-trip/${trip.id}`)}
+                            className="border-sky-500 text-sky-700 hover:bg-sky-50"
+                            title="View trip details"
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            <span className="hidden sm:inline">View</span>
+                          </Button>
                         </td>
                       </tr>
                     ))
@@ -1865,6 +1876,26 @@ const Admin = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Table Footer with Trip Count */}
+            {trips.length > 0 && (
+              <div className="bg-gray-50 px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+                <span className="text-sm text-gray-600">
+                  Showing{" "}
+                  <span className="font-semibold text-gray-900">
+                    {filteredTrips.length}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-semibold text-gray-900">
+                    {trips.length}
+                  </span>{" "}
+                  trips
+                </span>
+                <div className="text-sm text-gray-500">
+                  {trips.filter((t) => t.has_itinerary).length} completed
+                </div>
+              </div>
+            )}
           </Card>
         )}
 
