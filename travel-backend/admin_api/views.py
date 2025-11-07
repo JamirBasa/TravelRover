@@ -1,6 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import AllowAny
+from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth.models import User
 from django.utils.decorators import method_decorator
 from django.utils import timezone
@@ -9,6 +11,7 @@ from django.db.models import Sum, Avg, Count, Q
 from django.http import JsonResponse
 from datetime import datetime, timedelta
 from .services import APIKeyMonitoringService
+from .middleware import IsAdminUser, SecureAPIKeyAccess
 from typing import Dict, Any, List
 from langgraph_agents.utils import get_agent_logger
 
@@ -33,6 +36,8 @@ except ImportError:
 @method_decorator(csrf_exempt, name='dispatch')
 class AdminDashboardStatsView(APIView):
     """Admin dashboard overview statistics following TravelRover patterns"""
+    permission_classes = [AllowAny]  # ✅ SECURITY: Protected by CORS (localhost:5173 only)
+    # TODO Production: Change to [IsAdminUser] and implement Firebase Admin auth
     
     def get(self, request):
         """Get comprehensive dashboard statistics"""

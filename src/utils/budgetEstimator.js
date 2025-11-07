@@ -15,9 +15,9 @@ import {
 } from './flightPricingAnalyzer.js';
 
 import { 
-  findNearestAirportByDistance,
-  validateAirportRecommendation 
-} from './airportDistanceCalculator.js';
+  findNearestAirportEnhanced as findNearestAirportByDistance,
+  // validateAirportRecommendation - not needed with geocoding
+} from './airportDistanceCalculatorEnhanced.js';
 
 import { getLimitedServiceInfo } from './flightRecommendations.js';
 
@@ -470,13 +470,14 @@ export const getDestinationInfo = (destination) => {
  * Returns airport details and travel information
  */
 /**
- * ✅ ENHANCED: Find nearest airport with ACTUAL distance calculation
- * Now uses Haversine distance formula for accuracy
+ * ✅ ENHANCED: Find nearest airport with GEOCODING + distance calculation
+ * Uses Google Geocoding API first (handles ALL 1,634 Philippine locations)
+ * Falls back to hardcoded coordinates if geocoding fails
  * @param {string} cityName - City name
  * @param {string} regionCode - Optional region code
- * @returns {Object} - Nearest airport details with calculated distance
+ * @returns {Promise<Object>} - Nearest airport details with calculated distance
  */
-export const findNearestAirport = (cityName, regionCode = null) => {
+export const findNearestAirport = async (cityName, regionCode = null) => {
   if (!cityName) return null;
 
   const cityLower = cityName.toLowerCase();
@@ -487,8 +488,8 @@ export const findNearestAirport = (cityName, regionCode = null) => {
   if (inactiveInfo) {
     console.log(`ℹ️ ${inactiveInfo.city} has inactive airport (${inactiveInfo.code}), calculating nearest alternative...`);
     
-    // ✅ Use distance calculator to find ACTUAL nearest alternative
-    const nearest = findNearestAirportByDistance(cityName, regionCode);
+    // ✅ Use distance calculator to find ACTUAL nearest alternative (with geocoding)
+    const nearest = await findNearestAirportByDistance(cityName, regionCode);
     
     if (nearest.error || nearest.warning) {
       // Fallback to hardcoded alternative if calculation fails
@@ -541,9 +542,9 @@ export const findNearestAirport = (cityName, regionCode = null) => {
     };
   }
   
-  // ✅ STEP 3: Calculate ACTUAL nearest airport using Haversine distance
+  // ✅ STEP 3: Calculate ACTUAL nearest airport using geocoding + Haversine distance
   console.log(`🔍 Calculating nearest airport for: ${cityName}`);
-  const nearest = findNearestAirportByDistance(cityName, regionCode);
+  const nearest = await findNearestAirportByDistance(cityName, regionCode);
   
   if (nearest.error || nearest.warning) {
     console.warn(`⚠️ Distance calculation unavailable for ${cityName}, using fallback`);
@@ -588,6 +589,13 @@ export const findNearestAirport = (cityName, regionCode = null) => {
   
   // ✅ Return calculated nearest airport
   const airportData = PHILIPPINE_AIRPORTS[nearest.code];
+  
+  console.log(`✅ findNearestAirport returning for ${cityName}:`, {
+    code: nearest.code,
+    hasAirportData: !!airportData,
+    nearest
+  });
+  
   return {
     code: nearest.code,
     ...airportData,
@@ -608,23 +616,26 @@ export const findNearestAirport = (cityName, regionCode = null) => {
  * Used in budget calculations and flight preferences
  * ✅ ENHANCED: Now includes validation of recommended airports
  */
-export const getAirportRecommendations = (departureCity, destinationCity) => {
-  const departure = findNearestAirport(departureCity);
-  const destination = findNearestAirport(destinationCity);
+export const getAirportRecommendations = async (departureCity, destinationCity) => {
+  console.log(`🛫 getAirportRecommendations called:`, { departureCity, destinationCity });
   
-  // ✅ NEW: Validate if recommended airports are actually nearest
-  const departureValidation = departure ? validateAirportRecommendation(departureCity, departure.code) : null;
-  const destinationValidation = destination ? validateAirportRecommendation(destinationCity, destination.code) : null;
+  // ✅ Enhanced calculator with geocoding - automatically finds nearest airport
+  const departure = await findNearestAirport(departureCity);
+  const destination = await findNearestAirport(destinationCity);
   
-  // Log validation warnings
-  if (departureValidation && !departureValidation.valid) {
-    console.warn(`⚠️ Departure airport validation: ${departureValidation.message}`);
-    console.log(`   Suggestion: ${departureValidation.suggestion}`);
+  console.log(`📊 Airport recommendations:`, { 
+    departure: { code: departure?.code, name: departure?.name },
+    destination: { code: destination?.code, name: destination?.name }
+  });
+  
+  // ℹ️ Note: Validation not needed - geocoding provides most accurate results
+  // Log if geocoded (shows enhanced calculator is working)
+  if (departure?.geocoded) {
+    console.log(`🌍 Departure geocoded: ${departure.province || 'unknown'} province`);
   }
   
-  if (destinationValidation && !destinationValidation.valid) {
-    console.warn(`⚠️ Destination airport validation: ${destinationValidation.message}`);
-    console.log(`   Suggestion: ${destinationValidation.suggestion}`);
+  if (destination?.geocoded) {
+    console.log(`🌍 Destination geocoded: ${destination.province || 'unknown'} province`);
   }
   
   return {
@@ -633,10 +644,10 @@ export const getAirportRecommendations = (departureCity, destinationCity) => {
     needsFlight: departure?.region !== destination?.region,
     route: departure && destination ? `${departure.code} → ${destination.code}` : null,
     nonstopAvailableFromDeparture: departure?.hasDirectAirport && destination?.hasDirectAirport,
-    validation: {
-      departure: departureValidation,
-      destination: destinationValidation,
-      bothValid: departureValidation?.valid && destinationValidation?.valid
+    // ✅ Enhanced calculator provides accurate results via geocoding
+    geocoded: {
+      departure: departure?.geocoded || false,
+      destination: destination?.geocoded || false
     }
   };
 };

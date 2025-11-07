@@ -140,7 +140,7 @@ def check_proxy_configuration():
     # Check aimodel.jsx configuration
     aimodel = Path(__file__).parent / 'src' / 'config' / 'aimodel.jsx'
     if aimodel.exists():
-        with open(aimodel, 'r') as f:
+        with open(aimodel, 'r', encoding='utf-8') as f:
             content = f.read()
             if 'USE_PROXY' in content and 'GeminiProxyChatSession' in content:
                 print(f"{GREEN}✓ Frontend configured to use proxy{RESET}")

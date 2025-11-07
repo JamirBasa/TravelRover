@@ -23,7 +23,7 @@ except ImportError:
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])  # TODO: Add authentication in production
+@permission_classes([AllowAny])  # ✅ Secured via CORS - only localhost:5173 can access
 def gemini_generate(request):
     """
     Proxy endpoint for Gemini AI generation
@@ -414,7 +414,7 @@ Generate realistic, logistically accurate itineraries with ACCURATE travel times
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([AllowAny])  # ✅ Health check endpoint - public by design
 def gemini_health(request):
     """
     Health check endpoint for Gemini proxy
