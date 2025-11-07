@@ -18,7 +18,6 @@ import {
 function InfoSection({ trip }) {
   const [photoUrl, setPhotoUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     let currentPhotoUrl = null;
@@ -30,40 +29,78 @@ function InfoSection({ trip }) {
       }
 
       setIsLoading(true);
-      setError(null);
 
       try {
-        const data = { textQuery: trip.userSelection.location };
+        const searchQuery = `${trip.userSelection.location}, Philippines`;
+        console.log("🔍 InfoSection - Searching for:", searchQuery);
+
+        const data = { textQuery: searchQuery };
         const response = await GetPlaceDetails(data);
 
-        if (!response.data.places || response.data.places.length === 0) {
-          throw new Error("No places found for this location");
+        console.log("🔍 InfoSection - GetPlaceDetails response:", response);
+        console.log("🔍 InfoSection - response.data:", response.data);
+        console.log(
+          "🔍 InfoSection - response.data.places:",
+          response.data?.places
+        );
+
+        if (!response?.data?.places || response.data.places.length === 0) {
+          console.warn("⚠️ InfoSection - No places found in response");
+          setPhotoUrl("");
+          return;
         }
 
         const place = response.data.places[0];
+        console.log("📍 InfoSection - Place data:", {
+          displayName: place.displayName,
+          hasPhotos: !!place.photos,
+          photosLength: place.photos?.length || 0,
+          firstPhoto: place.photos?.[0],
+        });
 
         if (!place.photos || place.photos.length === 0) {
-          console.warn("No photos available for this place");
+          console.warn(
+            "📸 InfoSection - No photos available for:",
+            trip.userSelection.location
+          );
+          console.warn("📸 InfoSection - Place object:", place);
           setPhotoUrl("");
           return;
         }
 
         const photoReference = place.photos[0]?.name;
+        console.log("📸 InfoSection - Photo reference:", photoReference);
+        console.log("📸 InfoSection - Full photo object:", place.photos[0]);
+
         if (photoReference) {
           try {
             // ✅ Fetch photo as blob URL for proper loading
             const blobUrl = await fetchPlacePhoto(photoReference);
             currentPhotoUrl = blobUrl;
             setPhotoUrl(blobUrl);
-            console.log("✅ InfoSection - Photo loaded successfully");
+            console.log(
+              "✅ InfoSection - Photo loaded successfully:",
+              blobUrl.substring(0, 50)
+            );
           } catch (photoError) {
-            console.warn("📸 Failed to fetch photo:", photoError.message);
+            console.warn(
+              "📸 InfoSection - Failed to fetch photo:",
+              photoError.message
+            );
             setPhotoUrl("");
           }
+        } else {
+          console.warn("📸 InfoSection - No photo reference found");
+          setPhotoUrl("");
         }
       } catch (error) {
-        console.error("Error fetching place photo:", error);
-        setError(error.message);
+        console.error("❌ InfoSection - Error fetching place photo:", error);
+        console.error("❌ InfoSection - Error details:", {
+          message: error.message,
+          response: error.response,
+          trip: trip?.userSelection,
+        });
+        // Don't set error state - just use placeholder
         setPhotoUrl("");
       } finally {
         setIsLoading(false);
@@ -101,17 +138,6 @@ function InfoSection({ trip }) {
                 </div>
                 <p className="text-sky-700 dark:text-sky-300 font-semibold text-lg tracking-wide">
                   Loading destination...
-                </p>
-              </div>
-            </div>
-          ) : error ? (
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-100 to-gray-100 dark:from-slate-900 dark:to-gray-900 flex items-center justify-center">
-              <div className="text-center p-8">
-                <div className="w-24 h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <MapPin className="h-12 w-12 text-slate-400 dark:text-slate-600" />
-                </div>
-                <p className="text-slate-600 dark:text-slate-400 font-medium text-lg">
-                  Destination Preview Unavailable
                 </p>
               </div>
             </div>

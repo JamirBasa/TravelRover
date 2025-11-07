@@ -66,8 +66,16 @@ export const GetPlaceDetails = async (data) => {
     if (place) {
       console.log(
         "✅ Place found:",
-        place.displayName?.text || place.displayName
+        place.displayName?.text || place.displayName,
+        "| Photos:",
+        place.photos?.length || 0
       );
+
+      // Extra debug for photo issues
+      if (!place.photos || place.photos.length === 0) {
+        console.warn("⚠️ No photos in response for:", data.textQuery);
+        console.warn("⚠️ Place keys:", Object.keys(place));
+      }
     }
 
     // ✅ Cache successful response

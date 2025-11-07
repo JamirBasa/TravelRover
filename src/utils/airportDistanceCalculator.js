@@ -1,11 +1,18 @@
 /**
- * Airport Distance Calculator
- * Calculates actual distances between cities and airports using Haversine formula
- * Provides terrain-aware travel time estimates
+ * Airport Distance Calculator (LEGACY)
  * 
- * Purpose: Ensure users get the NEAREST airport recommendation with accurate travel times
+ * ⚠️ DEPRECATED: Use airportDistanceCalculatorEnhanced.js instead
  * 
- * Features:
+ * This legacy calculator only supports 70 hardcoded cities.
+ * The enhanced version supports all 1,634 Philippine municipalities via geocoding
+ * and includes province-aware sorting for better recommendations.
+ * 
+ * Kept for:
+ * - Test file compatibility
+ * - Fallback if enhanced calculator has issues
+ * - Reference for expected behavior
+ * 
+ * Original Features:
  * - Haversine distance calculation (straight-line distance)
  * - Terrain-aware travel time estimates (mountainous, urban, island, highway)
  * - Alternative airport suggestions
@@ -27,7 +34,7 @@ const AIRPORT_COORDINATES = {
   'CEB': { lat: 10.3075, lng: 123.9794, city: 'Cebu', region: 'r07' },
   'ILO': { lat: 10.8330, lng: 122.4933, city: 'Iloilo', region: 'r06' },
   'BCD': { lat: 10.6425, lng: 122.9283, city: 'Bacolod', region: 'r06' },
-  'TAG': { lat: 9.6641, lng: 123.8531, city: 'Tagbilaran (Bohol)', region: 'r07' },
+  'TAG': { lat: 9.5757, lng: 123.8534, city: 'Panglao (Bohol-Panglao Intl)', region: 'r07' }, // New airport opened Nov 2018
   'DGT': { lat: 9.3339, lng: 123.3004, city: 'Dumaguete', region: 'r07' },
   'TAC': { lat: 11.2280, lng: 125.0278, city: 'Tacloban', region: 'r08' },
   'KLO': { lat: 11.6794, lng: 122.3758, city: 'Kalibo', region: 'r06' },
@@ -574,6 +581,15 @@ export function getTransportRecommendations(cityName, airportCode) {
     recommendation: nearest.recommendation,
     alternatives: nearest.alternatives
   };
+}
+
+// ⚠️ LEGACY EXPORTS - Use airportDistanceCalculatorEnhanced.js for new code
+// Deprecated warning only shows in dev mode
+if (import.meta.env?.DEV) {
+  console.warn(
+    '⚠️ airportDistanceCalculator.js is DEPRECATED\n' +
+    'Use airportDistanceCalculatorEnhanced.js instead for better coverage and province-aware recommendations'
+  );
 }
 
 // Export all utilities

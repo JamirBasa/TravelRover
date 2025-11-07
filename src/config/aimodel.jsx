@@ -16,11 +16,14 @@ if (!USE_PROXY && !apiKey) {
   );
 }
 
-console.log("API KEY configured:", apiKey ? "✓" : "✗");
-console.log(
-  "Gemini Proxy Mode:",
-  USE_PROXY ? "ENABLED (secure)" : "DISABLED (direct)"
-);
+// ✅ SECURITY: Never log API keys or sensitive configuration
+// Only log proxy mode status for debugging
+if (import.meta.env.MODE === "development") {
+  console.log(
+    "Gemini Proxy Mode:",
+    USE_PROXY ? "ENABLED (secure)" : "DISABLED (direct)"
+  );
+}
 
 const genAI = USE_PROXY ? null : new GoogleGenerativeAI(apiKey);
 
