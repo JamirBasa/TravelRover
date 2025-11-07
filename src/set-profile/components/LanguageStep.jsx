@@ -36,7 +36,7 @@ const LanguageStep = ({ profileData, handleMultiSelect }) => {
               Select Languages You Speak
             </h3>
           </div>
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-gray-600 dark:text-gray-400">
             Helps us recommend destinations where you can communicate
           </p>
         </div>
@@ -63,7 +63,7 @@ const LanguageStep = ({ profileData, handleMultiSelect }) => {
                     className={`${
                       isSelected
                         ? "bg-white/20"
-                        : "bg-gradient-to-br from-sky-100 to-blue-100"
+                        : "bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900/30 dark:to-blue-900/30"
                     } p-2 rounded-lg text-2xl`}
                   >
                     {lang.flag}
@@ -71,14 +71,14 @@ const LanguageStep = ({ profileData, handleMultiSelect }) => {
                   <div className="flex-1 min-w-0">
                     <div
                       className={`font-semibold text-sm ${
-                        isSelected ? "text-white" : "text-gray-800"
+                        isSelected ? "text-white" : "text-gray-800 dark:text-gray-200"
                       }`}
                     >
                       {lang.label}
                     </div>
                     <div
                       className={`text-xs mt-0.5 ${
-                        isSelected ? "text-white/90" : "text-gray-600"
+                        isSelected ? "text-white/90" : "text-gray-600 dark:text-gray-400"
                       }`}
                     >
                       {lang.desc}

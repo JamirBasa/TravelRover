@@ -67,7 +67,7 @@ const TravelStyleStep = ({
             <h3 className="text-base font-bold brand-gradient-text mb-1">
               Preferred Trip Types
             </h3>
-            <p className="text-xs text-gray-600">Select activities you enjoy</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">Select activities you enjoy</p>
           </div>
           <div className="space-y-2">
             {tripTypes.map((type) => {
@@ -91,18 +91,18 @@ const TravelStyleStep = ({
                     className={`${
                       isSelected
                         ? "bg-white/20"
-                        : "bg-gradient-to-br from-sky-100 to-blue-100"
+                        : "bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900/30 dark:to-blue-900/30"
                     } p-2 rounded-lg mr-3`}
                   >
                     <IconComponent
                       className={`text-lg ${
-                        isSelected ? "text-white" : "text-sky-600"
+                        isSelected ? "text-white" : "text-sky-600 dark:text-sky-400"
                       }`}
                     />
                   </div>
                   <span
                     className={`font-medium text-sm flex-1 ${
-                      isSelected ? "text-white" : "text-gray-800"
+                      isSelected ? "text-white" : "text-gray-800 dark:text-gray-200"
                     }`}
                   >
                     {type.label}
@@ -126,20 +126,20 @@ const TravelStyleStep = ({
               <h3 className="text-base font-bold brand-gradient-text mb-1">
                 Preferred Budget Range
               </h3>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 Your typical budget preference (can be customized per trip)
               </p>
             </div>
-            <div className="mb-2 p-2.5 bg-gradient-to-br from-sky-50 to-blue-50 border border-sky-200 rounded-lg">
-              <div className="space-y-0.5 text-xs text-gray-700">
+            <div className="mb-2 p-2.5 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-900/20 dark:to-blue-900/20 border border-sky-200 dark:border-sky-700 rounded-lg">
+              <div className="space-y-0.5 text-xs text-gray-700 dark:text-gray-300">
                 <div className="flex gap-2">
-                  <span className="font-semibold text-sky-600 min-w-[70px]">
+                  <span className="font-semibold text-sky-600 dark:text-sky-400 min-w-[70px]">
                     Budget:
                   </span>
                   <span>₱2-8k/day · Hostels, local food, basic activities</span>
                 </div>
                 <div className="flex gap-2">
-                  <span className="font-semibold text-sky-600 min-w-[70px]">
+                  <span className="font-semibold text-sky-600 dark:text-sky-400 min-w-[70px]">
                     Moderate:
                   </span>
                   <span>
@@ -147,7 +147,7 @@ const TravelStyleStep = ({
                   </span>
                 </div>
                 <div className="flex gap-2">
-                  <span className="font-semibold text-sky-600 min-w-[70px]">
+                  <span className="font-semibold text-sky-600 dark:text-sky-400 min-w-[70px]">
                     Luxury:
                   </span>
                   <span>₱20k+/day · High-end resorts, premium experiences</span>
@@ -176,7 +176,7 @@ const TravelStyleStep = ({
                     <div className="flex items-center justify-between mb-1">
                       <div
                         className={`font-semibold text-sm ${
-                          isSelected ? "text-white" : "text-gray-800"
+                          isSelected ? "text-white" : "text-gray-800 dark:text-gray-200"
                         }`}
                       >
                         {budget.label}
@@ -189,7 +189,7 @@ const TravelStyleStep = ({
                     </div>
                     <div
                       className={`text-xs ${
-                        isSelected ? "text-white/90" : "text-sky-600"
+                        isSelected ? "text-white/90" : "text-sky-600 dark:text-sky-400"
                       }`}
                     >
                       {budget.range}
@@ -232,14 +232,14 @@ const TravelStyleStep = ({
                       className={`${
                         isSelected
                           ? "bg-white/20"
-                          : "bg-gradient-to-br from-sky-100 to-blue-100"
+                          : "bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900/30 dark:to-blue-900/30"
                       } p-2 rounded-lg mr-3 text-lg`}
                     >
                       {style.icon}
                     </div>
                     <span
                       className={`font-medium text-sm flex-1 ${
-                        isSelected ? "text-white" : "text-gray-800"
+                        isSelected ? "text-white" : "text-gray-800 dark:text-gray-200"
                       }`}
                     >
                       {style.label}
