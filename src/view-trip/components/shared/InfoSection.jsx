@@ -74,8 +74,27 @@ function InfoSection({ trip }) {
 
         if (photoReference) {
           try {
-            // ✅ Fetch photo as blob URL for proper loading
-            const blobUrl = await fetchPlacePhoto(photoReference);
+            // ✅ Fetch photo with retry logic and timeout
+            const fetchWithRetry = async (ref, maxRetries = 2) => {
+              for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                  console.log(`📸 InfoSection - Fetch attempt ${attempt}/${maxRetries}`);
+                  const blobUrl = await Promise.race([
+                    fetchPlacePhoto(ref),
+                    new Promise((_, reject) => 
+                      setTimeout(() => reject(new Error('Photo fetch timeout')), 10000)
+                    )
+                  ]);
+                  return blobUrl;
+                } catch (err) {
+                  if (attempt === maxRetries) throw err;
+                  console.warn(`⚠️ InfoSection - Attempt ${attempt} failed, retrying...`);
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+              }
+            };
+
+            const blobUrl = await fetchWithRetry(photoReference);
             currentPhotoUrl = blobUrl;
             setPhotoUrl(blobUrl);
             console.log(
@@ -84,7 +103,7 @@ function InfoSection({ trip }) {
             );
           } catch (photoError) {
             console.warn(
-              "📸 InfoSection - Failed to fetch photo:",
+              "📸 InfoSection - All photo fetch attempts failed:",
               photoError.message
             );
             setPhotoUrl("");
