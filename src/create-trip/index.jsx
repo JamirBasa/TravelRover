@@ -865,6 +865,10 @@ function CreateTrip() {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
+    useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStep]);
+
   // Google Login
   const googleLogin = useGoogleLogin({
     onSuccess: (codeResp) => GetUserProfile(codeResp),

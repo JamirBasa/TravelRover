@@ -106,7 +106,7 @@ const DietaryCulturalStep = ({
                 Dietary Preferences
               </h3>
             </div>
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               Choose dietary restrictions we should consider
             </p>
           </div>
@@ -133,7 +133,7 @@ const DietaryCulturalStep = ({
                       className={`${
                         isSelected
                           ? "bg-white/20"
-                          : "bg-gradient-to-br from-sky-100 to-blue-100"
+                          : "bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900/30 dark:to-blue-900/30"
                       } p-2 rounded-lg text-2xl flex-shrink-0`}
                     >
                       {diet.emoji}
@@ -141,14 +141,14 @@ const DietaryCulturalStep = ({
                     <div className="flex-1 min-w-0">
                       <div
                         className={`font-semibold text-sm ${
-                          isSelected ? "text-white" : "text-gray-800"
+                          isSelected ? "text-white" : "text-gray-800 dark:text-gray-200"
                         }`}
                       >
                         {diet.label}
                       </div>
                       <div
                         className={`text-xs mt-0.5 ${
-                          isSelected ? "text-white/90" : "text-gray-600"
+                          isSelected ? "text-white/90" : "text-gray-600 dark:text-gray-400"
                         }`}
                       >
                         {diet.desc}
@@ -167,13 +167,13 @@ const DietaryCulturalStep = ({
         </div>
 
         {/* Religious Dietary Requirement - Inclusive */}
-        <div className="brand-card p-3 border-sky-200">
+        <div className="brand-card p-3 border-sky-200 dark:border-sky-700">
           <label className="flex items-start gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={profileData.isHalal}
               onChange={(e) => handleInputChange("isHalal", e.target.checked)}
-              className="mt-0.5 w-4 h-4 text-sky-600 focus:ring-sky-500 border-gray-300 rounded transition-all"
+              className="mt-0.5 w-4 h-4 text-sky-600 focus:ring-sky-500 border-gray-300 dark:border-slate-600 rounded transition-all"
             />
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-0.5">
@@ -184,7 +184,7 @@ const DietaryCulturalStep = ({
                   Strict Religious Dietary Requirements
                 </span>
               </div>
-              <p className="text-gray-600 text-xs ml-6">
+              <p className="text-gray-600 dark:text-gray-400 text-xs ml-6">
                 Only recommend destinations with verified religious dietary
                 options (Halal, Kosher, etc.)
               </p>
@@ -203,7 +203,7 @@ const DietaryCulturalStep = ({
                 Cultural Considerations
               </h3>
             </div>
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               Select any preferences (optional)
             </p>
           </div>
@@ -230,7 +230,7 @@ const DietaryCulturalStep = ({
                       className={`${
                         isSelected
                           ? "bg-white/20"
-                          : "bg-gradient-to-br from-sky-100 to-blue-100"
+                          : "bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900/30 dark:to-blue-900/30"
                       } p-2 rounded-lg text-2xl flex-shrink-0`}
                     >
                       {culture.emoji}
@@ -238,14 +238,14 @@ const DietaryCulturalStep = ({
                     <div className="flex-1 min-w-0">
                       <div
                         className={`font-semibold text-sm ${
-                          isSelected ? "text-white" : "text-gray-800"
+                          isSelected ? "text-white" : "text-gray-800 dark:text-gray-200"
                         }`}
                       >
                         {culture.label}
                       </div>
                       <div
                         className={`text-xs mt-0.5 ${
-                          isSelected ? "text-white/90" : "text-gray-600"
+                          isSelected ? "text-white/90" : "text-gray-600 dark:text-gray-400"
                         }`}
                       >
                         {culture.desc}

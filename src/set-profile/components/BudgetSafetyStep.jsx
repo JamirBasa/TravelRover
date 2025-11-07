@@ -124,15 +124,15 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
     <div className="max-w-2xl mx-auto">
       <div className="space-y-4">
         {/* Emergency Contact - Ultra Compact */}
-        <div className="brand-card p-4 border-sky-200">
+        <div className="brand-card p-4 border-sky-200 dark:border-sky-700">
           <h3 className="text-sm font-bold brand-gradient-text mb-3 flex items-center gap-1.5">
-            <FaShieldAlt className="text-sky-600 text-sm" />
+            <FaShieldAlt className="text-sky-600 dark:text-sky-400 text-sm" />
             Emergency Contact
           </h3>
           <div className="space-y-2.5">
             <div>
-              <label className="block text-xs font-medium text-gray-800 mb-1 flex items-center gap-1">
-                <FaUser className="text-xs text-sky-600" />
+              <label className="block text-xs font-medium text-gray-800 dark:text-gray-200 mb-1 flex items-center gap-1">
+                <FaUser className="text-xs text-sky-600 dark:text-sky-400" />
                 Contact Name *
               </label>
               <Input
@@ -147,7 +147,7 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
 
             <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <label className="block text-xs font-medium text-gray-800 mb-1">
+                <label className="block text-xs font-medium text-gray-800 dark:text-gray-200 mb-1">
                   Relationship
                 </label>
                 <Input
@@ -164,8 +164,8 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-800 mb-1 flex items-center gap-1">
-                  <FaPhone className="text-xs text-sky-600" />
+                <label className="block text-xs font-medium text-gray-800 dark:text-gray-200 mb-1 flex items-center gap-1">
+                  <FaPhone className="text-xs text-sky-600 dark:text-sky-400" />
                   Phone *
                 </label>
                 <Input
@@ -180,7 +180,7 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
                   !isValidPhilippinePhone(
                     profileData.emergencyContact?.phone
                   ) && (
-                    <p className="text-xs text-red-500 mt-0.5">
+                    <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">
                       Please enter a valid mobile number
                     </p>
                   )}
@@ -190,9 +190,9 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
         </div>
 
         {/* Travel Experience - Ultra Compact */}
-        <div className="brand-card p-4 border-sky-200">
+        <div className="brand-card p-4 border-sky-200 dark:border-sky-700">
           <h3 className="text-sm font-bold brand-gradient-text mb-2.5 flex items-center gap-1.5">
-            <FaStar className="text-sky-600 text-sm" />
+            <FaStar className="text-sky-600 dark:text-sky-400 text-sm" />
             Travel Experience
           </h3>
           <div className="space-y-1.5">
@@ -213,20 +213,20 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
                 >
                   <IconComponent
                     className={`text-base mr-2.5 ${
-                      isSelected ? "text-white" : "text-sky-600"
+                      isSelected ? "text-white" : "text-sky-600 dark:text-sky-400"
                     }`}
                   />
                   <div className="flex-1">
                     <span
                       className={`font-medium text-xs ${
-                        isSelected ? "text-white" : "text-gray-800"
+                        isSelected ? "text-white" : "text-gray-800 dark:text-gray-200"
                       }`}
                     >
                       {exp.label}
                     </span>
                     <p
                       className={`text-xs mt-0.5 ${
-                        isSelected ? "text-white/90" : "text-gray-500"
+                        isSelected ? "text-white/90" : "text-gray-600 dark:text-gray-400"
                       }`}
                     >
                       {exp.desc}
@@ -244,11 +244,11 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
         </div>
 
         {/* Additional Info - Ultra Compact */}
-        <div className="brand-card p-4 border-sky-200 space-y-2.5">
+        <div className="brand-card p-4 border-sky-200 dark:border-sky-700 space-y-2.5">
           {/* Mobility Needs */}
           <div>
-            <label className="block text-xs font-medium text-gray-800 mb-1 flex items-center gap-1">
-              <FaWheelchair className="text-xs text-sky-600" />
+            <label className="block text-xs font-medium text-gray-800 dark:text-gray-200 mb-1 flex items-center gap-1">
+              <FaWheelchair className="text-xs text-sky-600 dark:text-sky-400" />
               Mobility needs?
             </label>
             <Input
@@ -263,8 +263,8 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
 
           {/* Bucket List */}
           <div>
-            <label className="block text-xs font-medium text-gray-800 mb-1 flex items-center gap-1">
-              <FaMapMarkerAlt className="text-xs text-sky-600" />
+            <label className="block text-xs font-medium text-gray-800 dark:text-gray-200 mb-1 flex items-center gap-1">
+              <FaMapMarkerAlt className="text-xs text-sky-600 dark:text-sky-400" />
               Dream destinations?
             </label>
             <Input
