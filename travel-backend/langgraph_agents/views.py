@@ -9,6 +9,7 @@ from .services import OrchestrationService, SessionService
 from .utils import get_agent_logger, validate_email
 from .exceptions import LangGraphAgentError, DataValidationError
 from .models import TravelPlanningSession, AgentExecutionLog
+from .throttling import TripGenerationThrottle, BurstTripGenerationThrottle, SessionStatusThrottle, HealthCheckThrottle
 
 logger = get_agent_logger("LangGraphViews")
 
@@ -16,7 +17,9 @@ logger = get_agent_logger("LangGraphViews")
 class LangGraphTravelPlannerView(APIView):
     """
     Main LangGraph Travel Planner API endpoint using modular services
+    Rate Limited: 5 requests/hour per user, 2 requests/minute burst protection
     """
+    throttle_classes = [TripGenerationThrottle, BurstTripGenerationThrottle]
     
     def post(self, request):
         """Execute LangGraph travel planning workflow"""
@@ -80,7 +83,9 @@ class LangGraphTravelPlannerView(APIView):
 class LangGraphSessionStatusView(APIView):
     """
     Get status and results of a LangGraph session using services
+    Rate Limited: 30 requests/minute per user
     """
+    throttle_classes = [SessionStatusThrottle]
     
     def get(self, request, session_id):
         """Get session status and results"""
@@ -136,7 +141,9 @@ class LangGraphSessionStatusView(APIView):
 class LangGraphHealthCheckView(APIView):
     """
     Health check endpoint for LangGraph system with comprehensive checks
+    Rate Limited: 60 requests/minute
     """
+    throttle_classes = [HealthCheckThrottle]
     
     def get(self, request):
         """Check LangGraph system health"""

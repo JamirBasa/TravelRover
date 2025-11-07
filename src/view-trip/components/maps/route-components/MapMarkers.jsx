@@ -85,7 +85,7 @@ function CustomMarkerContent({ location, index, markerColor }) {
         img.src = unsplashUrl;
       });
     } catch (error) {
-      console.error("Error fetching image:", error);
+      // Silently return null if image fetch fails
       return null;
     }
   };

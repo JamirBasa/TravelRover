@@ -49,7 +49,7 @@ export function LocationInfoWindow({ selectedLocation, onClose }) {
           setIsLoadingPhoto(false);
         });
       } catch (error) {
-        console.error("Error fetching place photo:", error);
+        // Silently handle photo fetch errors
         setIsLoadingPhoto(false);
       }
     };

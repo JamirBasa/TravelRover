@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { GetPlaceDetails, fetchPlacePhoto } from "@/config/GlobalApi";
 
+// ✅ Import production logging
+import { logDebug, logError } from "@/utils/productionLogger";
+
 function HotelCardItem({ hotel, onBookHotel }) {
   const [photoUrl, setPhotoUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -14,11 +17,11 @@ function HotelCardItem({ hotel, onBookHotel }) {
     const GetPlacePhoto = async () => {
       const hotelName = hotel?.hotelName || hotel?.name;
       if (!hotelName) {
-        console.warn("🏨 No hotel name provided for photo search");
+        logDebug("HotelCardItem", "No hotel name provided for photo search");
         return;
       }
 
-      console.log("🏨 HotelCardItem - Fetching photo for:", hotelName);
+      logDebug("HotelCardItem", "Fetching photo for hotel", { hotelName });
 
       setIsLoading(true);
       setError(null);
@@ -38,7 +41,7 @@ function HotelCardItem({ hotel, onBookHotel }) {
           searchQuery += ", Manila, Philippines";
         }
 
-        console.log("🏨 Search query:", searchQuery);
+        logDebug("HotelCardItem", "Search query constructed", { searchQuery });
 
         const data = { textQuery: searchQuery };
         const response = await GetPlaceDetails(data);
@@ -53,7 +56,7 @@ function HotelCardItem({ hotel, onBookHotel }) {
         const hotelData = response.data.places[0];
 
         if (!hotelData.photos || hotelData.photos.length === 0) {
-          console.warn("🏨 No photos available for this hotel");
+          logDebug("HotelCardItem", "No photos available for this hotel");
           setPhotoUrl("");
           return;
         }
@@ -67,16 +70,21 @@ function HotelCardItem({ hotel, onBookHotel }) {
             const fetchWithRetry = async (ref, maxRetries = 2) => {
               for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                  console.log(
-                    `🏨 HotelCardItem - Fetch attempt ${attempt}/${maxRetries}`
+                  logDebug(
+                    "HotelCardItem",
+                    `Fetch attempt ${attempt}/${maxRetries}`
                   );
                   // ✅ No Promise.race needed - fetchPlacePhoto has built-in timeout
                   const blobUrl = await fetchPlacePhoto(ref);
                   return blobUrl;
                 } catch (err) {
                   if (attempt === maxRetries) throw err;
-                  console.warn(
-                    `⚠️ HotelCardItem - Attempt ${attempt} failed, retrying...`
+                  logDebug(
+                    "HotelCardItem",
+                    `Attempt ${attempt} failed, retrying`,
+                    {
+                      error: err.message,
+                    }
                   );
                   // ✅ Reduced retry delay from 1s to 500ms (faster with SSL disabled)
                   await new Promise((resolve) => setTimeout(resolve, 500));
@@ -94,20 +102,23 @@ function HotelCardItem({ hotel, onBookHotel }) {
 
             currentPhotoUrl = blobUrl;
             setPhotoUrl(blobUrl);
-            console.log("✅ Hotel photo loaded successfully");
+            logDebug("HotelCardItem", "Hotel photo loaded successfully");
           } catch (photoError) {
-            console.warn(
-              "🏨 All hotel photo fetch attempts failed:",
-              photoError.message
-            );
+            logDebug("HotelCardItem", "All hotel photo fetch attempts failed", {
+              error: photoError.message,
+              fallbackAvailable: !!hotel?.imageUrl,
+            });
             setPhotoUrl(hotel?.imageUrl || "");
           }
         } else {
-          console.warn("🏨 No photo reference found");
+          logDebug("HotelCardItem", "No photo reference found");
           setPhotoUrl(hotel?.imageUrl || "");
         }
       } catch (error) {
-        console.error("🏨 Error fetching hotel photo:", error);
+        logError("HotelCardItem", "Error fetching hotel photo", {
+          error: error.message,
+          hasFallback: !!hotel?.imageUrl,
+        });
 
         if (!isMounted) return;
 
@@ -136,7 +147,9 @@ function HotelCardItem({ hotel, onBookHotel }) {
       isMounted = false;
       if (currentPhotoUrl && currentPhotoUrl.startsWith("blob:")) {
         URL.revokeObjectURL(currentPhotoUrl);
-        console.log("🗑️ Cleaned up blob URL for:", hotel?.name);
+        logDebug("HotelCardItem", "Cleaned up blob URL", {
+          hotelName: hotel?.name,
+        });
       }
     };
   }, [hotel?.hotelName, hotel?.name, hotel?.imageUrl]);

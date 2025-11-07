@@ -331,7 +331,7 @@ function ActivityEditor({
 
       return `${formattedHours}:${formattedMinutes}:00`;
     } catch (error) {
-      console.error("Error parsing time string:", timeString, error);
+      // Silently fail for time parsing - return empty string for invalid times
       return "";
     }
   }

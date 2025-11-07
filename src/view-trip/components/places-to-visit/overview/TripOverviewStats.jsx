@@ -6,7 +6,7 @@ import {
   PATTERNS,
   COMPOSED_STYLES,
 } from "../constants/designSystem";
-import { calculateTotalBudget, formatCurrency } from "@/utils/budgetCalculator";
+import { calculateTotalBudget, formatCurrency } from "@/utils";
 
 function TripOverviewStats({
   currentItinerary,

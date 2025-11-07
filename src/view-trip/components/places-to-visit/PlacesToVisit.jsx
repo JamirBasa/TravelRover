@@ -18,10 +18,19 @@
  * ✅ Firebase database persistence for all changes
  */
 
-import React, { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/config/firebaseConfig";
 import { toast } from "sonner";
+
+// ✅ Import production logging
+import { logDebug, logError } from "@/utils/productionLogger";
 
 // Component imports - Clean imports using index file
 import {
@@ -46,22 +55,26 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
   // ✅ Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
     expandAndFocusDay: (dayIndex = 0) => {
-      console.log(`📌 expandAndFocusDay called for day ${dayIndex}`);
-      
+      logDebug("PlacesToVisit", "expandAndFocusDay called", { dayIndex });
+
       // Expand the specified day
       const newExpanded = new Set(expandedDays);
       newExpanded.add(dayIndex);
       setExpandedDays(newExpanded);
-      
+
       // Scroll to the day after a short delay
       setTimeout(() => {
-        const dayElement = document.querySelector(`[data-day-index="${dayIndex}"]`);
+        const dayElement = document.querySelector(
+          `[data-day-index="${dayIndex}"]`
+        );
         if (dayElement) {
           dayElement.scrollIntoView({ behavior: "smooth", block: "start" });
-          console.log(`✅ Scrolled to day ${dayIndex}`);
+          logDebug("PlacesToVisit", "Scrolled to day successfully", {
+            dayIndex,
+          });
         }
       }, 300);
-      
+
       // Show helpful toast
       toast.info("Click 'Edit' on any day to modify activities", {
         duration: 4000,
@@ -166,7 +179,10 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
   // Parse itinerary data with enhanced error handling (memoized to prevent infinite loops)
   // Include trip.id in dependencies to ensure re-parse when trip data is refreshed
   const parsedItinerary = useMemo(() => {
-    console.log("🔄 Parsing itinerary data...", trip?.tripData?.itinerary);
+    logDebug("PlacesToVisit", "Parsing itinerary data", {
+      hasItinerary: !!trip?.tripData?.itinerary,
+      type: typeof trip?.tripData?.itinerary,
+    });
     return parseDataArray(trip?.tripData?.itinerary, "itinerary");
   }, [trip?.tripData?.itinerary, trip?.id]);
 
@@ -192,10 +208,9 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
   // Initialize editable itinerary on mount or when trip changes
   useEffect(() => {
     if (parsedItinerary && Array.isArray(parsedItinerary)) {
-      console.log(
-        "🔄 Updating editableItinerary with fresh data:",
-        parsedItinerary
-      );
+      logDebug("PlacesToVisit", "Updating editableItinerary with fresh data", {
+        dayCount: parsedItinerary.length,
+      });
 
       // Map each day and ensure plan array exists and has priority
       const updatedEditableItinerary = parsedItinerary.map((day, index) => {
@@ -204,11 +219,10 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
         // Priority 1: Use existing plan array if it has data
         if (day?.plan && Array.isArray(day.plan) && day.plan.length > 0) {
           planArray = day.plan;
-          console.log(
-            `✅ Day ${index + 1} has plan array with ${
-              planArray.length
-            } activities`
-          );
+          logDebug("PlacesToVisit", "Day has plan array", {
+            dayNumber: index + 1,
+            activityCount: planArray.length,
+          });
         }
         // Priority 2: Parse from planText if plan is empty
         else if (day?.planText && typeof day.planText === "string") {
@@ -231,11 +245,10 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
               id: `${index}-${actIndex}`,
             };
           });
-          console.log(
-            `⚠️ Day ${index + 1} parsed from planText: ${
-              planArray.length
-            } activities`
-          );
+          logDebug("PlacesToVisit", "Day parsed from planText", {
+            dayNumber: index + 1,
+            activityCount: planArray.length,
+          });
         }
 
         return {
@@ -314,12 +327,23 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
       // Refresh trip data from database to reflect the saved changes
       if (onTripUpdate) {
         await onTripUpdate();
-        console.log("✅ Day saved and trip data refreshed from database");
+        logDebug(
+          "PlacesToVisit",
+          "Day saved and trip data refreshed from database",
+          {
+            dayNumber: dayIndex + 1,
+          }
+        );
       } else {
-        console.log("✅ Day saved to database");
+        logDebug("PlacesToVisit", "Day saved to database", {
+          dayNumber: dayIndex + 1,
+        });
       }
     } catch (error) {
-      console.error("Error saving edited day:", error);
+      logError("PlacesToVisit", "Failed to save edited day", {
+        error: error.message,
+        dayNumber: dayIndex + 1,
+      });
       toast.error("Failed to save changes", {
         description: "Please try again or check your internet connection.",
       });
@@ -364,19 +388,28 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
         "tripData.itinerary": updatedItinerary,
       });
 
-      console.log("✅ Activities saved to database for Day", dayIndex + 1);
+      logDebug("PlacesToVisit", "Activities saved to database", {
+        dayNumber: dayIndex + 1,
+        activityCount: activities.length,
+      });
 
       // Refresh trip data from database to reflect the saved changes
       // Note: We do this silently without blocking the UI since updateActivities already updated local state
       if (onTripUpdate) {
         onTripUpdate().then(() => {
-          console.log("✅ Trip data refreshed from database");
+          logDebug(
+            "PlacesToVisit",
+            "Trip data refreshed from database after activity save"
+          );
         });
       }
 
       return { success: true };
     } catch (error) {
-      console.error("Error saving activities:", error);
+      logError("PlacesToVisit", "Failed to save activities", {
+        error: error.message,
+        dayNumber: dayIndex + 1,
+      });
       toast.error("Failed to save activities", {
         description:
           "Your changes are temporarily saved locally. Please try saving again.",
