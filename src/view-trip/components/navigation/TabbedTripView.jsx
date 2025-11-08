@@ -9,6 +9,9 @@ import {
   Map,
 } from "lucide-react";
 
+// ✅ Import production logging
+import { logDebug } from "@/utils/productionLogger";
+
 // Import existing components from organized folders
 import { InfoSection } from "../shared";
 import { Hotels } from "../accommodations";
@@ -20,29 +23,40 @@ import WeatherForecast from "../weather/WeatherForecast";
 
 function TabbedTripView({ trip, onTripUpdate }, ref) {
   const [activeTab, setActiveTab] = useState("overview");
-  
+
   // ✅ Create ref for PlacesToVisit component
   const placesToVisitRef = React.useRef(null);
 
   // ✅ Debug: Log when component mounts
   React.useEffect(() => {
-    console.log("🎬 TabbedTripView mounted");
-    return () => console.log("💀 TabbedTripView unmounting");
+    logDebug("TabbedTripView", "Component mounted");
+    return () => logDebug("TabbedTripView", "Component unmounting");
   }, []);
 
   // ✅ Expose methods to parent component via ref
   useImperativeHandle(ref, () => {
-    console.log("🔗 useImperativeHandle: Setting up ref methods");
+    logDebug(
+      "TabbedTripView",
+      "Setting up ref methods via useImperativeHandle"
+    );
     return {
       switchToItinerary: () => {
-        console.log("🎯 switchToItinerary called! Current tab:", activeTab);
+        logDebug("TabbedTripView", "switchToItinerary called", {
+          currentTab: activeTab,
+        });
         setActiveTab("itinerary");
-        console.log("✅ Tab switched to: itinerary");
-        
+        logDebug("TabbedTripView", "Tab switched to itinerary");
+
         // After tab switch, expand and focus Day 1
         setTimeout(() => {
-          if (placesToVisitRef.current && placesToVisitRef.current.expandAndFocusDay) {
-            console.log("� Calling expandAndFocusDay on PlacesToVisit");
+          if (
+            placesToVisitRef.current &&
+            placesToVisitRef.current.expandAndFocusDay
+          ) {
+            logDebug(
+              "TabbedTripView",
+              "Calling expandAndFocusDay on PlacesToVisit"
+            );
             placesToVisitRef.current.expandAndFocusDay(0);
           }
         }, 300);
@@ -64,12 +78,12 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
       component: (
         <div className="space-y-6">
           <InfoSection trip={trip} />
-          
+
           {/* Weather Forecast - Shows for trips within 14 days */}
           <div id="weather-forecast-section">
             <WeatherForecast trip={trip} />
           </div>
-          
+
           {trip?.routeOptimization && (
             <RouteOptimizationStatus
               routeOptimization={trip.routeOptimization}
@@ -103,7 +117,13 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
       id: "itinerary",
       label: "Itinerary",
       icon: <Calendar className="h-4 w-4" />,
-      component: <PlacesToVisit ref={placesToVisitRef} trip={trip} onTripUpdate={onTripUpdate} />,
+      component: (
+        <PlacesToVisit
+          ref={placesToVisitRef}
+          trip={trip}
+          onTripUpdate={onTripUpdate}
+        />
+      ),
     },
     {
       id: "map",
@@ -418,33 +438,52 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
               </p>
               <button
                 onClick={() => {
-                  console.log('🌤️ View Forecast clicked - switching to Overview tab');
-                  console.log('📊 Current trip data:', {
-                    location: trip?.userSelection?.location,
-                    startDate: trip?.userSelection?.startDate,
-                    duration: trip?.userSelection?.duration
-                  });
-                  console.log('🔑 API Key:', import.meta.env.VITE_OPENWEATHER_API_KEY ? 'Configured' : 'NOT SET');
-                  
+                  logDebug(
+                    "TabbedTripView",
+                    "View Forecast clicked - switching to Overview tab",
+                    {
+                      location: trip?.userSelection?.location,
+                      startDate: trip?.userSelection?.startDate?.toString(),
+                      duration: trip?.userSelection?.duration,
+                      hasApiKey: !!import.meta.env.VITE_OPENWEATHER_API_KEY,
+                    }
+                  );
+
                   setActiveTab("overview");
                   // Scroll to weather forecast section
                   setTimeout(() => {
-                    const weatherSection = document.getElementById('weather-forecast-section');
-                    console.log('📍 Weather section element:', weatherSection);
-                    
+                    const weatherSection = document.getElementById(
+                      "weather-forecast-section"
+                    );
+                    logDebug(
+                      "TabbedTripView",
+                      "Weather section element lookup",
+                      {
+                        found: !!weatherSection,
+                      }
+                    );
+
                     if (weatherSection) {
-                      console.log('✅ Scrolling to weather section');
-                      weatherSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      
+                      logDebug(
+                        "TabbedTripView",
+                        "Scrolling to weather section"
+                      );
+                      weatherSection.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center",
+                      });
+
                       // Add a subtle highlight effect
-                      weatherSection.style.transition = 'transform 0.3s ease';
-                      weatherSection.style.transform = 'scale(1.02)';
+                      weatherSection.style.transition = "transform 0.3s ease";
+                      weatherSection.style.transform = "scale(1.02)";
                       setTimeout(() => {
-                        weatherSection.style.transform = 'scale(1)';
+                        weatherSection.style.transform = "scale(1)";
                       }, 300);
                     } else {
-                      console.log('⚠️ Weather section not found - may not be displayed');
-                      console.log('💡 Check the debug panel on Overview tab for details');
+                      logDebug(
+                        "TabbedTripView",
+                        "Weather section not found - may not be displayed"
+                      );
                     }
                   }, 150);
                 }}

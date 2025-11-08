@@ -19,6 +19,9 @@ import TripViewErrorBoundary from "../../components/common/TripViewErrorBoundary
 // ✅ Import PDF export service
 import { generateTripPDF } from "@/services/pdfExportService";
 
+// ✅ Import production logging
+import { logDebug, logError } from "@/utils/productionLogger";
+
 // ✅ NEW: Import data flow auditor (development tool)
 import { auditTripData } from "@/utils/tripDataAuditor";
 
@@ -29,6 +32,7 @@ function ViewTrip() {
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false); // ✅ NEW: Track PDF download state
 
   // ✅ NEW: Ref to control TabbedTripView from parent
   const tabbedViewRef = useRef(null);
@@ -54,14 +58,23 @@ function ViewTrip() {
       setLoading(true);
       setError(null);
 
+      // ✅ Check network connectivity first
+      if (!navigator.onLine) {
+        throw new Error(
+          "No internet connection. Please check your network and try again."
+        );
+      }
+
       const docRef = doc(db, "AITrips", tripId);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
         const tripData = docSnap.data();
-        console.log("🔍 ViewTrip - Full document data:", tripData);
-        console.log("🔍 ViewTrip - tripData field:", tripData?.tripData);
-        console.log("🔍 ViewTrip - tripData type:", typeof tripData?.tripData);
+        logDebug("ViewTrip", "Loaded trip document", {
+          hasTripData: !!tripData?.tripData,
+          tripDataType: typeof tripData?.tripData,
+          destination: tripData?.userSelection?.location,
+        });
 
         // ✅ Run comprehensive data flow audit (development only)
         // Auditor handles all string-to-array parsing automatically
@@ -73,17 +86,65 @@ function ViewTrip() {
 
         const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
         if (tripData.userEmail && currentUser.email !== tripData.userEmail) {
-          console.warn("User doesn't own this trip");
+          logDebug("ViewTrip", "User viewing trip owned by different account", {
+            currentEmail: currentUser.email,
+            tripOwner: tripData.userEmail,
+          });
         }
       } else {
-        console.log("No such document!");
+        logDebug("ViewTrip", "Trip document not found in Firestore", {
+          tripId,
+        });
         setError("Trip not found");
-        toast.error("Trip not found!");
+        toast.error("Trip not found!", {
+          description:
+            "This trip may have been deleted or you don't have access to it.",
+        });
       }
     } catch (err) {
-      console.error("Error fetching trip:", err);
-      setError("Failed to load trip data");
-      toast.error("Failed to load trip data");
+      // ✅ IMPROVED: Better error handling with user-friendly messages
+      console.error("GetTripData error:", err);
+
+      const errorMessage =
+        err.message || err.toString() || "Failed to load trip data";
+
+      logError("ViewTrip", "Failed to fetch trip data from Firestore", {
+        error: errorMessage,
+        errorCode: err.code,
+        tripId,
+      });
+
+      // ✅ User-friendly error messages based on error type
+      let userMessage = "Failed to load trip data";
+      let description = "Please try again in a moment.";
+
+      if (!navigator.onLine) {
+        userMessage = "No Internet Connection";
+        description = "Please check your network connection and try again.";
+      } else if (
+        err.code === "unavailable" ||
+        errorMessage.includes("unavailable")
+      ) {
+        userMessage = "Service Temporarily Unavailable";
+        description =
+          "Firebase is having connection issues. Your data will load when the connection is restored.";
+      } else if (err.code === "permission-denied") {
+        userMessage = "Access Denied";
+        description = "You don't have permission to view this trip.";
+      } else if (err.code === "not-found") {
+        userMessage = "Trip Not Found";
+        description = "This trip may have been deleted.";
+      } else if (
+        err.code === "deadline-exceeded" ||
+        errorMessage.includes("timeout")
+      ) {
+        userMessage = "Connection Timeout";
+        description =
+          "The request took too long. Please check your connection and try again.";
+      }
+
+      setError(userMessage);
+      toast.error(userMessage, { description, duration: 6000 });
     } finally {
       setLoading(false);
     }
@@ -97,12 +158,17 @@ function ViewTrip() {
 
       if (docSnap.exists()) {
         const tripData = docSnap.data();
-        console.log("🔄 Refreshing trip data after edit:", tripData);
+        logDebug("ViewTrip", "Silent refresh completed", {
+          destination: tripData?.userSelection?.location,
+        });
         setTrip(tripData);
         return tripData;
       }
     } catch (err) {
-      console.error("Error refreshing trip data:", err);
+      logError("ViewTrip", "Silent refresh failed", {
+        error: err.message,
+        tripId,
+      });
       // Don't show error toast for silent refresh
     }
   };
@@ -157,6 +223,14 @@ function ViewTrip() {
   };
 
   const handleDownload = async () => {
+    // ✅ GUARD: Prevent multiple simultaneous downloads
+    if (isDownloading) {
+      toast.info("PDF generation in progress", {
+        description: "Please wait for the current download to complete",
+      });
+      return;
+    }
+
     if (!trip) {
       toast.error("Unable to generate PDF", {
         description: "Trip data is not available",
@@ -164,6 +238,7 @@ function ViewTrip() {
       return;
     }
 
+    setIsDownloading(true); // ✅ Lock the download button
     const loadingToast = toast.loading("Generating your PDF itinerary...");
 
     try {
@@ -181,20 +256,33 @@ function ViewTrip() {
       }
     } catch (error) {
       toast.dismiss(loadingToast);
-      console.error("PDF generation error:", error);
+      logError("ViewTrip", "PDF generation failed", {
+        error: error.message,
+        tripId,
+      });
       toast.error("Failed to generate PDF", {
         description: error.message || "Please try again later",
       });
+    } finally {
+      setIsDownloading(false); // ✅ Always unlock the button
     }
   };
 
   const handleEdit = () => {
-    console.log("🔧 handleEdit called");
-    console.log("📌 tabbedViewRef.current:", tabbedViewRef.current);
+    logDebug(
+      "ViewTrip",
+      "Edit button clicked, attempting to switch to Itinerary tab",
+      {
+        hasRef: !!tabbedViewRef.current,
+        hasMethod: !!tabbedViewRef.current?.switchToItinerary,
+      }
+    );
 
     // Check if ref is available
     if (!tabbedViewRef.current) {
-      console.error("❌ tabbedViewRef.current is null!");
+      logError("ViewTrip", "Cannot switch tabs - ref is null", {
+        message: "tabbedViewRef.current is null",
+      });
       toast.error("Unable to switch tabs", {
         description: "Please refresh the page and try again",
       });
@@ -203,7 +291,9 @@ function ViewTrip() {
 
     // Check if method exists
     if (!tabbedViewRef.current.switchToItinerary) {
-      console.error("❌ switchToItinerary method not found!");
+      logError("ViewTrip", "Cannot switch tabs - method missing", {
+        message: "switchToItinerary method not found on ref",
+      });
       toast.error("Tab switching not available", {
         description: "Please refresh the page and try again",
       });
@@ -216,7 +306,7 @@ function ViewTrip() {
     });
 
     // Use ref to switch to Itinerary tab
-    console.log("✅ Calling switchToItinerary()");
+    logDebug("ViewTrip", "Calling switchToItinerary()");
     tabbedViewRef.current.switchToItinerary();
   };
 
@@ -255,6 +345,7 @@ function ViewTrip() {
         onShare={handleShare}
         onDownload={handleDownload}
         onEdit={handleEdit}
+        isDownloading={isDownloading}
       />
 
       {/* Main Content with optimized spacing */}

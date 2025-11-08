@@ -2,6 +2,9 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { GetPlaceDetails, fetchPlacePhoto } from "@/config/GlobalApi";
 
+// ✅ Import production logging
+import { logDebug, logError } from "@/utils/productionLogger";
+
 function PlaceCardItem({ place }) {
   const [photoUrl, setPhotoUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -9,7 +12,7 @@ function PlaceCardItem({ place }) {
   const GetPlacePhoto = useCallback(async () => {
     const placeName = place?.placeName || place?.activity;
     if (!placeName) {
-      console.warn("No place name provided for photo search");
+      logDebug("PlaceCardItem", "No place name provided for photo search");
       return;
     }
 
@@ -49,15 +52,16 @@ function PlaceCardItem({ place }) {
     const cleanedPlaceName = extractPlaceName(placeName);
 
     if (!cleanedPlaceName) {
-      console.log("⏭️ Skipping photo search for generic activity:", placeName);
+      logDebug("PlaceCardItem", "Skipping photo search for generic activity", {
+        placeName,
+      });
       setPhotoUrl(""); // Use placeholder for generic activities
       return;
     }
 
-    console.log(
-      "🔍 PlaceCardItem - Fetching Google Places photo for:",
-      cleanedPlaceName
-    );
+    logDebug("PlaceCardItem", "Fetching Google Places photo", {
+      cleanedPlaceName,
+    });
 
     // Always use Google Places API for accurate, real photos
     // Skip the AI-generated imageUrl and get actual place photos
@@ -78,7 +82,7 @@ function PlaceCardItem({ place }) {
         searchQuery += ", Philippines";
       }
 
-      console.log("🔍 PlaceCardItem - Search query:", searchQuery);
+      logDebug("PlaceCardItem", "Search query constructed", { searchQuery });
 
       const data = {
         textQuery: searchQuery,
@@ -88,9 +92,9 @@ function PlaceCardItem({ place }) {
 
       // ✅ Graceful handling - don't throw errors, just use fallback
       if (!response?.data?.places || response.data.places.length === 0) {
-        console.warn(
-          "⚠️ PlaceCardItem - No places found, using fallback image"
-        );
+        logDebug("PlaceCardItem", "No places found, using fallback image", {
+          hasImageUrl: !!place?.imageUrl,
+        });
         setPhotoUrl(place?.imageUrl || "");
         return;
       }
@@ -98,16 +102,15 @@ function PlaceCardItem({ place }) {
       const placeData = response.data.places[0];
 
       if (!placeData.photos || placeData.photos.length === 0) {
-        console.warn("📸 PlaceCardItem - No photos available, using fallback");
+        logDebug("PlaceCardItem", "No photos available, using fallback");
         setPhotoUrl(place?.imageUrl || "");
         return;
       }
 
       const photoReference = placeData.photos[0]?.name;
-      console.log(
-        "📸 PlaceCardItem - Got photo reference:",
-        photoReference?.substring(0, 50)
-      );
+      logDebug("PlaceCardItem", "Got photo reference", {
+        photoRefPreview: photoReference?.substring(0, 50),
+      });
 
       if (photoReference) {
         try {
@@ -116,16 +119,21 @@ function PlaceCardItem({ place }) {
           const fetchWithRetry = async (ref, maxRetries = 2) => {
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
               try {
-                console.log(
-                  `📸 PlaceCardItem - Fetch attempt ${attempt}/${maxRetries}`
+                logDebug(
+                  "PlaceCardItem",
+                  `Fetch attempt ${attempt}/${maxRetries}`
                 );
                 // ✅ No Promise.race needed - fetchPlacePhoto has built-in timeout
                 const blobUrl = await fetchPlacePhoto(ref);
                 return blobUrl;
               } catch (err) {
                 if (attempt === maxRetries) throw err;
-                console.warn(
-                  `⚠️ PlaceCardItem - Attempt ${attempt} failed, retrying...`
+                logDebug(
+                  "PlaceCardItem",
+                  `Attempt ${attempt} failed, retrying`,
+                  {
+                    error: err.message,
+                  }
                 );
                 await new Promise((resolve) => setTimeout(resolve, 500)); // ✅ Reduced to 500ms
               }
@@ -133,26 +141,25 @@ function PlaceCardItem({ place }) {
           };
 
           const blobUrl = await fetchWithRetry(photoReference);
-          console.log("✅ PlaceCardItem - Photo loaded successfully");
+          logDebug("PlaceCardItem", "Photo loaded successfully");
           setPhotoUrl(blobUrl);
         } catch (photoError) {
-          console.warn(
-            "📸 PlaceCardItem - All photo fetch attempts failed:",
-            photoError.message
-          );
+          logDebug("PlaceCardItem", "All photo fetch attempts failed", {
+            error: photoError.message,
+            fallbackAvailable: !!place?.imageUrl,
+          });
           // Fallback to AI-generated image
           setPhotoUrl(place?.imageUrl || "");
         }
       } else {
-        console.warn("📸 PlaceCardItem - No photo reference found");
+        logDebug("PlaceCardItem", "No photo reference found");
         setPhotoUrl(place?.imageUrl || "");
       }
     } catch (error) {
-      console.error("🔍 PlaceCardItem - Error fetching place photo:", error);
-      console.log(
-        "🔍 PlaceCardItem - Falling back to AI imageUrl:",
-        place?.imageUrl
-      );
+      logError("PlaceCardItem", "Error fetching place photo", {
+        error: error.message,
+        fallbackImageUrl: place?.imageUrl,
+      });
 
       // Fallback to AI-generated image only if Google Places fails
       if (place?.imageUrl) {

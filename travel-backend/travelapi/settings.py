@@ -130,7 +130,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
-    ]
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'trip_generation': '5/hour',
+        'trip_generation_burst': '2/minute',
+        'session_status': '30/minute',
+        'health_check': '60/minute',
+    }
 }
 
 # CORS Configuration
@@ -172,23 +178,38 @@ LOGGING = {
             'format': '{levelname} {message}',
             'style': '{',
         },
+        'structured': {
+            '()': 'langgraph_agents.logging_config.StructuredFormatter',
+        },
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+            'formatter': 'simple' if DEBUG else 'structured',  # Structured in production
+        },
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'django.log',
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
+            'backupCount': 5,
+            'formatter': 'structured',
         },
     },
     'loggers': {
         'langgraph_agents': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'] if not DEBUG else ['console'],
             'level': 'INFO',
-            'propagate': True,
+            'propagate': False,
         },
         'admin_api': {
+            'handlers': ['console', 'file'] if not DEBUG else ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django': {
             'handlers': ['console'],
             'level': 'INFO',
-            'propagate': True,
+            'propagate': False,
         },
     },
 }

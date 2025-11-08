@@ -3,6 +3,9 @@ import RegularActivity from "./RegularActivity";
 import { ActivityEditor } from "../editing";
 import { MapPin } from "lucide-react";
 
+// ✅ Import production logging
+import { logDebug } from "@/utils/productionLogger";
+
 function ActivitiesRenderer({
   dayIndex,
   dayItem,
@@ -33,7 +36,10 @@ function ActivitiesRenderer({
     // PRIORITY 1: Use plan array if it exists (edited data from database)
     activitiesData = dayItem.plan;
     dataSource = "plan";
-    console.log("✅ Using plan array data for day", dayIndex, activitiesData);
+    logDebug("ActivitiesRenderer", "Using plan array data", {
+      dayIndex,
+      activityCount: activitiesData.length,
+    });
   } else {
     // PRIORITY 2: Fall back to planText (original AI-generated data)
     const possibleTextFields = [
@@ -70,7 +76,7 @@ function ActivitiesRenderer({
         };
       });
       dataSource = "planText";
-      console.log("⚠️ Using planText fallback for day", dayIndex);
+      logDebug("ActivitiesRenderer", "Using planText fallback", { dayIndex });
     } else {
       activitiesData = [];
       dataSource = "empty";
@@ -79,7 +85,8 @@ function ActivitiesRenderer({
 
   // Only log when there are issues for debugging
   if (dataSource === "empty" && dayItem) {
-    console.log("⚠️ No activities found for day:", dayIndex, {
+    logDebug("ActivitiesRenderer", "No activities found for day", {
+      dayIndex,
       dataSource,
       availableKeys: Object.keys(dayItem),
     });

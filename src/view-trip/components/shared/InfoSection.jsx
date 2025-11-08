@@ -10,6 +10,9 @@ import {
   Info as InfoIcon,
 } from "lucide-react";
 
+// ✅ Import production logging
+import { logDebug, logError } from "@/utils/productionLogger";
+
 /**
  * InfoSection Component
  * Comprehensive destination overview with professional design
@@ -26,7 +29,7 @@ function InfoSection({ trip }) {
 
     const GetPlacePhoto = async () => {
       if (!trip?.userSelection?.location) {
-        console.warn("No location provided for photo search");
+        logDebug("InfoSection", "No location provided for photo search");
         return;
       }
 
@@ -35,22 +38,21 @@ function InfoSection({ trip }) {
 
       try {
         const searchQuery = `${trip.userSelection.location}, Philippines`;
-        console.log("🔍 InfoSection - Starting photo fetch...");
-        console.log("🔍 InfoSection - Location:", trip.userSelection.location);
-        console.log("🔍 InfoSection - Search query:", searchQuery);
+        logDebug("InfoSection", "Starting photo fetch", {
+          location: trip.userSelection.location,
+          searchQuery,
+        });
 
         const data = { textQuery: searchQuery };
-        console.log("🔍 InfoSection - Calling GetPlaceDetails with:", data);
-        
         const response = await GetPlaceDetails(data);
 
         if (!isMounted) return; // ✅ Component unmounted, stop processing
 
-        console.log("🔍 InfoSection - GetPlaceDetails response received");
-        console.log("🔍 InfoSection - Response type:", typeof response);
-        console.log("🔍 InfoSection - Response keys:", Object.keys(response || {}));
-        console.log("🔍 InfoSection - response.data:", response?.data);
-        console.log("🔍 InfoSection - response.data type:", typeof response?.data);
+        logDebug("InfoSection", "GetPlaceDetails response received", {
+          responseType: typeof response,
+          hasData: !!response?.data,
+          dataType: typeof response?.data,
+        });
 
         // ✅ FIXED: Handle both transformed and untransformed responses
         // Backend returns: { success: true, data: { places: [...] } }
@@ -58,13 +60,15 @@ function InfoSection({ trip }) {
         // GlobalApi should transform to: { data: { places: [...] } }
         // But if cached or axios response, access via: response.data.data.places OR response.data.places
         const places = response.data?.data?.places || response.data?.places;
-        console.log("🔍 InfoSection - places array:", places);
-        console.log("🔍 InfoSection - places length:", places?.length);
-        console.log("🔍 InfoSection - First place:", places?.[0]);
+        logDebug("InfoSection", "Parsed places from response", {
+          placesCount: places?.length || 0,
+          hasFirstPlace: !!places?.[0],
+        });
 
         if (!places || places.length === 0) {
-          console.warn("⚠️ InfoSection - No places found in response");
-          console.warn("⚠️ InfoSection - Response structure:", response);
+          logDebug("InfoSection", "No places found in response", {
+            responseStructure: Object.keys(response || {}),
+          });
           if (isMounted) {
             setPhotoError(true);
             setPhotoUrl("");
@@ -73,19 +77,16 @@ function InfoSection({ trip }) {
         }
 
         const place = places[0];
-        console.log("📍 InfoSection - Place data:", {
+        logDebug("InfoSection", "Place data retrieved", {
           displayName: place.displayName,
           hasPhotos: !!place.photos,
           photosLength: place.photos?.length || 0,
-          firstPhoto: place.photos?.[0],
         });
 
         if (!place.photos || place.photos.length === 0) {
-          console.warn(
-            "📸 InfoSection - No photos available for:",
-            trip.userSelection.location
-          );
-          console.warn("📸 InfoSection - Place object:", place);
+          logDebug("InfoSection", "No photos available for location", {
+            location: trip.userSelection.location,
+          });
           if (isMounted) {
             setPhotoError(true);
             setPhotoUrl("");
@@ -94,60 +95,88 @@ function InfoSection({ trip }) {
         }
 
         const photoReference = place.photos[0]?.name;
-        console.log("📸 InfoSection - Photo reference found:", !!photoReference);
-        console.log("📸 InfoSection - Photo reference:", photoReference);
-        console.log("📸 InfoSection - Photo reference length:", photoReference?.length);
-        console.log("📸 InfoSection - Full photo object:", place.photos[0]);
+        logDebug("InfoSection", "Photo reference extracted", {
+          hasPhotoRef: !!photoReference,
+          photoRefLength: photoReference?.length || 0,
+        });
 
         if (photoReference) {
           try {
-            console.log("📸 InfoSection - Starting photo fetch with retry logic...");
-            
+            logDebug("InfoSection", "Starting photo fetch with retry logic");
+
             // ✅ Fetch photo with retry logic
             // ✅ SSL disabled in dev = much faster loading (2-3s instead of 10-15s)
-            const fetchWithRetry = async (ref, maxRetries = 2) => { // ✅ Reduced retries to 2
+            const fetchWithRetry = async (ref, maxRetries = 2) => {
+              // ✅ Reduced retries to 2
               for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 if (!isMounted) {
-                  console.log("📸 InfoSection - Component unmounted, aborting retry");
+                  logDebug(
+                    "InfoSection",
+                    "Component unmounted, aborting retry"
+                  );
                   return null; // ✅ Check mount status before retry
                 }
 
                 try {
-                  console.log(
-                    `📸 InfoSection - Fetch attempt ${attempt}/${maxRetries} starting...`
+                  logDebug(
+                    "InfoSection",
+                    `Photo fetch attempt ${attempt}/${maxRetries}`,
+                    {
+                      photoRefPreview: ref?.substring(0, 50),
+                    }
                   );
-                  console.log(`📸 InfoSection - Calling fetchPlacePhoto with:`, ref?.substring(0, 50));
-                  
+
                   // ✅ No Promise.race timeout needed - fetchPlacePhoto already has 20s timeout
                   const blobUrl = await fetchPlacePhoto(ref);
-                  
-                  console.log(`📸 InfoSection - Fetch attempt ${attempt} completed!`);
-                  console.log(`📸 InfoSection - BlobUrl received:`, blobUrl?.substring(0, 50));
+
+                  logDebug(
+                    "InfoSection",
+                    `Fetch attempt ${attempt} completed`,
+                    {
+                      blobUrlPreview: blobUrl?.substring(0, 50),
+                    }
+                  );
                   return blobUrl;
                 } catch (err) {
-                  console.error(`❌ InfoSection - Attempt ${attempt} failed:`, err.message);
-                  console.error(`❌ InfoSection - Error type:`, err.name);
-                  console.error(`❌ InfoSection - Full error:`, err);
-                  
+                  logError(
+                    "InfoSection",
+                    `Photo fetch attempt ${attempt} failed`,
+                    {
+                      error: err.message,
+                      errorType: err.name,
+                      attempt,
+                      maxRetries,
+                    }
+                  );
+
                   if (attempt === maxRetries) {
-                    console.error(`❌ InfoSection - Max retries (${maxRetries}) reached, throwing error`);
+                    logError(
+                      "InfoSection",
+                      `Max retries (${maxRetries}) reached`,
+                      {
+                        error: err.message,
+                      }
+                    );
                     throw err;
                   }
-                  
-                  console.warn(
-                    `⚠️ InfoSection - Attempt ${attempt}/${maxRetries} failed, retrying in 1s...`
+
+                  logDebug(
+                    "InfoSection",
+                    `Retrying photo fetch in 1s (attempt ${attempt}/${maxRetries})`
                   );
                   await new Promise((resolve) => setTimeout(resolve, 1000)); // ✅ Reduced to 1s between retries
                 }
               }
             };
 
-            console.log("📸 InfoSection - Calling fetchWithRetry...");
+            logDebug("InfoSection", "Calling fetchWithRetry");
             const blobUrl = await fetchWithRetry(photoReference);
-            console.log("📸 InfoSection - fetchWithRetry completed, blobUrl:", !!blobUrl);
-            
+
             if (!isMounted) {
-              console.log("📸 InfoSection - Component unmounted after fetch, cleaning up");
+              logDebug(
+                "InfoSection",
+                "Component unmounted after fetch, cleaning up"
+              );
               // Cleanup if unmounted during fetch
               if (blobUrl) URL.revokeObjectURL(blobUrl);
               return;
@@ -157,40 +186,44 @@ function InfoSection({ trip }) {
               currentPhotoUrl = blobUrl;
               setPhotoUrl(blobUrl);
               setPhotoError(false);
-              console.log(
-                "✅ InfoSection - Photo loaded successfully!",
-                blobUrl.substring(0, 50) + "..."
-              );
+              logDebug("InfoSection", "Photo loaded successfully", {
+                blobUrlPreview: blobUrl.substring(0, 50),
+              });
             } else {
-              console.warn("⚠️ InfoSection - blobUrl is null/undefined, setting error state");
+              logDebug(
+                "InfoSection",
+                "blobUrl is null/undefined, setting error state"
+              );
               setPhotoError(true);
               setPhotoUrl("");
             }
           } catch (photoError) {
-            console.error("❌ InfoSection - All photo fetch attempts failed!");
-            console.error("❌ InfoSection - Error message:", photoError.message);
-            console.error("❌ InfoSection - Error name:", photoError.name);
-            console.error("❌ InfoSection - Full error:", photoError);
-            
+            logError("InfoSection", "All photo fetch attempts failed", {
+              error: photoError.message,
+              errorName: photoError.name,
+              location: trip?.userSelection?.location,
+            });
+
             if (isMounted) {
               setPhotoError(true);
               setPhotoUrl("");
             }
           }
         } else {
-          console.warn("⚠️ InfoSection - No photo reference found in place data");
-          console.warn("⚠️ InfoSection - Place photos array:", place.photos);
+          logDebug("InfoSection", "No photo reference found in place data", {
+            hasPhotosArray: !!place.photos,
+          });
           if (isMounted) {
             setPhotoError(true);
             setPhotoUrl("");
           }
         }
       } catch (error) {
-        console.error("❌ InfoSection - Error in GetPlacePhoto function!");
-        console.error("❌ InfoSection - Error message:", error.message);
-        console.error("❌ InfoSection - Error name:", error.name);
-        console.error("❌ InfoSection - Error stack:", error.stack);
-        console.error("❌ InfoSection - Trip location:", trip?.userSelection?.location);
+        logError("InfoSection", "Error in GetPlacePhoto function", {
+          error: error.message,
+          errorName: error.name,
+          location: trip?.userSelection?.location,
+        });
         if (isMounted) {
           setPhotoError(true);
           setPhotoUrl("");
@@ -244,11 +277,11 @@ function InfoSection({ trip }) {
                 alt={`${trip?.userSelection?.location || "Destination"}`}
                 className="absolute inset-0 w-full h-full object-cover"
                 onError={(e) => {
-                  console.error("🖼️ InfoSection - Image failed to load:", {
-                    attempted: e.target.src,
+                  logError("InfoSection", "Image failed to load", {
+                    attemptedSrc: e.target.src,
                     photoUrl: photoUrl,
-                    photoError: photoError,
-                    location: trip?.userSelection?.location
+                    hasPhotoError: photoError,
+                    location: trip?.userSelection?.location,
                   });
                   e.target.src = "/placeholder.png";
                 }}

@@ -36,6 +36,21 @@ class TravelPlanningSession(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            # Single-field indexes for frequently queried fields
+            models.Index(fields=['user_email'], name='idx_session_email'),
+            models.Index(fields=['status'], name='idx_session_status'),
+            models.Index(fields=['destination'], name='idx_session_dest'),
+            models.Index(fields=['created_at'], name='idx_session_created'),
+            models.Index(fields=['session_id'], name='idx_session_id'),
+            
+            # Composite indexes for common query patterns
+            models.Index(fields=['user_email', 'status'], name='idx_email_status'),
+            models.Index(fields=['user_email', 'created_at'], name='idx_email_created'),
+            models.Index(fields=['status', 'created_at'], name='idx_status_created'),
+        ]
+        verbose_name = "Travel Planning Session"
+        verbose_name_plural = "Travel Planning Sessions"
 
 class AgentExecutionLog(models.Model):
     """Log individual agent executions"""
@@ -64,3 +79,18 @@ class AgentExecutionLog(models.Model):
     
     class Meta:
         ordering = ['started_at']
+        indexes = [
+            # Foreign key index (Django auto-creates this, but explicit is better)
+            models.Index(fields=['session'], name='idx_log_session'),
+            
+            # Single-field indexes
+            models.Index(fields=['agent_type'], name='idx_log_agent_type'),
+            models.Index(fields=['status'], name='idx_log_status'),
+            models.Index(fields=['started_at'], name='idx_log_started'),
+            
+            # Composite indexes for common query patterns
+            models.Index(fields=['session', 'agent_type'], name='idx_session_agent'),
+            models.Index(fields=['session', 'status'], name='idx_session_status_log'),
+        ]
+        verbose_name = "Agent Execution Log"
+        verbose_name_plural = "Agent Execution Logs"

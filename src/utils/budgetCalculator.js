@@ -1,10 +1,19 @@
 /**
  * Budget Calculator Utility
  * Calculates total estimated budget from trip data including activities, hotels, and flights
+ * 
+ * 🔄 MIGRATION NOTE (2025-11-07):
+ * - Removed local formatCurrency() - now re-exported from formatters.js
+ * - Using centralized formatPHP() for consistency
+ * - Replaced console.log with logDebug for production cleanup (2025-11-07)
  */
 
 // Import robust JSON parser
 import { parseDataArray } from './jsonParsers';
+// Import centralized currency formatter for re-export
+import { formatPHP } from './formatters';
+// Import production logger for debug logging
+import { logDebug } from './productionLogger';
 
 /**
  * Parse price string to number (handles ₱, commas, "Free", ranges, etc.)
@@ -95,7 +104,7 @@ export const calculateHotelsCost = (hotels, numNights = 1) => {
   const pricePerNight = parsePrice(selectedHotel?.pricePerNight);
   const hotelTotal = pricePerNight * numNights;
   
-  console.log('🏨 [Budget Calculator] Hotel cost calculation:', {
+  logDebug('BudgetCalculator', 'Hotel cost calculation', {
     totalHotelsInArray: hotels.length,
     usingHotel: selectedHotel?.hotelName || 'Unknown',
     pricePerNight,
@@ -132,7 +141,7 @@ export const calculateFlightsCost = (flights) => {
  * @returns {Object} - { total, breakdown: { activities, hotels, flights } }
  */
 export const calculateTotalBudget = (trip) => {
-  console.log('💰 [Budget Calculator] Starting calculation for trip:', trip?.id);
+  logDebug('BudgetCalculator', 'Starting calculation', { tripId: trip?.id });
   
   const breakdown = {
     activities: 0,
@@ -142,15 +151,15 @@ export const calculateTotalBudget = (trip) => {
   
   // Extract trip data
   let tripData = trip?.tripData;
-  console.log('💰 [Budget Calculator] Raw tripData type:', typeof tripData);
+  logDebug('BudgetCalculator', 'Raw tripData type', { type: typeof tripData });
   
   // Parse if it's a string
   if (typeof tripData === 'string') {
     try {
       tripData = JSON.parse(tripData);
-      console.log('💰 [Budget Calculator] Successfully parsed tripData from string');
+      logDebug('BudgetCalculator', 'Successfully parsed tripData from string');
     } catch (e) {
-      console.error('❌ [Budget Calculator] Failed to parse tripData:', e);
+      logDebug('BudgetCalculator', 'Failed to parse tripData', { error: e.message });
       return { total: 0, breakdown };
     }
   }
@@ -158,26 +167,25 @@ export const calculateTotalBudget = (trip) => {
   // Check if we have GA-First workflow total_cost (most accurate)
   if (tripData?.total_cost && typeof tripData.total_cost === 'number') {
     breakdown.activities = tripData.total_cost;
-    console.log('💰 [Budget Calculator] Using GA-First total_cost:', breakdown.activities);
+    logDebug('BudgetCalculator', 'Using GA-First total_cost', { cost: breakdown.activities });
   } else {
     // Calculate from itinerary
     let itinerary = tripData?.itinerary_data || tripData?.itinerary || [];
     
     // Parse if itinerary is a string
     if (typeof itinerary === 'string') {
-      console.log('🔄 [Budget Calculator] Parsing itinerary string with robust parser...');
+      logDebug('BudgetCalculator', 'Parsing itinerary string with robust parser');
       itinerary = parseDataArray(itinerary, 'itinerary');
-      console.log('✅ [Budget Calculator] Successfully parsed itinerary, length:', itinerary?.length);
+      logDebug('BudgetCalculator', 'Successfully parsed itinerary', { length: itinerary?.length });
     }
     
-    console.log('�💰 [Budget Calculator] Itinerary data:', {
+    logDebug('BudgetCalculator', 'Itinerary data', {
       source: tripData?.itinerary_data ? 'itinerary_data' : 'itinerary',
       length: itinerary?.length,
-      isArray: Array.isArray(itinerary),
-      sample: itinerary?.[0]
+      isArray: Array.isArray(itinerary)
     });
     breakdown.activities = calculateActivitiesCost(itinerary);
-    console.log('💰 [Budget Calculator] Calculated activities cost:', breakdown.activities);
+    logDebug('BudgetCalculator', 'Calculated activities cost', { cost: breakdown.activities });
   }
   
   // Calculate hotels cost
@@ -185,43 +193,43 @@ export const calculateTotalBudget = (trip) => {
   
   // Parse if hotels is a string
   if (typeof hotels === 'string') {
-    console.log('🔄 [Budget Calculator] Parsing hotels string with robust parser...');
+    logDebug('BudgetCalculator', 'Parsing hotels string with robust parser');
     hotels = parseDataArray(hotels, 'hotels');
-    console.log('✅ [Budget Calculator] Successfully parsed hotels, length:', hotels?.length);
+    logDebug('BudgetCalculator', 'Successfully parsed hotels', { length: hotels?.length });
   }
   
   const duration = trip?.userSelection?.duration || trip?.userSelection?.noOfDays || 1;
   const numNights = Math.max(1, duration - 1); // Usually nights = days - 1
-  console.log('💰 [Budget Calculator] Hotels:', {
+  logDebug('BudgetCalculator', 'Hotels data', {
     count: hotels?.length,
     isArray: Array.isArray(hotels),
     numNights,
     duration
   });
   breakdown.hotels = calculateHotelsCost(hotels, numNights);
-  console.log('💰 [Budget Calculator] Calculated hotels cost:', breakdown.hotels);
+  logDebug('BudgetCalculator', 'Calculated hotels cost', { cost: breakdown.hotels });
   
   // Calculate flights cost
   let flights = tripData?.flights || [];
   
   // Parse if flights is a string
   if (typeof flights === 'string') {
-    console.log('🔄 [Budget Calculator] Parsing flights string with robust parser...');
+    logDebug('BudgetCalculator', 'Parsing flights string with robust parser');
     flights = parseDataArray(flights, 'flights');
-    console.log('✅ [Budget Calculator] Successfully parsed flights, length:', flights?.length);
+    logDebug('BudgetCalculator', 'Successfully parsed flights', { length: flights?.length });
   }
   
-  console.log('💰 [Budget Calculator] Flights:', { 
+  logDebug('BudgetCalculator', 'Flights data', { 
     count: flights?.length,
     isArray: Array.isArray(flights)
   });
   breakdown.flights = calculateFlightsCost(flights);
-  console.log('💰 [Budget Calculator] Calculated flights cost:', breakdown.flights);
+  logDebug('BudgetCalculator', 'Calculated flights cost', { cost: breakdown.flights });
   
   // Calculate total
   const total = breakdown.activities + breakdown.hotels + breakdown.flights;
   
-  console.log('💰 [Budget Calculator] Final breakdown:', {
+  logDebug('BudgetCalculator', 'Final breakdown', {
     activities: breakdown.activities,
     hotels: breakdown.hotels,
     flights: breakdown.flights,
@@ -235,18 +243,14 @@ export const calculateTotalBudget = (trip) => {
 };
 
 /**
- * Format currency for display (Philippine Peso)
+ * ✅ REMOVED (2025-11-07): Duplicate export causing conflict
+ * 
+ * Previously exported formatCurrency as alias for formatPHP
+ * Now consumers should import formatCurrency from '@/utils' (resolves to formatters.js)
+ * or import formatPHP directly from '@/utils/formatters'
+ * 
+ * This fixes: "conflicting star exports for name 'formatCurrency'" error
  */
-export const formatCurrency = (amount) => {
-  if (typeof amount !== 'number' || isNaN(amount)) {
-    return '₱0';
-  }
-  
-  return `₱${amount.toLocaleString('en-PH', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  })}`;
-};
 
 /**
  * Get budget category based on total amount

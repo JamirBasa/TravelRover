@@ -17,6 +17,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { getLimitedServiceInfo } from "@/utils/flightRecommendations";
+import { logDebug, logError } from "@/utils/productionLogger";
 
 // ✅ CENTRALIZED: Import airport data from single source of truth
 // Convert LIMITED_SERVICE_AIRPORTS format to component-specific format
@@ -309,15 +310,13 @@ function FlightBooking({ trip }) {
     const city = locationStr.split(",")[0].trim();
     const cityLower = city.toLowerCase();
 
-    console.log(
-      `🔍 Looking for airport code for: "${location}" -> City: "${city}"`
-    );
+    logDebug("FlightBooking", "Looking for airport code", { location, city });
 
     // Direct exact matches first
     for (const [key, code] of Object.entries(airportMap)) {
       const keyLower = key.toLowerCase();
       if (cityLower === keyLower || locationLower.includes(keyLower)) {
-        console.log(`✅ Found exact match: ${key} -> ${code}`);
+        logDebug("FlightBooking", "Found exact match", { key, code });
         return code;
       }
     }
@@ -326,14 +325,14 @@ function FlightBooking({ trip }) {
     for (const [key, code] of Object.entries(airportMap)) {
       const keyLower = key.toLowerCase();
       if (cityLower.includes(keyLower) || keyLower.includes(cityLower)) {
-        console.log(`✅ Found partial match: ${key} -> ${code}`);
+        logDebug("FlightBooking", "Found partial match", { key, code });
         return code;
       }
     }
 
-    console.log(
-      `⚠️ No airport code found for "${location}", defaulting to MNL`
-    );
+    logDebug("FlightBooking", "No airport code found, defaulting to MNL", {
+      location,
+    });
     return "MNL";
   };
 
@@ -362,11 +361,11 @@ function FlightBooking({ trip }) {
 
   // Helper function to generate Trip.com affiliate booking URL
   const generateTripComURL = (options = {}) => {
-    console.log("🔍 Trip data for URL generation:", {
+    logDebug("FlightBooking", "Generating Trip.com URL", {
       tripLocation: trip?.userSelection?.location,
-      flightPreferences: trip?.flightPreferences,
-      userProfile: trip?.userProfile,
-      options: options,
+      hasFlightPreferences: !!trip?.flightPreferences,
+      hasUserProfile: !!trip?.userProfile,
+      options,
     });
 
     const departureCity =
@@ -381,7 +380,7 @@ function FlightBooking({ trip }) {
     const originCode = getAirportCode(departureCity);
     const destinationCode = getAirportCode(destinationCity);
 
-    console.log("✈️ Airport codes:", {
+    logDebug("FlightBooking", "Airport codes resolved", {
       departureCity,
       destinationCity,
       originCode,
@@ -391,11 +390,13 @@ function FlightBooking({ trip }) {
     // ✅ ADDED: Validate route before generating URL
     const routeValidation = validateRoute(originCode, destinationCode);
     if (!routeValidation.valid) {
-      console.warn("⚠️ Invalid route detected:", routeValidation);
+      logDebug("FlightBooking", "Invalid route detected", routeValidation);
       // For inactive airports, use the first alternative
       if (routeValidation.info?.alternatives) {
         const alternativeCode = routeValidation.info.alternatives[0];
-        console.log(`🔄 Using alternative airport: ${alternativeCode}`);
+        logDebug("FlightBooking", "Using alternative airport", {
+          alternativeCode,
+        });
         return generateTripComURL({
           ...options,
           destination:
@@ -502,17 +503,17 @@ function FlightBooking({ trip }) {
   // Error boundary protection
   try {
     if (!trip) {
-      console.warn("⚠️ No trip data provided to FlightBooking component");
+      logDebug("FlightBooking", "No trip data provided");
       throw new Error("No trip data available");
     }
 
     const hasFlightData = trip?.hasRealFlights && trip?.realFlightData?.success;
     const flights = trip?.realFlightData?.flights || [];
 
-    console.log("🛫 Flight data:", {
+    logDebug("FlightBooking", "Flight data loaded", {
       hasFlightData,
-      flights,
-      realFlightData: trip?.realFlightData,
+      flightCount: flights.length,
+      hasRealData: !!trip?.realFlightData,
     });
 
     // ✅ NEW: Validate and filter flights with price validation
@@ -523,7 +524,7 @@ function FlightBooking({ trip }) {
           flight && typeof flight === "object" && flight.name && flight.price;
 
         if (!hasBasicStructure) {
-          console.warn("⚠️ Invalid flight structure:", flight);
+          logDebug("FlightBooking", "Invalid flight structure", { flight });
           return false;
         }
 
@@ -531,10 +532,11 @@ function FlightBooking({ trip }) {
         const priceValidation = validateFlightPrice(flight.price);
 
         if (!priceValidation.valid) {
-          console.warn(
-            `⚠️ Invalid flight price for ${flight.name}: ${flight.price}`,
-            priceValidation.error
-          );
+          logDebug("FlightBooking", "Invalid flight price", {
+            flightName: flight.name,
+            price: flight.price,
+            error: priceValidation.error,
+          });
           return false;
         }
 
@@ -740,9 +742,13 @@ function FlightBooking({ trip }) {
     });
 
     const handleBookFlight = (flight) => {
-      console.log("Flight booking attempt:", flight);
+      logDebug("FlightBooking", "Flight booking attempt", {
+        flightName: flight.name,
+      });
       const bookingUrl = generateTripComURL();
-      console.log("🔗 Generated Trip.com booking URL:", bookingUrl);
+      logDebug("FlightBooking", "Generated booking URL", {
+        url: bookingUrl.substring(0, 100),
+      });
       window.open(bookingUrl, "_blank");
     };
 
@@ -1009,7 +1015,7 @@ function FlightBooking({ trip }) {
       </div>
     );
   } catch (error) {
-    console.error("❌ FlightBooking component error:", error);
+    logError("FlightBooking", "Component error", { error: error.message });
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4 sm:p-6 text-center">
         <div className="text-red-600 text-xl mb-2">⚠️</div>

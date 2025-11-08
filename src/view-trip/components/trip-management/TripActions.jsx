@@ -1,13 +1,13 @@
 // src/view-trip/components/TripActions.jsx
 import { Button } from "@/components/ui/button";
-import { Share2, Download, Edit, MoreHorizontal } from "lucide-react";
+import { Share2, Download, Edit, MoreHorizontal, Loader2 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-function TripActions({ onShare, onDownload, onEdit }) {
+function TripActions({ onShare, onDownload, onEdit, isDownloading }) {
   return (
     <div className="flex items-center gap-2">
       {/* Primary Action - Share */}
@@ -27,11 +27,21 @@ function TripActions({ onShare, onDownload, onEdit }) {
           variant="outline"
           size="sm"
           onClick={onDownload}
+          disabled={isDownloading}
           className="px-3 py-2 text-sm font-medium"
-          aria-label="Download trip as PDF"
+          aria-label={isDownloading ? "Generating PDF..." : "Download trip as PDF"}
         >
-          <Download className="h-4 w-4 mr-1" />
-          PDF
+          {isDownloading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Download className="h-4 w-4 mr-1" />
+              PDF
+            </>
+          )}
         </Button>
 
         <Button
@@ -65,10 +75,20 @@ function TripActions({ onShare, onDownload, onEdit }) {
                 variant="ghost"
                 size="sm"
                 onClick={onDownload}
+                disabled={isDownloading}
                 className="w-full justify-start text-left"
               >
-                <Download className="h-4 w-4 mr-2" />
-                Download PDF
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download PDF
+                  </>
+                )}
               </Button>
               <Button
                 variant="ghost"

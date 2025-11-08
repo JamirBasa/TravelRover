@@ -4,7 +4,7 @@
  */
 
 import React from "react";
-import { calculateTotalBudget, formatCurrency } from "@/utils/budgetCalculator";
+import { calculateTotalBudget, formatCurrency } from "@/utils";
 import { DollarSign, MapPin, Hotel, Plane } from "lucide-react";
 
 function BudgetBreakdown({ trip, className = "" }) {

@@ -2,15 +2,60 @@
  * TravelRover Formatting Utilities
  * 
  * Functions for formatting data display
+ * 
+ * 🔄 MIGRATION NOTE (2025-11-07):
+ * - formatCurrency() renamed to formatCurrencyGeneric() to avoid conflicts
+ * - Added formatPHP() for Philippine Peso formatting (primary use case)
+ * - budgetCalculator.js has its own formatCurrency() for PHP (₱) - now being phased out
+ * - Use formatPHP() for all budget/price displays in the app
  */
 
 /**
- * Format currency value
+ * Format Philippine Peso (₱) for display
+ * Primary currency formatter for TravelRover (Philippines-focused app)
+ * 
+ * @param {number} amount - Amount to format
+ * @returns {string} - Formatted PHP string (e.g., "₱15,000")
+ * 
+ * @example
+ * formatPHP(15000) // "₱15,000"
+ * formatPHP(0) // "₱0"
+ * formatPHP(null) // "₱0"
+ */
+export const formatPHP = (amount) => {
+  if (typeof amount !== 'number' || isNaN(amount)) {
+    return '₱0';
+  }
+  
+  return `₱${amount.toLocaleString('en-PH', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  })}`;
+};
+
+/**
+ * Format currency value (generic, multi-currency)
+ * Use formatPHP() for Philippine Peso in most cases
+ * 
  * @param {number} amount - Amount to format
  * @param {string} currency - Currency code (default: USD)
  * @returns {string} - Formatted currency string
+ * 
+ * @example
+ * formatCurrencyGeneric(1000, 'USD') // "$1,000"
+ * formatCurrencyGeneric(1000, 'EUR') // "€1,000"
+ * formatCurrencyGeneric(1000, 'PHP') // "₱1,000"
  */
-export const formatCurrency = (amount, currency = 'USD') => {
+export const formatCurrencyGeneric = (amount, currency = 'USD') => {
+  if (typeof amount !== 'number' || isNaN(amount)) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(0);
+  }
+  
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency,
@@ -18,6 +63,12 @@ export const formatCurrency = (amount, currency = 'USD') => {
     maximumFractionDigits: 0
   }).format(amount);
 };
+
+/**
+ * @deprecated Use formatPHP() instead for Philippine Peso
+ * Kept for backward compatibility during migration
+ */
+export const formatCurrency = formatPHP;
 
 /**
  * Format date for display
