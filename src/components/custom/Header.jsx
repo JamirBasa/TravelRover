@@ -128,10 +128,31 @@ function Header() {
   );
 
   const handleLogout = useCallback(() => {
-    googleLogout();
+    // Clear localStorage
     localStorage.removeItem("user");
+    localStorage.removeItem("userProfile");
+    localStorage.removeItem("tripDraft");
+    
+    // Clear sessionStorage
+    sessionStorage.clear();
+    
+    // Google OAuth logout
+    googleLogout();
+    
+    // Update state
     setUser(null);
-  }, []);
+    
+    // Show success toast
+    toast.success("Logged out successfully", {
+      description: "You have been signed out. See you next time!",
+      duration: 3000,
+    });
+    
+    // ✅ Redirect to homepage with replace to prevent back navigation
+    navigate("/", { replace: true });
+    
+    console.log("✅ User logged out and redirected to homepage");
+  }, [navigate]); // ✅ Add navigate to dependencies
 
   return (
     <div className="px-4 md:px-5 py-3.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200/80 dark:border-slate-700/80 shadow-lg sticky top-0 z-50 transition-all duration-300">
