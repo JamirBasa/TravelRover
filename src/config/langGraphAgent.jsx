@@ -7,6 +7,7 @@ import {
 } from "./apiConfig";
 import { criticalApiCall } from "../utils/exponentialBackoff";
 import { logDebug, logError } from "../utils/productionLogger";
+// ⚠️ REMOVED: determineTransportMode import - backend handles transport analysis
 
 /**
  * LangGraph Travel Agent - Client Adapter for Django Backend
@@ -108,6 +109,15 @@ export class LangGraphTravelAgent {
               `URL: ${requestUrl}\n` +
               `Make sure Django server is running on http://localhost:8000\n` +
               `Error: ${errorDetail}`
+          );
+        }
+
+        // ✅ SPECIFIC 429 RATE LIMIT HANDLING
+        if (response.status === 429) {
+          const retryAfter = response.headers.get("Retry-After") || 60;
+          throw new Error(
+            `Rate limit exceeded. Please wait ${retryAfter} seconds before trying again.\n` +
+              `Tip: You're generating trips too quickly. Take a short break! ☕`
           );
         }
 
@@ -221,6 +231,17 @@ export class LangGraphTravelAgent {
     const hotelData = tripParams.hotelData || {};
     const userEmail = this.getCurrentUserEmail();
 
+    // ⚠️ REMOVED: Don't analyze transport mode here - Django backend handles this
+    // The frontend transport analysis was blocking request preparation and causing timeouts
+    // The backend already analyzes transport mode during orchestrateTrip() execution
+    let transportContext = null;
+
+    logDebug("LangGraphAgent", "Transport mode analysis delegated to backend", {
+      departure: flightData.departureCity,
+      destination: tripParams.destination,
+      note: "Backend will analyze transport mode during orchestration",
+    });
+
     return {
       destination: tripParams.destination,
       start_date: tripParams.startDate,
@@ -242,6 +263,10 @@ export class LangGraphTravelAgent {
       // Send hotel data in both formats
       hotel_data: hotelData,
       hotelData: hotelData,
+
+      // ✅ NEW: Send transport mode context to backend
+      transport_mode: transportContext,
+      transportMode: transportContext, // camelCase for compatibility
 
       // User profile
       user_profile: tripParams.userProfile || {},
@@ -401,6 +426,9 @@ export class LangGraphTravelAgent {
       // Extract optimized itinerary (enhanced with route data)
       optimized_itinerary:
         results.optimized_itinerary || results.itinerary_data,
+
+      // ✅ NEW: Extract ground transport mode analysis
+      transport_mode: results.transport_mode || null,
 
       // Error handling
       errors: results.agent_errors || [],

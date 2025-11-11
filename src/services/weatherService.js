@@ -22,6 +22,35 @@ const WEATHER_API_URL = 'https://api.openweathermap.org/data/2.5';
 const weatherCache = new Map();
 const CACHE_DURATION = 3600000; // 1 hour in milliseconds
 
+// Philippine location mapping for cities that OpenWeatherMap might not recognize
+// Maps local names to API-friendly names or nearby major cities
+const PHILIPPINE_LOCATION_MAP = {
+  'Pagadian': 'Zamboanga,PH', // Use Zamboanga as fallback for Pagadian area
+  'Dipolog': 'Zamboanga,PH',
+  'Isabela': 'Zamboanga,PH',
+  'Marawi': 'Cagayan de Oro,PH',
+  'Iligan': 'Cagayan de Oro,PH',
+  'Butuan': 'Cagayan de Oro,PH',
+  'Surigao': 'Cagayan de Oro,PH',
+  'Tacloban': 'Cebu,PH',
+  'Ormoc': 'Cebu,PH',
+  'Catbalogan': 'Tacloban,PH',
+  'San Vicente': 'Puerto Princesa,PH',
+  'Coron': 'Puerto Princesa,PH',
+  'El Nido': 'Puerto Princesa,PH',
+  'Sagada': 'Baguio,PH',
+  'Banaue': 'Baguio,PH',
+  'Vigan': 'Laoag,PH',
+  'Batanes': 'Basco,PH',
+  'Siquijor': 'Dumaguete,PH',
+  'Camiguin': 'Cagayan de Oro,PH',
+  'Siargao': 'Surigao,PH',
+  'Moalboal': 'Cebu,PH',
+  'Oslob': 'Cebu,PH',
+  'Bantayan': 'Cebu,PH',
+  'Malapascua': 'Cebu,PH',
+};
+
 /**
  * Check if trip dates are within forecast availability (14 days max)
  */
@@ -58,10 +87,21 @@ export const getLocationCoordinates = async (locationName) => {
   const originalLocation = locationName;
   const cityName = originalLocation.split(',')[0].trim();
   
+  // Remove "City" suffix for better API matching (e.g., "Pagadian City" → "Pagadian")
+  const cityNameWithoutSuffix = cityName.replace(/\s+City$/i, '').trim();
+  
+  // Check if we have a mapped location for this city
+  const mappedLocation = PHILIPPINE_LOCATION_MAP[cityNameWithoutSuffix] || 
+                         PHILIPPINE_LOCATION_MAP[cityName];
+  
   // Try multiple location formats in order
   const formats = [
+    // Try mapped location first (if available)
+    ...(mappedLocation ? [{ name: 'Mapped location', query: mappedLocation }] : []),
+    { name: 'City without "City" suffix', query: `${cityNameWithoutSuffix},PH` },
     { name: 'City name only', query: `${cityName},PH` },
-    { name: 'City without country', query: cityName },
+    { name: 'City without country', query: cityNameWithoutSuffix },
+    { name: 'Original city name', query: cityName },
     { name: 'Original location', query: `${originalLocation},PH` }
   ];
   
@@ -74,11 +114,18 @@ export const getLocationCoordinates = async (locationName) => {
       
       if (response.ok) {
         const data = await response.json();
-        logDebug('WeatherService', 'Location found', { format: format.name, location: data.name });
+        const usingMappedLocation = format.name === 'Mapped location';
+        logDebug('WeatherService', 'Location found', { 
+          format: format.name, 
+          location: data.name,
+          mappedFrom: usingMappedLocation ? originalLocation : null
+        });
         return {
           lat: data.coord.lat,
           lon: data.coord.lon,
           name: data.name,
+          isMapped: usingMappedLocation,
+          originalLocation: usingMappedLocation ? originalLocation : null,
         };
       } else {
         logDebug('WeatherService', 'Location format failed', { format: format.name, status: response.status });

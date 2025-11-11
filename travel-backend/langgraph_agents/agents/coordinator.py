@@ -8,6 +8,7 @@ from .base_agent import BaseAgent
 from .flight_agent import FlightAgent
 from .hotel_agent import HotelAgent
 from .route_optimizer_agent import RouteOptimizerAgent
+from .transport_mode_agent import TransportModeAgent
 from ..models import TravelPlanningSession
 import logging
 from asgiref.sync import sync_to_async
@@ -23,6 +24,8 @@ class CoordinatorAgent(BaseAgent):
         self.hotel_agent = HotelAgent(session_id)
         # Initialize route optimizer with genetic algorithm enabled by default
         self.route_optimizer = RouteOptimizerAgent(session_id, use_genetic_algorithm=use_genetic_algorithm)
+        # ✅ NEW: Initialize transport mode agent
+        self.transport_mode_agent = TransportModeAgent(session_id)
         self.use_ga_first = use_ga_first  # NEW: Enable GA-first itinerary generation
     
     def execute_sync(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -63,6 +66,11 @@ class CoordinatorAgent(BaseAgent):
             # Create/update session
             await self._update_session(trip_params)
             
+            # ✅ NEW: Analyze transport mode FIRST (before GA or traditional workflow)
+            transport_mode_result = await self._analyze_transport_mode(trip_params)
+            trip_params['transport_mode_analysis'] = transport_mode_result
+            logger.info(f"🚌 Transport mode analysis: {transport_mode_result.get('mode')} - {transport_mode_result.get('recommendation')}")
+            
             # NEW: Check if we should use GA-first approach
             if self.use_ga_first:
                 logger.info("🧬 Using GA-First approach for itinerary generation")
@@ -99,17 +107,18 @@ class CoordinatorAgent(BaseAgent):
     def _parse_trip_parameters(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Parse and validate trip parameters"""
         
+        # ✅ Support both camelCase and snake_case for compatibility
         return {
             'destination': input_data.get('destination'),
-            'start_date': input_data.get('startDate'),
-            'end_date': input_data.get('endDate'),
+            'start_date': input_data.get('startDate') or input_data.get('start_date'),
+            'end_date': input_data.get('endDate') or input_data.get('end_date'),
             'duration': input_data.get('duration', 3),
             'travelers': input_data.get('travelers'),
             'budget': input_data.get('budget'),
             'user_email': input_data.get('user_email'),
-            'flight_data': input_data.get('flightData', {}),
-            'hotel_data': input_data.get('hotelData', {}),
-            'user_profile': input_data.get('userProfile', {})
+            'flight_data': input_data.get('flightData') or input_data.get('flight_data', {}),
+            'hotel_data': input_data.get('hotelData') or input_data.get('hotel_data', {}),
+            'user_profile': input_data.get('userProfile') or input_data.get('user_profile', {})
         }
     
     async def _update_session(self, trip_params: Dict[str, Any]) -> None:
@@ -140,6 +149,46 @@ class CoordinatorAgent(BaseAgent):
         
         await get_or_create_session()
     
+    async def _analyze_transport_mode(self, trip_params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze optimal transport mode for the given route.
+        
+        Args:
+            trip_params: Dictionary containing destination and departure city
+            
+        Returns:
+            Dict with transport mode analysis including:
+            - mode: Recommended transport mode
+            - recommendation: Human-readable message
+            - search_flights: Boolean indicating if flight search should be performed
+            - ground_transport: Ground transport details if available
+        """
+        try:
+            destination = trip_params.get('destination', '')
+            departure_city = trip_params.get('flight_data', {}).get('departureCity', 'Manila')
+            include_flights = trip_params.get('flight_data', {}).get('includeFlights', True)
+            
+            # Call TransportModeAgent for analysis (synchronous call)
+            analysis = self.transport_mode_agent.analyze_transport_mode(
+                destination=destination,
+                departure_city=departure_city,
+                include_flights=include_flights
+            )
+            
+            logger.info(f"🚌 Transport mode analysis: {analysis['mode']} from {departure_city} to {destination}")
+            
+            return analysis
+            
+        except Exception as e:
+            logger.error(f"Transport mode analysis failed: {e}")
+            # Return default: allow flight search
+            return {
+                'mode': 'flight_recommended',
+                'recommendation': 'Transport mode analysis unavailable, defaulting to flight search.',
+                'search_flights': True,
+                'ground_transport': None
+            }
+    
     async def _create_execution_plan(self, trip_params: Dict[str, Any]) -> Dict[str, Any]:
         """Create execution plan for agents"""
         
@@ -148,15 +197,23 @@ class CoordinatorAgent(BaseAgent):
             'parallel_tasks': []
         }
         
-        # Add flight task (default to True unless explicitly disabled)
+        # ✅ NEW: Check transport mode analysis results
+        transport_mode_analysis = trip_params.get('transport_mode_analysis', {})
+        should_search_flights = transport_mode_analysis.get('search_flights', True)
+        
+        # Add flight task (default to True unless explicitly disabled OR ground transport preferred)
         include_flights = trip_params.get('flight_data', {}).get('includeFlights', True)
-        if include_flights:
+        
+        # ✅ OPTIMIZATION: Skip flight search if ground transport is preferred
+        if include_flights and should_search_flights:
             flight_params = self._build_flight_params(trip_params)
             plan['parallel_tasks'].append({
                 'agent_type': 'flight',
                 'params': {'flight_params': flight_params}
             })
             logger.info(f"🛫 Flight search enabled with params: {flight_params}")
+        elif include_flights and not should_search_flights:
+            logger.info(f"✅ Flight search SKIPPED - ground transport preferred for this route")
         
         # Add hotel task (default to True unless explicitly disabled)
         include_hotels = trip_params.get('hotel_data', {}).get('includeHotels', True)
@@ -434,12 +491,16 @@ class CoordinatorAgent(BaseAgent):
     async def _merge_agent_results(self, agent_results: Dict[str, Any], trip_params: Dict[str, Any]) -> Dict[str, Any]:
         """Merge results from all agents"""
         
+        # ✅ NEW: Include transport mode analysis
+        transport_mode_analysis = trip_params.get('transport_mode_analysis', {})
+        
         merged = {
             'session_id': self.session_id,
             'trip_params': trip_params,
             'agent_results': agent_results,
             'flights': agent_results.get('flight'),
             'hotels': agent_results.get('hotel'),
+            'transport_mode': transport_mode_analysis,  # ✅ Add transport analysis
             'total_estimated_cost': 0,
             'cost_breakdown': {},
             'agent_errors': []
@@ -474,10 +535,27 @@ class CoordinatorAgent(BaseAgent):
                     hotels[0]['usage_note'] = 'Default hotel for Day 1 check-in in itinerary'
                     logger.info(f"✅ Marked {hotels[0].get('name', 'Unknown')} as primary check-in hotel")
         
-        merged['total_estimated_cost'] = flight_cost + hotel_cost
+        # ✅ NEW: Include ground transport cost if applicable
+        ground_transport_cost = 0
+        if transport_mode_analysis.get('mode') == 'ground_preferred':
+            ground_transport = transport_mode_analysis.get('ground_transport', {})
+            if ground_transport:
+                cost_range = ground_transport.get('cost', 'Unknown')
+                # Extract average cost from range (e.g., "₱200-350" -> 275)
+                if '-' in cost_range:
+                    parts = cost_range.replace('₱', '').split('-')
+                    try:
+                        min_cost = float(parts[0].strip())
+                        max_cost = float(parts[1].strip())
+                        ground_transport_cost = (min_cost + max_cost) / 2
+                    except (ValueError, IndexError):
+                        ground_transport_cost = 0
+        
+        merged['total_estimated_cost'] = flight_cost + hotel_cost + ground_transport_cost
         merged['cost_breakdown'] = {
             'flights': flight_cost,
-            'hotels': hotel_cost
+            'hotels': hotel_cost,
+            'ground_transport': ground_transport_cost  # ✅ Add ground transport to breakdown
         }
         
         # Collect errors
@@ -759,6 +837,20 @@ class CoordinatorAgent(BaseAgent):
             step_duration = time.time() - step_start
             logger.info(f"✅ GA optimization complete in {step_duration:.2f}s. Score: {ga_result.get('optimization_score', 0):.2f}")
             
+            # Step 2.5: Analyze transport mode (NEW: Ground Transport Analysis)
+            step_start = time.time()
+            logger.info("🚗 Step 2.5: Analyzing transport mode...")
+            transport_mode_result = await self._analyze_transport_mode(trip_params)
+            trip_params['transport_mode_analysis'] = transport_mode_result
+            
+            # Update execution plan based on transport mode
+            if not transport_mode_result.get('search_flights', True):
+                logger.info("🚗 Ground transport preferred - skipping flight search")
+                trip_params['flight_data']['includeFlights'] = False
+            
+            step_duration = time.time() - step_start
+            logger.info(f"✅ Transport mode analysis complete in {step_duration:.2f}s")
+            
             # Step 3: Parallel execution of flights & hotels
             step_start = time.time()
             logger.info("✈️ Step 3: Fetching flights & hotels in parallel...")
@@ -799,6 +891,28 @@ class CoordinatorAgent(BaseAgent):
                 hotel_response = None
                 logger.info("🏨 Hotels not requested - setting to null")
             
+            # ✅ NEW: Calculate cost breakdown including ground transport
+            transport_mode_analysis = trip_params.get('transport_mode_analysis', {})
+            ground_transport_cost = 0
+            
+            if transport_mode_analysis.get('mode') == 'ground_preferred':
+                ground_transport = transport_mode_analysis.get('ground_transport', {})
+                if ground_transport:
+                    cost_data = ground_transport.get('cost', {})
+                    if isinstance(cost_data, dict):
+                        try:
+                            min_cost = float(cost_data.get('min', 0))
+                            max_cost = float(cost_data.get('max', 0))
+                            ground_transport_cost = (min_cost + max_cost) / 2
+                        except (ValueError, TypeError):
+                            ground_transport_cost = 0
+            
+            cost_breakdown = {
+                'flights': 0,  # Will be calculated from flight_response if available
+                'hotels': 0,   # Will be calculated from hotel_response if available
+                'ground_transport': round(ground_transport_cost) if ground_transport_cost > 0 else 0
+            }
+            
             final_results = {
                 # GA-generated itinerary
                 'itinerary_data': ga_result.get('itinerary_data', []),
@@ -811,6 +925,12 @@ class CoordinatorAgent(BaseAgent):
                 
                 # Hotel results (null if not requested)
                 'hotels': hotel_response,
+                
+                # ✅ NEW: Ground transport mode analysis
+                'transport_mode': transport_mode_analysis,
+                
+                # ✅ NEW: Cost breakdown with ground transport
+                'cost_breakdown': cost_breakdown,
                 
                 # Trip parameters
                 'trip_params': trip_params,

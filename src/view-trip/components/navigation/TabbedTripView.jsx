@@ -7,18 +7,22 @@ import {
   Info,
   Lightbulb,
   Map,
+  MessageCircle,
 } from "lucide-react";
 
 // ✅ Import production logging
 import { logDebug } from "@/utils/productionLogger";
+// ✅ Import budget calculator
+import { calculateTotalBudget } from "@/utils";
 
 // Import existing components from organized folders
 import { InfoSection } from "../shared";
 import { Hotels } from "../accommodations";
 import { PlacesToVisit } from "../places-to-visit";
-import { FlightBooking } from "../travel-bookings";
+import { FlightBooking, GroundTransportBanner } from "../travel-bookings";
 import { RouteOptimizationStatus } from "../optimization";
 import { OptimizedRouteMap } from "../maps";
+import { TripChatbot } from "../chat";
 import WeatherForecast from "../weather/WeatherForecast";
 
 function TabbedTripView({ trip, onTripUpdate }, ref) {
@@ -74,10 +78,46 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
     {
       id: "overview",
       label: "Overview",
-      icon: <Info className="h-4 w-4" />,
+      icon: <Info className="h-5 w-5" />,
       component: (
         <div className="space-y-6">
           <InfoSection trip={trip} />
+
+          {/* Simple Transport Summary - Overview only, details in Air Travel tab */}
+          {trip?.transportMode?.mode && (
+            <div className="brand-card p-4 border border-sky-200">
+              <div className="flex items-center gap-3">
+                <div className="text-2xl">
+                  {trip.transportMode.mode === "ground_preferred" ? "🚌" : "✈️"}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                    {trip.transportMode.mode === "ground_preferred"
+                      ? "Ground Transport Recommended"
+                      : "Flight Recommended"}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                    {trip.transportMode.mode === "ground_preferred"
+                      ? "Travel by bus/van for a scenic journey"
+                      : "Air travel is the most efficient option for your route"}
+                    {" • "}
+                    <button
+                      onClick={() =>
+                        setActiveTab(
+                          trip?.flightPreferences?.includeFlights
+                            ? "air-travel"
+                            : "itinerary"
+                        )
+                      }
+                      className="text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 font-medium"
+                    >
+                      View Details →
+                    </button>
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Weather Forecast - Shows for trips within 14 days */}
           <div id="weather-forecast-section">
@@ -94,29 +134,42 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
       ),
     },
     {
-      id: "hotels",
-      label: "Hotels",
-      icon: <Hotel className="h-4 w-4" />,
+      id: "accommodations",
+      label: "Accommodations",
+      icon: <Hotel className="h-5 w-5" />,
       component: <Hotels trip={trip} />,
     },
-    // ✅ Show Flights tab if user ENABLED flights (even if no data for inactive airports)
+    // ✅ Show Air Travel tab if user ENABLED flights (even if no data for inactive airports)
     ...(trip?.flightPreferences?.includeFlights ||
     trip?.hasRealFlights ||
     trip?.realFlightData?.success ||
     trip?.flightResults?.success
       ? [
           {
-            id: "flights",
-            label: "Flights",
-            icon: <Plane className="h-4 w-4" />,
-            component: <FlightBooking trip={trip} />,
+            id: "air-travel",
+            label: "Air Travel",
+            icon: <Plane className="h-5 w-5" />,
+            component: (
+              <div className="space-y-4">
+                {/* Show ground transport info if ground_preferred */}
+                {trip?.transportMode?.mode === "ground_preferred" ? (
+                  <GroundTransportBanner
+                    transportMode={trip.transportMode}
+                    costBreakdown={trip.costBreakdown}
+                  />
+                ) : (
+                  /* Show flight booking if flights are recommended */
+                  <FlightBooking trip={trip} />
+                )}
+              </div>
+            ),
           },
         ]
       : []),
     {
       id: "itinerary",
       label: "Itinerary",
-      icon: <Calendar className="h-4 w-4" />,
+      icon: <Calendar className="h-5 w-5" />,
       component: (
         <PlacesToVisit
           ref={placesToVisitRef}
@@ -128,7 +181,7 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
     {
       id: "map",
       label: "Interactive Map",
-      icon: <Map className="h-4 w-4" />,
+      icon: <Map className="h-5 w-5" />,
       component: (
         <OptimizedRouteMap
           itinerary={trip?.tripData?.itinerary}
@@ -140,9 +193,15 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
       ),
     },
     {
+      id: "chat",
+      label: "AI Assistant",
+      icon: <MessageCircle className="h-5 w-5" />,
+      component: <TripChatbot trip={trip} />,
+    },
+    {
       id: "tips",
       label: "Travel Tips",
-      icon: <Lightbulb className="h-4 w-4" />,
+      icon: <Lightbulb className="h-5 w-5" />,
       component: (
         <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border border-orange-200 dark:border-orange-800 rounded-lg p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-4">
@@ -232,11 +291,29 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
         <section className="xl:col-span-3 w-full" aria-label="Trip content">
           {/* Compact Tab Navigation */}
           <nav
-            className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700"
+            className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 relative"
             role="tablist"
             aria-label="Trip sections"
           >
-            <div className="flex overflow-x-auto scrollbar-hide">
+            {/* Scroll hint gradient indicators */}
+            <div
+              className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white dark:from-slate-900 to-transparent pointer-events-none z-10"
+              aria-hidden="true"
+            ></div>
+            <div
+              className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-slate-900 to-transparent pointer-events-none z-10"
+              aria-hidden="true"
+            ></div>
+
+            <div
+              className="flex overflow-x-auto scroll-smooth snap-x snap-mandatory 
+                         scrollbar-track-gray-100 dark:scrollbar-track-slate-800
+                         scrollbar-thumb-gray-400 dark:scrollbar-thumb-slate-500
+                         hover:scrollbar-thumb-gray-500 dark:hover:scrollbar-thumb-slate-400"
+              style={{
+                scrollbarWidth: "auto" /* Firefox - show full scrollbar */,
+              }}
+            >
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -244,7 +321,7 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
                   aria-selected={activeTab === tab.id}
                   aria-controls={`tabpanel-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all duration-300 whitespace-nowrap cursor-pointer ${
+                  className={`flex items-center gap-2.5 px-4 sm:px-5 py-4 text-sm sm:text-base font-medium border-b-2 transition-all duration-300 whitespace-nowrap cursor-pointer flex-shrink-0 snap-start ${
                     activeTab === tab.id
                       ? "border-sky-500 dark:border-sky-400 text-sky-700 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/50"
                       : "border-transparent text-gray-600 dark:text-gray-400 hover:text-sky-600 dark:hover:text-sky-400 hover:border-sky-300 dark:hover:border-sky-700 hover:bg-sky-50/30 dark:hover:bg-sky-950/20"
@@ -272,16 +349,19 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
           </nav>
 
           {/* Optimized Tab Content */}
-          <div className="bg-white dark:bg-slate-950 min-h-[500px] w-full">
+          <div className="bg-white dark:bg-slate-950 min-h-[500px] w-full flex flex-col">
             {tabs.map((tab) => (
               <div
                 key={tab.id}
                 id={`tabpanel-${tab.id}`}
                 role="tabpanel"
                 aria-labelledby={`tab-${tab.id}`}
-                className={`p-3 sm:p-4 lg:p-6 w-full ${
-                  activeTab === tab.id ? "block" : "hidden"
-                }`}
+                className={`w-full ${
+                  // ✅ No padding for chat tab (fills container), normal padding for others
+                  tab.id === "chat"
+                    ? "p-4 sm:p-5 lg:p-6 flex-1 flex flex-col"
+                    : "p-3 sm:p-4 lg:p-6"
+                } ${activeTab === tab.id ? "block" : "hidden"}`}
               >
                 {tab.component}
               </div>
@@ -295,70 +375,120 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
           aria-label="Trip summary and actions"
         >
           <div className="p-4 sm:p-5 space-y-4 xl:sticky xl:top-20">
-            {/* Trip Summary Card */}
-            <div className="brand-gradient rounded-lg p-4 text-white shadow-lg">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+            {/* At A Glance Card - Clean & Professional */}
+            <div className="brand-gradient rounded-xl p-5 text-white shadow-xl">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
                   <span
-                    className="text-white text-sm"
+                    className="text-white text-lg"
                     role="img"
-                    aria-label="Statistics"
+                    aria-label="Overview"
                   >
-                    📊
+                    ✨
                   </span>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold">Trip Summary</h3>
-                  <p className="text-white/80 text-sm">Essential details</p>
+                  <h3 className="text-lg font-bold">At A Glance</h3>
+                  <p className="text-white/80 text-xs">Your trip essentials</p>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex flex-col gap-1 py-2 border-b border-white/20">
-                  <span className="text-white/90 font-medium text-sm">
-                    Destination
-                  </span>
-                  <span className="font-semibold text-white text-sm break-words leading-relaxed">
-                    {trip?.userSelection?.location || "Not specified"}
-                  </span>
+              <div className="space-y-4">
+                {/* Travel Dates - Prominent Display */}
+                {trip?.userSelection?.startDate &&
+                  trip?.userSelection?.endDate && (
+                    <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-base">📅</span>
+                        <span className="text-white/90 font-semibold text-sm">
+                          Travel Period
+                        </span>
+                      </div>
+                      <p className="font-bold text-white text-base leading-relaxed">
+                        {new Date(
+                          trip.userSelection.startDate
+                        ).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}{" "}
+                        -{" "}
+                        {new Date(
+                          trip.userSelection.endDate
+                        ).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
+                  )}
+
+                {/* Trip Overview - 2 Key Metrics */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  {/* Duration */}
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center border border-white/10 hover:bg-white/15 transition-colors">
+                    <div className="text-2xl font-bold text-white mb-1.5">
+                      {trip?.userSelection?.duration || 0}
+                    </div>
+                    <div className="text-white/80 text-xs font-medium">
+                      Days
+                    </div>
+                  </div>
+
+                  {/* Travelers */}
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center border border-white/10 hover:bg-white/15 transition-colors">
+                    <div className="text-2xl font-bold text-white mb-1.5">
+                      {trip?.userSelection?.travelers || 1}
+                    </div>
+                    <div className="text-white/80 text-xs font-medium">
+                      {(trip?.userSelection?.travelers || 1) === 1
+                        ? "Traveler"
+                        : "Travelers"}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/20">
-                  <span className="text-white/90 font-medium text-sm">
-                    Duration
-                  </span>
-                  <span className="font-semibold text-white text-sm">
-                    {trip?.userSelection?.duration || 0} days
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/20">
-                  <span className="text-white/90 font-medium text-sm">
-                    Travelers
-                  </span>
-                  <span className="font-semibold text-white text-sm">
-                    {trip?.userSelection?.travelers || "Not specified"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/20">
-                  <span className="text-white/90 font-medium text-sm">
-                    Budget
-                  </span>
-                  <span className="font-semibold text-white text-sm">
-                    {trip?.userSelection?.customBudget
-                      ? `₱${trip?.userSelection?.customBudget?.toLocaleString()}`
-                      : trip?.userSelection?.budget || "Not set"}
-                  </span>
-                </div>
-                {trip?.hasRealFlights && (
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-white/90 font-medium text-sm">
-                      Flight Data
-                    </span>
-                    <span className="font-semibold text-green-300 dark:text-green-400 flex items-center gap-1.5 text-sm">
-                      <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-                      Live
+
+                {/* Total Budget */}
+                <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-base">💰</span>
+                    <span className="text-white/90 font-semibold text-sm">
+                      Total Budget
                     </span>
                   </div>
-                )}
+                  <p className="font-bold text-white text-base leading-relaxed">
+                    {(() => {
+                      // ✅ Priority 1: Use budgetAmount (already parsed number - new trips)
+                      if (trip?.userSelection?.budgetAmount) {
+                        return `₱${trip.userSelection.budgetAmount.toLocaleString()}`;
+                      }
+
+                      // ✅ Priority 2: Parse customBudget (string to number - custom budget)
+                      if (
+                        trip?.userSelection?.customBudget &&
+                        trip.userSelection.customBudget.trim() !== ""
+                      ) {
+                        const amount = parseInt(
+                          trip.userSelection.customBudget
+                        );
+                        return !isNaN(amount)
+                          ? `₱${amount.toLocaleString()}`
+                          : "Budget not set";
+                      }
+
+                      // ✅ Priority 3: Calculate from trip data (tier-based budgets like "Moderate")
+                      if (trip?.tripData) {
+                        const calculated = calculateTotalBudget(trip);
+                        if (calculated?.total && calculated.total > 0) {
+                          return `₱${calculated.total.toLocaleString()}`;
+                        }
+                      }
+
+                      // ❌ No budget data available
+                      return "Budget not set";
+                    })()}
+                  </p>
+                </div>
               </div>
             </div>
 

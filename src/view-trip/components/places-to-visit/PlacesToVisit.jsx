@@ -41,7 +41,6 @@ import {
   ItineraryHeader,
   DayHeader,
   DayActivities,
-  TravelTipsSection,
   EmptyStateComponent,
 } from "./index";
 
@@ -50,6 +49,7 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
   // Enhanced state management for per-day editing functionality
   const [editingDay, setEditingDay] = useState(null); // null or dayIndex number
   const [editableItinerary, setEditableItinerary] = useState([]);
+  // ✅ Start with all days collapsed by default for reduced visual clutter
   const [expandedDays, setExpandedDays] = useState(new Set());
 
   // ✅ Expose methods to parent via ref
@@ -177,14 +177,13 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
   };
 
   // Parse itinerary data with enhanced error handling (memoized to prevent infinite loops)
-  // Include trip.id in dependencies to ensure re-parse when trip data is refreshed
   const parsedItinerary = useMemo(() => {
     logDebug("PlacesToVisit", "Parsing itinerary data", {
       hasItinerary: !!trip?.tripData?.itinerary,
       type: typeof trip?.tripData?.itinerary,
     });
     return parseDataArray(trip?.tripData?.itinerary, "itinerary");
-  }, [trip?.tripData?.itinerary, trip?.id]);
+  }, [trip?.tripData?.itinerary]);
 
   // Calculate trip statistics (memoized)
   const { totalDays, totalActivities } = useMemo(() => {
@@ -444,18 +443,11 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
         placesToVisit={parsedPlacesToVisit}
       />
 
-      {/* Must-Visit Places Section with Images */}
-      {parsedPlacesToVisit && parsedPlacesToVisit.length > 0 && (
-        <PlacesToVisitSection placesToVisit={parsedPlacesToVisit} />
-      )}
-
-      {/* Budget Breakdown Section */}
-      <BudgetBreakdown trip={trip} className="mb-8" />
-
+      {/* ✅ OPTIMIZED ORDER: Itinerary comes right after overview */}
       {/* Daily Itinerary Header */}
       <ItineraryHeader />
 
-      {/* Usage Instructions */}
+      {/* Usage Instructions - Compact version */}
       <ItineraryNavigationHelper editingDay={editingDay} />
 
       {/* Main Itinerary Section */}
@@ -507,8 +499,16 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
         </div>
       </div>
 
-      {/* Travel Tips */}
-      <TravelTipsSection />
+      {/* ✅ OPTIMIZED ORDER: Budget and Places after itinerary */}
+      {/* Budget Breakdown Section */}
+      <BudgetBreakdown trip={trip} className="mt-8" />
+
+      {/* Included Places Section (renamed from Must-Visit) */}
+      {parsedPlacesToVisit && parsedPlacesToVisit.length > 0 && (
+        <PlacesToVisitSection placesToVisit={parsedPlacesToVisit} />
+      )}
+
+      {/* Travel Tips removed - consolidated in Travel Tips tab for better UX */}
     </div>
   );
 });

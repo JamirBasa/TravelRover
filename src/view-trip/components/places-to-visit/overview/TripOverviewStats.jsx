@@ -49,67 +49,65 @@ function TripOverviewStats({
       </div>
 
       <div
-        className={`${PATTERNS.sectionHeader.content} ${SPACING.padding.large} px-5 sm:px-8 py-8`}
+        className={`${PATTERNS.sectionHeader.content} px-4 sm:px-6 py-5 sm:py-6`}
       >
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <h3
-            className={`text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 leading-tight`}
+            className={`text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2 leading-tight`}
           >
             ✨ Your Adventure at a Glance
           </h3>
           <p
-            className={`text-base sm:text-lg lg:text-xl text-blue-100 dark:text-blue-200 leading-relaxed max-w-2xl mx-auto`}
+            className={`text-sm sm:text-base text-blue-100 dark:text-blue-200 max-w-2xl mx-auto`}
           >
-            Everything you need to know about your amazing journey
+            AI-optimized itinerary with real-time data
           </p>
         </div>
 
-        <div
-          className={`grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8`}
-        >
+        <div className={`grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4`}>
           <div className="text-center group cursor-default">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 group-hover:bg-white/35 group-hover:scale-110 shadow-lg">
-              <span className="text-3xl sm:text-4xl lg:text-5xl">📅</span>
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3 transition-all duration-300 group-hover:bg-white/35 group-hover:scale-110 shadow-lg">
+              <span className="text-2xl sm:text-3xl">📅</span>
             </div>
             <div
-              className={`text-3xl sm:text-4xl font-bold text-white mb-2 transition-all duration-300 group-hover:scale-105`}
+              className={`text-2xl sm:text-3xl font-bold text-white mb-1 transition-all duration-300 group-hover:scale-105`}
             >
               {itineraryLength}
             </div>
             <div
-              className={`text-base sm:text-lg font-semibold text-white dark:text-blue-100 leading-tight`}
+              className={`text-sm sm:text-base font-semibold text-white dark:text-blue-100 leading-tight`}
             >
               {itineraryLength === 1 ? "Day" : "Days"}
             </div>
           </div>
 
           <div className="text-center group cursor-default">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 group-hover:bg-white/35 group-hover:scale-110 shadow-lg">
-              <span className="text-3xl sm:text-4xl lg:text-5xl">🎯</span>
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3 transition-all duration-300 group-hover:bg-white/35 group-hover:scale-110 shadow-lg">
+              <span className="text-2xl sm:text-3xl">📍</span>
             </div>
             <div
-              className={`text-3xl sm:text-4xl font-bold text-white mb-2 transition-all duration-300 group-hover:scale-105`}
+              className={`text-2xl sm:text-3xl font-bold text-white mb-1 transition-all duration-300 group-hover:scale-105`}
             >
               {placesToVisitLength}
             </div>
             <div
-              className={`text-base sm:text-lg font-semibold text-white dark:text-blue-100 leading-tight`}
+              className={`text-sm sm:text-base font-semibold text-white dark:text-blue-100 leading-tight`}
             >
-              Must-See {placesToVisitLength === 1 ? "Place" : "Places"}
+              Featured {placesToVisitLength === 1 ? "Place" : "Places"}
             </div>
           </div>
 
           <div className="text-center group cursor-default">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 group-hover:bg-white/35 group-hover:scale-110 shadow-lg">
-              <span className="text-3xl sm:text-4xl lg:text-5xl">⚡</span>
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3 transition-all duration-300 group-hover:bg-white/35 group-hover:scale-110 shadow-lg">
+              <span className="text-2xl sm:text-3xl">⚡</span>
             </div>
             <div
-              className={`text-3xl sm:text-4xl font-bold text-white mb-2 transition-all duration-300 group-hover:scale-105`}
+              className={`text-2xl sm:text-3xl font-bold text-white mb-1 transition-all duration-300 group-hover:scale-105`}
             >
               {activitiesCount}
             </div>
             <div
-              className={`text-base sm:text-lg font-semibold text-white dark:text-blue-100 leading-tight`}
+              className={`text-sm sm:text-base font-semibold text-white dark:text-blue-100 leading-tight`}
             >
               {activitiesCount === 1 ? "Activity" : "Activities"}
             </div>
@@ -117,47 +115,21 @@ function TripOverviewStats({
 
           {budgetInfo.total > 0 && (
             <div className="text-center group cursor-default">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 group-hover:bg-white/35 group-hover:scale-110 shadow-lg">
-                <span className="text-3xl sm:text-4xl lg:text-5xl">💰</span>
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/25 dark:bg-white/15 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3 transition-all duration-300 group-hover:bg-white/35 group-hover:scale-110 shadow-lg">
+                <span className="text-2xl sm:text-3xl">💰</span>
               </div>
               <div
-                className={`text-2xl sm:text-3xl font-bold text-white mb-2 transition-all duration-300 group-hover:scale-105`}
+                className={`text-xl sm:text-2xl font-bold text-white mb-1 transition-all duration-300 group-hover:scale-105`}
               >
                 {formatCurrency(budgetInfo.total)}
               </div>
               <div
-                className={`text-base sm:text-lg font-semibold text-white dark:text-blue-100 leading-tight`}
+                className={`text-sm sm:text-base font-semibold text-white dark:text-blue-100 leading-tight`}
               >
                 Total Cost
               </div>
             </div>
           )}
-        </div>
-
-        {/* Trip Highlights */}
-        <div className="mt-8 pt-6 border-t border-white/20 dark:border-white/10">
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-            <div className="flex items-center gap-2.5 bg-white/95 dark:bg-slate-800/90 text-gray-800 dark:text-gray-100 rounded-full px-5 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">
-              <span className="text-lg sm:text-xl">🌟</span>
-              <span>AI-Optimized</span>
-            </div>
-            {budgetInfo.total > 0 && (
-              <div className="flex items-center gap-2.5 bg-white/95 dark:bg-slate-800/90 text-gray-800 dark:text-gray-100 rounded-full px-5 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">
-                <span className="text-lg sm:text-xl">💰</span>
-                <span>Estimated Cost</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2.5 bg-white/95 dark:bg-slate-800/90 text-gray-800 dark:text-gray-100 rounded-full px-5 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">
-              <span className="text-lg sm:text-xl">📍</span>
-              <span>Local Insights</span>
-            </div>
-            {trip?.hasRealFlights && (
-              <div className="flex items-center gap-2.5 bg-green-100/95 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full px-5 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 border border-green-300 dark:border-green-700">
-                <span className="text-lg sm:text-xl">✈️</span>
-                <span>Live Flights</span>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>
