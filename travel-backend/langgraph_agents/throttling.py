@@ -11,13 +11,13 @@ import time
 class TripGenerationThrottle(UserRateThrottle):
     """
     Rate limiting for trip generation endpoint
-    Authenticated users: 5 requests per hour
-    Anonymous users: 2 requests per hour
+    Authenticated users: 20 requests per hour (increased for development)
+    Anonymous users: 10 requests per hour
     """
     scope = 'trip_generation'
     
     # Override default rates
-    rate = '5/hour'
+    rate = '20/hour'  # Increased for development/testing
     
     def get_cache_key(self, request, view):
         """
@@ -47,10 +47,10 @@ class TripGenerationThrottle(UserRateThrottle):
         
         if not user_email:
             # Anonymous users get stricter limit
-            self.rate = '2/hour'
+            self.rate = '10/hour'  # Increased for development
         else:
             # Authenticated users get standard limit
-            self.rate = '5/hour'
+            self.rate = '20/hour'  # Increased for development
             
         return super().allow_request(request, view)
 
@@ -78,7 +78,7 @@ class BurstTripGenerationThrottle(UserRateThrottle):
     Prevents rapid-fire requests within short timeframe
     """
     scope = 'trip_generation_burst'
-    rate = '2/minute'  # Max 2 requests per minute
+    rate = '10/minute'  # Max 10 requests per minute (increased for development/testing)
     
     def get_cache_key(self, request, view):
         """Use same cache key format as TripGenerationThrottle"""

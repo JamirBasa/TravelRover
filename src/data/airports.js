@@ -281,7 +281,7 @@ export const PHILIPPINE_AIRPORTS = {
     aliases: ['Davao', 'Davao City', 'City of Mati']
   },
 
-  // === MINDANAO - CAGAYAN DE ORO ===
+  // === MINDANAO - NORTHERN MINDANAO ===
   'CGY': {
     code: 'CGY',
     name: 'Laguindingan Airport',
@@ -292,6 +292,48 @@ export const PHILIPPINE_AIRPORTS = {
     type: 'domestic',
     coordinates: { lat: 8.6017, lng: 124.4567 },
     aliases: ['Cagayan', 'Cagayan de Oro']
+  },
+
+  'OZC': {
+    code: 'OZC',
+    name: 'Labo Airport (Ozamiz Airport)',
+    city: 'Ozamiz',
+    region: 'Misamis Occidental',
+    regionCode: 'northern-mindanao',
+    status: AIRPORT_STATUS.ACTIVE,
+    type: 'domestic',
+    coordinates: { lat: 8.1789, lng: 123.8417 },
+    aliases: ['Ozamiz', 'Ozamis', 'Ozamiz City', 'Misamis Occidental']
+  },
+
+  'MBL': {
+    code: 'MBL',
+    name: 'Malaybalay Airport',
+    city: 'Malaybalay',
+    region: 'Bukidnon',
+    regionCode: 'northern-mindanao',
+    status: AIRPORT_STATUS.LIMITED,
+    type: 'domestic',
+    coordinates: { lat: 8.1431, lng: 125.1272 },
+    aliases: ['Malaybalay', 'Malaybalay City', 'Bukidnon'],
+    alternatives: ['CGY'],
+    alternativeNames: ['Laguindingan Airport (Cagayan de Oro)'],
+    transport: 'Van/bus from Cagayan de Oro (2 hours)',
+    travelTime: '2 hours',
+    recommendation: 'Fly to Cagayan de Oro (CGY) then take van to Malaybalay.',
+    notes: 'Malaybalay Airport has very limited/seasonal service. Best route: Fly to Cagayan de Oro → Van to Malaybalay (2 hrs, ₱200-300).'
+  },
+
+  'DPL': {
+    code: 'DPL',
+    name: 'Dipolog Airport',
+    city: 'Dipolog',
+    region: 'Zamboanga del Norte',
+    regionCode: 'zamboanga-peninsula',
+    status: AIRPORT_STATUS.ACTIVE,
+    type: 'domestic',
+    coordinates: { lat: 8.6019, lng: 123.3419 },
+    aliases: ['Dipolog', 'Dipolog City']
   },
 
   // === MINDANAO - CARAGA ===
@@ -330,6 +372,22 @@ export const PHILIPPINE_AIRPORTS = {
     type: 'international',
     coordinates: { lat: 6.9224, lng: 122.0596 },
     aliases: ['Zamboanga', 'Zamboanga City']
+  },
+
+  'PAG': {
+    code: 'PAG',
+    name: 'Pagadian Airport',
+    city: 'Pagadian',
+    region: 'Zamboanga del Sur',
+    regionCode: 'zamboanga',
+    status: AIRPORT_STATUS.LIMITED,
+    type: 'domestic',
+    coordinates: { lat: 6.0574, lng: 121.0119 },
+    aliases: ['Pagadian', 'Pagadian City'],
+    notes: 'Limited commercial service - ground transport to/from Zamboanga often preferred',
+    alternatives: ['ZAM'],
+    alternativeNames: ['Zamboanga City'],
+    recommendation: '✈️→🚌 Limited flights. Ground transport to/from Zamboanga is convenient (3 hrs, ₱200-350).'
   },
 
   // === MINDANAO - COTABATO ===
@@ -383,7 +441,7 @@ export const INTERNATIONAL_AIRPORTS = ['MNL', 'CEB', 'CRK', 'DVO', 'ILO', 'KLO',
 export const ACTIVE_DOMESTIC_AIRPORTS = ['TUG', 'WNP', 'LGP', 'DGT', 'BCD', 'RXS', 'CGY', 'BXU', 'SUG', 'CBO', 'MPH'];
 
 // Airports with limited/seasonal service
-export const LIMITED_SERVICE_AIRPORTS = ['BAG', 'SFS', 'DRP', 'BSO'];
+export const LIMITED_SERVICE_AIRPORTS = ['BAG', 'SFS', 'DRP', 'BSO', 'MBL'];
 
 // Inactive airports (no commercial service)
 export const INACTIVE_AIRPORTS = ['BAG'];
@@ -404,6 +462,36 @@ export function getAirportByCode(code) {
 }
 
 /**
+ * Calculate Levenshtein distance between two strings (typo tolerance)
+ * @param {string} a - First string
+ * @param {string} b - Second string
+ * @returns {number} Edit distance
+ */
+function levenshteinDistance(a, b) {
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+/**
  * Get airport code from city/location name
  * @param {string} location - City or location name
  * @returns {string} Airport code (defaults to 'MNL' if not found)
@@ -417,37 +505,59 @@ export function getAirportCode(location) {
     return trimmed.toUpperCase();
   }
 
-  // Normalize location for matching
+  // Extract city name from "City, Province/Region" format
+  const cityName = location.split(',')[0].trim().toLowerCase();
   const locationLower = location.toLowerCase();
-  const city = location.split(',')[0].trim().toLowerCase();
 
-  // Search through all airports
+  // PHASE 1: Exact city name matches (highest priority)
   for (const [code, airport] of Object.entries(PHILIPPINE_AIRPORTS)) {
-    const cityLower = airport.city.toLowerCase();
-    const regionLower = airport.region.toLowerCase();
-
-    // Exact city match
-    if (city === cityLower || locationLower === cityLower) {
+    const airportCityLower = airport.city.toLowerCase();
+    
+    // Exact match on extracted city name
+    if (cityName === airportCityLower) {
       return code;
     }
+  }
 
-    // Exact region match
-    if (city === regionLower || locationLower === regionLower) {
-      return code;
-    }
-
-    // Check aliases
+  // PHASE 2: Check aliases for exact city name match
+  for (const [code, airport] of Object.entries(PHILIPPINE_AIRPORTS)) {
     if (airport.aliases) {
       for (const alias of airport.aliases) {
         const aliasLower = alias.toLowerCase();
-        if (city === aliasLower || locationLower.includes(aliasLower)) {
+        // Exact alias match on extracted city name
+        if (cityName === aliasLower) {
           return code;
+        }
+        // Fuzzy match: check if cityName closely matches alias (typo tolerance)
+        // Example: "osamiz" should match "Ozamiz"
+        if (cityName.length >= 5 && aliasLower.length >= 5) {
+          const distance = levenshteinDistance(cityName, aliasLower);
+          // Allow 1-2 character difference for typos
+          if (distance <= 2 && distance < aliasLower.length * 0.3) {
+            console.log(`✨ Fuzzy match: "${location}" → "${alias}" (${airport.city})`);
+            return code;
+          }
         }
       }
     }
+  }
 
-    // Partial matching
-    if (city.includes(cityLower) || cityLower.includes(city)) {
+  // PHASE 3: Region/province matches (lower priority)
+  for (const [code, airport] of Object.entries(PHILIPPINE_AIRPORTS)) {
+    const regionLower = airport.region.toLowerCase();
+    
+    // Exact region match
+    if (cityName === regionLower || locationLower === regionLower) {
+      return code;
+    }
+  }
+
+  // PHASE 4: Partial matching as last resort (for backwards compatibility)
+  for (const [code, airport] of Object.entries(PHILIPPINE_AIRPORTS)) {
+    const airportCityLower = airport.city.toLowerCase();
+    
+    // Partial match on full location string (city names longer than 3 chars to avoid false positives)
+    if (locationLower.includes(airportCityLower) && airportCityLower.length > 3) {
       return code;
     }
   }

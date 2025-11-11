@@ -221,6 +221,58 @@ ${hotelLines.join("\n")}
 };
 
 /**
+ * GROUND TRANSPORT SUMMARY
+ * Builds ground transport context for AI itinerary generation
+ */
+export const buildGroundTransportSummary = (transportMode) => {
+  if (!transportMode || !transportMode.ground_transport) {
+    return "";
+  }
+
+  const gt = transportMode.ground_transport;
+
+  // Build transport summary
+  let summary = `\n🚌 GROUND TRANSPORT AVAILABLE:`;
+  summary += `\nMode: ${
+    transportMode.primary_mode || gt.modes?.[0] || "bus/van"
+  }`;
+  summary += `\nTravel Time: ${gt.travel_time || "N/A"}`;
+  summary += `\nCost: ₱${gt.cost?.min || "N/A"}-${gt.cost?.max || "N/A"}`;
+
+  if (gt.operators && gt.operators.length > 0) {
+    summary += `\nOperators: ${gt.operators.join(", ")}`;
+  }
+
+  if (gt.frequency) {
+    summary += `\nSchedule: ${gt.frequency}`;
+  }
+
+  if (gt.scenic) {
+    summary += `\n⭐ SCENIC ROUTE - Mention scenic views in itinerary!`;
+  }
+
+  if (gt.notes) {
+    summary += `\nNotes: ${gt.notes}`;
+  }
+
+  // Add critical instructions with proper context
+  summary += `\n\n🚨 CRITICAL: Include ground transport in Day 1 arrival!`;
+
+  if (transportMode.mode === "ground_preferred") {
+    summary += `\n✅ DIRECT GROUND TRANSPORT: "Travel from [user's origin] to [destination] via ${
+      transportMode.primary_mode || "bus"
+    } (${gt.travel_time}, ₱${gt.cost?.min}-${gt.cost?.max})"`;
+    summary += `\n(Flight search was SKIPPED - ground transport is preferred for this route)`;
+  } else {
+    summary += `\nIF destination lacks direct airport: "Fly to [nearest airport], then ${
+      transportMode.primary_mode || "bus"
+    } to [destination] (${gt.travel_time}, ₱${gt.cost?.min}-${gt.cost?.max})"`;
+  }
+
+  return summary;
+};
+
+/**
  * CONDENSED TRAVEL DATES
  * Replaces verbose date section (200 tokens → 50 tokens)
  */
@@ -308,6 +360,7 @@ export const buildOptimizedPrompt = ({
   flightRecommendations,
   hotelRecommendations,
   specialRequests,
+  transportMode, // ✅ NEW: Ground transport recommendations
 }) => {
   // Extract numeric duration for detail level calculation
   const durationDays = parseInt(duration) || 1;
@@ -376,6 +429,13 @@ export const buildOptimizedPrompt = ({
     .replace("{activityStartDate}", dateInfo?.activitiesStartDate || "")
     .replace("{activityEndDate}", dateInfo?.activitiesEndDate || "")
     .replace("{checkoutDate}", dateInfo?.checkoutDate || "");
+
+  // ✅ NEW: Add ground transport context if available
+  const groundTransportSummary = buildGroundTransportSummary(transportMode);
+  if (groundTransportSummary) {
+    prompt += groundTransportSummary;
+    console.log("✅ Ground transport context added to prompt");
+  }
 
   // Add duration-specific instructions
   if (detailLevel.instructions) {

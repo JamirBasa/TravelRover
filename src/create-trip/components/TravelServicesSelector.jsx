@@ -26,6 +26,12 @@ import {
 } from "../../utils/flightRecommendations";
 import { getAirportRecommendations } from "../../utils/budgetEstimator";
 import { HOTEL_CONFIG } from "../../constants/options";
+import {
+  determineTransportMode,
+  TRANSPORT_MODE,
+  getTransportModeIcon,
+  getTransportModeLabel,
+} from "../../utils/transportModeDetector";
 
 const TravelServicesSelector = ({
   flightData,
@@ -37,6 +43,48 @@ const TravelServicesSelector = ({
 }) => {
   const profileSummary =
     UserProfileService.getProfileDisplaySummary(userProfile);
+
+  // ✅ ENHANCED: Analyze transport mode based on route (with backend API)
+  const [transportAnalysis, setTransportAnalysis] = React.useState(null);
+  const [loadingTransportMode, setLoadingTransportMode] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!formData?.location || !flightData.departureCity) {
+      setTransportAnalysis(null);
+      return;
+    }
+
+    // Use async version with backend API
+    const analyzeTransport = async () => {
+      setLoadingTransportMode(true);
+      try {
+        // Import async version dynamically
+        const { determineTransportModeAsync } = await import(
+          "../../utils/transportModeDetector"
+        );
+        const result = await determineTransportModeAsync(
+          formData.location,
+          flightData.departureCity,
+          flightData.includeFlights,
+          true // Use backend API
+        );
+        setTransportAnalysis(result);
+      } catch (error) {
+        console.error("Transport mode analysis error:", error);
+        // Fallback to synchronous version
+        const result = determineTransportMode(
+          formData.location,
+          flightData.departureCity,
+          flightData.includeFlights
+        );
+        setTransportAnalysis(result);
+      } finally {
+        setLoadingTransportMode(false);
+      }
+    };
+
+    analyzeTransport();
+  }, [formData?.location, flightData.departureCity, flightData.includeFlights]);
 
   // Flight logic
   const regionOptions = useMemo(() => {
@@ -137,8 +185,231 @@ const TravelServicesSelector = ({
         </p>
       </div>
 
-      {/* Side-by-Side Service Cards */}
-      <div className="grid md:grid-cols-2 gap-4">
+      {/* ✅ SIMPLIFIED: Compact Transport Recommendation Banner */}
+      {transportAnalysis && formData?.location && flightData.departureCity && (
+        <div
+          className={`brand-card p-4 border-2 mb-6 ${
+            transportAnalysis.groundTransport?.preferred
+              ? "border-emerald-400 dark:border-emerald-600 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30"
+              : transportAnalysis.groundTransportNotice?.available
+              ? "border-amber-300 dark:border-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30"
+              : "border-sky-200 dark:border-sky-800 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30"
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <div className="text-3xl flex-shrink-0">
+              {transportAnalysis.groundTransport?.preferred
+                ? "🚌"
+                : transportAnalysis.groundTransportNotice?.available
+                ? "⚠️"
+                : getTransportModeIcon(transportAnalysis.mode)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <h3
+                  className={`font-bold text-base ${
+                    transportAnalysis.groundTransport?.preferred
+                      ? "text-emerald-900 dark:text-emerald-200"
+                      : transportAnalysis.groundTransportNotice?.available
+                      ? "text-amber-900 dark:text-amber-200"
+                      : "brand-gradient-text"
+                  }`}
+                >
+                  {transportAnalysis.groundTransport?.preferred
+                    ? "Ground Transport Recommended"
+                    : transportAnalysis.groundTransportNotice?.available
+                    ? "Air Travel Recommended"
+                    : `${getTransportModeLabel(
+                        transportAnalysis.mode
+                      )} Recommended`}
+                </h3>
+                {transportAnalysis.groundTransport?.preferred && (
+                  <span className="px-1.5 py-0.5 bg-emerald-200 dark:bg-emerald-800 text-[10px] font-semibold rounded text-emerald-800 dark:text-emerald-200">
+                    Best Option
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs text-gray-700 dark:text-gray-300 mb-2 line-clamp-2">
+                {transportAnalysis.recommendation}
+              </p>
+
+              {/* ✅ ENHANCED Ground Transport Details - With Confidence & Ferry Info */}
+              {/* 🔧 FIX: Only show when preferred OR when there's no groundTransportNotice (to avoid duplication) */}
+              {transportAnalysis.groundTransport?.available &&
+                transportAnalysis.groundTransport?.preferred && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 text-xs flex-wrap">
+                      <div className="flex items-center gap-1">
+                        <span className="text-emerald-600 dark:text-emerald-400">
+                          ⏱️
+                        </span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {transportAnalysis.groundTransport.travelTime}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-emerald-600 dark:text-emerald-400">
+                          💰
+                        </span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {transportAnalysis.groundTransport.cost}
+                        </span>
+                      </div>
+
+                      {/* ✅ NEW: Ferry indicator */}
+                      {transportAnalysis.groundTransport.hasFerry && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-blue-600 dark:text-blue-400">
+                            ⛴️
+                          </span>
+                          <span className="font-medium text-blue-900 dark:text-blue-100">
+                            Ferry
+                          </span>
+                        </div>
+                      )}
+
+                      {/* ✅ ENHANCED: Show multiple operators for ferries */}
+                      {transportAnalysis.groundTransport.operators?.length >
+                        0 && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-emerald-600 dark:text-emerald-400">
+                            {transportAnalysis.groundTransport.hasFerry
+                              ? "🚢"
+                              : "🚌"}
+                          </span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">
+                            {transportAnalysis.groundTransport.operators
+                              .length > 1
+                              ? `${
+                                  transportAnalysis.groundTransport.operators[0]
+                                } +${
+                                  transportAnalysis.groundTransport.operators
+                                    .length - 1
+                                } more`
+                              : transportAnalysis.groundTransport.operators[0]}
+                          </span>
+                        </div>
+                      )}
+
+                      {transportAnalysis.groundTransport.scenic && (
+                        <span className="text-blue-600 dark:text-blue-400">
+                          ✨ Scenic
+                        </span>
+                      )}
+                    </div>
+
+                    {/* ✅ NEW: Confidence Indicator Badge */}
+                    {(transportAnalysis.groundTransport.calculated ||
+                      transportAnalysis.source === "backend") && (
+                      <div className="flex items-center gap-2">
+                        {transportAnalysis.groundTransport.calculated ? (
+                          <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 text-[10px] font-semibold rounded flex items-center gap-1">
+                            📊 Estimated Route
+                            {transportAnalysis.groundTransport.confidence && (
+                              <span className="text-[9px]">
+                                ({transportAnalysis.groundTransport.confidence}{" "}
+                                confidence)
+                              </span>
+                            )}
+                          </span>
+                        ) : transportAnalysis.source === "backend" ? (
+                          <span className="px-2 py-0.5 bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200 text-[10px] font-semibold rounded flex items-center gap-1">
+                            ✓ Verified Route
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
+
+                    {/* ✅ NEW: Show all ferry operators if available */}
+                    {transportAnalysis.groundTransport.hasFerry &&
+                      transportAnalysis.groundTransport.operators?.length >
+                        1 && (
+                        <p className="text-[10px] text-gray-600 dark:text-gray-400">
+                          <strong>Ferry Operators:</strong>{" "}
+                          {transportAnalysis.groundTransport.operators.join(
+                            ", "
+                          )}
+                        </p>
+                      )}
+                  </div>
+                )}
+
+              {/* 🔧 NEW: Ground Transport Notice Details (for flight_required routes) */}
+              {transportAnalysis.groundTransportNotice?.available && (
+                <div className="space-y-2 border-t border-amber-200 dark:border-amber-800 pt-3 mt-2">
+                  <div className="flex items-center gap-3 text-xs flex-wrap">
+                    <div className="flex items-center gap-1">
+                      <span className="text-amber-600 dark:text-amber-400">
+                        ⏱️
+                      </span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {transportAnalysis.groundTransportNotice.travelTime ||
+                          transportAnalysis.groundTransportNotice.travel_time}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-amber-600 dark:text-amber-400">
+                        💰
+                      </span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {typeof transportAnalysis.groundTransportNotice.cost ===
+                        "object"
+                          ? `₱${transportAnalysis.groundTransportNotice.cost.min}-${transportAnalysis.groundTransportNotice.cost.max}`
+                          : transportAnalysis.groundTransportNotice.cost}
+                      </span>
+                    </div>
+
+                    {/* Show operators if available */}
+                    {transportAnalysis.groundTransportNotice.operators?.length >
+                      0 && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-amber-600 dark:text-amber-400">
+                          🚌
+                        </span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {transportAnalysis.groundTransportNotice.operators[0]}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Verified badge */}
+                    <span className="px-2 py-0.5 bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200 text-[10px] font-semibold rounded flex items-center gap-1">
+                      ✓ Verified Route
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-amber-800 dark:text-amber-300">
+                    ⚠️{" "}
+                    {transportAnalysis.groundTransportNotice.warning ||
+                      "Ground transport available but not ideal - very long travel time"}
+                  </p>
+
+                  {/* Show helpful tip for overnight buses */}
+                  {transportAnalysis.groundTransportNotice
+                    .has_overnight_option && (
+                    <p className="text-[10px] text-gray-600 dark:text-gray-400">
+                      💡 Tip:{" "}
+                      {transportAnalysis.groundTransportNotice.notes ||
+                        "Overnight bus travel available. Sleep during journey, arrive refreshed. More time-efficient than connecting flights with 2-4hr layovers."}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {transportAnalysis.warning &&
+                !transportAnalysis.groundTransportNotice && (
+                  <p className="text-xs text-amber-800 dark:text-amber-300 mt-2">
+                    ⚠️ {transportAnalysis.warning}
+                  </p>
+                )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Side-by-Side Service Cards - RESPONSIVE LAYOUT */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* FLIGHT CARD */}
         <div className="brand-card p-5 border-2 border-gray-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-600 transition-all">
           <div
@@ -181,10 +452,14 @@ const TravelServicesSelector = ({
                       : "text-gray-700 dark:text-gray-300"
                   }`}
                 >
-                  Flight Search
+                  Transport Options
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {flightData.includeFlights ? "Enabled" : "Click to enable"}
+                  {flightData.includeFlights
+                    ? transportAnalysis?.flightInfo?.direct
+                      ? "Direct flights available"
+                      : "Flights with connections"
+                    : "Click to search transport"}
                 </p>
               </div>
             </div>
@@ -206,9 +481,77 @@ const TravelServicesSelector = ({
               key="flight-content"
               className="space-y-3 animate-expand-height"
             >
+              {/* ✅ NEW: Transport Options Comparison Card */}
+              {transportAnalysis &&
+                transportAnalysis.flightInfo &&
+                transportAnalysis.groundTransport?.available && (
+                  <div className="p-3 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border-2 border-sky-200 dark:border-sky-700 rounded-lg animate-fade-in-scale stagger-1">
+                    <div className="flex items-start gap-2 mb-2">
+                      <span className="text-lg">💡</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-sm text-sky-900 dark:text-sky-200 mb-1">
+                          {transportAnalysis.flightInfo.direct
+                            ? "Direct Flight Available"
+                            : "Flights Available"}
+                        </div>
+                        <div className="text-xs text-gray-700 dark:text-gray-300">
+                          {transportAnalysis.flightInfo.direct
+                            ? `${
+                                transportAnalysis.flightMetrics
+                                  ?.estimated_flight_time || "~1 hour"
+                              } • ${
+                                transportAnalysis.flightMetrics?.distance ||
+                                "Distance available"
+                              }`
+                            : "Connecting flights via hub"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Ground Transport Alternative */}
+                    {!transportAnalysis.groundTransport.preferred && (
+                      <div className="mt-2 p-2 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-700 rounded">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
+                              💰 Save money: Take ground transport?
+                            </div>
+                            <div className="text-[10px] text-gray-600 dark:text-gray-400">
+                              {transportAnalysis.groundTransport.travelTime} •{" "}
+                              {transportAnalysis.groundTransport.cost}
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Show more details or switch preference
+                            }}
+                            className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline whitespace-nowrap"
+                          >
+                            Details →
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Flight is Recommended but Ground Available */}
+                    {transportAnalysis.groundTransport.preferred && (
+                      <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700 rounded">
+                        <div className="text-xs text-amber-800 dark:text-amber-300">
+                          <span className="font-semibold">💡 Tip:</span> Ground
+                          transport (
+                          {transportAnalysis.groundTransport.travelTime}) is
+                          actually more practical for this route.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
               {/* Flight Recommendation Alert */}
               {flightRecommendation &&
-                flightRecommendation.type !== "optimal" && (
+                flightRecommendation.type !== "optimal" &&
+                !transportAnalysis?.groundTransport?.preferred && (
                   <div
                     className={`p-2.5 rounded-lg border text-xs animate-fade-in-scale stagger-1 ${
                       flightRecommendation.type === "same-city"
@@ -227,11 +570,11 @@ const TravelServicesSelector = ({
               {flightData.departureCity &&
                 profileSummary?.hasLocationData &&
                 flightRecommendation?.type !== "same-city" && (
-                  <div className="p-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-700 rounded-lg animate-fade-in-scale stagger-1">
-                    <div className="flex items-center gap-1.5 text-green-700 dark:text-green-400 text-xs">
-                      <FaCheck className="text-[10px]" />
-                      <span>From profile: {profileSummary.location}</span>
-                    </div>
+                  <div className="flex items-center gap-1 text-green-600 dark:text-green-400 text-xs animate-fade-in-scale stagger-1">
+                    <FaCheck className="text-[10px]" />
+                    <span title="Auto-populated from profile">
+                      Profile: {profileSummary.location}
+                    </span>
                   </div>
                 )}
 
@@ -330,6 +673,168 @@ const TravelServicesSelector = ({
                     </div>
                   </div>
                 )}
+
+              {/* ✅ NEW: Detailed Comparison (Expandable) */}
+              {transportAnalysis &&
+                transportAnalysis.groundTransport?.available &&
+                transportAnalysis.flightInfo && (
+                  <details className="mt-3 animate-fade-in-scale stagger-4">
+                    <summary className="cursor-pointer text-xs text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 font-medium flex items-center gap-1">
+                      <span>📊 Compare All Transport Options</span>
+                      <span className="text-[10px] text-gray-500">
+                        (Flight vs Ground)
+                      </span>
+                    </summary>
+
+                    <div className="mt-3 space-y-2">
+                      {/* Flight Option */}
+                      <div
+                        className={`p-3 rounded-lg border-2 ${
+                          transportAnalysis.groundTransport.preferred
+                            ? "border-gray-200 dark:border-slate-700"
+                            : "border-sky-300 dark:border-sky-600 bg-sky-50 dark:bg-sky-950/30"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">✈️</span>
+                            <div>
+                              <div className="text-sm font-bold">
+                                {transportAnalysis.flightInfo.direct
+                                  ? "Direct Flight"
+                                  : "Connecting Flight"}
+                              </div>
+                              {transportAnalysis.flightInfo.direct &&
+                                transportAnalysis.flightInfo.airlines && (
+                                  <div className="text-[10px] text-gray-600 dark:text-gray-400">
+                                    {transportAnalysis.flightInfo.airlines.join(
+                                      ", "
+                                    )}
+                                  </div>
+                                )}
+                            </div>
+                          </div>
+                          {!transportAnalysis.groundTransport.preferred && (
+                            <span className="text-[10px] bg-sky-600 text-white px-2 py-0.5 rounded-full font-bold">
+                              RECOMMENDED
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                          <div>
+                            <div className="font-bold text-sky-600 dark:text-sky-400">
+                              {transportAnalysis.flightMetrics
+                                ?.estimated_flight_time || "~1 hr"}
+                            </div>
+                            <div className="text-[9px] text-gray-500">
+                              Flight Time
+                            </div>
+                          </div>
+                          <div>
+                            <div className="font-bold text-amber-600 dark:text-amber-400">
+                              ₱2.5-4k
+                            </div>
+                            <div className="text-[9px] text-gray-500">
+                              Est. Cost
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm">⭐⭐⭐⭐⭐</div>
+                            <div className="text-[9px] text-gray-500">
+                              Comfort
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-[10px] text-gray-600 dark:text-gray-400 flex flex-wrap gap-2">
+                          <span>✓ Fastest</span>
+                          <span>✓ Most comfortable</span>
+                          <span>✓ Arrive fresh</span>
+                        </div>
+                      </div>
+
+                      {/* Ground Transport Option */}
+                      <div
+                        className={`p-3 rounded-lg border-2 ${
+                          transportAnalysis.groundTransport.preferred
+                            ? "border-emerald-300 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-950/30"
+                            : "border-gray-200 dark:border-slate-700"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">🚌</span>
+                            <div>
+                              <div className="text-sm font-bold">
+                                Ground Transport
+                              </div>
+                              {transportAnalysis.groundTransport.operators &&
+                                transportAnalysis.groundTransport.operators
+                                  .length > 0 && (
+                                  <div className="text-[10px] text-gray-600 dark:text-gray-400">
+                                    {
+                                      transportAnalysis.groundTransport
+                                        .operators[0]
+                                    }
+                                  </div>
+                                )}
+                            </div>
+                          </div>
+                          {transportAnalysis.groundTransport.preferred && (
+                            <span className="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded-full font-bold">
+                              BEST OPTION
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                          <div>
+                            <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                              {transportAnalysis.groundTransport.travelTime}
+                            </div>
+                            <div className="text-[9px] text-gray-500">
+                              Travel Time
+                            </div>
+                          </div>
+                          <div>
+                            <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                              {transportAnalysis.groundTransport.cost}
+                            </div>
+                            <div className="text-[9px] text-gray-500">Cost</div>
+                          </div>
+                          <div>
+                            <div className="text-sm">⭐⭐⭐</div>
+                            <div className="text-[9px] text-gray-500">
+                              Comfort
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-[10px] text-gray-600 dark:text-gray-400 flex flex-wrap gap-2">
+                          <span>✓ Most economical</span>
+                          <span>✓ Frequent departures</span>
+                          {transportAnalysis.groundTransport.scenic && (
+                            <span>✓ Scenic route</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Cost Savings Highlight */}
+                      <div className="p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700 rounded text-center">
+                        <div className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                          💰 Ground transport saves ₱1,500-3,000 per person
+                        </div>
+                        <div className="text-[10px] text-gray-600 dark:text-gray-400 mt-0.5">
+                          {transportAnalysis.groundTransport.preferred
+                            ? "Recommended for budget-conscious travelers"
+                            : `But ${
+                                transportAnalysis.flightMetrics
+                                  ?.estimated_flight_time
+                                  ? `saves ${transportAnalysis.groundTransport.travelTime} of travel time`
+                                  : "flight saves significant time"
+                              }`}
+                        </div>
+                      </div>
+                    </div>
+                  </details>
+                )}
             </div>
           )}
         </div>
@@ -398,13 +903,11 @@ const TravelServicesSelector = ({
               {hotelData.preferredType &&
                 profileSummary?.accommodationPreference ===
                   hotelData.preferredType && (
-                  <div className="p-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-700 rounded-lg animate-fade-in-scale stagger-1">
-                    <div className="flex items-center gap-1.5 text-green-700 dark:text-green-400 text-xs">
-                      <FaCheck className="text-[10px]" />
-                      <span>
-                        From profile: {profileSummary.accommodationPreference}
-                      </span>
-                    </div>
+                  <div className="flex items-center gap-1 text-green-600 dark:text-green-400 text-xs animate-fade-in-scale stagger-1">
+                    <FaCheck className="text-[10px]" />
+                    <span title="Auto-populated from profile">
+                      Profile: {profileSummary.accommodationPreference}
+                    </span>
                   </div>
                 )}
 
@@ -413,7 +916,7 @@ const TravelServicesSelector = ({
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Accommodation Type
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {accommodationOptions.map((option) => (
                     <button
                       key={option.value}

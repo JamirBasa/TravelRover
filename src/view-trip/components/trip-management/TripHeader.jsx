@@ -1,8 +1,6 @@
 // src/view-trip/components/TripHeader.jsx
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, DollarSign, Clock, MapPin } from "lucide-react";
+import { Clock, MapPin } from "lucide-react";
 import TripActions from "./TripActions";
-import { calculateTotalBudget, formatCurrency } from "@/utils";
 
 function TripHeader({ trip, onShare, onDownload, onEdit, isDownloading }) {
   const formatDate = (dateString) => {
@@ -13,9 +11,6 @@ function TripHeader({ trip, onShare, onDownload, onEdit, isDownloading }) {
       year: "numeric",
     });
   };
-
-  // Calculate total estimated budget from generated itinerary
-  const budgetInfo = calculateTotalBudget(trip);
 
   return (
     <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-slate-800">
@@ -41,46 +36,6 @@ function TripHeader({ trip, onShare, onDownload, onEdit, isDownloading }) {
                   <span>Created {formatDate(trip?.createdAt)}</span>
                 </div>
               </div>
-            </div>
-
-            {/* Compact Trip Details */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Badge
-                variant="secondary"
-                className="bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 px-2 py-1 text-xs font-medium"
-              >
-                <Calendar className="h-3 w-3 mr-1" />
-                {trip?.userSelection?.duration || 0} days
-              </Badge>
-              <Badge
-                variant="secondary"
-                className="bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800 px-2 py-1 text-xs font-medium"
-              >
-                <Users className="h-3 w-3 mr-1" />
-                {trip?.userSelection?.travelers || "Multiple"}
-              </Badge>
-              {budgetInfo.total > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 px-2 py-1 text-xs font-medium"
-                  title={`Breakdown - Activities: ${formatCurrency(
-                    budgetInfo.breakdown.activities
-                  )} | Hotels: ${formatCurrency(
-                    budgetInfo.breakdown.hotels
-                  )} | Flights: ${formatCurrency(
-                    budgetInfo.breakdown.flights
-                  )}`}
-                >
-                  <DollarSign className="h-3 w-3 mr-1" />
-                  Total: {formatCurrency(budgetInfo.total)}
-                </Badge>
-              )}
-              <Badge
-                variant="outline"
-                className="text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 px-2 py-1 text-xs font-medium"
-              >
-                Ready to explore
-              </Badge>
             </div>
           </div>
 

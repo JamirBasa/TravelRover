@@ -123,6 +123,13 @@ export const PHILIPPINE_REGIONS = {
     keywords: ["zamboanga", "zamboanga city", "fort pilar", "pink sand beach", "pink beach"],
     famousAttractions: ["Fort Pilar", "Great Santa Cruz Island (Pink Beach)", "Pasonanca Park", "Yakan Weaving Village", "Merloquet Falls"]
   },
+  "Pagadian": {
+    region: "Region IX",
+    province: "Zamboanga del Sur",
+    nearbyAreas: ["Zamboanga City", "Ozamiz", "Dipolog", "Margosatubig"],
+    keywords: ["pagadian", "pagadian city", "city of smiles", "tricycle capital"],
+    famousAttractions: ["Dao-Dao Islands", "Pulacan Falls", "Lourdes Grotto", "Pagadian City Rotonda", "Blue Jazz Beach Resort", "Dakak Beach"]
+  },
   
   // Island Destinations
   "Palawan": {
@@ -158,8 +165,26 @@ export function getRegionData(destination) {
     return PHILIPPINE_REGIONS[normalizedDestination];
   }
   
-  // Try partial match
+  // ✅ IMPROVED: Extract city name from "City, Province, Country" format
+  // This prevents "Pagadian City, Zamboanga del Sur" from matching "Zamboanga"
   const destinationLower = normalizedDestination.toLowerCase();
+  const cityName = destinationLower.split(',')[0].trim(); // Get first part before comma
+  
+  // Try exact city name match first (highest priority)
+  for (const [key, value] of Object.entries(PHILIPPINE_REGIONS)) {
+    if (cityName === key.toLowerCase() || cityName.includes(key.toLowerCase() + ' city')) {
+      return value;
+    }
+  }
+  
+  // Try keyword match (check if city has specific keywords)
+  for (const [_key, value] of Object.entries(PHILIPPINE_REGIONS)) {
+    if (value.keywords && value.keywords.some(keyword => cityName.includes(keyword))) {
+      return value;
+    }
+  }
+  
+  // Last resort: Try partial match on full destination string
   for (const [key, value] of Object.entries(PHILIPPINE_REGIONS)) {
     if (destinationLower.includes(key.toLowerCase()) || 
         key.toLowerCase().includes(destinationLower)) {

@@ -104,12 +104,22 @@ export const getMinimumBudget = (params) => {
 
   const travelerCount = typeof travelers === 'number' ? travelers : 1;
   
-  // Base daily cost per person
-  let dailyCostPerPerson = 1500; // Base budget-friendly rate
+  // ✅ ENHANCED: Tiered minimums based on group size (economies of scale)
+  const getMinPerPersonPerDay = (travelerCount) => {
+    if (travelerCount >= 11) return 600;  // Large groups: Bulk bookings, shared accommodations
+    if (travelerCount >= 6) return 700;   // Medium groups: Group discounts
+    if (travelerCount >= 3) return 800;   // Small groups: Split costs
+    return 1000;                          // Solo/couples: No economies of scale
+  };
+  
+  const baseMinPerDay = getMinPerPersonPerDay(travelerCount);
   
   // Adjust for services
+  let dailyCostPerPerson = baseMinPerDay;
   if (includeHotels) {
-    dailyCostPerPerson += 1500; // Add hotel cost
+    // Add hotel cost (also scales with group size)
+    const hotelPerPerson = travelerCount >= 6 ? 800 : 1200;
+    dailyCostPerPerson += hotelPerPerson;
   }
   
   // Flight costs (one-time)

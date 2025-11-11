@@ -16,6 +16,9 @@ export * from './travel-bookings';
 // Navigation - Tabbed views and navigation components
 export * from './navigation';
 
+// Chat - AI-powered chatbot components
+export * from './chat';
+
 // Legacy Itinerary - Previous itinerary implementations
 export * from './itinerary-legacy';
 
