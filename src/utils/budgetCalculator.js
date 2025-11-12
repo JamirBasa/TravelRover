@@ -146,7 +146,8 @@ export const calculateTotalBudget = (trip) => {
   const breakdown = {
     activities: 0,
     hotels: 0,
-    flights: 0
+    flights: 0,
+    groundTransport: 0
   };
   
   // Extract trip data
@@ -226,13 +227,28 @@ export const calculateTotalBudget = (trip) => {
   breakdown.flights = calculateFlightsCost(flights);
   logDebug('BudgetCalculator', 'Calculated flights cost', { cost: breakdown.flights });
   
+  // ✅ NEW: Calculate ground transport cost from costBreakdown or transportMode
+  if (tripData?.costBreakdown?.ground_transport) {
+    breakdown.groundTransport = tripData.costBreakdown.ground_transport;
+    logDebug('BudgetCalculator', 'Using costBreakdown.ground_transport', { cost: breakdown.groundTransport });
+  } else if (trip?.costBreakdown?.ground_transport) {
+    breakdown.groundTransport = trip.costBreakdown.ground_transport;
+    logDebug('BudgetCalculator', 'Using trip.costBreakdown.ground_transport', { cost: breakdown.groundTransport });
+  } else if (trip?.transportMode?.ground_transport?.cost) {
+    // Calculate average of min/max
+    const groundCost = trip.transportMode.ground_transport.cost;
+    breakdown.groundTransport = Math.round((groundCost.min + groundCost.max) / 2);
+    logDebug('BudgetCalculator', 'Calculated from transportMode cost range', { cost: breakdown.groundTransport });
+  }
+  
   // Calculate total
-  const total = breakdown.activities + breakdown.hotels + breakdown.flights;
+  const total = breakdown.activities + breakdown.hotels + breakdown.flights + breakdown.groundTransport;
   
   logDebug('BudgetCalculator', 'Final breakdown', {
     activities: breakdown.activities,
     hotels: breakdown.hotels,
     flights: breakdown.flights,
+    groundTransport: breakdown.groundTransport,
     total
   });
   

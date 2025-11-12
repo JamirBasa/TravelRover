@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { getLimitedServiceInfo } from "@/utils/flightRecommendations";
 import { logDebug, logError } from "@/utils/productionLogger";
+import { getAirportCode } from "@/data/airports";
 
 // ✅ CENTRALIZED: Import airport data from single source of truth
 // Convert LIMITED_SERVICE_AIRPORTS format to component-specific format
@@ -229,112 +230,11 @@ function FlightBooking({ trip }) {
     return durationStr || "Not specified";
   };
 
-  // Helper function to extract airport codes from location names
-  const getAirportCode = (location) => {
-    if (!location) return "MNL";
-
-    // If it's already a 3-letter airport code, return it
-    if (
-      typeof location === "string" &&
-      location.length === 3 &&
-      location.match(/^[A-Z]{3}$/)
-    ) {
-      return location;
-    }
-
-    // ✅ UPDATED: Complete airport map with Baguio
-    const airportMap = {
-      // Metro Manila
-      Manila: "MNL",
-      "Metro Manila": "MNL",
-      "Manila City": "MNL",
-
-      // Luzon
-      Baguio: "BAG", // ✅ ADDED: Returns BAG (will be handled by validation)
-      "Baguio City": "BAG",
-      Benguet: "BAG",
-      Clark: "CRK",
-      Angeles: "CRK",
-      "Angeles City": "CRK",
-      Laoag: "LAO",
-      Tuguegarao: "TUG",
-      Legazpi: "LGP",
-      Naga: "WNP",
-
-      // Visayas
-      Cebu: "CEB",
-      "Cebu City": "CEB",
-      Iloilo: "ILO",
-      "Iloilo City": "ILO",
-      Bacolod: "BCD",
-      "Bacolod City": "BCD",
-      Bohol: "TAG",
-      Tagbilaran: "TAG",
-      "Tagbilaran City": "TAG",
-      Boracay: "KLO",
-      Kalibo: "KLO",
-      Malay: "KLO",
-      Dumaguete: "DGT",
-      "Dumaguete City": "DGT",
-      Roxas: "RXS",
-      Tacloban: "TAC",
-      Catarman: "CRM",
-
-      // Mindanao
-      Davao: "DVO",
-      "Davao City": "DVO",
-      Zamboanga: "ZAM",
-      "Zamboanga City": "ZAM",
-      Cagayan: "CGY",
-      "Cagayan de Oro": "CGY",
-      Butuan: "BXU",
-      Surigao: "SUG",
-      Siargao: "IAO",
-      "General Luna": "IAO",
-
-      // Palawan
-      Palawan: "PPS",
-      "Puerto Princesa": "PPS",
-      "El Nido": "PPS",
-      Coron: "PPS",
-
-      // Others
-      Dipolog: "DPG",
-      Pagadian: "PAG",
-      Jolo: "JOL",
-      Tawi: "TWY",
-    };
-
-    const locationStr = String(location);
-    const locationLower = locationStr.toLowerCase();
-    const city = locationStr.split(",")[0].trim();
-    const cityLower = city.toLowerCase();
-
-    logDebug("FlightBooking", "Looking for airport code", { location, city });
-
-    // Direct exact matches first
-    for (const [key, code] of Object.entries(airportMap)) {
-      const keyLower = key.toLowerCase();
-      if (cityLower === keyLower || locationLower.includes(keyLower)) {
-        logDebug("FlightBooking", "Found exact match", { key, code });
-        return code;
-      }
-    }
-
-    // Partial matches
-    for (const [key, code] of Object.entries(airportMap)) {
-      const keyLower = key.toLowerCase();
-      if (cityLower.includes(keyLower) || keyLower.includes(cityLower)) {
-        logDebug("FlightBooking", "Found partial match", { key, code });
-        return code;
-      }
-    }
-
-    logDebug("FlightBooking", "No airport code found, defaulting to MNL", {
-      location,
-    });
-    return "MNL";
-  };
+  // ✅ FIX: Removed local getAirportCode function - now using centralized version from airports.js
+  // The old local version had a bug where "Pagadian City, Zamboanga del Sur" matched
+  // "Zamboanga City" because it used locationLower.includes(keyLower) which found "zamboanga"
+  // in the full address string BEFORE checking "pagadian". The fixed version from airports.js
+  // extracts the city name first before matching.
 
   // ✅ NEW: Validate if route has commercial flights
   const validateRoute = (originCode, destinationCode) => {
@@ -685,10 +585,10 @@ function FlightBooking({ trip }) {
               <span className="text-3xl">✈️</span>
             </div>
             <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
-              Flight Booking Available
+              Air Travel Options Available
             </h3>
             <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base max-w-md mx-auto mb-8 leading-relaxed">
-              Contact our travel partners for the best flight deals to{" "}
+              Search for flights and compare prices from our travel partners to{" "}
               <span className="font-semibold text-sky-600 dark:text-sky-400">
                 {trip?.userSelection?.location}
               </span>

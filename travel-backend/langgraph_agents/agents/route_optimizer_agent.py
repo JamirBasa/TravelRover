@@ -2,6 +2,7 @@
 from typing import Dict, Any, List, Tuple
 import asyncio
 import math
+import re
 from datetime import datetime, timedelta
 import json
 import logging
@@ -572,6 +573,62 @@ class RouteOptimizerAgent(BaseAgent):
         
         return R * c
     
+    def _extract_transport_mode(self, activity: Dict) -> str:
+        """
+        Extract transport mode from timeTravel field or determine context-aware mode.
+        Maps Philippine transport modes to Google Maps API modes.
+        
+        Returns: 'WALKING', 'TRANSIT', or 'DRIVING' (Google Maps API compatible)
+        """
+        time_travel = activity.get('timeTravel', '').lower()
+        
+        # Check for explicit walking
+        if 'walk' in time_travel or 'walking' in time_travel:
+            return 'WALKING'
+        
+        # Map Philippine public transport to TRANSIT
+        public_transport_modes = ['jeepney', 'bus', 'tricycle']
+        if any(mode in time_travel for mode in public_transport_modes):
+            return 'TRANSIT'
+        
+        # Map private/hired transport to DRIVING
+        private_transport_modes = ['taxi', 'grab', 'car', 'van']
+        if any(mode in time_travel for mode in private_transport_modes):
+            return 'DRIVING'
+        
+        # Smart default based on distance
+        coords = activity.get('routing_metadata', {}).get('coordinates')
+        if coords:
+            # Get previous activity to calculate distance
+            distance_km = activity.get('routing_metadata', {}).get('distance_km', 0)
+            
+            # Short distances (< 500m) should be walking
+            if distance_km < 0.5:
+                return 'WALKING'
+        
+        # Default to DRIVING for unknown cases
+        return 'DRIVING'
+    
+    def _get_display_transport_mode(self, activity: Dict) -> str:
+        """
+        Preserve original Philippine transport mode for display purposes.
+        
+        Returns: Original mode string like 'jeepney', 'taxi', 'walking', etc.
+        """
+        time_travel = activity.get('timeTravel', '')
+        
+        # Extract transport mode using regex: "X minutes by [mode]"
+        match = re.search(r'by\s+(\w+)', time_travel, re.IGNORECASE)
+        if match:
+            return match.group(1).lower()
+        
+        # Check for walking patterns
+        if 'walk' in time_travel.lower():
+            return 'walking'
+        
+        # Default to taxi if no mode found (most common paid transport in Philippines)
+        return 'taxi'
+    
     def _calculate_route_segments(self, activities: List[Dict]) -> List[Dict]:
         """Calculate route segments between consecutive activities"""
         
@@ -588,6 +645,10 @@ class RouteOptimizerAgent(BaseAgent):
             distance_km = self._calculate_distance(current_coords, next_coords)
             travel_time_minutes = self._estimate_travel_time(distance_km)
             
+            # Extract transport modes: API mode for calculations, display mode for UI
+            api_mode = self._extract_transport_mode(next_activity)
+            display_mode = self._get_display_transport_mode(next_activity)
+            
             segment = {
                 'from': {
                     'name': current.get('placeName', 'Unknown'),
@@ -599,7 +660,8 @@ class RouteOptimizerAgent(BaseAgent):
                 },
                 'distance_km': round(distance_km, 2),
                 'duration_minutes': travel_time_minutes,
-                'travel_mode': 'driving',
+                'travel_mode': api_mode,  # For Google Maps API calls (WALKING/TRANSIT/DRIVING)
+                'display_mode': display_mode,  # For UI display (jeepney, taxi, etc.)
                 'google_maps_url': self._generate_maps_url(current_coords, next_coords)
             }
             

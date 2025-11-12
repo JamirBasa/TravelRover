@@ -233,6 +233,13 @@ export class GeminiProxyService {
         }, 10000); // Update every 10 seconds
       }
 
+      // ✅ NEW: Extract ground transport context from options
+      const groundTransportContext =
+        options.ground_transport_context || options.groundTransportContext;
+
+      // ✅ NEW: Extract chat mode flag from options
+      const chatMode = options.chat_mode || false;
+
       const response = await axios.post(
         `${API_BASE_URL}/langgraph/gemini/generate/`,
         {
@@ -245,6 +252,10 @@ export class GeminiProxyService {
             maxOutputTokens: 32768,
             model: generationConfig.model || "gemini-2.5-flash",
           },
+          // ✅ NEW: Pass ground transport context to backend
+          ground_transport_context: groundTransportContext,
+          // ✅ NEW: Pass chat mode flag to backend
+          chat_mode: chatMode,
         },
         {
           timeout,

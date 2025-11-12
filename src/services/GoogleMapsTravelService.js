@@ -129,10 +129,101 @@ class GoogleMapsTravelService {
     */
   }
 
+  /**
+   * Map Philippine transport modes to Google Maps API modes
+   * 
+   * IMPORTANT: Google Maps API has LIMITED Philippine transit data!
+   * - NO jeepney routes in database
+   * - NO tricycle routes
+   * - LIMITED provincial bus data
+   * 
+   * Strategy: Only call Google Maps for modes it can handle accurately.
+   * For Philippine-specific modes, return null to skip API call.
+   * 
+   * @param {string} localMode - Philippine transport mode (jeepney, tricycle, etc.)
+   * @returns {string|null} Google Maps API mode or null if unsupported
+   */
+  mapPhilippineTransportToGoogleMode(localMode) {
+    if (!localMode) return 'DRIVING';
+    
+    const lower = localMode.toLowerCase();
+    
+    // ⚠️ PHILIPPINE-SPECIFIC MODES: Google Maps doesn't have accurate data
+    // Return null to skip API call and trust AI-generated data
+    const philippineLocalModes = ['jeepney', 'tricycle'];
+    if (philippineLocalModes.includes(lower)) {
+      console.warn(`⚠️ Google Maps API doesn't support ${localMode} routes in Philippines. Using AI data.`);
+      return null;
+    }
+    
+    // ✅ MODES GOOGLE MAPS CAN HANDLE
+    const modeMap = {
+      'bus': 'TRANSIT',          // Some major bus routes available
+      'taxi': 'DRIVING',         // Standard driving routes
+      'grab': 'DRIVING',         // Ride-sharing = driving
+      'car': 'DRIVING',          // Private vehicle
+      'van': 'DRIVING',          // Private/hired vehicle
+      'walking': 'WALKING',      // Pedestrian (but limited sidewalk data)
+      'walk': 'WALKING',         // Pedestrian
+      'bicycle': 'BICYCLING',    // Limited bike lane data
+      'bike': 'BICYCLING',       // Limited bike lane data
+    };
+    
+    return modeMap[lower] || 'DRIVING';  // Default to DRIVING if unknown
+  }
+  
+  /**
+   * Determine if Google Maps API should be used for this transport mode
+   * @param {string} localMode - Philippine transport mode
+   * @returns {boolean} True if Google Maps API has reliable data for this mode
+   */
+  shouldUseGoogleMapsForMode(localMode) {
+    if (!localMode) return true;  // Default modes are safe
+    
+    const lower = localMode.toLowerCase();
+    
+    // Don't use Google Maps for Philippine-specific transit
+    const localOnlyModes = ['jeepney', 'tricycle'];
+    if (localOnlyModes.includes(lower)) {
+      return false;
+    }
+    
+    // Use Google Maps for standard modes
+    return true;
+  }
+
   // Get single travel time between two locations using modern Routes API
   async getSingleTravelTime(from, to, travelMode = 'DRIVING') {
     const fromLocation = this.formatLocationForAPI(from);
     const toLocation = this.formatLocationForAPI(to);
+    
+    // Check if Google Maps API should be used for this mode
+    if (!this.shouldUseGoogleMapsForMode(travelMode)) {
+      console.log(`🚌 Skipping Google Maps API for ${travelMode} (using AI data)`);
+      return {
+        from: fromLocation,
+        to: toLocation,
+        status: 'skipped',
+        reason: `Google Maps doesn't support ${travelMode} in Philippines`,
+        travelMode: travelMode,
+        useAIData: true  // Signal to use AI-generated data instead
+      };
+    }
+    
+    // Convert Philippine modes to Google Maps API modes
+    const googleMode = this.mapPhilippineTransportToGoogleMode(travelMode);
+    
+    if (!googleMode) {
+      // Mode not supported by Google Maps
+      return {
+        from: fromLocation,
+        to: toLocation,
+        status: 'unsupported',
+        reason: `${travelMode} not supported by Google Maps API`,
+        travelMode: travelMode,
+        useAIData: true
+      };
+    }
 
     try {
       // Use the modern Directions API (part of Routes) instead of deprecated Distance Matrix
@@ -140,7 +231,7 @@ class GoogleMapsTravelService {
         this.directionsService.route({
           origin: fromLocation,
           destination: toLocation,
-          travelMode: window.google.maps.TravelMode[travelMode],
+          travelMode: window.google.maps.TravelMode[googleMode],
           unitSystem: window.google.maps.UnitSystem.METRIC,
           avoidHighways: false,
           avoidTolls: false
