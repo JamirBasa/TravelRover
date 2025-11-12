@@ -2,7 +2,14 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Clock, MapPin, Star, DollarSign, Timer } from "lucide-react";
+import {
+  Clock,
+  MapPin,
+  Star,
+  DollarSign,
+  Timer,
+  ChevronRight,
+} from "lucide-react";
 import { COLORS, PATTERNS, ANIMATIONS } from "../constants/designSystem";
 import {
   parseTimeString,
@@ -33,32 +40,32 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
       aria-labelledby={titleId}
       aria-describedby={detailsId}
     >
-      <CardContent className="p-4 sm:p-5">
-        <div className="relative flex gap-4">
-          {/* Enhanced activity indicator - Bigger and more visible */}
-          <div className="flex-shrink-0 pt-1">
+      <CardContent className="p-3 sm:p-4">
+        <div className="relative flex gap-3">
+          {/* Compact activity indicator */}
+          <div className="flex-shrink-0 pt-0.5">
             <div
               className={cn(
-                "w-6 h-6 rounded-full shadow-lg border-2 border-white dark:border-slate-800",
+                "w-5 h-5 rounded-full shadow-md border-2 border-white dark:border-slate-800",
                 COLORS.primary.gradient
               )}
               aria-hidden="true"
             />
           </div>
 
-          <div className="flex-1 min-w-0 space-y-3">
-            {/* Enhanced time badge - Show actual extracted time */}
+          <div className="flex-1 min-w-0 space-y-2">
+            {/* Compact time badge */}
             {displayTime && displayTime !== "All Day" && (
               <div className="flex items-center">
                 <Badge
                   variant="secondary"
                   className={cn(
-                    "gap-2 font-bold border-2 px-4 py-2 text-sm",
+                    "gap-1.5 font-bold border px-3 py-1 text-xs",
                     "bg-sky-100 dark:bg-sky-950/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800 hover:bg-sky-200 dark:hover:bg-sky-900/50 shadow-sm",
                     ANIMATIONS.transition.medium
                   )}
                 >
-                  <Clock className="h-4 w-4" aria-hidden="true" />
+                  <Clock className="h-3 w-3" aria-hidden="true" />
                   <time dateTime={parseTimeString(displayTime)}>
                     {displayTime}
                   </time>
@@ -66,27 +73,21 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
               </div>
             )}
 
-            {/* Enhanced activity title - Bigger icon and more readable text */}
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-sky-100 dark:bg-sky-950/30 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
-                <MapPin
-                  className={cn("h-5 w-5", "text-sky-600 dark:text-sky-400")}
-                  aria-hidden="true"
-                />
-              </div>
+            {/* Compact activity title */}
+            <div className="flex items-start gap-2.5">
               <div className="flex-1 min-w-0">
                 <h4
                   id={titleId}
                   className={cn(
-                    "text-base sm:text-lg font-bold leading-tight",
+                    "text-sm sm:text-base font-bold leading-tight",
                     "text-gray-900 dark:text-gray-100",
-                    "break-words mb-2"
+                    "break-words mb-1.5"
                   )}
                 >
                   {cleanPlaceName || "Activity"}
                 </h4>
 
-                {/* See Directions Link */}
+                {/* See Directions Link - More compact */}
                 {cleanPlaceName && cleanPlaceName !== "Activity" && (
                   <a
                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -94,28 +95,37 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition-colors cursor-pointer hover:underline"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition-colors cursor-pointer hover:underline"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <MapPin className="h-4 w-4" />
-                    <span>See Directions</span>
+                    <MapPin className="h-3 w-3" />
+                    <span>Directions</span>
                   </a>
                 )}
               </div>
             </div>
 
-            {/* Enhanced description - More readable text */}
-            <p
-              id={detailsId}
-              className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed break-words"
-            >
-              {activity?.placeDetails ||
-                "Discover this amazing location and create unforgettable memories during your visit."}
-            </p>
+            {/* ✅ OPTIMIZED: Hide description by default, show on hover/click */}
+            <details className="group/details">
+              <summary className="text-xs font-semibold text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors list-none flex items-center gap-1.5">
+                <span>View Details</span>
+                <ChevronRight
+                  className="h-3 w-3 group-open/details:rotate-90 transition-transform"
+                  aria-hidden="true"
+                />
+              </summary>
+              <p
+                id={detailsId}
+                className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed break-words mt-2 pl-1"
+              >
+                {activity?.placeDetails ||
+                  "Discover this amazing location and create unforgettable memories during your visit."}
+              </p>
+            </details>
 
-            {/* Modern badge collection - Only show meaningful data, not defaults */}
+            {/* Compact badge collection - Minimal design */}
             <div
-              className="flex flex-wrap items-center gap-2"
+              className="flex flex-wrap items-center gap-1.5"
               aria-label="Activity details"
             >
               {activity?.ticketPricing &&
@@ -124,15 +134,13 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                   <Badge
                     variant="outline"
                     className={cn(
-                      "gap-2 px-3 py-1.5 text-xs font-semibold border-2",
+                      "gap-1 px-2 py-0.5 text-xs font-semibold border",
                       "border-green-300 dark:border-green-800",
                       "bg-green-50 dark:bg-green-950/30",
                       "text-green-700 dark:text-green-400",
-                      "hover:bg-green-100 dark:hover:bg-green-900/50",
                       ANIMATIONS.transition.medium
                     )}
                   >
-                    <DollarSign className="h-3.5 w-3.5" aria-hidden="true" />
                     <span className="font-bold">{activity.ticketPricing}</span>
                   </Badge>
                 )}
@@ -141,15 +149,13 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                 <Badge
                   variant="outline"
                   className={cn(
-                    "gap-2 px-3 py-1.5 text-xs font-semibold border-2",
+                    "gap-1 px-2 py-0.5 text-xs font-semibold border",
                     "border-orange-300 dark:border-orange-800",
                     "bg-orange-50 dark:bg-orange-950/30",
                     "text-orange-700 dark:text-orange-400",
-                    "hover:bg-orange-100 dark:hover:bg-orange-900/50",
                     ANIMATIONS.transition.medium
                   )}
                 >
-                  <Timer className="h-3.5 w-3.5" aria-hidden="true" />
                   <span className="font-bold">{activity.timeTravel}</span>
                 </Badge>
               )}
@@ -160,19 +166,14 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                   <Badge
                     variant="outline"
                     className={cn(
-                      "gap-2 px-3 py-1.5 text-xs font-semibold border-2",
+                      "gap-1 px-2 py-0.5 text-xs font-semibold border",
                       "border-yellow-300 dark:border-yellow-800",
                       "bg-yellow-50 dark:bg-yellow-950/30",
                       "text-yellow-700 dark:text-yellow-400",
-                      "hover:bg-yellow-100 dark:hover:bg-yellow-900/50",
                       ANIMATIONS.transition.medium
                     )}
                   >
-                    <Star
-                      className="h-3.5 w-3.5 fill-current"
-                      aria-hidden="true"
-                    />
-                    <span className="font-bold">{activity.rating}/5</span>
+                    <span className="font-bold">⭐ {activity.rating}</span>
                   </Badge>
                 )}
             </div>

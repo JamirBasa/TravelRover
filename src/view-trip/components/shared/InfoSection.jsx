@@ -286,12 +286,6 @@ function InfoSection({ trip }) {
                   e.target.src = "/placeholder.png";
                 }}
               />
-              {/* ✅ Show detailed debug info when using placeholder */}
-              {(photoError || !photoUrl) && !isLoading && (
-                <div className="absolute top-4 right-4 bg-amber-500/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs text-white font-medium">
-                  📸 Using placeholder image
-                </div>
-              )}
               {/* Gradient Overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
             </>
@@ -321,269 +315,177 @@ function InfoSection({ trip }) {
             </h1>
 
             {/* Tagline */}
-            <p className="text-lg md:text-xl text-white/95 font-medium drop-shadow-lg mb-6 max-w-2xl">
+            <p className="text-lg md:text-xl text-white/95 font-medium drop-shadow-lg mb-4 max-w-2xl">
               Your personalized {trip?.userSelection?.duration}-day adventure
               awaits
             </p>
 
-            {/* Quick Features */}
-            <div className="flex flex-wrap gap-2">
-              <Badge
-                className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md 
-                             border border-white/40 dark:border-slate-700 
-                             text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm font-semibold shadow-lg"
-              >
-                <Sparkles className="h-4 w-4 mr-1.5 text-yellow-500" />
-                AI-Optimized
-              </Badge>
-              <Badge
-                className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md 
-                             border border-white/40 dark:border-slate-700 
-                             text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm font-semibold shadow-lg"
-              >
-                <TrendingUp className="h-4 w-4 mr-1.5 text-emerald-500" />
-                Budget-Friendly
-              </Badge>
-              <Badge
-                className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md 
-                             border border-white/40 dark:border-slate-700 
-                             text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm font-semibold shadow-lg"
-              >
-                <Shield className="h-4 w-4 mr-1.5 text-blue-500" />
-                Local Insights
-              </Badge>
-            </div>
+            {/* Travel Dates - Key Information */}
+            {trip?.userSelection?.startDate && trip?.userSelection?.endDate && (
+              <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-xl shadow-lg border border-white/40 dark:border-slate-700 hover:shadow-xl transition-shadow duration-300">
+                <Clock className="h-4 w-4 text-sky-600 dark:text-sky-400 flex-shrink-0" />
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  {new Date(trip.userSelection.startDate).toLocaleDateString(
+                    "en-US",
+                    {
+                      month: "short",
+                      day: "numeric",
+                    }
+                  )}
+                  {" - "}
+                  {new Date(trip.userSelection.endDate).toLocaleDateString(
+                    "en-US",
+                    {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    }
+                  )}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* AI-Generated Insights Grid */}
-      <div className="grid md:grid-cols-3 gap-4">
-        {/* Smart Itinerary Card */}
+      {/* Your Trip Dates - Detailed Information */}
+      {trip?.userSelection?.startDate && trip?.userSelection?.endDate && (
         <div
-          className="bg-gradient-to-br from-blue-50 to-indigo-50 
-                     dark:from-blue-950/30 dark:to-indigo-950/30 
-                     rounded-xl p-5 border-2 border-blue-200 dark:border-blue-800 
-                     hover:shadow-lg transition-all duration-300"
+          className="bg-gradient-to-r from-sky-50 via-blue-50 to-sky-50 
+                     dark:from-sky-950/30 dark:via-blue-950/30 dark:to-sky-950/30 
+                     rounded-xl p-5 border-2 border-sky-200 dark:border-sky-800 shadow-md hover:shadow-lg transition-all duration-300"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 brand-gradient rounded-lg flex items-center justify-center shadow-md">
+              <Clock className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">
+                Your Travel Dates
+              </h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                Mark your calendar for this adventure
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-3 p-4 rounded-lg bg-white dark:bg-slate-900 border border-sky-200 dark:border-sky-800">
+            <p className="text-gray-900 dark:text-gray-100 font-semibold text-lg">
+              {new Date(trip.userSelection.startDate).toLocaleDateString(
+                "en-US",
+                {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                }
+              )}
+              <span className="mx-3 text-sky-500 text-xl">→</span>
+              {new Date(trip.userSelection.endDate).toLocaleDateString(
+                "en-US",
+                {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                }
+              )}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* What's Included - Brand-Unified Design */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Personalized Itinerary */}
+        <div
+          className="bg-gradient-to-br from-sky-50 via-blue-50 to-sky-50 
+                     dark:from-sky-950/30 dark:via-blue-950/30 dark:to-sky-950/30 
+                     rounded-xl p-5 border-2 border-sky-200 dark:border-sky-800 
+                     shadow-md hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
         >
           <div className="flex items-center gap-3 mb-3">
             <div
-              className="w-10 h-10 bg-blue-500 dark:bg-blue-600 rounded-lg 
+              className="w-10 h-10 brand-gradient rounded-lg 
                          flex items-center justify-center shadow-md"
             >
               <Sparkles className="h-5 w-5 text-white" />
             </div>
-            <h3 className="font-bold text-blue-900 dark:text-blue-300 text-base">
-              Smart Planning
+            <h3 className="font-bold text-sky-900 dark:text-sky-300 text-base">
+              Personalized Itinerary
             </h3>
           </div>
-          <p className="text-blue-800 dark:text-blue-300/90 text-sm leading-relaxed">
-            AI-optimized itinerary with perfect timing, balanced activities, and
-            realistic travel duration between locations.
+          <p className="text-sky-800 dark:text-sky-300/90 text-sm leading-relaxed">
+            Every day planned with perfect timing, balanced activities, and
+            realistic travel between locations.
           </p>
         </div>
 
-        {/* Budget Optimization Card */}
+        {/* Smart Budget & Local Tips */}
         <div
-          className="bg-gradient-to-br from-emerald-50 to-green-50 
-                     dark:from-emerald-950/30 dark:to-green-950/30 
-                     rounded-xl p-5 border-2 border-emerald-200 dark:border-emerald-800 
-                     hover:shadow-lg transition-all duration-300"
+          className="bg-gradient-to-br from-sky-50 via-blue-50 to-sky-50 
+                     dark:from-sky-950/30 dark:via-blue-950/30 dark:to-sky-950/30 
+                     rounded-xl p-5 border-2 border-sky-200 dark:border-sky-800 
+                     shadow-md hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
         >
           <div className="flex items-center gap-3 mb-3">
             <div
-              className="w-10 h-10 bg-emerald-500 dark:bg-emerald-600 rounded-lg 
+              className="w-10 h-10 brand-gradient rounded-lg 
                          flex items-center justify-center shadow-md"
             >
               <TrendingUp className="h-5 w-5 text-white" />
             </div>
-            <h3 className="font-bold text-emerald-900 dark:text-emerald-300 text-base">
-              Budget Smart
+            <h3 className="font-bold text-sky-900 dark:text-sky-300 text-base">
+              Smart Budget & Local Tips
             </h3>
           </div>
-          <p className="text-emerald-800 dark:text-emerald-300/90 text-sm leading-relaxed">
-            Maximized value with strategic spending allocation across
-            activities, accommodations, and travel based on your budget.
-          </p>
-        </div>
-
-        {/* Local Knowledge Card */}
-        <div
-          className="bg-gradient-to-br from-amber-50 to-orange-50 
-                     dark:from-amber-950/30 dark:to-orange-950/30 
-                     rounded-xl p-5 border-2 border-amber-200 dark:border-amber-800 
-                     hover:shadow-lg transition-all duration-300"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div
-              className="w-10 h-10 bg-amber-500 dark:bg-amber-600 rounded-lg 
-                         flex items-center justify-center shadow-md"
-            >
-              <InfoIcon className="h-5 w-5 text-white" />
-            </div>
-            <h3 className="font-bold text-amber-900 dark:text-amber-300 text-base">
-              Local Expertise
-            </h3>
-          </div>
-          <p className="text-amber-800 dark:text-amber-300/90 text-sm leading-relaxed">
-            Curated recommendations based on authentic local insights, seasonal
-            considerations, and traveler reviews.
+          <p className="text-sky-800 dark:text-sky-300/90 text-sm leading-relaxed">
+            Get the most value from your budget with insider tips and authentic
+            local recommendations.
           </p>
         </div>
       </div>
 
-      {/* Special Requests Section (if applicable) */}
+      {/* Special Preferences - Warm Attention Accent */}
       {trip?.userSelection?.specificRequests && (
         <div
-          className="bg-gradient-to-br from-purple-50 to-pink-50 
-                     dark:from-purple-950/30 dark:to-pink-950/30 
-                     rounded-xl p-6 border-2 border-purple-200 dark:border-purple-800 shadow-md"
+          className="bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50 
+                     dark:from-amber-950/30 dark:via-orange-950/30 dark:to-amber-950/30 
+                     rounded-xl p-6 border-2 border-amber-200 dark:border-amber-800 
+                     shadow-md hover:shadow-lg transition-all duration-300"
         >
           <div className="flex items-start gap-4">
             <div
-              className="w-12 h-12 bg-purple-500 dark:bg-purple-600 rounded-xl 
+              className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 
+                         dark:from-amber-600 dark:to-orange-600 rounded-xl 
                          flex items-center justify-center shadow-lg flex-shrink-0"
             >
               <span className="text-2xl">💬</span>
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-purple-900 dark:text-purple-300 text-lg mb-2">
+              <h3 className="font-bold text-amber-900 dark:text-amber-300 text-lg mb-2">
                 Your Special Preferences
               </h3>
               <div
                 className="bg-white dark:bg-slate-900 rounded-lg p-4 
-                           border border-purple-200 dark:border-purple-800 shadow-sm"
+                           border border-amber-200 dark:border-amber-800 shadow-sm"
               >
                 <p
-                  className="text-purple-900 dark:text-purple-200 leading-relaxed 
+                  className="text-amber-900 dark:text-amber-200 leading-relaxed 
                            text-sm break-words whitespace-pre-line"
                 >
                   {trip.userSelection.specificRequests}
                 </p>
               </div>
               <p
-                className="text-purple-700 dark:text-purple-400 text-xs mt-3 
+                className="text-amber-700 dark:text-amber-400 text-xs mt-3 
                          flex items-center gap-2"
               >
-                <Clock className="h-3.5 w-3.5" />
-                Our AI has tailored your itinerary to match these preferences
+                <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                Your itinerary reflects these preferences
               </p>
             </div>
           </div>
         </div>
       )}
-
-      {/* Travel Readiness Checklist */}
-      <div
-        className="bg-white dark:bg-slate-900 rounded-xl p-6 border-2 
-                   border-gray-200 dark:border-slate-700 shadow-md"
-      >
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 brand-gradient rounded-lg flex items-center justify-center shadow-md">
-            <Shield className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg">
-              Trip Readiness
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">
-              Everything you need is prepared
-            </p>
-          </div>
-        </div>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Itinerary Status */}
-          <div
-            className="flex items-center gap-3 p-3 rounded-lg 
-                       bg-emerald-50 dark:bg-emerald-950/30 
-                       border border-emerald-200 dark:border-emerald-800"
-          >
-            <div
-              className="w-8 h-8 bg-emerald-500 dark:bg-emerald-600 rounded-full 
-                         flex items-center justify-center flex-shrink-0"
-            >
-              <span className="text-white text-lg">✓</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-emerald-900 dark:text-emerald-300 text-sm">
-                Itinerary
-              </p>
-              <p className="text-emerald-700 dark:text-emerald-400 text-xs">
-                Generated
-              </p>
-            </div>
-          </div>
-
-          {/* Hotels Status */}
-          <div
-            className="flex items-center gap-3 p-3 rounded-lg 
-                       bg-blue-50 dark:bg-blue-950/30 
-                       border border-blue-200 dark:border-blue-800"
-          >
-            <div
-              className="w-8 h-8 bg-blue-500 dark:bg-blue-600 rounded-full 
-                         flex items-center justify-center flex-shrink-0"
-            >
-              <span className="text-white text-lg">✓</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-blue-900 dark:text-blue-300 text-sm">
-                Hotels
-              </p>
-              <p className="text-blue-700 dark:text-blue-400 text-xs">
-                Verified
-              </p>
-            </div>
-          </div>
-
-          {/* Flights Status (if applicable) */}
-          {trip?.hasRealFlights ? (
-            <div
-              className="flex items-center gap-3 p-3 rounded-lg 
-                         bg-sky-50 dark:bg-sky-950/30 
-                         border border-sky-200 dark:border-sky-800"
-            >
-              <div
-                className="w-8 h-8 bg-sky-500 dark:bg-sky-600 rounded-full 
-                           flex items-center justify-center flex-shrink-0"
-              >
-                <span className="text-white text-lg">✓</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sky-900 dark:text-sky-300 text-sm">
-                  Flights
-                </p>
-                <p className="text-sky-700 dark:text-sky-400 text-xs">
-                  Live Data
-                </p>
-              </div>
-            </div>
-          ) : null}
-
-          {/* Route Status */}
-          <div
-            className="flex items-center gap-3 p-3 rounded-lg 
-                       bg-purple-50 dark:bg-purple-950/30 
-                       border border-purple-200 dark:border-purple-800"
-          >
-            <div
-              className="w-8 h-8 bg-purple-500 dark:bg-purple-600 rounded-full 
-                         flex items-center justify-center flex-shrink-0"
-            >
-              <span className="text-white text-lg">✓</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-purple-900 dark:text-purple-300 text-sm">
-                Routes
-              </p>
-              <p className="text-purple-700 dark:text-purple-400 text-xs">
-                Optimized
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

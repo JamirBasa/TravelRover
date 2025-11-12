@@ -210,78 +210,76 @@ function PlaceCardItem({ place }) {
   };
 
   return (
-    <Link to={generateMapsURL()} target="_blank" className="block group">
-      <div className="bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-xl p-5 hover:shadow-lg hover:border-sky-400 dark:hover:border-sky-500 transition-all duration-300 relative">
-        <div className="flex gap-4">
-          {/* Place Image */}
-          <div className="flex-shrink-0">
-            {isLoading ? (
-              <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-800 dark:to-slate-700 rounded-lg flex items-center justify-center">
-                <div className="w-6 h-6 border-2 border-sky-500 dark:border-sky-400 border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : photoUrl ? (
-              <img
-                src={photoUrl}
-                className="w-24 h-24 rounded-lg object-cover transition-transform duration-300 group-hover:scale-105 shadow-sm"
-                alt={placeName}
-                onError={(e) => {
-                  e.target.src = "/placeholder.png";
-                }}
-              />
-            ) : (
-              <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-800 dark:to-slate-700 rounded-lg flex items-center justify-center border border-gray-200 dark:border-slate-600">
-                <span className="text-gray-400 dark:text-gray-500 text-3xl">
-                  📍
-                </span>
-              </div>
+    <Link to={generateMapsURL()} target="_blank" className="block group h-full">
+      <div className="bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden hover:shadow-xl hover:border-sky-400 dark:hover:border-sky-500 transition-all duration-300 h-full flex flex-col">
+        {/* Place Image - Full width at top */}
+        <div className="w-full h-48 flex-shrink-0 overflow-hidden">
+          {isLoading ? (
+            <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center">
+              <div className="w-8 h-8 border-3 border-sky-500 dark:border-sky-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : photoUrl ? (
+            <img
+              src={photoUrl}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+              alt={placeName}
+              onError={(e) => {
+                e.target.src = "/placeholder.png";
+              }}
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center border-b border-gray-200 dark:border-slate-600">
+              <span className="text-gray-400 dark:text-gray-500 text-4xl font-light">
+                �️
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Content Area */}
+        <div className="p-5 flex-1 flex flex-col">
+          {/* Title */}
+          <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg leading-tight group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors line-clamp-2 mb-3">
+            {placeName}
+          </h3>
+
+          {/* Description */}
+          {placeDetails && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 leading-relaxed mb-4">
+              {placeDetails}
+            </p>
+          )}
+
+          {/* Info Badges - Only show if data exists */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {place?.ticketPricing && (
+              <span className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 px-2.5 py-1 rounded-md text-xs font-semibold border border-green-200 dark:border-green-800">
+                <span>💰</span>
+                <span>{place.ticketPricing}</span>
+              </span>
+            )}
+
+            {place?.timeTravel && (
+              <span className="inline-flex items-center gap-1.5 bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-md text-xs font-semibold border border-orange-200 dark:border-orange-800">
+                <span>⏰</span>
+                <span>{place.timeTravel}</span>
+              </span>
+            )}
+
+            {place?.rating && (
+              <span className="inline-flex items-center gap-1.5 bg-yellow-50 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-400 px-2.5 py-1 rounded-md text-xs font-semibold border border-yellow-200 dark:border-yellow-800">
+                <span>⭐</span>
+                <span>{place.rating}/5</span>
+              </span>
             )}
           </div>
 
-          {/* Place Details */}
-          <div className="flex-1 min-w-0 space-y-2.5">
-            {/* Title */}
-            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg leading-tight group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors line-clamp-2">
-              {placeName}
-            </h3>
-
-            {/* Description */}
-            {placeDetails && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
-                {placeDetails}
-              </p>
-            )}
-
-            {/* Info Badges - Only show if data exists */}
-            <div className="flex flex-wrap gap-2">
-              {place?.ticketPricing && (
-                <span className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 px-2.5 py-1 rounded-md text-xs font-semibold border border-green-200 dark:border-green-800">
-                  <span>💰</span>
-                  <span>{place.ticketPricing}</span>
-                </span>
-              )}
-
-              {place?.timeTravel && (
-                <span className="inline-flex items-center gap-1.5 bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-md text-xs font-semibold border border-orange-200 dark:border-orange-800">
-                  <span>⏰</span>
-                  <span>{place.timeTravel}</span>
-                </span>
-              )}
-
-              {place?.rating && (
-                <span className="inline-flex items-center gap-1.5 bg-yellow-50 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-400 px-2.5 py-1 rounded-md text-xs font-semibold border border-yellow-200 dark:border-yellow-800">
-                  <span>⭐</span>
-                  <span>{place.rating}/5</span>
-                </span>
-              )}
-            </div>
-
-            {/* Action Indicator */}
-            <div className="flex items-center gap-2 text-xs text-sky-600 dark:text-sky-400 font-semibold pt-1">
-              <span>View on Maps</span>
-              <span className="transform group-hover:translate-x-1 transition-transform">
-                →
-              </span>
-            </div>
+          {/* Action Indicator - Push to bottom */}
+          <div className="flex items-center gap-2 text-xs text-sky-600 dark:text-sky-400 font-semibold mt-auto">
+            <span>View on Maps</span>
+            <span className="transform group-hover:translate-x-1 transition-transform">
+              →
+            </span>
           </div>
         </div>
       </div>

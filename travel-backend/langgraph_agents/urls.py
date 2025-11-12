@@ -15,6 +15,9 @@ urlpatterns = [
     # Session management
     path('session/<str:session_id>/', views.LangGraphSessionStatusView.as_view(), name='session_status'),
     
+    # Transport mode analysis
+    path('transport-mode/', views.TransportModeAnalysisView.as_view(), name='transport_mode_analysis'),
+    
     # Photo proxy (CORS bypass for Google Places photos)
     path('photo-proxy/', GooglePlacesPhotoProxyView.as_view(), name='photo_proxy'),
     

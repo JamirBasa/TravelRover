@@ -106,27 +106,35 @@ const BudgetSelector = ({
         return 1000;
       }
 
-      // ✅ UPDATED: Use 90% of budget-friendly tier as the ABSOLUTE minimum (was 85%)
-      // This is more realistic for successful trip generation
-      // 90% allows some flexibility below the "recommended" tier without being too aggressive
-      const calculatedMinimum = Math.floor(parsed * 0.9);
-
-      // ✅ Enforce absolute floor based on trip duration
-      // Prevents unrealistically low budgets for longer trips
+      // ✅ ENHANCED: Tiered minimums based on group size (economies of scale)
+      const travelers = formData.travelers || 1;
       const duration = formData.duration || 3;
-      const absoluteFloor = duration * 1200; // ₱1,200/day minimum (bare bones)
 
-      // Use the higher of: calculated minimum OR absolute floor
-      const finalMinimum = Math.max(calculatedMinimum, absoluteFloor);
+      const getMinPerPersonPerDay = (travelerCount) => {
+        if (travelerCount >= 11) return 600; // Large groups: Shared accommodations, bulk bookings
+        if (travelerCount >= 6) return 700; // Medium groups: Group discounts
+        if (travelerCount >= 3) return 800; // Small groups: Split costs
+        return 1000; // Solo/couples: No economies of scale
+      };
 
-      console.log("💰 Minimum Budget Calculation:", {
-        budgetFriendlyTier: parsed,
-        calculated90Percent: calculatedMinimum,
-        absoluteFloor,
+      const minPerPersonPerDay = getMinPerPersonPerDay(travelers);
+      const calculatedMinimum = minPerPersonPerDay * duration * travelers;
+
+      // Also respect the budget-friendly tier estimate (use 90%)
+      const budgetTierMinimum = Math.floor(parsed * 0.9);
+
+      // Use the lower of tiered calculation OR budget tier (most lenient)
+      const finalMinimum = Math.min(calculatedMinimum, budgetTierMinimum);
+
+      console.log("💰 Minimum Budget Calculation (Tiered):", {
+        travelers,
+        minPerPersonPerDay,
+        tieredMinimum: calculatedMinimum,
+        budgetFriendly90Percent: budgetTierMinimum,
         finalMinimum,
         duration,
         includesFlights: flightData.includeFlights,
-        includesHotels: hotelData.includeHotels, // ✅ NEW: Log hotel service
+        includesHotels: hotelData.includeHotels,
       });
 
       return finalMinimum;
@@ -137,8 +145,9 @@ const BudgetSelector = ({
   }, [
     budgetEstimates,
     formData.duration,
-    flightData.includeFlights, // ✅ NEW: Recalculate when flights change
-    hotelData.includeHotels, // ✅ NEW: Recalculate when hotels change
+    formData.travelers, // ✅ NEW: Recalculate when traveler count changes (for tiered minimums)
+    flightData.includeFlights,
+    hotelData.includeHotels,
   ]);
 
   // ✅ NEW: Get smart budget tier recommendation
@@ -612,6 +621,123 @@ const BudgetSelector = ({
                       )}
                     </p>
                   </div>
+
+                  {/* ✅ NEW: Real-Time Budget Calculator */}
+                  {customValue && formData.duration && formData.travelers && (
+                    <div className="p-4 bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-700 rounded-lg mt-3">
+                      <p className="text-sm font-semibold text-sky-900 dark:text-sky-200 mb-3">
+                        💰 Budget Breakdown
+                      </p>
+                      <div className="grid grid-cols-3 gap-3 text-xs">
+                        <div className="text-center p-2 bg-white dark:bg-slate-800 rounded border border-sky-200 dark:border-sky-700">
+                          <span className="text-gray-600 dark:text-gray-400 block mb-1">
+                            Per Day
+                          </span>
+                          <p className="font-bold text-base text-gray-900 dark:text-gray-100">
+                            ₱
+                            {Math.round(
+                              customValue / formData.duration
+                            ).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 bg-white dark:bg-slate-800 rounded border border-sky-200 dark:border-sky-700">
+                          <span className="text-gray-600 dark:text-gray-400 block mb-1">
+                            Per Person
+                          </span>
+                          <p className="font-bold text-base text-gray-900 dark:text-gray-100">
+                            ₱
+                            {Math.round(
+                              customValue / formData.travelers
+                            ).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 bg-white dark:bg-slate-800 rounded border border-sky-200 dark:border-sky-700">
+                          <span className="text-gray-600 dark:text-gray-400 block mb-1">
+                            Per Person/Day
+                          </span>
+                          <p
+                            className={`font-bold text-base ${(() => {
+                              const perPersonPerDay =
+                                customValue /
+                                formData.duration /
+                                formData.travelers;
+                              const minRequired =
+                                formData.travelers >= 11
+                                  ? 600
+                                  : formData.travelers >= 6
+                                  ? 700
+                                  : formData.travelers >= 3
+                                  ? 800
+                                  : 1000;
+                              return perPersonPerDay < minRequired
+                                ? "text-red-600 dark:text-red-400"
+                                : perPersonPerDay < minRequired * 1.2
+                                ? "text-amber-600 dark:text-amber-400"
+                                : "text-green-600 dark:text-green-400";
+                            })()}`}
+                          >
+                            ₱
+                            {Math.round(
+                              customValue /
+                                formData.duration /
+                                formData.travelers
+                            ).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      {(() => {
+                        const perPersonPerDay =
+                          customValue / formData.duration / formData.travelers;
+                        const minRequired =
+                          formData.travelers >= 11
+                            ? 600
+                            : formData.travelers >= 6
+                            ? 700
+                            : formData.travelers >= 3
+                            ? 800
+                            : 1000;
+                        const suggestedTotal =
+                          minRequired * formData.duration * formData.travelers;
+
+                        if (perPersonPerDay < minRequired) {
+                          return (
+                            <div className="mt-3 p-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-700 rounded">
+                              <p className="text-xs text-red-800 dark:text-red-300">
+                                ⚠️ Too low! For {formData.travelers} travelers,
+                                minimum is ₱{minRequired}/day/person. Suggested
+                                budget:{" "}
+                                <strong>
+                                  ₱{suggestedTotal.toLocaleString()}
+                                </strong>
+                              </p>
+                            </div>
+                          );
+                        } else if (perPersonPerDay < minRequired * 1.2) {
+                          return (
+                            <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700 rounded">
+                              <p className="text-xs text-amber-800 dark:text-amber-300">
+                                💡 Tight budget. Consider ₱
+                                {Math.round(
+                                  suggestedTotal * 1.5
+                                ).toLocaleString()}{" "}
+                                for more comfort.
+                              </p>
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div className="mt-3 p-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-700 rounded">
+                              <p className="text-xs text-green-800 dark:text-green-300">
+                                ✅ Good budget! You'll have comfortable options
+                                for your trip.
+                              </p>
+                            </div>
+                          );
+                        }
+                      })()}
+                    </div>
+                  )}
+
                   {customBudgetError && (
                     <div
                       className={`flex items-start gap-2 p-3 rounded-xl border ${

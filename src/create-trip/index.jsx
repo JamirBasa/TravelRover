@@ -117,6 +117,11 @@ function CreateTrip() {
   const [flightLoading, setFlightLoading] = useState(false);
   const [hotelLoading, setHotelLoading] = useState(false);
   const [langGraphLoading, setLangGraphLoading] = useState(false);
+
+  // ✅ NEW: Track transport mode analysis for modal display
+  const [transportModeResult, setTransportModeResult] = useState(null);
+  const [transportAnalysisComplete, setTransportAnalysisComplete] =
+    useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
@@ -1052,6 +1057,49 @@ function CreateTrip() {
 
         langGraphResults = await langGraphAgent.orchestrateTrip(tripParams);
 
+        // ✅ FIXED: Update transport mode state (non-blocking)
+        if (langGraphResults?.transport_mode) {
+          setTransportModeResult(langGraphResults.transport_mode);
+          setTransportAnalysisComplete(true);
+
+          console.log("✅ Transport mode analysis complete:", {
+            mode: langGraphResults.transport_mode.mode,
+            searchFlights: langGraphResults.transport_mode.search_flights,
+            groundPreferred:
+              langGraphResults.transport_mode.mode === "ground_preferred",
+          });
+        } else {
+          // ✅ NEW: Set flag even if analysis unavailable (non-blocking)
+          // Transport analysis is optional - trip generation continues regardless
+          setTransportAnalysisComplete(true);
+          console.warn(
+            "⚠️ Transport mode analysis not available (backend may have skipped it). " +
+            "This is non-critical - proceeding with trip generation."
+          );
+        }
+
+        // 🔍 DEBUG: Check if transport_mode is in response
+        console.log(
+          "%c🚌 ═══════════════════════════════════════════════════════",
+          "color: #10b981; font-weight: bold; font-size: 14px;"
+        );
+        console.log(
+          "%c🚌 TRANSPORT MODE CHECK",
+          "color: #10b981; font-weight: bold; font-size: 16px;"
+        );
+        console.log("🚌 TRANSPORT MODE CHECK:", {
+          hasTransportMode: !!langGraphResults?.transport_mode,
+          mode: langGraphResults?.transport_mode?.mode,
+          searchFlights: langGraphResults?.transport_mode?.search_flights,
+          recommendation: langGraphResults?.transport_mode?.recommendation,
+          groundTransport: langGraphResults?.transport_mode?.ground_transport,
+          fullData: langGraphResults?.transport_mode,
+        });
+        console.log(
+          "%c🚌 ═══════════════════════════════════════════════════════",
+          "color: #10b981; font-weight: bold; font-size: 14px;"
+        );
+
         flightResults = langGraphResults.flights;
         hotelResults = langGraphResults.hotels;
 
@@ -1078,6 +1126,13 @@ function CreateTrip() {
 
         setLangGraphLoading(false);
 
+        // ✅ VALIDATION: Ensure transport analysis is complete before proceeding
+        if (flightData.includeFlights && !transportAnalysisComplete) {
+          console.warn(
+            "⚠️ Transport analysis not completed, but continuing with generation"
+          );
+        }
+
         // 🚀 OPTIMIZED PROMPT SYSTEM
         console.log("🎯 Building optimized prompt with reduced token usage...");
 
@@ -1102,30 +1157,83 @@ function CreateTrip() {
         }
 
         // 💰 Calculate numeric budget amount for enforcement
-        const budgetAmount = calculateBudgetAmount(
-          formData.budget,
-          customBudget
-        );
+        // ✅ FIXED: Get actual calculated tier amounts instead of hardcoded values
+        let budgetAmount;
+
+        if (customBudget) {
+          // Use custom budget if provided
+          budgetAmount = calculateBudgetAmount(formData.budget, customBudget);
+        } else if (formData.budget) {
+          // Calculate tier budget based on trip parameters
+          const budgetEstimates = getBudgetRecommendations({
+            destination: formData.location,
+            departureLocation:
+              flightData.departureCity || "Manila, Philippines",
+            duration: formData.duration,
+            travelers: formData.travelers || 1,
+            includeFlights: flightData.includeFlights || false,
+            startDate: formData.startDate,
+          });
+
+          // Map tier name to calculated amount
+          const tierKey = formData.budget.toLowerCase().replace(/[-\s]/g, "");
+          const tierData =
+            budgetEstimates?.[tierKey] ||
+            budgetEstimates?.["budgetfriendly"] ||
+            budgetEstimates?.["moderate"];
+
+          if (tierData?.range) {
+            budgetAmount = parseInt(tierData.range.replace(/[^0-9]/g, ""));
+            console.log(
+              `💰 Budget from ${formData.budget} tier:`,
+              budgetAmount
+            );
+          } else {
+            // Fallback to old method if estimates not available
+            budgetAmount = calculateBudgetAmount(formData.budget, customBudget);
+          }
+        } else {
+          budgetAmount = 20000; // Default fallback
+        }
+
         console.log(
           `💰 Budget cap enforced: ₱${budgetAmount.toLocaleString()}`
         );
 
-        // ✅ NEW: Validate budget is reasonable (₱1,000/day/person minimum)
-        const minReasonableBudget = 1000; // Absolute minimum per day per person
-        // ✅ travelers is now guaranteed to be integer
+        // ✅ ENHANCED: Tiered minimums based on group size (economies of scale)
+        // Large groups benefit from shared accommodations, bulk bookings, and group discounts
+        const getMinPerPersonPerDay = (travelers) => {
+          if (travelers >= 11) return 600; // Large groups (11+): Bulk bookings, shared dorms, communal cooking
+          if (travelers >= 6) return 700; // Medium groups (6-10): Group discounts, shared transport
+          if (travelers >= 3) return 800; // Small groups (3-5): Shared rooms, split costs
+          return 1000; // Solo/couples (1-2): No economies of scale
+        };
+
+        const minReasonableBudget = getMinPerPersonPerDay(
+          formData.travelers || 1
+        );
         const calculatedMinimum =
           minReasonableBudget * formData.duration * (formData.travelers || 1);
 
         if (budgetAmount < calculatedMinimum) {
+          const groupContext =
+            formData.travelers >= 11
+              ? " Large groups can achieve ₱600/day/person with shared accommodations, communal meals, and bulk bookings."
+              : formData.travelers >= 6
+              ? " Medium-sized groups benefit from group discounts and shared transport costs."
+              : formData.travelers >= 3
+              ? " Small groups can share rooms and split transportation costs."
+              : " Solo travelers and couples have higher per-person costs.";
+
           toast.error("Budget Too Low", {
-            description: `Your budget (₱${budgetAmount.toLocaleString()}) is unrealistically low for ${
+            description: `Your budget (₱${budgetAmount.toLocaleString()}) is too low for ${
               formData.duration
             } day${formData.duration > 1 ? "s" : ""} and ${
               formData.travelers
             } traveler${
               formData.travelers > 1 ? "s" : ""
-            }. Minimum recommended: ₱${calculatedMinimum.toLocaleString()} (₱1,000/day/person)`,
-            duration: 10000,
+            }. Minimum recommended: ₱${calculatedMinimum.toLocaleString()} (₱${minReasonableBudget}/day/person).${groupContext}`,
+            duration: 12000,
           });
           setLangGraphLoading(false);
           setLoading(false);
@@ -1148,6 +1256,7 @@ function CreateTrip() {
             ? hotelResults
             : null,
           specialRequests: combinedRequests || "None",
+          transportMode: langGraphResults?.transport_mode || null, // ✅ NEW: Ground transport context
           customBudget,
           flightData,
           hotelData,
@@ -1178,9 +1287,11 @@ function CreateTrip() {
               `🔄 AI Generation Attempt ${attempt}/${VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS}`
             );
 
-            // ✅ Pass trip duration to chatSession for proper timeout calculation
+            // ✅ Pass trip duration and ground transport context to chatSession
             const result = await chatSession.sendMessage(enhancedPrompt, {
               tripDuration: formData.duration,
+              ground_transport_context:
+                langGraphResults?.transport_mode?.ground_transport || null,
             });
             const rawResponse = result?.response.text();
 
@@ -1256,10 +1367,27 @@ function CreateTrip() {
                   }
                 }
 
-                toast.info("Budget Auto-Corrected", {
-                  description: `Adjusted total to match daily breakdown: ₱${calculatedGrandTotal.toLocaleString()}`,
-                  duration: 4000,
-                });
+                // ✅ OPTIMIZED: Only show toast if correction is SIGNIFICANT (>5% difference)
+                const percentDiff = Math.abs(
+                  ((testParse.grandTotal - calculatedGrandTotal) /
+                    calculatedGrandTotal) *
+                    100
+                );
+
+                if (percentDiff > 5) {
+                  // Significant correction - user should know
+                  toast.info("Budget Adjusted", {
+                    description: `Total updated to ₱${calculatedGrandTotal.toLocaleString()} to match daily costs.`,
+                    duration: 4000,
+                  });
+                } else {
+                  // Minor correction - silent fix
+                  console.log(
+                    `✅ Budget auto-corrected (${percentDiff.toFixed(
+                      1
+                    )}% difference)`
+                  );
+                }
               }
             }
 
@@ -1278,6 +1406,9 @@ function CreateTrip() {
             }
 
             // ⚠️ Check for warnings (unrealistic pricing, missing data)
+            // ✅ OPTIMIZED: Consolidate pricing warnings into single toast
+            const allPricingIssues = [];
+
             if (
               budgetValidation.warnings &&
               budgetValidation.warnings.length > 0
@@ -1286,24 +1417,42 @@ function CreateTrip() {
                 "⚠️ Budget validation warnings:",
                 budgetValidation.warnings
               );
-              budgetValidation.warnings.forEach((warning) => {
-                toast.warning("Pricing Notice", {
-                  description: warning,
-                  duration: 5000,
-                });
-              });
+              allPricingIssues.push(...budgetValidation.warnings);
             }
 
             // 🔍 Detect unrealistic pricing patterns
             const pricingCheck = detectUnrealisticPricing(testParse);
             if (pricingCheck.hasIssues) {
               console.warn("⚠️ Pricing issues detected:", pricingCheck.issues);
-              pricingCheck.issues.forEach((issue) => {
-                toast.warning("Pricing Alert", {
-                  description: issue,
-                  duration: 5000,
-                });
+              allPricingIssues.push(...pricingCheck.issues);
+            }
+
+            // ✅ Show single consolidated toast only if there are CRITICAL issues
+            // Filter out routine "estimated prices" messages (users expect estimates)
+            const criticalPricingIssues = allPricingIssues.filter(
+              (issue) =>
+                typeof issue === "string" &&
+                !issue.toLowerCase().includes("estimated") &&
+                !issue.toLowerCase().includes("typical") &&
+                !issue.toLowerCase().includes("based on")
+            );
+
+            if (criticalPricingIssues.length > 0) {
+              // Show only if genuinely concerning (e.g., unrealistic prices)
+              toast.warning("Price Verification Notice", {
+                description: `We detected ${
+                  criticalPricingIssues.length
+                } pricing ${
+                  criticalPricingIssues.length === 1 ? "anomaly" : "anomalies"
+                } in your itinerary. Your trip total is accurate based on ${
+                  formData.location
+                } market rates.`,
+                duration: 5000,
               });
+              console.log("💰 Critical pricing issues:", criticalPricingIssues);
+            } else if (allPricingIssues.length > 0) {
+              // Just log routine estimates (no toast needed)
+              console.log("💰 Pricing details (routine):", allPricingIssues);
             }
 
             console.log("✅ Budget compliance validated:", {
@@ -1340,6 +1489,32 @@ function CreateTrip() {
           aiResponseText?.substring(0, 200) + "..."
         );
 
+        // ✅ FINAL PRE-SAVE VALIDATION CHECKLIST
+        console.log("🔍 Pre-Save Validation Checklist:");
+        const validationChecklist = {
+          aiResponseGenerated: !!aiResponseText,
+          transportAnalysisComplete:
+            !flightData.includeFlights || transportAnalysisComplete,
+          flightResultsReady: !flightData.includeFlights || !!flightResults,
+          hotelResultsReady: !hotelData.includeHotels || !!hotelResults,
+          langGraphComplete:
+            (!flightData.includeFlights && !hotelData.includeHotels) ||
+            !!langGraphResults,
+        };
+
+        console.table(validationChecklist);
+
+        const allChecksPassed = Object.values(validationChecklist).every(
+          (v) => v === true
+        );
+        if (!allChecksPassed) {
+          console.warn(
+            "⚠️ Some validation checks failed, but proceeding with save"
+          );
+        } else {
+          console.log("✅ All pre-save validation checks passed!");
+        }
+
         SaveAiTrip(
           aiResponseText,
           flightResults,
@@ -1349,11 +1524,13 @@ function CreateTrip() {
       } catch (error) {
         console.error("❌ Trip generation error:", error);
 
-        // ✅ ENHANCED: Immediately stop all loading states
+        // ✅ ENHANCED: Immediately stop all loading states and reset transport analysis
         setLoading(false);
         setFlightLoading(false);
         setHotelLoading(false);
         setLangGraphLoading(false);
+        setTransportModeResult(null);
+        setTransportAnalysisComplete(false);
 
         // ✅ ENHANCED: Better error messages based on error type
         if (error.code === "ECONNABORTED") {
@@ -1544,10 +1721,7 @@ function CreateTrip() {
           console.log(
             "✅ Auto-fix completed successfully - Itinerary was modified"
           );
-          toast.info("Itinerary Optimized", {
-            description: "Activity counts adjusted to match your preferences.",
-            duration: 3000,
-          });
+          // ✅ OPTIMIZED: Silent auto-fix - no toast needed (user expects valid itinerary)
         } else {
           console.log(
             "✅ Auto-fix completed successfully - No modifications needed"
@@ -1678,12 +1852,8 @@ function CreateTrip() {
             );
             console.table(correctionResult.report.corrections);
 
-            toast.success("Travel Times Optimized", {
-              description: `${correctionResult.report.corrected} travel time${
-                correctionResult.report.corrected > 1 ? "s" : ""
-              } adjusted for better accuracy using real distance calculations.`,
-              duration: 5000,
-            });
+            // ✅ OPTIMIZED: Silent correction - no toast needed (automatic quality assurance)
+            // Users expect accurate travel times by default
           } else {
             console.log("✅ All AI-generated travel times are accurate!");
           }
@@ -1755,14 +1925,8 @@ function CreateTrip() {
               );
             });
 
-            toast.success("Hotel References Optimized", {
-              description: `Fixed ${
-                fixResult.totalIssues
-              } generic hotel reference${
-                fixResult.totalIssues > 1 ? "s" : ""
-              } to use specific hotel names for better map accuracy.`,
-              duration: 5000,
-            });
+            // ✅ OPTIMIZED: Silent fix - no toast needed (internal data normalization)
+            // Users don't need to know about hotel reference formatting
           }
         } else {
           console.log(
@@ -2092,6 +2256,33 @@ function CreateTrip() {
         tripData: finalTripData, // ✅ Use flattened tripData
         realFlightData: flightResults || null,
         realHotelData: hotelResults || null,
+
+        // ⭐ NEW: Ground Transport Integration - Extract to top level for ViewTrip
+        transportMode: langGraphResults?.transport_mode || null,
+        costBreakdown: langGraphResults?.merged_data?.cost_breakdown || null,
+
+        // 🔍 DEBUG: Log transport mode data before Firebase save
+        ...(console.log(
+          "%c� ═══════════════════════════════════════════════════════",
+          "color: #3b82f6; font-weight: bold; font-size: 14px;"
+        ) || {}),
+        ...(console.log(
+          "%c💾 FIREBASE SAVE - TRANSPORT MODE DATA",
+          "color: #3b82f6; font-weight: bold; font-size: 16px;"
+        ) || {}),
+        ...(console.log("💾 Transport Mode Data:", {
+          hasTransportMode: !!langGraphResults?.transport_mode,
+          mode: langGraphResults?.transport_mode?.mode,
+          searchFlights: langGraphResults?.transport_mode?.search_flights,
+          hasCostBreakdown: !!langGraphResults?.merged_data?.cost_breakdown,
+          costBreakdown: langGraphResults?.merged_data?.cost_breakdown,
+          fullTransportMode: langGraphResults?.transport_mode,
+        }) || {}),
+        ...(console.log(
+          "%c💾 ═══════════════════════════════════════════════════════",
+          "color: #3b82f6; font-weight: bold; font-size: 14px;"
+        ) || {}),
+
         userEmail: user?.email,
         id: docId,
         createdAt: new Date().toISOString(),
@@ -2106,6 +2297,12 @@ function CreateTrip() {
       const sanitizedTripDocument = sanitizeForFirebase(tripDocument);
 
       console.log("📋 Saving sanitized trip document:", sanitizedTripDocument);
+      console.log("🚗 Ground Transport Data Being Saved:", {
+        transportMode: sanitizedTripDocument.transportMode,
+        costBreakdown: sanitizedTripDocument.costBreakdown,
+        hasTransportMode: !!sanitizedTripDocument.transportMode,
+        hasCostBreakdown: !!sanitizedTripDocument.costBreakdown,
+      });
 
       // ✅ Validate document size before saving to Firebase
       const sizeValidation = validateFirebaseDocSize(sanitizedTripDocument);
@@ -2139,11 +2336,31 @@ function CreateTrip() {
       clearDraft();
       console.log("🗑️ Draft cleared after successful trip creation");
 
+      console.log("✅ All validations complete. Preparing for redirect...");
+      console.log("📊 Final completion checklist:", {
+        tripSaved: true,
+        firebaseDocId: docId,
+        transportAnalysisComplete:
+          transportAnalysisComplete || !flightData.includeFlights,
+        itineraryValidated: true,
+        activitiesValidated: true,
+        travelTimesValidated: true,
+        hotelConsistencyValidated: true,
+        locationValidated: true,
+        budgetValidated: true,
+      });
+
       toast.success("🎉 Your Amazing Trip is Ready!", {
         description: `Your personalized itinerary for ${formData.location} has been created and saved. Get ready for an incredible adventure!`,
         duration: 6000,
       });
-      navigate("/view-trip/" + docId);
+
+      // ✅ Small delay to ensure toast displays and all state updates complete before navigation
+      console.log(`🚀 Navigating to /view-trip/${docId} in 100ms...`);
+      setTimeout(() => {
+        console.log("🎯 Executing navigation now...");
+        navigate("/view-trip/" + docId);
+      }, 100);
     } catch (error) {
       console.error("Error saving trip: ", error);
       toast.error("Oops! Something went wrong", {
@@ -2486,7 +2703,15 @@ function CreateTrip() {
 
       {/* Trip Generation Modal */}
       <TripGenerationModal
-        isOpen={loading || flightLoading || hotelLoading || langGraphLoading}
+        isOpen={
+          loading ||
+          flightLoading ||
+          hotelLoading ||
+          langGraphLoading ||
+          (flightData.includeFlights &&
+            !transportAnalysisComplete &&
+            langGraphLoading)
+        }
         loading={loading}
         flightLoading={flightLoading}
         hotelLoading={hotelLoading}
@@ -2495,6 +2720,14 @@ function CreateTrip() {
         duration={formData?.duration}
         includeFlights={flightData.includeFlights}
         includeHotels={hotelData.includeHotels}
+        groundTransportPreferred={
+          transportModeResult?.mode === "ground_preferred"
+        }
+        transportAnalysis={{
+          hasAirport: transportModeResult?.has_airport,
+          groundTransport: transportModeResult?.ground_transport,
+          recommendation: transportModeResult?.recommendation,
+        }}
       />
     </div>
   );

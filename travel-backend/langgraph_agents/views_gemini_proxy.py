@@ -66,6 +66,7 @@ def gemini_generate(request):
         prompt = request.data.get('prompt')
         schema = request.data.get('schema')
         generation_config = request.data.get('generationConfig', {})
+        use_chat_mode = request.data.get('chat_mode', False)  # ✅ NEW: Chat mode flag
         
         # Validate prompt
         if not prompt:
@@ -124,9 +125,26 @@ def gemini_generate(request):
         system_context = """
 You are an expert Philippine travel planner generating JSON itineraries. Follow these CRITICAL rules:
 
-🛫 AIRPORT SELECTION (MANDATORY):
+🚌 GROUND TRANSPORT INTELLIGENCE (NEW):
+✅ IF mode is "ground_preferred" → Use DIRECT ground transport from origin to destination
+✅ Example for direct ground: "Travel from [origin] to [destination] via [mode] ([X hours], ₱[cost range])"
+✅ IF destination lacks airport → Use "Fly to [nearest airport], then [mode] to [destination] ([X hours], ₱[cost range])"
+✅ Include operator names, travel time, and cost range when available
+✅ Mention scenic routes: "Enjoy coastal highway views during the journey"
+
+GROUND TRANSPORT CONTEXT (Will be provided when available):
+- mode: primary transport mode (bus/van/ferry/etc.)
+- travel_time: actual travel duration
+- cost: min/max fare range
+- operators: available service providers
+- frequency: schedule information
+- scenic: whether route offers scenic views
+- notes: practical tips and recommendations
+
+�🛫 AIRPORT SELECTION (MANDATORY):
 ✅ IF destination has direct airport → Use it with proper code
 ✅ IF destination has NO direct airport → Recommend NEAREST airport + ground transfer details
+✅ IF ground_preferred mode → Skip flight search, use ground transport exclusively
 
 PHILIPPINES AIRPORT GUIDE:
 ✅ Cities WITH Direct Airports:
@@ -205,13 +223,42 @@ Generate realistic, logistically accurate itineraries with ACCURATE travel times
 """
         
         # Check if this is a travel itinerary request (contains travel-related keywords)
+        # ✅ FIXED: Skip system prompt if chat_mode=True (for chatbot conversations)
         is_travel_request = any(keyword in prompt.lower() for keyword in [
             'itinerary', 'trip', 'travel', 'destination', 'hotel', 'flight', 
             'budget', 'travelers', 'places to visit', 'duration'
-        ])
+        ]) and not use_chat_mode  # Don't add trip generation prompt for chat
         
-        # Prepend system context for travel requests
-        enhanced_prompt = f"{system_context}\n\n{prompt}" if is_travel_request else prompt
+        # Extract ground transport context from request if available
+        ground_transport_context = request.data.get('ground_transport_context')
+        
+        # Build enhanced prompt with ground transport context
+        enhanced_prompt = prompt
+        if is_travel_request:
+            # Add system context
+            enhanced_prompt = f"{system_context}\n\n"
+            
+            # Add ground transport context if available
+            if ground_transport_context:
+                gt = ground_transport_context
+                enhanced_prompt += f"""
+🚌 ACTIVE GROUND TRANSPORT RECOMMENDATION:
+Mode: {gt.get('primary_mode', 'bus/van')}
+Travel Time: {gt.get('travel_time', 'N/A')}
+Cost Range: ₱{gt.get('cost', {}).get('min', 'N/A')}-{gt.get('cost', {}).get('max', 'N/A')}
+{f"Operators: {', '.join(gt.get('operators', []))}" if gt.get('operators') else ''}
+{f"Frequency: {gt.get('frequency')}" if gt.get('frequency') else ''}
+{f"Notes: {gt.get('notes')}" if gt.get('notes') else ''}
+{'⭐ SCENIC ROUTE - Mention the scenic views in the itinerary!' if gt.get('scenic') else ''}
+
+CRITICAL: Include this ground transport information in Day 1 arrival details!
+- IF ground_preferred mode: "Travel from [user's origin city] to [destination] via {gt.get('primary_mode', 'bus')} ({gt.get('travel_time', 'X hours')}, ₱{gt.get('cost', {}).get('min', 'X')}-{gt.get('cost', {}).get('max', 'X')})"
+- IF flying to nearest airport: "Arrive at [nearest airport with code], then take {gt.get('primary_mode', 'bus')} to [destination] ({gt.get('travel_time', 'X hours')}, ₱{gt.get('cost', {}).get('min', 'X')}-{gt.get('cost', {}).get('max', 'X')})"
+
+"""
+                logger.info(f"✅ Added ground transport context to prompt: {gt.get('primary_mode')} ({gt.get('travel_time')})")
+            
+            enhanced_prompt += prompt
         
         logger.info(f"🤖 Calling Gemini model: {model_name} (Travel context: {is_travel_request})")
         

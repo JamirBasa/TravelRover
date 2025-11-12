@@ -54,7 +54,8 @@ const LIMITED_SERVICE_AIRPORTS = {
     travelTime: "9-10 hours from Manila",
     recommendation: "Direct overnight bus from Manila or via Baguio"
   },
-  "PAG": {
+  // NOTE: Pagudpud has NO airport - PAG code reserved for Pagadian Airport (Zamboanga del Sur)
+  "PAGUDPUD": {
     name: "Pagudpud",
     alternatives: ["LAO"],
     alternativeNames: ["Laoag"],
@@ -500,8 +501,17 @@ export function isSameCity(departureCity, destination) {
   const departure = normalizeName(departureCity);
   const dest = normalizeName(destination);
 
-  if (departure === dest) return true;
-  if (dest.includes(departure) || departure.includes(dest)) return true;
+  // ✅ FIX: Extract city name from "City, Province, Country" format FIRST
+  // This prevents "Pagadian City, Zamboanga del Sur" from matching "Zamboanga City"
+  const destCityOnly = dest.split(',')[0].trim();
+  const depCityOnly = departure.split(',')[0].trim();
+
+  // Check exact match on city names only
+  if (depCityOnly === destCityOnly) return true;
+  
+  // Check if one city name contains the other (for abbreviations/variations)
+  // BUT only if they're both in the SAME part (not province in destination)
+  if (destCityOnly.includes(depCityOnly) || depCityOnly.includes(destCityOnly)) return true;
 
   // Metro area matching
   const metroMatches = {
@@ -572,8 +582,16 @@ const REMOTE_DESTINATIONS = [
 
 export function isRemoteDestination(destination) {
   if (!destination) return false;
-  const normalized = destination.toLowerCase();
-  return REMOTE_DESTINATIONS.some((remote) => normalized.includes(remote));
+  
+  // Extract city name from "City, Province" format to avoid false positives
+  // e.g., "Pagadian City, Zamboanga del Sur" should NOT match "zamboanga" in array
+  let cityName = destination.split(',')[0].trim().toLowerCase();
+  
+  // Normalize common city name variations
+  cityName = cityName.replace(/\s+city$/, '').replace(/\s+town$/, ''); // "Zamboanga City" → "zamboanga"
+  
+  // Match against extracted and normalized city name only
+  return REMOTE_DESTINATIONS.some((remote) => cityName === remote);
 }
 
 /**
@@ -681,7 +699,7 @@ export function getFlightRecommendationMessage({
     
     return {
       type: "limited-service",
-      message: `🧭 ${destination} has no regular commercial flights. Fly to ${altCities} and continue by ${airportInfo.transport} (${airportInfo.travelTime}).`,
+      message: `✈️→🚌 Fly to ${altCities}, then ${airportInfo.transport} (${airportInfo.travelTime})`,
       recommendation: "connect-via-major-hub",
       alternativeAirports: airportInfo.alternatives,
       groundTransport: airportInfo.transport,
@@ -694,7 +712,7 @@ export function getFlightRecommendationMessage({
   if (!hasCommercialFlights(airportCode)) {
     return {
       type: "no-direct-flights",
-      message: `🧭 No regular commercial flights to ${destination}. Consider flying to a nearby major airport and continuing by land.`,
+      message: `✈️→🚌 No direct flights. Fly to nearby hub + ground transfer.`,
       recommendation: "connect-via-nearby-hub",
       alternativeAirports: ["MNL", "CRK", "CEB"],
     };

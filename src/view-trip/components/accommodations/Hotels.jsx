@@ -509,9 +509,11 @@ function Hotels({ trip }) {
         <div className="w-16 h-16 bg-sky-100 dark:bg-sky-950/50 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
           <span className="text-2xl">🏨</span>
         </div>
-        <h3 className="text-lg font-bold mb-2">Finding the Best Hotels...</h3>
+        <h3 className="text-lg font-bold mb-2">
+          Finding the Best Accommodations...
+        </h3>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          We're selecting top accommodations for you
+          We're selecting top places to stay for you
         </p>
       </div>
     );
@@ -531,7 +533,7 @@ function Hotels({ trip }) {
             <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
               <span className="text-white text-xl">🏨</span>
             </div>
-            <h2 className="text-xl font-bold text-white">Hotels</h2>
+            <h2 className="text-xl font-bold text-white">Accommodations</h2>
           </div>
         </div>
 
@@ -548,7 +550,7 @@ function Hotels({ trip }) {
           {!hotelSearchRequested ? (
             <div className="max-w-md mx-auto space-y-4">
               <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                Hotel search was not enabled when this trip was created.
+                Accommodation search was not enabled when this trip was created.
               </p>
               <div className="bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 rounded-xl p-5 border-2 border-sky-200 dark:border-sky-800">
                 <div className="flex items-start gap-3 text-left">
@@ -557,13 +559,13 @@ function Hotels({ trip }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-sky-900 dark:text-sky-300 text-sm mb-2">
-                      Want Hotel Recommendations?
+                      Want Accommodation Recommendations?
                     </h4>
                     <p className="text-sky-800 dark:text-sky-400 text-xs leading-relaxed">
                       Create a new trip and enable{" "}
-                      <strong>"Include Hotel Search"</strong> in the preferences
-                      step to get personalized hotel recommendations with real
-                      data.
+                      <strong>"Include Accommodation Search"</strong> in the
+                      preferences step to get personalized recommendations with
+                      real data.
                     </p>
                   </div>
                 </div>
@@ -572,8 +574,8 @@ function Hotels({ trip }) {
           ) : (
             <div className="max-w-md mx-auto space-y-4">
               <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                We couldn't retrieve hotels for this destination. This may be
-                temporary.
+                We couldn't retrieve accommodations for this destination. This
+                may be temporary.
               </p>
               <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl p-5 border-2 border-amber-200 dark:border-amber-800">
                 <div className="flex items-start gap-3 text-left">
@@ -635,7 +637,7 @@ function Hotels({ trip }) {
                 <h2 className="text-xl md:text-2xl font-bold text-white mb-1.5">
                   {hotels.realHotels.length > 0
                     ? "Verified Accommodations"
-                    : "Recommended Hotels"}
+                    : "Recommended Accommodations"}
                 </h2>
                 <div className="flex items-center gap-2 flex-wrap text-white/90 text-xs md:text-sm">
                   <span className="font-medium">

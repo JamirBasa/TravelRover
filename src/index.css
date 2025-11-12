@@ -649,3 +649,167 @@ a:not(:disabled),
   filter: brightness(0) invert(1);
   transition: filter 0.3s ease;
 }
+
+/* ============================================
+   CHATBOT ENHANCEMENTS - Professional Design
+   ============================================ */
+
+/* Subtle grid pattern for header background */
+.bg-grid-pattern {
+  background-image: linear-gradient(
+      to right,
+      rgba(14, 165, 233, 0.03) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgba(14, 165, 233, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Smooth entrance animations for chat messages */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-from-bottom-4 {
+  from {
+    transform: translateY(1rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation-name: fade-in;
+}
+
+.slide-in-from-bottom-4 {
+  animation-name: slide-in-from-bottom-4;
+}
+
+.duration-500 {
+  animation-duration: 500ms;
+}
+
+/* Staggered animation delays for message entrance */
+.animate-pulse {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.delay-0 {
+  animation-delay: 0ms;
+}
+
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* Enhanced scrollbar for chatbot */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 9999px;
+  transition: background-color 0.2s;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.8);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgba(71, 85, 105, 0.5);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(71, 85, 105, 0.8);
+}
+
+/* Carousel scrollbar hide */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Enhanced navigation scrollbar - Larger and more visible */
+.scrollbar-track-gray-100::-webkit-scrollbar {
+  height: 8px; /* Increased from default 6px */
+}
+
+.scrollbar-track-gray-100::-webkit-scrollbar-track {
+  background-color: rgb(243, 244, 246); /* gray-100 */
+  border-radius: 4px;
+}
+
+.scrollbar-thumb-gray-400::-webkit-scrollbar-thumb {
+  background-color: rgb(156, 163, 175); /* gray-400 */
+  border-radius: 4px;
+  border: 2px solid rgb(243, 244, 246); /* Creates padding effect */
+}
+
+.scrollbar-thumb-gray-400:hover::-webkit-scrollbar-thumb {
+  background-color: rgb(107, 114, 128); /* gray-500 */
+}
+
+/* Dark mode enhanced scrollbar */
+.dark .scrollbar-track-gray-100::-webkit-scrollbar-track {
+  background-color: rgb(30, 41, 59); /* slate-800 */
+}
+
+.dark .scrollbar-thumb-gray-400::-webkit-scrollbar-thumb {
+  background-color: rgb(100, 116, 139); /* slate-500 */
+  border-color: rgb(30, 41, 59); /* slate-800 */
+}
+
+.dark .scrollbar-thumb-gray-400:hover::-webkit-scrollbar-thumb {
+  background-color: rgb(148, 163, 184); /* slate-400 */
+}
+
+/* Backdrop blur support check */
+@supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
+  .backdrop-blur-xl {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .backdrop-blur-md {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}

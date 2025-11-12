@@ -158,18 +158,34 @@ export const correctItineraryTravelTimes = (tripData, options = {}) => {
 
 /**
  * Extract transport mode from timeTravel string
+ * Enhanced version with better priority ordering and cost-based inference
  */
 const extractTransportMode = (timeTravelString) => {
+  if (!timeTravelString) return 'taxi';
+  
   const lowerStr = timeTravelString.toLowerCase();
-
-  if (lowerStr.includes('walk')) return 'walking';
+  
+  // Priority order: specific → general
+  // Walking first (most distinct)
+  if (lowerStr.includes('walking') || lowerStr.includes('walk')) return 'walking';
+  
+  // Specific Philippine transport modes
   if (lowerStr.includes('jeepney')) return 'jeepney';
-  if (lowerStr.includes('taxi') || lowerStr.includes('grab')) return 'taxi';
   if (lowerStr.includes('tricycle')) return 'tricycle';
   if (lowerStr.includes('bus')) return 'bus';
+  
+  // Private/hired transport
+  if (lowerStr.includes('taxi') || lowerStr.includes('grab')) return 'taxi';
+  if (lowerStr.includes('van')) return 'van';
   if (lowerStr.includes('car')) return 'car';
 
-  return 'taxi'; // Default
+  // Cost-based inference: if has cost and not free, assume taxi (most common)
+  if (lowerStr.includes('₱') && !lowerStr.includes('free')) return 'taxi';
+  
+  // Free transport with no explicit mode = walking
+  if (lowerStr.includes('free')) return 'walking';
+
+  return 'taxi'; // Default fallback
 };
 
 /**

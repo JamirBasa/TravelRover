@@ -1,7 +1,6 @@
 import React from "react";
-import { MapPin, Clock, ArrowDown, Navigation2, Sparkles } from "lucide-react";
+import { MapPin, Clock, ArrowDown, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { isValidDuration, isValidPricing } from "./locationDataValidator";
 
 /**
  * LocationSequenceList Component
@@ -86,196 +85,75 @@ export function LocationSequenceList({
 
 /**
  * LocationCard Component
- * Enhanced card with professional styling and realistic data display
+ * Compact inline layout showing only essential information
  */
 function LocationCard({ location, index, onLocationClick, getMarkerColor }) {
-  // Validate and categorize the location type
   const isHotelReturn = location.isReturnToHotel;
-  const hasDuration = isValidDuration(location.duration);
-  const hasPricing = isValidPricing(location.pricing);
-  const hasMetadata = location.time || hasDuration || hasPricing;
 
   return (
-    <div className="group transition-all duration-200">
+    <div
+      className="group flex items-center gap-3 p-3 rounded-lg 
+                 border border-gray-200 dark:border-slate-700
+                 bg-white dark:bg-slate-900
+                 hover:shadow-md hover:border-sky-400 dark:hover:border-sky-600 
+                 cursor-pointer transition-all duration-200"
+      onClick={() => onLocationClick(location)}
+    >
+      {/* Compact Number Badge */}
       <div
-        className="relative flex items-start gap-4 p-5 rounded-xl 
-                   border-2 border-gray-200 dark:border-slate-700
-                   bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm
-                   hover:shadow-xl hover:border-sky-400 dark:hover:border-sky-600 
-                   hover:-translate-y-0.5
-                   cursor-pointer transition-all duration-200"
-        onClick={() => onLocationClick(location)}
+        className="w-9 h-9 rounded-full flex items-center justify-center 
+                   text-white font-bold text-sm flex-shrink-0 shadow-md
+                   transition-transform duration-200 group-hover:scale-110"
+        style={{ backgroundColor: getMarkerColor(location.day) }}
       >
-        {/* Enhanced Number Badge with Gradient */}
-        <div
-          className="relative w-12 h-12 rounded-full flex items-center justify-center 
-                     text-white font-bold text-base flex-shrink-0 shadow-lg
-                     transition-transform duration-200
-                     group-hover:scale-110 group-hover:shadow-xl"
-          style={{
-            background: `linear-gradient(135deg, ${getMarkerColor(
-              location.day
-            )} 0%, ${adjustColorBrightness(
-              getMarkerColor(location.day),
-              -20
-            )} 100%)`,
-          }}
+        {index + 1}
+      </div>
+
+      {/* Inline Content: Day • Time • Activity Name */}
+      <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+        {/* Day */}
+        <span
+          className="text-xs font-bold"
+          style={{ color: getMarkerColor(location.day) }}
         >
-          <span className="relative z-10">{index + 1}</span>
-          {/* Pulse effect on hover */}
-          <div
-            className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-20 
-                       group-hover:animate-ping transition-opacity"
-            style={{ backgroundColor: getMarkerColor(location.day) }}
-          />
-        </div>
+          Day {location.day}
+        </span>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {/* Title Row */}
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <div className="flex items-start gap-2 flex-1 min-w-0">
-              <h5
-                className="font-bold text-gray-900 dark:text-gray-100 text-base 
-                           leading-snug break-words"
-              >
-                {location.name}
-              </h5>
-              {isHotelReturn && (
-                <Badge
-                  variant="outline"
-                  className="text-xs py-0.5 px-2 h-5 shrink-0
-                           bg-gradient-to-r from-blue-50 to-indigo-50 
-                           dark:from-blue-950/40 dark:to-indigo-950/40 
-                           border-blue-400 dark:border-blue-600 
-                           text-blue-700 dark:text-blue-400
-                           font-medium"
-                >
-                  🏨 Return
-                </Badge>
-              )}
+        {/* Separator */}
+        <span className="text-gray-400 dark:text-gray-600 text-xs">•</span>
+
+        {/* Time */}
+        {location.time && location.time !== "All Day" && (
+          <>
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3 text-sky-500 dark:text-sky-400" />
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                {location.time}
+              </span>
             </div>
-            <Navigation2
-              className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0 
-                       group-hover:text-sky-500 dark:group-hover:text-sky-400 
-                       transition-all duration-200 group-hover:rotate-45"
-            />
-          </div>
+            <span className="text-gray-400 dark:text-gray-600 text-xs">•</span>
+          </>
+        )}
 
-          {/* Metadata Row */}
-          {hasMetadata && (
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              {/* Day Badge */}
-              <Badge
-                variant="outline"
-                className="text-xs font-semibold border-2 px-2.5 py-0.5
-                         bg-white dark:bg-slate-800 shadow-sm"
-                style={{
-                  borderColor: getMarkerColor(location.day),
-                  color: getMarkerColor(location.day),
-                }}
-              >
-                Day {location.day}
-              </Badge>
+        {/* Activity Name */}
+        <h5 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+          {location.name}
+        </h5>
 
-              {/* Time Badge */}
-              {location.time && location.time !== "All Day" && (
-                <div
-                  className="flex items-center gap-1.5 text-xs font-medium
-                           text-gray-700 dark:text-gray-300
-                           bg-gradient-to-r from-gray-50 to-gray-100 
-                           dark:from-slate-800 dark:to-slate-700
-                           px-3 py-1 rounded-full shadow-sm
-                           border border-gray-200 dark:border-slate-600"
-                >
-                  <Clock className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
-                  <span>{location.time}</span>
-                </div>
-              )}
-
-              {/* Duration Badge */}
-              {hasDuration && (
-                <div
-                  className="flex items-center gap-1.5 text-xs font-medium
-                           text-amber-700 dark:text-amber-400
-                           bg-gradient-to-r from-amber-50 to-orange-50 
-                           dark:from-amber-950/30 dark:to-orange-950/30
-                           px-3 py-1 rounded-full shadow-sm
-                           border border-amber-200 dark:border-amber-800"
-                >
-                  <span>⏱️</span>
-                  <span>{location.duration}</span>
-                </div>
-              )}
-
-              {/* Pricing Badge */}
-              {hasPricing && (
-                <div
-                  className="flex items-center gap-1.5 text-xs font-medium
-                           text-emerald-700 dark:text-emerald-400
-                           bg-gradient-to-r from-emerald-50 to-green-50 
-                           dark:from-emerald-950/30 dark:to-green-950/30
-                           px-3 py-1 rounded-full shadow-sm
-                           border border-emerald-200 dark:border-emerald-800"
-                >
-                  <span>💰</span>
-                  <span>{location.pricing}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Details/Description */}
-          {location.details && location.details.length > 10 && (
-            <p
-              className="text-sm text-gray-600 dark:text-gray-400 
-                        line-clamp-2 leading-relaxed"
-            >
-              {location.details}
-            </p>
-          )}
-        </div>
-
-        {/* Enhanced Hover Indicator - Glassmorphic glow */}
-        <div
-          className="absolute inset-0 rounded-xl 
-                   bg-gradient-to-br from-sky-400/10 to-blue-500/10
-                   dark:from-sky-500/10 dark:to-blue-600/10
-                   opacity-0 group-hover:opacity-100 
-                   transition-opacity duration-200
-                   pointer-events-none"
-        />
-        <div
-          className="absolute inset-0 rounded-xl border-2 
-                   border-sky-400 dark:border-sky-500
-                   opacity-0 group-hover:opacity-100 
-                   transition-opacity duration-200
-                   pointer-events-none"
-        />
+        {/* Hotel Return Badge (if applicable) */}
+        {isHotelReturn && (
+          <Badge
+            variant="outline"
+            className="text-xs py-0 px-1.5 h-5 ml-1
+                     bg-blue-50 dark:bg-blue-950/40 
+                     border-blue-400 dark:border-blue-600 
+                     text-blue-700 dark:text-blue-400"
+          >
+            🏨
+          </Badge>
+        )}
       </div>
     </div>
-  );
-}
-
-/**
- * Helper function to adjust color brightness
- */
-function adjustColorBrightness(color, percent) {
-  const num = parseInt(color.replace("#", ""), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = (num >> 16) + amt;
-  const G = ((num >> 8) & 0x00ff) + amt;
-  const B = (num & 0x0000ff) + amt;
-  return (
-    "#" +
-    (
-      0x1000000 +
-      (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
-      (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
-      (B < 255 ? (B < 1 ? 0 : B) : 255)
-    )
-      .toString(16)
-      .slice(1)
   );
 }
 

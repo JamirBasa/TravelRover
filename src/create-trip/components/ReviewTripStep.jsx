@@ -11,6 +11,7 @@ import {
   FaExclamationTriangle,
   FaInfoCircle,
   FaEdit,
+  FaBus,
 } from "react-icons/fa";
 import {
   calculateDuration,
@@ -18,6 +19,8 @@ import {
   DATE_CONFIG,
 } from "../../constants/options";
 import { formatTravelersDisplay } from "../../utils/travelersParsers";
+import { determineTransportModeAsync } from "../../utils/transportModeDetector";
+import { useState, useEffect } from "react";
 
 const ReviewTripStep = ({
   formData,
@@ -28,6 +31,40 @@ const ReviewTripStep = ({
   place,
   onEdit, // Optional: callback to navigate back to specific step
 }) => {
+  // ✅ Analyze transport mode with async backend API
+  const [transportAnalysis, setTransportAnalysis] = useState(null);
+  const [isLoadingTransport, setIsLoadingTransport] = useState(false);
+
+  useEffect(() => {
+    const analyzeTransportMode = async () => {
+      if (!formData?.location || !flightData?.departureCity) {
+        setTransportAnalysis(null);
+        return;
+      }
+
+      setIsLoadingTransport(true);
+      try {
+        const analysis = await determineTransportModeAsync(
+          formData.location,
+          flightData.departureCity,
+          flightData.includeFlights
+        );
+        setTransportAnalysis(analysis);
+      } catch (error) {
+        console.error("Transport mode analysis error:", error);
+        setTransportAnalysis(null);
+      } finally {
+        setIsLoadingTransport(false);
+      }
+    };
+
+    analyzeTransportMode();
+  }, [
+    formData?.location,
+    flightData?.departureCity,
+    flightData?.includeFlights,
+  ]);
+
   // Use centralized formatting functions
   const formatDate = (dateString) => {
     if (!dateString) return "Not selected";
@@ -212,72 +249,158 @@ const ReviewTripStep = ({
               Travel Services
             </h3>
 
-            {/* Flight Search Details */}
-            {flightData?.includeFlights && (
-              <div
-                className={`brand-card p-4 border-2 ${
-                  isFlightDataComplete
-                    ? "border-green-200 dark:border-green-700 bg-green-50/30 dark:bg-green-950/20"
-                    : "border-amber-200 dark:border-amber-700 bg-amber-50/30 dark:bg-amber-950/20"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                        <FaPlane className="text-blue-500" />
-                        Flight Search
+            {/* ✅ Smart Transport Recommendation Banner */}
+            {flightData?.includeFlights &&
+              transportAnalysis?.groundTransport?.preferred && (
+                <div className="brand-card p-3 border-2 border-emerald-400 dark:border-emerald-600 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 mb-4">
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">🚌</div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-200 mb-1 flex items-center gap-2">
+                        <FaBus className="text-emerald-600" />
+                        Ground Transport Recommended
                       </h4>
-                      {isFlightDataComplete && (
-                        <span className="text-xs font-semibold text-green-600 dark:text-green-400 px-2 py-0.5 bg-green-100 dark:bg-green-900/40 rounded-full">
-                          ✓ Ready
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-start gap-2">
-                        <span className="text-gray-500 dark:text-gray-400 min-w-[90px]">
-                          Departure:
-                        </span>
-                        <span className="font-medium text-gray-900 dark:text-gray-100">
-                          {flightData.departureCity || (
-                            <span className="text-amber-600 dark:text-amber-400">
-                              ⚠️ Not specified
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                      {flightData.departureRegion && (
-                        <div className="flex items-start gap-2">
-                          <span className="text-gray-500 dark:text-gray-400 min-w-[90px]">
-                            Region:
+                      <p className="text-xs text-emerald-800 dark:text-emerald-300 mb-2">
+                        {transportAnalysis.hasAirport === false ||
+                        transportAnalysis.warning
+                          ? `${
+                              formData.location?.split(",")[0]
+                            } has no direct flights. Ground transport is the practical option.`
+                          : transportAnalysis.recommendation}
+                      </p>
+                      <div className="flex items-center gap-4 text-xs flex-wrap">
+                        <div className="flex items-center gap-1">
+                          <span className="text-emerald-600 dark:text-emerald-400">
+                            ⏱️
                           </span>
-                          <span className="text-gray-700 dark:text-gray-300">
-                            {flightData.departureRegion}
+                          <span className="font-medium text-gray-900 dark:text-gray-100">
+                            {transportAnalysis.groundTransport.travelTime}
                           </span>
                         </div>
-                      )}
-                      <div className="flex items-start gap-2">
-                        <span className="text-gray-500 dark:text-gray-400 min-w-[90px]">
-                          Destination:
-                        </span>
-                        <span className="text-gray-700 dark:text-gray-300">
-                          {formData.location}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-emerald-600 dark:text-emerald-400">
+                            💰
+                          </span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">
+                            {transportAnalysis.groundTransport.cost}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-emerald-600 dark:text-emerald-400">
+                            🚌
+                          </span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">
+                            {transportAnalysis.groundTransport.operators?.[0]}
+                          </span>
+                        </div>
                       </div>
+                      <p className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-2 italic">
+                        {transportAnalysis.hasAirport === false
+                          ? "✅ Direct ground transport available - no flight connections needed."
+                          : "💡 Tip: Ground transport is more convenient and economical for this route."}
+                      </p>
                     </div>
-
-                    {!isFlightDataComplete && (
-                      <div className="mt-3 p-2 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded text-xs text-amber-800 dark:text-amber-300">
-                        <FaInfoCircle className="inline mr-1" />
-                        Departure city is required for flight search
-                      </div>
-                    )}
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+
+            {/* Flight Search Details */}
+            {flightData?.includeFlights &&
+              // Show different card based on whether ground transport is preferred
+              (transportAnalysis?.groundTransport?.preferred ? (
+                // Special card when ground transport is better
+                <div className="brand-card p-4 border-2 border-gray-300 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 opacity-75">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-bold text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                          <FaPlane className="text-gray-400" />
+                          Flight Search{" "}
+                          <span className="text-xs font-normal">
+                            (Not needed for this route)
+                          </span>
+                        </h4>
+                      </div>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                        Based on your route,{" "}
+                        <strong>ground transport is more practical</strong>. No
+                        flight search needed—we'll generate your itinerary with
+                        the recommended bus/van travel.
+                      </p>
+                      <div className="text-[10px] text-gray-500 dark:text-gray-500 italic">
+                        💡 Your trip will be generated without flight search. If
+                        you prefer to search flights anyway, you can adjust this
+                        in the AI-generated itinerary later.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // Normal flight search card
+                <div
+                  className={`brand-card p-4 border-2 ${
+                    isFlightDataComplete
+                      ? "border-green-200 dark:border-green-700 bg-green-50/30 dark:bg-green-950/20"
+                      : "border-amber-200 dark:border-amber-700 bg-amber-50/30 dark:bg-amber-950/20"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                          <FaPlane className="text-blue-500" />
+                          Flight Search
+                        </h4>
+                        {isFlightDataComplete && (
+                          <span className="text-xs font-semibold text-green-600 dark:text-green-400 px-2 py-0.5 bg-green-100 dark:bg-green-900/40 rounded-full">
+                            ✓ Ready
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-500 dark:text-gray-400 min-w-[90px]">
+                            Departure:
+                          </span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">
+                            {flightData.departureCity || (
+                              <span className="text-amber-600 dark:text-amber-400">
+                                ⚠️ Not specified
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        {flightData.departureRegion && (
+                          <div className="flex items-start gap-2">
+                            <span className="text-gray-500 dark:text-gray-400 min-w-[90px]">
+                              Region:
+                            </span>
+                            <span className="text-gray-700 dark:text-gray-300">
+                              {flightData.departureRegion}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-500 dark:text-gray-400 min-w-[90px]">
+                            Destination:
+                          </span>
+                          <span className="text-gray-700 dark:text-gray-300">
+                            {formData.location}
+                          </span>
+                        </div>
+                      </div>
+
+                      {!isFlightDataComplete && (
+                        <div className="mt-3 p-2 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded text-xs text-amber-800 dark:text-amber-300">
+                          <FaInfoCircle className="inline mr-1" />
+                          Departure city is required for flight search
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
 
             {/* Hotel Search Details */}
             {hotelData?.includeHotels && (
@@ -410,17 +533,38 @@ const ReviewTripStep = ({
                     Transportation options and travel time estimates
                   </span>
                 </li>
-                {flightData?.includeFlights && (
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-600 dark:text-blue-500 mt-0.5 text-base">
-                      ✈️
-                    </span>
-                    <span className="leading-relaxed">
-                      <strong>Real-time flight search</strong> from{" "}
-                      {flightData.departureCity || "your city"}
-                    </span>
-                  </li>
-                )}
+                {/* 🔧 Smart transport mode display - shows ground or flight based on backend analysis */}
+                {flightData?.includeFlights &&
+                  (isLoadingTransport ? (
+                    <li className="flex items-start gap-2">
+                      <span className="text-gray-400 mt-0.5 text-base">⏳</span>
+                      <span className="leading-relaxed text-gray-500 dark:text-gray-400 italic">
+                        Analyzing best transport mode...
+                      </span>
+                    </li>
+                  ) : transportAnalysis?.groundTransport?.preferred ? (
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-600 dark:text-emerald-500 mt-0.5 text-base">
+                        🚌
+                      </span>
+                      <span className="leading-relaxed">
+                        <strong>Ground transport route</strong> from{" "}
+                        {flightData.departureCity || "your city"} (
+                        {transportAnalysis.groundTransport.travelTime},{" "}
+                        {transportAnalysis.groundTransport.cost})
+                      </span>
+                    </li>
+                  ) : (
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-600 dark:text-blue-500 mt-0.5 text-base">
+                        ✈️
+                      </span>
+                      <span className="leading-relaxed">
+                        <strong>Real-time flight search</strong> from{" "}
+                        {flightData.departureCity || "your city"}
+                      </span>
+                    </li>
+                  ))}
                 {hotelData?.includeHotels && (
                   <li className="flex items-start gap-2">
                     <span className="text-orange-600 dark:text-orange-500 mt-0.5 text-base">
