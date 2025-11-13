@@ -5,7 +5,10 @@ import { GetPlaceDetails, fetchPlacePhoto } from "@/config/GlobalApi";
 // ✅ Import production logging
 import { logDebug, logError } from "@/utils/productionLogger";
 
-function PlaceCardItem({ place }) {
+// ✅ Import optimized Google Places query builder
+import { buildGooglePlacesQuery } from "@/utils/googlePlacesQueryBuilder";
+
+function PlaceCardItem({ place, trip }) {
   const [photoUrl, setPhotoUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -16,74 +19,35 @@ function PlaceCardItem({ place }) {
       return;
     }
 
-    // ✅ Extract actual place name from activity description
-    const extractPlaceName = (activityName) => {
-      if (!activityName) return null;
+    // ✅ USE NEW QUERY BUILDER for optimized Google Places searches
+    const searchQuery = buildGooglePlacesQuery(place, trip);
 
-      // Remove common activity prefixes
-      const cleaned = activityName
-        .replace(
-          /^(Breakfast|Lunch|Dinner|Snack|Check-in|Check out|Visit|Explore|Tour|Shopping|Relax)\s+(at|to)?\s+/i,
-          ""
-        )
-        .replace(/^(and check in|and check-in|for the day)\s*/i, "")
-        .trim();
-
-      // If too short or generic, return original
-      if (cleaned.length < 3) return activityName;
-
-      // Skip generic activities and just use original
-      const skipTerms = [
-        "hotel",
-        "rest",
-        "return",
-        "end of day",
-        "free time",
-        "leisure",
-        "accommodation",
-      ];
-      if (skipTerms.some((term) => cleaned.toLowerCase() === term)) {
-        return null; // Will skip photo search for generic activities
-      }
-
-      return cleaned;
-    };
-
-    const cleanedPlaceName = extractPlaceName(placeName);
-
-    if (!cleanedPlaceName) {
-      logDebug("PlaceCardItem", "Skipping photo search for generic activity", {
-        placeName,
-      });
+    if (!searchQuery) {
+      logDebug(
+        "PlaceCardItem",
+        "Skipping photo search - query builder returned empty",
+        {
+          placeName,
+        }
+      );
       setPhotoUrl(""); // Use placeholder for generic activities
       return;
     }
 
-    logDebug("PlaceCardItem", "Fetching Google Places photo", {
-      cleanedPlaceName,
-    });
+    logDebug(
+      "PlaceCardItem",
+      "Fetching Google Places photo with optimized query",
+      {
+        original: placeName,
+        optimized: searchQuery,
+      }
+    );
 
     // Always use Google Places API for accurate, real photos
     // Skip the AI-generated imageUrl and get actual place photos
     setIsLoading(true);
 
     try {
-      // Create more specific search query by adding location context
-      let searchQuery = cleanedPlaceName;
-
-      // Add Manila, Philippines context for better location accuracy
-      if (
-        !searchQuery.toLowerCase().includes("manila") &&
-        !searchQuery.toLowerCase().includes("philippines") &&
-        !searchQuery.toLowerCase().includes("cebu") &&
-        !searchQuery.toLowerCase().includes("davao") &&
-        !searchQuery.toLowerCase().includes("baguio")
-      ) {
-        searchQuery += ", Philippines";
-      }
-
-      logDebug("PlaceCardItem", "Search query constructed", { searchQuery });
-
       const data = {
         textQuery: searchQuery,
       };
@@ -170,7 +134,7 @@ function PlaceCardItem({ place }) {
     } finally {
       setIsLoading(false);
     }
-  }, [place?.placeName, place?.activity, place?.imageUrl]);
+  }, [place, trip]);
 
   useEffect(() => {
     // Check for both possible property names

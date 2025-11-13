@@ -70,8 +70,8 @@ class OrchestrationService:
                 'session_id': session_id
             }
             
-            # Execute coordinator workflow synchronously
-            optimized_results = self.coordinator.execute_sync(coordinator_input)
+            # Execute coordinator workflow asynchronously
+            optimized_results = await self.coordinator._execute_logic(coordinator_input)
             
             # Update session with final results
             await self.session_service.update_session_status(

@@ -41,6 +41,22 @@ function TripChatbot({ trip }) {
   // Backend status tracking (null = checking, true = online, false = offline)
   const [isBackendOnline, setIsBackendOnline] = useState(null);
 
+  // ✅ FIX: Create persistent chat session (maintains conversation history)
+  const chatSessionRef = useRef(null);
+
+  // ✅ NEW: Request lock to prevent duplicate API calls
+  const isRequestInProgressRef = useRef(false);
+
+  // Initialize chat session once when component mounts
+  useEffect(() => {
+    chatSessionRef.current = new GeminiProxyChatSession({
+      temperature: 0.7,
+      maxOutputTokens: 800,
+      model: "gemini-2.5-flash",
+    });
+    logDebug("TripChatbot", "Chat session initialized");
+  }, []); // Empty dependency array = runs once on mount
+
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -174,9 +190,18 @@ What would you like to know? 😊`,
     return context;
   };
 
-  // Send message to Agent Router API
+  // Send message to AI chat
   const sendMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
+
+    // ✅ CRITICAL FIX: Prevent duplicate API calls with request lock
+    if (isRequestInProgressRef.current) {
+      logDebug(
+        "TripChatbot",
+        "Request already in progress, ignoring duplicate call"
+      );
+      return;
+    }
 
     const userMsg = {
       id: Date.now(),
@@ -189,67 +214,74 @@ What would you like to know? 😊`,
     setInput("");
     setIsLoading(true);
 
+    // ✅ Set lock to prevent concurrent requests
+    isRequestInProgressRef.current = true;
+
     try {
-      logDebug("TripChatbot", "Sending message to Agent Router", {
+      logDebug("TripChatbot", "Sending message", {
         messageLength: userMessage.length,
+        conversationLength: messages.length,
       });
 
       const tripContext = getTripContext();
-      const systemPrompt = `You are Rover, a friendly and knowledgeable AI travel assistant for TravelRover. You're here to help travelers make the most of their trip!
 
-TRAVELER'S TRIP DETAILS:
+      // ✅ IMPROVED: Check if this is the first user message
+      // (Skip welcome message at index 0, so first user message is when length === 1)
+      const isFirstUserMessage = messages.length === 1;
+
+      let fullPrompt;
+
+      if (isFirstUserMessage) {
+        // First message: Send full system prompt with trip context
+        const systemPrompt = `You are Rover, a friendly AI travel assistant for TravelRover. Help travelers with their trip to ${
+          tripContext.destination
+        }!
+
+TRIP DETAILS:
 🌍 Destination: ${tripContext.destination}
 📅 Duration: ${tripContext.duration} days (${tripContext.travelDates})
 👥 Travelers: ${tripContext.travelers}
 💰 Budget: ${tripContext.budget}
 ${
   tripContext.hasItinerary
-    ? "✅ Itinerary: Already planned"
-    : "📝 Itinerary: Not yet created"
+    ? "✅ Itinerary: Planned"
+    : "📝 Itinerary: Not created yet"
 }
-${tripContext.hasHotels ? "✅ Hotels: Booked" : "🏨 Hotels: Not yet booked"}
-${tripContext.hasFlights ? "✅ Flights: Booked" : "✈️ Flights: Not yet booked"}
+${tripContext.hasHotels ? "✅ Hotels: Arranged" : "🏨 Hotels: Not arranged"}
+${tripContext.hasFlights ? "✅ Flights: Arranged" : "✈️ Flights: Not arranged"}
 🚗 Transport: ${tripContext.transportMode}
 
-YOUR ROLE:
-- Be conversational and friendly, like a local friend giving advice
-- Answer specific questions about their trip (packing, food, activities, logistics)
-- Give personalized recommendations based on their destination and preferences
-- Share local tips, cultural insights, and insider knowledge
-- Keep responses concise (2-4 paragraphs max) and actionable
-- Use emojis naturally to make conversations engaging
-- If they ask about things already in their itinerary, reference it specifically
+BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 paragraphs max. Use emojis naturally.`;
 
-TONE: Warm, enthusiastic, helpful - like a travel-savvy friend, not a formal guide.`;
+        fullPrompt = `${systemPrompt}\n\nTraveler: ${userMessage}`;
+      } else {
+        // Subsequent messages: Just send the new message
+        // (The persistent session maintains context automatically)
+        fullPrompt = userMessage;
+      }
 
-      // ✅ Use Gemini Proxy Service (same as trip generation)
-      // Benefits: API key stays on server, caching, rate limit handling, auto-retry
-      const chatSession = new GeminiProxyChatSession({
-        temperature: 0.7,
-        maxOutputTokens: 800,
-        model: "gemini-2.5-flash", // ✅ FIXED: Use stable model (same as trip generation)
+      logDebug("TripChatbot", "Using chat session", {
+        isFirstMessage: isFirstUserMessage,
+        messageCount: messages.length,
       });
 
-      logDebug("TripChatbot", "Sending message via Gemini Proxy", {
-        messageLength: userMessage.length,
-        hasContext: !!tripContext,
-      });
+      // ✅ FIX: Use persistent chat session (maintains conversation context)
+      if (!chatSessionRef.current) {
+        throw new Error("Chat session not initialized");
+      }
 
-      // Send message with combined prompt
-      const result = await chatSession.sendMessage(
-        `${systemPrompt}\n\nUser: ${userMessage}`,
-        {
-          requestType: "simple_query", // Fast response for chat
-          chat_mode: true, // ✅ NEW: Tell backend this is chat, not trip generation
-        }
-      );
+      // Send message through persistent session
+      const result = await chatSessionRef.current.sendMessage(fullPrompt, {
+        requestType: "simple_query",
+        chat_mode: true,
+      });
 
       const response = result.response;
       const assistantMessage =
         response.text() ||
-        "I'm sorry, I couldn't generate a response. Please try again.";
+        "I couldn't generate a response right now. Please try again! 😊";
 
-      logDebug("TripChatbot", "Received response from Gemini Proxy", {
+      logDebug("TripChatbot", "Received response", {
         responseLength: assistantMessage.length,
       });
 
@@ -267,12 +299,12 @@ TONE: Warm, enthusiastic, helpful - like a travel-savvy friend, not a formal gui
         stack: error.stack,
       });
 
-      // Simplified error messages for travelers
+      // ✅ IMPROVED: User-friendly error messages (no technical jargon)
       let errorContent =
-        "I'm having trouble connecting right now. Please refresh the page and try again. 😊";
-      let toastDescription = "Connection issue. Please try again.";
+        "Hmm, I'm having trouble right now. Mind trying again? 😊";
+      let toastDescription = "Please try again";
 
-      // Network/connection errors
+      // Connection issues
       if (
         error.message?.includes("Backend server not running") ||
         error.message?.includes("ERR_CONNECTION_REFUSED") ||
@@ -280,33 +312,41 @@ TONE: Warm, enthusiastic, helpful - like a travel-savvy friend, not a formal gui
         error.code === "ERR_NETWORK"
       ) {
         errorContent =
-          "Oops! I can't connect right now. Please refresh the page and give it another try. If the problem continues, check your internet connection. 🔄";
-        toastDescription = "Connection lost. Please refresh and try again.";
+          "Oops! I can't connect right now. Please refresh this page and try again. 🔄";
+        toastDescription = "Connection lost - please refresh";
       } else if (!navigator.onLine) {
         errorContent =
-          "Looks like you're offline. Please check your internet connection and try again. 📡";
+          "Looks like you're offline. Check your internet and try again! 📡";
         toastDescription = "No internet connection";
       }
-      // Rate limiting
+      // Too many requests
       else if (
         error.message?.includes("429") ||
         error.message?.includes("Too Many Requests") ||
         error.message?.includes("RESOURCE_EXHAUSTED")
       ) {
         errorContent =
-          "Whoa, that's a lot of questions! 😊 Give me a minute to catch my breath, then we can continue chatting.";
-        toastDescription = "Too many requests. Please wait a moment.";
+          "Whoa, slow down there! 😊 Give me a moment to catch up, then let's continue.";
+        toastDescription = "Please wait a moment";
       }
-      // Generic API issues
+      // Service issues
       else if (
         error.message?.includes("Invalid API key") ||
         error.message?.includes("API_KEY_INVALID") ||
         error.message?.includes("unauthorized") ||
-        error.message?.includes("403")
+        error.message?.includes("403") ||
+        error.message?.includes("500") ||
+        error.message?.includes("503")
       ) {
         errorContent =
-          "I'm experiencing some technical difficulties. Please refresh the page and try again. 🔧";
-        toastDescription = "Service temporarily unavailable";
+          "I'm having some technical difficulties. Try refreshing the page! 🔧";
+        toastDescription = "Try refreshing the page";
+      }
+      // Session issues
+      else if (error.message?.includes("Chat session not initialized")) {
+        errorContent =
+          "Something went wrong with our chat. Please refresh the page to start fresh! �";
+        toastDescription = "Please refresh the page";
       }
 
       const errorMsg = {
@@ -318,33 +358,52 @@ TONE: Warm, enthusiastic, helpful - like a travel-savvy friend, not a formal gui
       };
 
       setMessages((prev) => [...prev, errorMsg]);
-      toast.error("Chat Error", {
+
+      // ✅ IMPROVED: Friendlier error notification
+      toast.error("Oops!", {
         description: toastDescription,
         duration: 5000,
       });
 
-      // Re-check backend status after error (might have gone offline)
+      // Re-check connection status after network errors
       if (
         error.message?.includes("Backend server not running") ||
         error.message?.includes("ERR_CONNECTION_REFUSED") ||
         error.message?.includes("Network Error") ||
+        error.message?.includes("Chat session not initialized") ||
         error.code === "ERR_NETWORK"
       ) {
         setTimeout(() => checkBackendHealth(), 1000);
+
+        // Reinitialize chat session if it was lost
+        if (error.message?.includes("Chat session not initialized")) {
+          chatSessionRef.current = new GeminiProxyChatSession({
+            temperature: 0.7,
+            maxOutputTokens: 800,
+            model: "gemini-2.5-flash",
+          });
+          logDebug("TripChatbot", "Chat session reinitialized after error");
+        }
       }
     } finally {
       setIsLoading(false);
+      // ✅ Release lock after request completes (success or error)
+      isRequestInProgressRef.current = false;
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // ✅ Prevent submission if already loading
+    if (isLoading || !input.trim()) return;
     sendMessage(input);
   };
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      // ✅ Prevent duplicate submission on Enter key
+      if (isLoading || !input.trim()) return;
       handleSubmit(e);
     }
   };

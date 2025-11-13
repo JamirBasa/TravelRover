@@ -1211,6 +1211,7 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
               <LocationInfoWindow
                 selectedLocation={selectedLocation}
                 onClose={() => setSelectedLocation(null)}
+                trip={trip}
               />
             </Map>
           </div>

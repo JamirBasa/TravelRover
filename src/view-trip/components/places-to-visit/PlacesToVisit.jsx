@@ -505,7 +505,7 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
 
       {/* Included Places Section (renamed from Must-Visit) */}
       {parsedPlacesToVisit && parsedPlacesToVisit.length > 0 && (
-        <PlacesToVisitSection placesToVisit={parsedPlacesToVisit} />
+        <PlacesToVisitSection placesToVisit={parsedPlacesToVisit} trip={trip} />
       )}
 
       {/* Travel Tips removed - consolidated in Travel Tips tab for better UX */}

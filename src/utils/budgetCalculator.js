@@ -118,17 +118,75 @@ export const calculateHotelsCost = (hotels, numNights = 1) => {
 
 /**
  * Calculate total cost from flights
+ * 
+ * 🆕 FIXED: Now properly handles per-person pricing based on travelers count
+ * Prioritizes backend pricing metadata for accuracy
+ * 
+ * @param {Array} flights - Array of flight objects
+ * @param {number} travelers - Number of travelers (default: 1)
+ * @param {boolean} priceIsPerPerson - Whether API price is already per-person (default: true for SerpAPI)
+ * @returns {number} - Total flight cost for ALL travelers
  */
-export const calculateFlightsCost = (flights) => {
-  if (!Array.isArray(flights)) {
+export const calculateFlightsCost = (flights, travelers = 1, priceIsPerPerson = true) => {
+  if (!Array.isArray(flights) || flights.length === 0) {
     return 0;
   }
   
   let total = 0;
   
   flights.forEach((flight) => {
-    const price = parsePrice(flight?.price);
-    total += price;
+    let flightTotal = 0;
+    
+    // 🆕 PRIORITY 1: Check if backend provided explicit total_for_group
+    if (flight.total_for_group) {
+      flightTotal = parsePrice(flight.total_for_group);
+      logDebug('BudgetCalculator', 'Using backend-calculated group total', {
+        airline: flight?.name || 'Unknown',
+        total: flightTotal,
+        travelers: flight.travelers || travelers,
+        source: 'backend metadata'
+      });
+    }
+    // PRIORITY 2: Check if backend provided per-person price metadata
+    else if (flight.price_per_person && flight.travelers) {
+      const pricePerPerson = parsePrice(flight.price_per_person);
+      flightTotal = pricePerPerson * flight.travelers;
+      logDebug('BudgetCalculator', 'Calculated from per-person metadata', {
+        airline: flight?.name || 'Unknown',
+        pricePerPerson,
+        travelers: flight.travelers,
+        total: flightTotal,
+        source: 'backend metadata'
+      });
+    }
+    // FALLBACK: Use legacy calculation
+    else {
+      const pricePerFlight = parsePrice(flight?.price);
+      
+      // If price is already per-person (SerpAPI default), multiply by travelers
+      // If price is total for group, use as-is
+      flightTotal = priceIsPerPerson 
+        ? pricePerFlight * travelers 
+        : pricePerFlight;
+      
+      logDebug('BudgetCalculator', 'Legacy calculation (fallback)', {
+        airline: flight?.name || 'Unknown',
+        pricePerFlight,
+        travelers,
+        priceIsPerPerson,
+        flightTotal,
+        source: 'legacy calculation'
+      });
+    }
+    
+    total += flightTotal;
+  });
+  
+  logDebug('BudgetCalculator', 'Total flights cost', { 
+    total, 
+    travelers,
+    flightCount: flights.length,
+    note: 'Uses backend metadata when available, legacy calculation as fallback'
   });
   
   return total;
@@ -220,12 +278,25 @@ export const calculateTotalBudget = (trip) => {
     logDebug('BudgetCalculator', 'Successfully parsed flights', { length: flights?.length });
   }
   
+  // 🆕 FIXED: Extract travelers count for proper flight cost calculation
+  const travelers = trip?.userSelection?.travelers || 1;
+  const travelersNum = typeof travelers === 'number' ? travelers : 
+                       typeof travelers === 'string' ? parseInt(travelers) || 1 : 1;
+  
   logDebug('BudgetCalculator', 'Flights data', { 
     count: flights?.length,
-    isArray: Array.isArray(flights)
+    isArray: Array.isArray(flights),
+    travelers: travelersNum,
+    note: 'Prices will be multiplied by travelers count'
   });
-  breakdown.flights = calculateFlightsCost(flights);
-  logDebug('BudgetCalculator', 'Calculated flights cost', { cost: breakdown.flights });
+  
+  // Pass travelers count to flight cost calculator
+  breakdown.flights = calculateFlightsCost(flights, travelersNum, true);
+  logDebug('BudgetCalculator', 'Calculated flights cost', { 
+    cost: breakdown.flights,
+    travelers: travelersNum,
+    perPerson: Math.round(breakdown.flights / travelersNum)
+  });
   
   // ✅ NEW: Calculate ground transport cost from costBreakdown or transportMode
   if (tripData?.costBreakdown?.ground_transport) {

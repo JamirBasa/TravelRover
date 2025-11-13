@@ -26,9 +26,23 @@ export function autoFixDay1Activities(tripData) {
   // Get constraints for arrival day
   const constraints = getActivityConstraints(true, false, 2);
 
+  console.log(`🔧 Auto-fix Day 1 (Arrival):`, {
+    totalItems: day1.plan.length,
+    activityCount,
+    logisticsCount: logistics.length,
+    targetMax: constraints.max,
+    needsFix: activityCount > constraints.max
+  });
+
   // If more than max allowed activities, reduce to max
   if (activityCount > constraints.max) {
     const keptActivities = activities.slice(0, constraints.max);
+    const removedCount = activityCount - constraints.max;
+    
+    console.log(`  ✂️ Removing ${removedCount} excess activities from Day 1:`, 
+      activities.slice(constraints.max).map(a => a.placeName || a)
+    );
+    
     // Reconstruct Day 1 plan with logistics + max allowed activities
     // Sort by time to maintain chronological order
     const newPlan = [...logistics, ...keptActivities].sort((a, b) => {
@@ -42,7 +56,10 @@ export function autoFixDay1Activities(tripData) {
       ...day1,
       plan: newPlan
     };
+    
+    console.log(`  ✅ Fixed Day 1: ${activityCount} → ${constraints.max} activities`);
   }
+  
   return tripData;
 }
 
@@ -150,10 +167,25 @@ function autoFixMiddleDays(tripData, formData) {
     // Use unified activity classification
     const { activities, logistics, activityCount } = classifyActivities(day.plan);
 
+    console.log(`🔧 Auto-fix Day ${i + 1} (Middle Day):`, {
+      totalItems: day.plan.length,
+      activityCount,
+      logisticsCount: logistics.length,
+      targetMax: constraints.max,
+      needsFix: activityCount > constraints.max
+    });
+
     // If more than max activities, keep only allowed number
     if (activityCount > constraints.max) {
+      // Keep only the first N activities (they're usually in chronological order)
       const keptActivities = activities.slice(0, constraints.max);
-      // Reconstruct day plan
+      const removedCount = activityCount - constraints.max;
+      
+      console.log(`  ✂️ Removing ${removedCount} excess activities:`, 
+        activities.slice(constraints.max).map(a => a.placeName || a)
+      );
+      
+      // Reconstruct day plan: logistics + limited activities, sorted by time
       const newPlan = [...logistics, ...keptActivities].sort((a, b) => {
         const timeA = a.time || '00:00';
         const timeB = b.time || '00:00';
@@ -164,7 +196,9 @@ function autoFixMiddleDays(tripData, formData) {
         ...day,
         plan: newPlan
       };
-      modificationsCount++; // Track modifications
+      modificationsCount++;
+      
+      console.log(`  ✅ Fixed Day ${i + 1}: ${activityCount} → ${constraints.max} activities`);
     }
   }
   
