@@ -565,7 +565,9 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
             </div>
             <div className="bg-white dark:bg-slate-800 px-5 py-3.5 rounded-2xl shadow-sm border border-gray-200/50 dark:border-slate-700/50">
               <div className="flex items-center gap-3">
-                <Loader2 className="h-5 w-5 animate-spin text-sky-500" />
+                <div style={{ animation: 'spin 1s linear infinite' }}>
+                  <Loader2 className="h-5 w-5 text-sky-500" />
+                </div>
                 <span className="text-[15px] text-gray-600 dark:text-gray-400 font-medium">
                   Rover is thinking
                   <span className="inline-flex">
@@ -614,7 +616,9 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
             }
           >
             {isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <div style={{ animation: 'spin 1s linear infinite' }}>
+                <Loader2 className="h-5 w-5" />
+              </div>
             ) : (
               <Send className="h-5 w-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             )}

@@ -374,6 +374,7 @@ function CreateTrip() {
             duration: formData.duration,
             travelers: travelerCount,
             includeFlights: flightData.includeFlights || false,
+            transportAnalysis: flightData.transportAnalysis || null, // ✅ NEW: Pass transport mode analysis
             startDate: formData.startDate,
           });
 
@@ -388,9 +389,26 @@ function CreateTrip() {
                 budgetTier.range.replace(/[^0-9]/g, "")
               );
 
-              const absoluteMinimum = Math.max(
-                Math.floor(recommendedBudget * 0.9),
-                formData.duration * 1200
+              // ✅ FIXED: Use SAME minimum calculation as BudgetSelector
+              // Matches BudgetSelector.jsx lines 80-132
+              const travelers = formData.travelers || 1;
+              const duration = formData.duration || 3;
+
+              const getMinPerPersonPerDay = (travelerCount) => {
+                if (travelerCount >= 11) return 600;
+                if (travelerCount >= 6) return 700;
+                if (travelerCount >= 3) return 800;
+                return 1000;
+              };
+
+              const minPerPersonPerDay = getMinPerPersonPerDay(travelers);
+              const tieredMinimum = minPerPersonPerDay * duration * travelers;
+              const budgetTier90Percent = Math.floor(recommendedBudget * 0.9);
+
+              // Use the LOWER value (more lenient)
+              const absoluteMinimum = Math.min(
+                tieredMinimum,
+                budgetTier90Percent
               );
 
               const customBudgetAmount = parseInt(customBudget);
@@ -398,6 +416,9 @@ function CreateTrip() {
               console.log("💰 Budget revalidation after service change:", {
                 customBudgetAmount,
                 absoluteMinimum,
+                tieredMinimum,
+                budgetTier90Percent,
+                calculation: "Min of (tiered OR 90%) - matches BudgetSelector",
                 servicesAdded: Object.entries(currentServices)
                   .filter(([, enabled]) => enabled)
                   .map(([service]) => service),
@@ -446,6 +467,7 @@ function CreateTrip() {
     }
   }, [
     flightData.includeFlights,
+    flightData.transportAnalysis, // ✅ NEW: Added to dependency array
     hotelData.includeHotels,
     customBudget,
     currentStep,
@@ -781,10 +803,30 @@ function CreateTrip() {
                 duration: formData.duration,
                 travelers: travelerCount,
                 includeFlights: flightData.includeFlights || false,
+                transportAnalysis: flightData.transportAnalysis || null, // ✅ NEW: Pass transport mode analysis
                 startDate: formData.startDate,
               });
 
               console.log("📊 Budget estimates received:", budgetEstimates);
+              console.log("🚌 Transport analysis passed:", {
+                hasTransportAnalysis: !!flightData.transportAnalysis,
+                isGroundPreferred:
+                  flightData.transportAnalysis?.groundTransport?.preferred,
+                includeFlights: flightData.includeFlights,
+                includeHotels: hotelData.includeHotels,
+                departureCity: flightData.departureCity,
+                destination: formData.location,
+              });
+
+              // ⚠️ WARNING: If transport analysis is missing, budget might be incorrect
+              if (flightData.includeFlights && !flightData.transportAnalysis) {
+                console.warn(
+                  "⚠️ VALIDATION WARNING: includeFlights=true but transportAnalysis is missing!"
+                );
+                console.warn(
+                  "This may cause budget to include flight costs even for ground-preferred routes"
+                );
+              }
 
               if (budgetEstimates) {
                 const budgetTier =
@@ -799,15 +841,39 @@ function CreateTrip() {
                     budgetTier.range.replace(/[^0-9]/g, "")
                   );
 
-                  const absoluteMinimum = Math.max(
-                    Math.floor(recommendedBudget * 0.9),
-                    formData.duration * 1200
+                  // ✅ FIXED: Use SAME minimum calculation as BudgetSelector
+                  // Matches BudgetSelector.jsx lines 80-132
+                  const travelers = formData.travelers || 1;
+                  const duration = formData.duration || 3;
+
+                  const getMinPerPersonPerDay = (travelerCount) => {
+                    if (travelerCount >= 11) return 600;
+                    if (travelerCount >= 6) return 700;
+                    if (travelerCount >= 3) return 800;
+                    return 1000;
+                  };
+
+                  const minPerPersonPerDay = getMinPerPersonPerDay(travelers);
+                  const tieredMinimum =
+                    minPerPersonPerDay * duration * travelers;
+                  const budgetTier90Percent = Math.floor(
+                    recommendedBudget * 0.9
+                  );
+
+                  // Use the LOWER value (more lenient)
+                  const absoluteMinimum = Math.min(
+                    tieredMinimum,
+                    budgetTier90Percent
                   );
 
                   console.log("💰 Budget validation check:", {
                     customBudgetAmount,
                     recommendedBudget,
+                    tieredMinimum,
+                    budgetTier90Percent,
                     absoluteMinimum,
+                    calculation:
+                      "Min of (tiered OR 90%) - matches BudgetSelector",
                     isValid: customBudgetAmount >= absoluteMinimum,
                   });
 
@@ -836,29 +902,10 @@ function CreateTrip() {
 
                   console.log("✅ Budget validation PASSED");
 
-                  // Soft warning if below recommended (but above minimum)
-                  if (customBudgetAmount < recommendedBudget) {
-                    const percentBelow = Math.round(
-                      ((recommendedBudget - customBudgetAmount) /
-                        recommendedBudget) *
-                        100
-                    );
-
-                    if (percentBelow > 3) {
-                      const services = [];
-                      if (flightData.includeFlights) services.push("flights");
-                      if (hotelData.includeHotels) services.push("hotels");
-                      const serviceText =
-                        services.length > 0
-                          ? ` (including ${services.join(" and ")})`
-                          : "";
-
-                      toast.warning("Budget below recommended amount", {
-                        description: `Your budget is ${percentBelow}% below our recommendation (₱${recommendedBudget.toLocaleString()})${serviceText}. This may limit accommodation and activity options. You can proceed, but expect basic choices.`,
-                        duration: 6000,
-                      });
-                    }
-                  }
+                  // ✅ REMOVED: Confusing warning with inconsistent recommended budget
+                  // User already saw budget comparison in BudgetSelector display
+                  // No need to show duplicate warning with potentially different calculation
+                  // (Transport analysis timing can cause discrepancy: ₱11,500 vs ₱12,600)
                 }
               }
             } catch (error) {

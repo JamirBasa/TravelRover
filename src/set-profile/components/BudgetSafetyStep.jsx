@@ -141,7 +141,7 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
                   handleInputChange("emergencyContact", e.target.value, "name")
                 }
                 placeholder="Enter emergency contact name"
-                className="text-sm py-1.5 px-3 rounded-lg border-2 focus:border-sky-500 leading-tight h-auto"
+                className="text-sm py-1.5 px-3 rounded-lg border-2 focus:border-sky-500 dark:focus:border-sky-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-slate-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 leading-tight h-auto"
               />
             </div>
 
@@ -160,7 +160,7 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
                     )
                   }
                   placeholder="e.g., Parent"
-                  className="text-sm py-1.5 px-3 rounded-lg border-2 focus:border-sky-500 leading-tight h-auto"
+                  className="text-sm py-1.5 px-3 rounded-lg border-2 focus:border-sky-500 dark:focus:border-sky-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-slate-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 leading-tight h-auto"
                 />
               </div>
               <div>
@@ -174,7 +174,7 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
                   onChange={handleEmergencyPhoneChange}
                   placeholder="0917-123-4567"
                   maxLength={13}
-                  className="text-sm py-1.5 px-3 rounded-lg border-2 focus:border-sky-500 leading-tight h-auto"
+                  className="text-sm py-1.5 px-3 rounded-lg border-2 focus:border-sky-500 dark:focus:border-sky-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-slate-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 leading-tight h-auto"
                 />
                 {profileData.emergencyContact?.phone &&
                   !isValidPhilippinePhone(
@@ -257,7 +257,7 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
                 handleInputChange("mobilityNeeds", e.target.value)
               }
               placeholder="e.g., Wheelchair accessible (optional)"
-              className="text-sm py-1.5 px-3 rounded-lg border-2 focus:border-sky-500 leading-tight h-auto"
+              className="text-sm py-1.5 px-3 rounded-lg border-2 focus:border-sky-500 dark:focus:border-sky-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-slate-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 leading-tight h-auto"
             />
           </div>
 
@@ -273,7 +273,7 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
                 handleInputChange("bucketListDestinations", e.target.value)
               }
               placeholder="Places you want to visit (optional)"
-              className="text-sm py-1.5 px-3 rounded-lg border-2 focus:border-sky-500 leading-tight h-auto"
+              className="text-sm py-1.5 px-3 rounded-lg border-2 focus:border-sky-500 dark:focus:border-sky-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-slate-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 leading-tight h-auto"
             />
           </div>
         </div>

@@ -112,7 +112,7 @@ const PersonalInfoStep = ({ profileData, handleInputChange }) => {
   return (
     <div className="max-w-3xl mx-auto">
       {/* Personal Information Form - Ultra Compact */}
-      <div className="brand-card p-5 border-sky-200">
+      <div className="brand-card p-5 border-sky-200 dark:border-sky-700 bg-white dark:bg-slate-800">
         <div className="flex items-center gap-2 mb-4">
           <div className="brand-gradient p-1.5 rounded-lg">
             <FaUser className="text-white text-base" />
@@ -127,50 +127,50 @@ const PersonalInfoStep = ({ profileData, handleInputChange }) => {
         <div className="grid md:grid-cols-2 gap-3">
           {/* First Name */}
           <div>
-            <label className="block text-xs font-semibold text-gray-800 mb-1.5">
+            <label className="block text-xs font-semibold text-gray-800 dark:text-gray-200 mb-1.5">
               First Name *
             </label>
             <Input
               value={profileData.firstName}
               onChange={(e) => handleInputChange("firstName", e.target.value)}
               placeholder="Juan"
-              className="text-sm py-2 px-3 rounded-lg border-2 focus:border-sky-500 leading-tight h-auto"
+              className="text-sm py-2 px-3 rounded-lg border-2 focus:border-sky-500 dark:focus:border-sky-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-slate-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 leading-tight h-auto"
             />
           </div>
 
           {/* Last Name */}
           <div>
-            <label className="block text-xs font-semibold text-gray-800 mb-1.5">
+            <label className="block text-xs font-semibold text-gray-800 dark:text-gray-200 mb-1.5">
               Last Name *
             </label>
             <Input
               value={profileData.lastName}
               onChange={(e) => handleInputChange("lastName", e.target.value)}
               placeholder="Dela Cruz"
-              className="text-sm py-2 px-3 rounded-lg border-2 focus:border-sky-500 leading-tight h-auto"
+              className="text-sm py-2 px-3 rounded-lg border-2 focus:border-sky-500 dark:focus:border-sky-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-slate-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 leading-tight h-auto"
             />
           </div>
 
           {/* Middle Name */}
           <div>
-            <label className="block text-xs font-semibold text-gray-800 mb-1.5">
+            <label className="block text-xs font-semibold text-gray-800 dark:text-gray-200 mb-1.5">
               Middle Name{" "}
-              <span className="text-gray-400 text-xs">(Optional)</span>
+              <span className="text-gray-400 dark:text-gray-500 text-xs">(Optional)</span>
             </label>
             <Input
               value={profileData.middleName}
               onChange={(e) => handleInputChange("middleName", e.target.value)}
               placeholder="Santos"
-              className="text-sm py-2 px-3 rounded-lg border-2 focus:border-sky-500 leading-tight h-auto"
+              className="text-sm py-2 px-3 rounded-lg border-2 focus:border-sky-500 dark:focus:border-sky-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-slate-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 leading-tight h-auto"
             />
           </div>
 
           {/* Date of Birth */}
           <div>
-            <label className="block text-xs font-semibold text-gray-800 mb-1.5 flex items-center gap-1">
-              <FaCalendar className="text-sky-600 text-xs" />
+            <label className="block text-xs font-semibold text-gray-800 dark:text-gray-200 mb-1.5 flex items-center gap-1">
+              <FaCalendar className="text-sky-600 dark:text-sky-400 text-xs" />
               Date of Birth *{" "}
-              <span className="text-gray-400 font-normal">(18+)</span>
+              <span className="text-gray-400 dark:text-gray-500 font-normal">(18+)</span>
             </label>
             <Input
               type="date"
@@ -178,13 +178,13 @@ const PersonalInfoStep = ({ profileData, handleInputChange }) => {
               onChange={handleDateOfBirthChange}
               max={maxDate}
               min={minDate}
-              className="text-sm py-2 px-3 rounded-lg border-2 focus:border-sky-500 leading-tight h-auto"
+              className="text-sm py-2 px-3 rounded-lg border-2 focus:border-sky-500 dark:focus:border-sky-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-slate-600 leading-tight h-auto cursor-pointer"
             />
           </div>
 
           {/* Gender */}
           <div>
-            <label className="block text-xs font-semibold text-gray-800 mb-1.5">
+            <label className="block text-xs font-semibold text-gray-800 dark:text-gray-200 mb-1.5">
               Gender
             </label>
             <Select
@@ -203,8 +203,8 @@ const PersonalInfoStep = ({ profileData, handleInputChange }) => {
 
           {/* Mobile Number */}
           <div>
-            <label className="block text-xs font-semibold text-gray-800 mb-1.5 flex items-center gap-1">
-              <FaPhone className="text-sky-600 text-xs" />
+            <label className="block text-xs font-semibold text-gray-800 dark:text-gray-200 mb-1.5 flex items-center gap-1">
+              <FaPhone className="text-sky-600 dark:text-sky-400 text-xs" />
               Mobile Number *
             </label>
             <Input
@@ -213,11 +213,11 @@ const PersonalInfoStep = ({ profileData, handleInputChange }) => {
               onChange={handlePhoneChange}
               placeholder="0917-123-4567"
               maxLength={13}
-              className="text-sm py-2 px-3 rounded-lg border-2 focus:border-sky-500 leading-tight h-auto"
+              className="text-sm py-2 px-3 rounded-lg border-2 focus:border-sky-500 dark:focus:border-sky-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-slate-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 leading-tight h-auto"
             />
             {profileData.phone &&
               !isValidPhilippinePhone(profileData.phone) && (
-                <p className="text-xs text-red-500 mt-0.5">
+                <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">
                   Please enter a valid mobile number
                 </p>
               )}

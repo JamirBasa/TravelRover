@@ -930,7 +930,10 @@ const Admin = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-100 flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div 
+            className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-sky-500 border-t-transparent rounded-full mx-auto mb-4"
+            style={{ animation: 'spin 1s linear infinite' }}
+          ></div>
           <p className="text-sky-700 font-medium text-sm sm:text-base">
             Verifying admin access...
           </p>
@@ -1097,7 +1100,10 @@ const Admin = () => {
             {loading && (
               <div className="flex justify-center items-center py-12">
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4"></div>
+                  <div 
+                    className="rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4"
+                    style={{ animation: 'spin 1s linear infinite' }}
+                  ></div>
                   <p className="text-gray-600 font-medium">
                     Loading dashboard statistics...
                   </p>

@@ -351,7 +351,9 @@ function HeroSection() {
           >
             {isCheckingProfile ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <div style={{ animation: 'spin 1s linear infinite', display: 'inline-block', marginRight: '0.5rem' }}>
+                  <Loader2 className="h-4 w-4" />
+                </div>
                 <span className="hidden sm:inline">Checking...</span>
                 <span className="sm:hidden">Wait</span>
               </>

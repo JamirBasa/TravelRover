@@ -45,7 +45,10 @@ const CustomToaster = () => {
     ),
     loading: (
       <div className={TOAST_ICON_STYLES.loading.className}>
-        <div className={TOAST_ICON_STYLES.loading.innerClassName}></div>
+        <div 
+          className="w-6 h-6 border-[3px] border-sky-200 border-t-sky-600 rounded-full"
+          style={{ animation: 'spin 1s linear infinite' }}
+        ></div>
       </div>
     ),
   };

@@ -83,7 +83,8 @@ function HotelCardItem({ hotel, onBookHotel }) {
                     "HotelCardItem",
                     `Attempt ${attempt} failed, retrying`,
                     {
-                      error: err.message,
+                      error: err?.message || err?.toString() || "Unknown error",
+                      errorType: typeof err,
                     }
                   );
                   // ✅ Reduced retry delay from 1s to 500ms (faster with SSL disabled)
@@ -105,8 +106,9 @@ function HotelCardItem({ hotel, onBookHotel }) {
             logDebug("HotelCardItem", "Hotel photo loaded successfully");
           } catch (photoError) {
             logDebug("HotelCardItem", "All hotel photo fetch attempts failed", {
-              error: photoError.message,
+              error: photoError?.message || photoError?.toString() || "Unknown error",
               fallbackAvailable: !!hotel?.imageUrl,
+              errorType: typeof photoError,
             });
             setPhotoUrl(hotel?.imageUrl || "");
           }
@@ -116,8 +118,10 @@ function HotelCardItem({ hotel, onBookHotel }) {
         }
       } catch (error) {
         logError("HotelCardItem", "Error fetching hotel photo", {
-          error: error.message,
+          error: error?.message || error?.toString() || "Unknown error",
           hasFallback: !!hotel?.imageUrl,
+          errorType: typeof error,
+          errorDetails: error,
         });
 
         if (!isMounted) return;
@@ -127,7 +131,7 @@ function HotelCardItem({ hotel, onBookHotel }) {
           setPhotoUrl(hotel.imageUrl);
           setError(null);
         } else {
-          setError(error.message);
+          setError(error?.message || "Failed to load photo");
           setPhotoUrl("");
         }
       } finally {
@@ -179,7 +183,10 @@ function HotelCardItem({ hotel, onBookHotel }) {
             {isLoading ? (
               <div className="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-150 dark:from-slate-800 dark:to-slate-750 rounded-lg flex items-center justify-center">
                 <div className="text-center">
-                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-sky-300 dark:border-sky-700 border-t-sky-600 dark:border-t-sky-400"></div>
+                  <div 
+                    className="inline-block rounded-full h-6 w-6 border-2 border-sky-300 dark:border-sky-700 border-t-sky-600 dark:border-t-sky-400"
+                    style={{ animation: 'spin 1s linear infinite' }}
+                  ></div>
                   <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 font-medium">
                     Loading hotel...
                   </p>
@@ -227,16 +234,24 @@ function HotelCardItem({ hotel, onBookHotel }) {
                       {hotel.rating}
                     </span>
                   </div>
-                  {(hotel?.user_ratings_total || hotel?.reviews_count) && (
+                  {/* Show review count if > 0 */}
+                  {((hotel?.user_ratings_total || 0) > 0 || (hotel?.reviews_count || 0) > 0) && (
                     <span className="text-xs text-gray-500 dark:text-gray-400">
                       {(
-                        hotel.user_ratings_total || hotel.reviews_count
+                        hotel.user_ratings_total || hotel.reviews_count || 0
                       ).toLocaleString()}{" "}
                       reviews
                     </span>
                   )}
-                  {/* Google Places Data Badge */}
-                  {hotel?.dataSource === "google_places_api" && (
+                  {/* Show AI-Generated Warning if 0 reviews but has rating */}
+                  {((hotel?.user_ratings_total || 0) === 0 && (hotel?.reviews_count || 0) === 0) && hotel?.rating && (
+                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium flex items-center gap-0.5 mt-0.5">
+                      <span>⚠️</span>
+                      <span>AI Estimate</span>
+                    </span>
+                  )}
+                  {/* Google Places Data Badge - Only show if REAL reviews exist */}
+                  {hotel?.dataSource === "google_places_api" && ((hotel?.user_ratings_total || 0) > 0 || (hotel?.reviews_count || 0) > 0) && (
                     <span className="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-0.5 mt-0.5">
                       <span>✓</span>
                       <span>Verified</span>

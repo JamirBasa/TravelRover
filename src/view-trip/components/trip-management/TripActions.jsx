@@ -33,7 +33,9 @@ function TripActions({ onShare, onDownload, onEdit, isDownloading }) {
         >
           {isDownloading ? (
             <>
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              <div style={{ animation: 'spin 1s linear infinite', display: 'inline-block', marginRight: '0.25rem' }}>
+                <Loader2 className="h-4 w-4" />
+              </div>
               Generating...
             </>
           ) : (
@@ -80,7 +82,9 @@ function TripActions({ onShare, onDownload, onEdit, isDownloading }) {
               >
                 {isDownloading ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <div style={{ animation: 'spin 1s linear infinite', display: 'inline-block', marginRight: '0.5rem' }}>
+                      <Loader2 className="h-4 w-4" />
+                    </div>
                     Generating...
                   </>
                 ) : (

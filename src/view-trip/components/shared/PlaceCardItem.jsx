@@ -180,7 +180,10 @@ function PlaceCardItem({ place, trip }) {
         <div className="w-full h-48 flex-shrink-0 overflow-hidden">
           {isLoading ? (
             <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center">
-              <div className="w-8 h-8 border-3 border-sky-500 dark:border-sky-400 border-t-transparent rounded-full animate-spin" />
+              <div 
+                className="w-8 h-8 border-3 border-sky-500 dark:border-sky-400 border-t-transparent rounded-full" 
+                style={{ animation: 'spin 1s linear infinite' }}
+              />
             </div>
           ) : photoUrl ? (
             <img
@@ -194,7 +197,7 @@ function PlaceCardItem({ place, trip }) {
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center border-b border-gray-200 dark:border-slate-600">
               <span className="text-gray-400 dark:text-gray-500 text-4xl font-light">
-                �️
+                📍
               </span>
             </div>
           )}

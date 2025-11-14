@@ -331,7 +331,7 @@ const UserProfile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex">
       {/* Left Side - Travel Image */}
       <div className="hidden lg:flex lg:w-1/2 relative">
         <div
@@ -342,17 +342,17 @@ const UserProfile = () => {
           }}
         >
           {/* Travel-themed background image with lighter overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-sky-600/50 to-blue-700/50"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-sky-600/50 to-blue-700/50 dark:from-sky-900/70 dark:to-blue-950/70"></div>
 
           {/* Travel elements overlay */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center text-white p-8 bg-black/20 backdrop-blur-sm rounded-3xl max-w-lg mx-4">
+            <div className="text-center text-white p-8 bg-black/20 dark:bg-black/40 backdrop-blur-sm rounded-3xl max-w-lg mx-4 shadow-2xl">
               <div className="mb-8">
                 <h1 className="text-4xl lg:text-5xl font-bold mb-4 drop-shadow-lg">
                   Your Journey <br />
                   Starts Here
                 </h1>
-                <p className="text-xl opacity-95 max-w-md mx-auto drop-shadow-md">
+                <p className="text-xl opacity-95 max-w-md mx-auto drop-shadow-md text-blue-100 dark:text-blue-200">
                   Create a personalized travel profile and discover amazing
                   destinations tailored just for you
                 </p>
@@ -370,7 +370,7 @@ const UserProfile = () => {
           </div>
 
           {/* Map pattern overlay */}
-          <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0 opacity-10 dark:opacity-5">
             <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <pattern
@@ -397,20 +397,20 @@ const UserProfile = () => {
       {/* Right Side - Form */}
       <div className="w-full lg:w-1/2 flex flex-col">
         {/* Header for mobile */}
-        <div className="lg:hidden brand-gradient text-white p-6 text-center">
-          <h1 className="text-2xl font-bold mb-2">
+        <div className="lg:hidden brand-gradient text-white p-6 text-center shadow-lg">
+          <h1 className="text-2xl font-bold mb-2 drop-shadow-md">
             Complete Your Travel Profile
           </h1>
-          <p className="opacity-90">Create personalized travel experiences</p>
+          <p className="opacity-95 text-blue-100">Create personalized travel experiences</p>
         </div>
 
         {/* Form Container - No Scroll, Compact Layout */}
-        <div className="flex-1 flex flex-col p-6 lg:p-8 overflow-hidden max-h-screen">
+        <div className="flex-1 flex flex-col p-6 lg:p-8 overflow-hidden max-h-screen bg-gray-50 dark:bg-slate-950">
           {/* Modern Progress Header */}
           <div className="mb-5">
             {/* Animated Progress Bar with Gradient */}
             <div className="relative mb-4">
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden shadow-inner">
                 <div
                   className="h-full brand-gradient rounded-full transition-all duration-500 ease-out relative"
                   style={{ width: `${progress}%` }}
@@ -452,8 +452,8 @@ const UserProfile = () => {
                       </div>
 
                       {/* Tooltip on hover - hidden on small screens */}
-                      <div className="hidden md:block absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                        <div className="bg-gray-900 text-white text-xs py-1 px-2 rounded shadow-lg">
+                      <div className="hidden md:block absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                        <div className="bg-gray-900 dark:bg-slate-800 text-white text-xs py-1 px-2 rounded shadow-lg border border-gray-700 dark:border-slate-600">
                           {step.title}
                         </div>
                       </div>
@@ -536,15 +536,17 @@ const UserProfile = () => {
           </div>
 
           {/* Step Content - Fits viewport */}
-          <div className="flex-1 overflow-y-auto">{renderStepContent()}</div>
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-sky-500 dark:scrollbar-thumb-sky-600 scrollbar-track-gray-200 dark:scrollbar-track-slate-800 pb-4">
+            {renderStepContent()}
+          </div>
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-slate-700">
+          <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-slate-700 mt-4 bg-white dark:bg-slate-900 sticky bottom-0 z-10">
             <Button
               variant="outline"
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="flex items-center gap-2 px-6"
+              className="flex items-center gap-2 px-6 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/50 hover:border-sky-300 dark:hover:border-sky-600 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FaArrowLeft />
               Previous
@@ -563,11 +565,14 @@ const UserProfile = () => {
                 <Button
                   onClick={saveProfile}
                   disabled={saving}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 px-6"
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white px-6 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div 
+                        className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" 
+                        style={{ animation: 'spin 1s linear infinite' }}
+                      />
                       Saving...
                     </>
                   ) : (

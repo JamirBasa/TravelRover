@@ -110,7 +110,10 @@ function WeatherForecast({ trip }) {
     return (
       <div className="bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 dark:from-sky-950/30 dark:via-blue-950/30 dark:to-indigo-950/30 rounded-lg border border-sky-200 dark:border-sky-800 p-6 shadow-md">
         <div className="flex items-center justify-center gap-3">
-          <div className="w-5 h-5 border-2 border-sky-500 dark:border-sky-400 border-t-transparent rounded-full animate-spin" />
+          <div 
+            className="w-5 h-5 border-2 border-sky-500 dark:border-sky-400 border-t-transparent rounded-full" 
+            style={{ animation: 'spin 1s linear infinite' }}
+          />
           <p className="text-sm text-gray-600 dark:text-gray-400 tracking-wide">
             Loading weather forecast...
           </p>

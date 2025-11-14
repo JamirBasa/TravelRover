@@ -445,18 +445,18 @@ const BudgetSelector = ({
                     {estimate && (
                       <div className="mt-2 flex items-center gap-2 flex-wrap">
                         <p className="text-xs font-bold text-sky-700 dark:text-sky-400">
-                          {estimate.range}{" "}
+                          {typeof estimate.range === 'string' ? estimate.range : `₱${estimate.range?.toLocaleString() || '0'}`}{" "}
                           <span className="font-normal text-gray-600 dark:text-gray-400">
                             total
                           </span>
                         </p>
-                        {formData.travelers && formData.travelers > 1 && (
+                        {formData.travelers && formData.travelers > 1 && estimate.perPerson && (
                           <>
                             <span className="text-gray-400 dark:text-gray-600">
                               •
                             </span>
                             <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                              {estimate.perPerson}{" "}
+                              {typeof estimate.perPerson === 'string' ? estimate.perPerson : `₱${estimate.perPerson?.toLocaleString() || '0'}`}{" "}
                               <span className="font-normal text-gray-600 dark:text-gray-400">
                                 per person
                               </span>
@@ -469,7 +469,11 @@ const BudgetSelector = ({
                               •
                             </span>
                             <p className="text-xs font-medium text-sky-700 dark:text-sky-400">
-                              {estimate.perDay}{" "}
+                              {typeof estimate.perDay === 'string' ? estimate.perDay : (
+                                typeof estimate.perDay === 'object' 
+                                  ? `₱${Math.round((estimate.perDay.min + estimate.perDay.max) / 2).toLocaleString()}`
+                                  : `₱${estimate.perDay?.toLocaleString() || '0'}`
+                              )}{" "}
                               <span className="font-normal text-gray-600 dark:text-gray-400">
                                 per day
                               </span>

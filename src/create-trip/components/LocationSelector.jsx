@@ -161,7 +161,9 @@ function LocationSelector({ place, onPlaceChange, isPreFilled, categoryData }) {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       {loadingDestination === dest.city ? (
-                        <Loader2 className="w-4 h-4 text-sky-500 dark:text-sky-400 animate-spin flex-shrink-0" />
+                        <div style={{ animation: 'spin 1s linear infinite' }}>
+                          <Loader2 className="w-4 h-4 text-sky-500 dark:text-sky-400 flex-shrink-0" />
+                        </div>
                       ) : (
                         <FaMapMarkerAlt className="text-sky-500 dark:text-sky-400 flex-shrink-0" />
                       )}
