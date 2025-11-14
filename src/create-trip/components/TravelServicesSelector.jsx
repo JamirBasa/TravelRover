@@ -46,7 +46,6 @@ const TravelServicesSelector = ({
 
   // ✅ ENHANCED: Analyze transport mode based on route (with backend API)
   const [transportAnalysis, setTransportAnalysis] = React.useState(null);
-  const [loadingTransportMode, setLoadingTransportMode] = React.useState(false);
 
   React.useEffect(() => {
     if (!formData?.location || !flightData.departureCity) {
@@ -56,7 +55,6 @@ const TravelServicesSelector = ({
 
     // Use async version with backend API
     const analyzeTransport = async () => {
-      setLoadingTransportMode(true);
       try {
         // Import async version dynamically
         const { determineTransportModeAsync } = await import(
@@ -69,6 +67,12 @@ const TravelServicesSelector = ({
           true // Use backend API
         );
         setTransportAnalysis(result);
+
+        // ✅ NEW: Pass transport analysis to parent component
+        onFlightDataChange({
+          ...flightData,
+          transportAnalysis: result,
+        });
       } catch (error) {
         console.error("Transport mode analysis error:", error);
         // Fallback to synchronous version
@@ -78,13 +82,19 @@ const TravelServicesSelector = ({
           flightData.includeFlights
         );
         setTransportAnalysis(result);
-      } finally {
-        setLoadingTransportMode(false);
+
+        // ✅ NEW: Pass transport analysis to parent component
+        onFlightDataChange({
+          ...flightData,
+          transportAnalysis: result,
+        });
       }
     };
 
     analyzeTransport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData?.location, flightData.departureCity, flightData.includeFlights]);
+  // Note: onFlightDataChange intentionally not in deps to avoid infinite loop
 
   // Flight logic
   const regionOptions = useMemo(() => {
@@ -189,45 +199,76 @@ const TravelServicesSelector = ({
       {transportAnalysis && formData?.location && flightData.departureCity && (
         <div
           className={`brand-card p-4 border-2 mb-6 ${
-            transportAnalysis.groundTransport?.preferred
+            transportAnalysis.groundTransport?.preferred === true &&
+            !transportAnalysis.recommendation
+              ?.toLowerCase()
+              .includes("not recommended")
               ? "border-emerald-400 dark:border-emerald-600 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30"
-              : transportAnalysis.groundTransportNotice?.available
+              : transportAnalysis.mode === "flight_required" ||
+                transportAnalysis.groundTransportNotice?.available ||
+                transportAnalysis.recommendation
+                  ?.toLowerCase()
+                  .includes("not recommended")
               ? "border-amber-300 dark:border-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30"
               : "border-sky-200 dark:border-sky-800 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30"
           }`}
         >
           <div className="flex items-start gap-3">
             <div className="text-3xl flex-shrink-0">
-              {transportAnalysis.groundTransport?.preferred
+              {transportAnalysis.groundTransport?.preferred === true &&
+              !transportAnalysis.recommendation
+                ?.toLowerCase()
+                .includes("not recommended")
                 ? "🚌"
-                : transportAnalysis.groundTransportNotice?.available
-                ? "⚠️"
+                : transportAnalysis.mode === "flight_required" ||
+                  transportAnalysis.groundTransportNotice?.available ||
+                  transportAnalysis.recommendation
+                    ?.toLowerCase()
+                    .includes("not recommended")
+                ? "✈️"
                 : getTransportModeIcon(transportAnalysis.mode)}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <h3
                   className={`font-bold text-base ${
-                    transportAnalysis.groundTransport?.preferred
+                    transportAnalysis.groundTransport?.preferred === true &&
+                    !transportAnalysis.recommendation
+                      ?.toLowerCase()
+                      .includes("not recommended")
                       ? "text-emerald-900 dark:text-emerald-200"
-                      : transportAnalysis.groundTransportNotice?.available
+                      : transportAnalysis.mode === "flight_required" ||
+                        transportAnalysis.groundTransportNotice?.available ||
+                        transportAnalysis.recommendation
+                          ?.toLowerCase()
+                          .includes("not recommended")
                       ? "text-amber-900 dark:text-amber-200"
                       : "brand-gradient-text"
                   }`}
                 >
-                  {transportAnalysis.groundTransport?.preferred
+                  {transportAnalysis.groundTransport?.preferred === true &&
+                  !transportAnalysis.recommendation
+                    ?.toLowerCase()
+                    .includes("not recommended")
                     ? "Ground Transport Recommended"
-                    : transportAnalysis.groundTransportNotice?.available
+                    : transportAnalysis.mode === "flight_required" ||
+                      transportAnalysis.groundTransportNotice?.available ||
+                      transportAnalysis.recommendation
+                        ?.toLowerCase()
+                        .includes("not recommended")
                     ? "Air Travel Recommended"
                     : `${getTransportModeLabel(
                         transportAnalysis.mode
                       )} Recommended`}
                 </h3>
-                {transportAnalysis.groundTransport?.preferred && (
-                  <span className="px-1.5 py-0.5 bg-emerald-200 dark:bg-emerald-800 text-[10px] font-semibold rounded text-emerald-800 dark:text-emerald-200">
-                    Best Option
-                  </span>
-                )}
+                {transportAnalysis.groundTransport?.preferred === true &&
+                  !transportAnalysis.recommendation
+                    ?.toLowerCase()
+                    .includes("not recommended") && (
+                    <span className="px-1.5 py-0.5 bg-emerald-200 dark:bg-emerald-800 text-[10px] font-semibold rounded text-emerald-800 dark:text-emerald-200">
+                      Best Option
+                    </span>
+                  )}
               </div>
 
               <p className="text-xs text-gray-700 dark:text-gray-300 mb-2 line-clamp-2">
@@ -235,9 +276,12 @@ const TravelServicesSelector = ({
               </p>
 
               {/* ✅ ENHANCED Ground Transport Details - With Confidence & Ferry Info */}
-              {/* 🔧 FIX: Only show when preferred OR when there's no groundTransportNotice (to avoid duplication) */}
+              {/* 🔧 FIX: Only show when TRULY preferred AND recommendation doesn't say "not recommended" */}
               {transportAnalysis.groundTransport?.available &&
-                transportAnalysis.groundTransport?.preferred && (
+                transportAnalysis.groundTransport?.preferred === true &&
+                !transportAnalysis.recommendation
+                  ?.toLowerCase()
+                  .includes("not recommended") && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-3 text-xs flex-wrap">
                       <div className="flex items-center gap-1">
@@ -659,13 +703,16 @@ const TravelServicesSelector = ({
               {airportInfo &&
                 formData?.location &&
                 flightData.departureCity &&
+                airportInfo.departure?.code &&
+                airportInfo.destination?.code &&
+                airportInfo.departure.code !== airportInfo.destination.code && // ✅ Don't show if same city
                 destinationAirportStatus?.hasService && (
                   <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-700 animate-fade-in-scale stagger-3">
                     <div className="flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300">
                       <FaPlane className="flex-shrink-0" />
                       <span className="font-semibold">
-                        {airportInfo.departure?.code || "---"} →{" "}
-                        {airportInfo.destination?.code || "---"}
+                        {airportInfo.departure.code} →{" "}
+                        {airportInfo.destination.code}
                       </span>
                       {airportInfo?.nonstopAvailableFromDeparture && (
                         <span className="text-[10px]">• Nonstop available</span>

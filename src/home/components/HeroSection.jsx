@@ -28,7 +28,7 @@ function HeroSection() {
     }
   }, []);
 
-  // Clean categories with essential data
+  // Enhanced categories with richer context for AI generation
   const categories = [
     {
       id: 1,
@@ -45,9 +45,27 @@ function HeroSection() {
         "caving",
         "trekking",
         "cliff jumping",
+        "camping",
+        "mountain biking",
       ],
       keywords:
-        "adventure sports, outdoor activities, extreme sports, mountain adventures, nature exploration",
+        "adventure sports, outdoor activities, extreme sports, mountain adventures, nature exploration, physical challenges",
+      recommendedDestinations: [
+        { city: "Sagada", reason: "Mountain trails, caves, hanging coffins" },
+        { city: "Banaue", reason: "Rice terraces trekking, tribal villages" },
+        {
+          city: "San Antonio, Zambales",
+          reason: "Mountain climbing, beach camping, Anawangin Cove",
+        },
+        {
+          city: "Tanay, Rizal",
+          reason: "Masungi Georeserve rock formations, conservation trail",
+        },
+        {
+          city: "Cagayan de Oro",
+          reason: "White-water rafting, zipline adventures",
+        },
+      ],
     },
     {
       id: 2,
@@ -64,9 +82,34 @@ function HeroSection() {
         "surfing",
         "kayaking",
         "beach relaxation",
+        "sunset watching",
+        "beach photography",
       ],
       keywords:
-        "beach resorts, island hopping, water sports, coastal activities, tropical paradise, beach relaxation",
+        "beach resorts, island hopping, water sports, coastal activities, tropical paradise, beach relaxation, marine life",
+      recommendedDestinations: [
+        {
+          city: "El Nido",
+          reason: "Pristine lagoons, limestone cliffs, island hopping",
+        },
+        {
+          city: "Coron",
+          reason: "Crystal-clear lakes, wreck diving, Kayangan Lake",
+        },
+        {
+          city: "Siargao",
+          reason: "Surfing paradise, coconut groves, island life",
+        },
+        {
+          city: "Boracay",
+          reason: "White sand, water sports, beach nightlife",
+        },
+        {
+          city: "Batanes",
+          reason:
+            "Dramatic coastlines, untouched beaches, Valugan Boulder Beach",
+        },
+      ],
     },
     {
       id: 3,
@@ -83,9 +126,34 @@ function HeroSection() {
         "art galleries",
         "traditional crafts",
         "local markets",
+        "heritage walks",
+        "indigenous communities",
       ],
       keywords:
-        "historical sites, museums, cultural heritage, local traditions, historical landmarks, cultural experiences",
+        "historical sites, museums, cultural heritage, local traditions, historical landmarks, cultural experiences, Spanish colonial history",
+      recommendedDestinations: [
+        {
+          city: "Vigan",
+          reason:
+            "Spanish colonial architecture, Calle Crisologo, heritage city",
+        },
+        {
+          city: "Manila",
+          reason: "Intramuros walled city, Fort Santiago, Spanish era churches",
+        },
+        {
+          city: "Baguio",
+          reason: "Cordillera culture, indigenous crafts, Session Road",
+        },
+        {
+          city: "Bataan",
+          reason: "World War II history, Death March memorial",
+        },
+        {
+          city: "Cebu City",
+          reason: "Magellan's Cross, Basilica, colonial heritage",
+        },
+      ],
     },
     {
       id: 4,
@@ -102,9 +170,30 @@ function HeroSection() {
         "specialty dining",
         "local delicacies",
         "food festivals",
+        "farm visits",
+        "culinary workshops",
       ],
       keywords:
-        "local cuisine, food tours, restaurants, street food, culinary experiences, local specialties, food markets",
+        "local cuisine, food tours, restaurants, street food, culinary experiences, local specialties, food markets, Filipino dishes",
+      recommendedDestinations: [
+        {
+          city: "Angeles, Pampanga",
+          reason: "Culinary capital, sisig, traditional kakanin",
+        },
+        { city: "Cebu City", reason: "Lechon capital, seafood, Larsian BBQ" },
+        {
+          city: "Manila",
+          reason: "Diverse food scene, Chinatown, international cuisine",
+        },
+        {
+          city: "Laoag",
+          reason: "Bagnet, empanada, Vigan longganisa, Ilocos cuisine",
+        },
+        {
+          city: "Bacolod",
+          reason: "Chicken inasal, sweets capital, Manokan Country",
+        },
+      ],
     },
   ];
 
@@ -206,6 +295,7 @@ function HeroSection() {
             categoryName: category.name,
             categoryActivities: category.activities,
             categoryKeywords: category.keywords,
+            recommendedDestinations: category.recommendedDestinations, // ✅ NEW: Destination suggestions
             searchedLocation: place?.label || null,
             prefilledTripType: category.tripType,
             categoryFocus: true, // Flag to indicate this is a category-focused trip
@@ -261,7 +351,15 @@ function HeroSection() {
           >
             {isCheckingProfile ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <div
+                  style={{
+                    animation: "spin 1s linear infinite",
+                    display: "inline-block",
+                    marginRight: "0.5rem",
+                  }}
+                >
+                  <Loader2 className="h-4 w-4" />
+                </div>
                 <span className="hidden sm:inline">Checking...</span>
                 <span className="sm:hidden">Wait</span>
               </>

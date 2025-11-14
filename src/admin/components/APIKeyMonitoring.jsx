@@ -213,7 +213,10 @@ const APIKeyMonitoring = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <div
+              className="rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"
+              style={{ animation: "spin 1s linear infinite" }}
+            ></div>
             <p className="text-gray-600">🔍 Checking API key status...</p>
             <p className="text-gray-500 text-sm mt-2">
               Connecting to monitoring service
@@ -253,7 +256,11 @@ const APIKeyMonitoring = () => {
             disabled={loading}
             className="flex items-center gap-2"
           >
-            <FaSync className={loading ? "animate-spin" : ""} />
+            <div
+              style={loading ? { animation: "spin 1s linear infinite" } : {}}
+            >
+              <FaSync />
+            </div>
             Refresh Now
           </Button>
         </div>

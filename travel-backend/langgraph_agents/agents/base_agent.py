@@ -49,14 +49,24 @@ class BaseAgent(AgentLoggerMixin, ABC):
             # Validate and sanitize output
             validated_result = self._validate_output(result)
             
-            # Log success
-            self.log_execution_success(
-                method_name, 
-                f"completed in {execution_time_ms}ms"
-            )
+            # ✅ FIX: Respect success field from agent's internal logic
+            # If agent returned success: False (e.g. no flights available), propagate it
+            internal_success = validated_result.get('success', True) if isinstance(validated_result, dict) else True
+            
+            # Log success or warning
+            if internal_success:
+                self.log_execution_success(
+                    method_name, 
+                    f"completed in {execution_time_ms}ms"
+                )
+            else:
+                # Log warning if agent completed but returned no results
+                self.logger.warning(
+                    f"{method_name} completed but returned no valid results: {validated_result.get('error', 'Unknown reason')}"
+                )
             
             return {
-                'success': True,
+                'success': internal_success,  # Use agent's internal success flag
                 'agent_type': self.agent_type,
                 'execution_time_ms': execution_time_ms,
                 'data': validated_result,

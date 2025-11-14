@@ -156,6 +156,9 @@ GOOGLE_MAPS_API_KEY = config('GOOGLE_MAPS_API_KEY', default='')  # ✅ Added for
 GOOGLE_GEMINI_AI_API_KEY = config('GOOGLE_GEMINI_AI_API_KEY', default='')
 GEMINI_API_KEY = GOOGLE_GEMINI_AI_API_KEY  # Alias for proxy endpoint
 
+# LongCat AI API Key (Eva - thinking mode)
+LONGCAT_API_KEY = config('LONGCAT_API_KEY', default='')
+
 # ✅ Add these if missing for API monitoring
 FIREBASE_API_KEY = config('FIREBASE_API_KEY', default='')
 FIREBASE_PROJECT_ID = config('FIREBASE_PROJECT_ID', default='')

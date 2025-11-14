@@ -67,7 +67,9 @@ function GenerateTripButton({
       <span className="relative z-10 flex items-center gap-2">
         {isAnyLoading ? (
           <>
-            <AiOutlineLoading3Quarters className="h-4 w-4 animate-spin" />
+            <div style={{ animation: "spin 1s linear infinite" }}>
+              <AiOutlineLoading3Quarters className="h-4 w-4" />
+            </div>
             <span className="flex flex-col items-start">
               <span>{getLoadingMessage()}</span>
               {eta && <span className="text-xs opacity-80">{eta}</span>}

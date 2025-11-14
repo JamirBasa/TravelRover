@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LongCat Frontend Test</title>
+</head>
+<body>
+    <h1>LongCat Health Check Test</h1>
+    <button onclick="testHealth()">Test Health</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testHealth() {
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/langgraph/longcat/health/');
+                const data = await response.json();
+                
+                resultEl.textContent = JSON.stringify(data, null, 2);
+                
+                console.log('Full response:', data);
+                console.log('data.data:', data.data);
+                console.log('Configured:', data.data?.configured);
+                console.log('Valid:', data.data?.valid);
+                
+                // Test the condition
+                if (data.data && data.data.configured && data.data.valid) {
+                    console.log('✅ LongCat would be marked ONLINE');
+                } else {
+                    console.log('❌ LongCat would be marked OFFLINE');
+                    console.log('Reason:', {
+                        hasData: !!data.data,
+                        configured: data.data?.configured,
+                        valid: data.data?.valid
+                    });
+                }
+            } catch (error) {
+                resultEl.textContent = 'Error: ' + error.message;
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
