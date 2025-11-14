@@ -421,7 +421,7 @@ function TripCard({ trip, onDelete }) {
       <div className="relative overflow-hidden h-56 bg-gradient-to-br from-gray-100 via-blue-50 to-sky-50 dark:from-slate-800 dark:via-slate-800/50 dark:to-slate-700">
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center z-10">
-            <div style={{ animation: 'spin 1s linear infinite' }}>
+            <div style={{ animation: "spin 1s linear infinite" }}>
               <AiOutlineLoading3Quarters className="h-7 w-7 text-sky-500 dark:text-sky-400" />
             </div>
           </div>

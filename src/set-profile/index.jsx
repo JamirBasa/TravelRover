@@ -401,7 +401,9 @@ const UserProfile = () => {
           <h1 className="text-2xl font-bold mb-2 drop-shadow-md">
             Complete Your Travel Profile
           </h1>
-          <p className="opacity-95 text-blue-100">Create personalized travel experiences</p>
+          <p className="opacity-95 text-blue-100">
+            Create personalized travel experiences
+          </p>
         </div>
 
         {/* Form Container - No Scroll, Compact Layout */}
@@ -569,9 +571,9 @@ const UserProfile = () => {
                 >
                   {saving ? (
                     <>
-                      <div 
-                        className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" 
-                        style={{ animation: 'spin 1s linear infinite' }}
+                      <div
+                        className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                        style={{ animation: "spin 1s linear infinite" }}
                       />
                       Saving...
                     </>

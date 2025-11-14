@@ -445,35 +445,52 @@ const BudgetSelector = ({
                     {estimate && (
                       <div className="mt-2 flex items-center gap-2 flex-wrap">
                         <p className="text-xs font-bold text-sky-700 dark:text-sky-400">
-                          {typeof estimate.range === 'string' ? estimate.range : `₱${estimate.range?.toLocaleString() || '0'}`}{" "}
+                          {typeof estimate.range === "string"
+                            ? estimate.range
+                            : `₱${
+                                estimate.range?.toLocaleString() || "0"
+                              }`}{" "}
                           <span className="font-normal text-gray-600 dark:text-gray-400">
                             total
                           </span>
                         </p>
-                        {formData.travelers && formData.travelers > 1 && estimate.perPerson && (
-                          <>
-                            <span className="text-gray-400 dark:text-gray-600">
-                              •
-                            </span>
-                            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                              {typeof estimate.perPerson === 'string' ? estimate.perPerson : `₱${estimate.perPerson?.toLocaleString() || '0'}`}{" "}
-                              <span className="font-normal text-gray-600 dark:text-gray-400">
-                                per person
+                        {formData.travelers &&
+                          formData.travelers > 1 &&
+                          estimate.perPerson && (
+                            <>
+                              <span className="text-gray-400 dark:text-gray-600">
+                                •
                               </span>
-                            </p>
-                          </>
-                        )}
+                              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                                {typeof estimate.perPerson === "string"
+                                  ? estimate.perPerson
+                                  : `₱${
+                                      estimate.perPerson?.toLocaleString() ||
+                                      "0"
+                                    }`}{" "}
+                                <span className="font-normal text-gray-600 dark:text-gray-400">
+                                  per person
+                                </span>
+                              </p>
+                            </>
+                          )}
                         {estimate.perDay && formData.duration && (
                           <>
                             <span className="text-gray-400 dark:text-gray-600">
                               •
                             </span>
                             <p className="text-xs font-medium text-sky-700 dark:text-sky-400">
-                              {typeof estimate.perDay === 'string' ? estimate.perDay : (
-                                typeof estimate.perDay === 'object' 
-                                  ? `₱${Math.round((estimate.perDay.min + estimate.perDay.max) / 2).toLocaleString()}`
-                                  : `₱${estimate.perDay?.toLocaleString() || '0'}`
-                              )}{" "}
+                              {typeof estimate.perDay === "string"
+                                ? estimate.perDay
+                                : typeof estimate.perDay === "object"
+                                ? `₱${Math.round(
+                                    (estimate.perDay.min +
+                                      estimate.perDay.max) /
+                                      2
+                                  ).toLocaleString()}`
+                                : `₱${
+                                    estimate.perDay?.toLocaleString() || "0"
+                                  }`}{" "}
                               <span className="font-normal text-gray-600 dark:text-gray-400">
                                 per day
                               </span>

@@ -67,7 +67,7 @@ const TravelServicesSelector = ({
           true // Use backend API
         );
         setTransportAnalysis(result);
-        
+
         // ✅ NEW: Pass transport analysis to parent component
         onFlightDataChange({
           ...flightData,
@@ -82,7 +82,7 @@ const TravelServicesSelector = ({
           flightData.includeFlights
         );
         setTransportAnalysis(result);
-        
+
         // ✅ NEW: Pass transport analysis to parent component
         onFlightDataChange({
           ...flightData,
@@ -92,7 +92,7 @@ const TravelServicesSelector = ({
     };
 
     analyzeTransport();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData?.location, flightData.departureCity, flightData.includeFlights]);
   // Note: onFlightDataChange intentionally not in deps to avoid infinite loop
 
@@ -200,11 +200,15 @@ const TravelServicesSelector = ({
         <div
           className={`brand-card p-4 border-2 mb-6 ${
             transportAnalysis.groundTransport?.preferred === true &&
-            !transportAnalysis.recommendation?.toLowerCase().includes("not recommended")
+            !transportAnalysis.recommendation
+              ?.toLowerCase()
+              .includes("not recommended")
               ? "border-emerald-400 dark:border-emerald-600 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30"
               : transportAnalysis.mode === "flight_required" ||
                 transportAnalysis.groundTransportNotice?.available ||
-                transportAnalysis.recommendation?.toLowerCase().includes("not recommended")
+                transportAnalysis.recommendation
+                  ?.toLowerCase()
+                  .includes("not recommended")
               ? "border-amber-300 dark:border-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30"
               : "border-sky-200 dark:border-sky-800 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30"
           }`}
@@ -212,11 +216,15 @@ const TravelServicesSelector = ({
           <div className="flex items-start gap-3">
             <div className="text-3xl flex-shrink-0">
               {transportAnalysis.groundTransport?.preferred === true &&
-              !transportAnalysis.recommendation?.toLowerCase().includes("not recommended")
+              !transportAnalysis.recommendation
+                ?.toLowerCase()
+                .includes("not recommended")
                 ? "🚌"
                 : transportAnalysis.mode === "flight_required" ||
                   transportAnalysis.groundTransportNotice?.available ||
-                  transportAnalysis.recommendation?.toLowerCase().includes("not recommended")
+                  transportAnalysis.recommendation
+                    ?.toLowerCase()
+                    .includes("not recommended")
                 ? "✈️"
                 : getTransportModeIcon(transportAnalysis.mode)}
             </div>
@@ -225,28 +233,38 @@ const TravelServicesSelector = ({
                 <h3
                   className={`font-bold text-base ${
                     transportAnalysis.groundTransport?.preferred === true &&
-                    !transportAnalysis.recommendation?.toLowerCase().includes("not recommended")
+                    !transportAnalysis.recommendation
+                      ?.toLowerCase()
+                      .includes("not recommended")
                       ? "text-emerald-900 dark:text-emerald-200"
                       : transportAnalysis.mode === "flight_required" ||
                         transportAnalysis.groundTransportNotice?.available ||
-                        transportAnalysis.recommendation?.toLowerCase().includes("not recommended")
+                        transportAnalysis.recommendation
+                          ?.toLowerCase()
+                          .includes("not recommended")
                       ? "text-amber-900 dark:text-amber-200"
                       : "brand-gradient-text"
                   }`}
                 >
                   {transportAnalysis.groundTransport?.preferred === true &&
-                  !transportAnalysis.recommendation?.toLowerCase().includes("not recommended")
+                  !transportAnalysis.recommendation
+                    ?.toLowerCase()
+                    .includes("not recommended")
                     ? "Ground Transport Recommended"
                     : transportAnalysis.mode === "flight_required" ||
                       transportAnalysis.groundTransportNotice?.available ||
-                      transportAnalysis.recommendation?.toLowerCase().includes("not recommended")
+                      transportAnalysis.recommendation
+                        ?.toLowerCase()
+                        .includes("not recommended")
                     ? "Air Travel Recommended"
                     : `${getTransportModeLabel(
                         transportAnalysis.mode
                       )} Recommended`}
                 </h3>
                 {transportAnalysis.groundTransport?.preferred === true &&
-                  !transportAnalysis.recommendation?.toLowerCase().includes("not recommended") && (
+                  !transportAnalysis.recommendation
+                    ?.toLowerCase()
+                    .includes("not recommended") && (
                     <span className="px-1.5 py-0.5 bg-emerald-200 dark:bg-emerald-800 text-[10px] font-semibold rounded text-emerald-800 dark:text-emerald-200">
                       Best Option
                     </span>
@@ -261,7 +279,9 @@ const TravelServicesSelector = ({
               {/* 🔧 FIX: Only show when TRULY preferred AND recommendation doesn't say "not recommended" */}
               {transportAnalysis.groundTransport?.available &&
                 transportAnalysis.groundTransport?.preferred === true &&
-                !transportAnalysis.recommendation?.toLowerCase().includes("not recommended") && (
+                !transportAnalysis.recommendation
+                  ?.toLowerCase()
+                  .includes("not recommended") && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-3 text-xs flex-wrap">
                       <div className="flex items-center gap-1">

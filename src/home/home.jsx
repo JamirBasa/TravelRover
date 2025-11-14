@@ -1,6 +1,5 @@
 import React from "react";
 import HeroSection from "./components/HeroSection";
-import DestinationsSection from "./components/DestinationsSection";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 /**
@@ -20,7 +19,6 @@ function Home() {
       {/* Content with proper spacing */}
       <div className="relative z-10 min-h-screen">
         <HeroSection />
-        <DestinationsSection />
       </div>
     </div>
   );

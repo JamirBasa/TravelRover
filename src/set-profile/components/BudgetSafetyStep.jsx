@@ -213,20 +213,26 @@ const BudgetSafetyStep = ({ profileData, handleInputChange }) => {
                 >
                   <IconComponent
                     className={`text-base mr-2.5 ${
-                      isSelected ? "text-white" : "text-sky-600 dark:text-sky-400"
+                      isSelected
+                        ? "text-white"
+                        : "text-sky-600 dark:text-sky-400"
                     }`}
                   />
                   <div className="flex-1">
                     <span
                       className={`font-medium text-xs ${
-                        isSelected ? "text-white" : "text-gray-800 dark:text-gray-200"
+                        isSelected
+                          ? "text-white"
+                          : "text-gray-800 dark:text-gray-200"
                       }`}
                     >
                       {exp.label}
                     </span>
                     <p
                       className={`text-xs mt-0.5 ${
-                        isSelected ? "text-white/90" : "text-gray-600 dark:text-gray-400"
+                        isSelected
+                          ? "text-white/90"
+                          : "text-gray-600 dark:text-gray-400"
                       }`}
                     >
                       {exp.desc}

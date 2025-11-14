@@ -1,30 +1,34 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Loader2, Sparkles } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, Brain, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { logDebug, logError } from "@/utils/productionLogger";
 import { GeminiProxyChatSession } from "@/config/geminiProxyService";
+import { LongCatService } from "@/config/longcatService";
 
 /**
  * TripChatbot Component
- * AI-powered travel assistant using Gemini Proxy Service
- * Provides trip-specific guidance and answers
+ * AI-powered travel assistant with dual AI provider support
+ *
+ * Providers:
+ * - Gemini 2.5 Flash: Fast, excellent Philippine knowledge (default)
+ * - LongCat: Free 500K tokens/day, thinking mode for complex questions
  *
  * Architecture:
- * - Uses GeminiProxyChatSession (same as trip generation)
- * - API key stays secure on backend server
+ * - Smart model selection based on question complexity
+ * - API keys stay secure on backend server
  * - Built-in caching, rate limit handling, auto-retry
- * - Consistent with existing TravelRover infrastructure
+ * - Seamless fallback between providers
  *
  * Backend Setup:
  * 1. Start Django server: cd travel-backend && python manage.py runserver
- * 2. Configure GEMINI_API_KEY in travel-backend/.env
+ * 2. Configure GEMINI_API_KEY and LONGCAT_API_KEY in travel-backend/.env
  * 3. Backend handles all AI requests securely
  *
  * Benefits:
- * - 🔒 Secure: API key never exposed to browser
- * - ⚡ Fast: 5-min caching for common questions
- * - 🔄 Reliable: Auto-retry with exponential backoff
- * - 📊 Smart: Adaptive timeout based on request type
+ * - 🔒 Secure: API keys never exposed to browser
+ * - 🧠 Smart: Thinking mode for complex planning
+ * - ⚡ Fast: Optimized model selection
+ * - � Reliable: Multi-provider fallback
  */
 function TripChatbot({ trip }) {
   // Get logged-in user from localStorage
@@ -40,39 +44,67 @@ function TripChatbot({ trip }) {
 
   // Backend status tracking (null = checking, true = online, false = offline)
   const [isBackendOnline, setIsBackendOnline] = useState(null);
+  const [isLongCatOnline, setIsLongCatOnline] = useState(null);
+
+  // AI Provider selection ('gemini' or 'longcat')
+  const [aiProvider, setAiProvider] = useState("gemini");
+  const [useThinkingMode, setUseThinkingMode] = useState(false);
+  const [suggestedProvider, setSuggestedProvider] = useState(null); // null, 'gemini', or 'longcat'
 
   // ✅ FIX: Create persistent chat session (maintains conversation history)
   const chatSessionRef = useRef(null);
+  const longcatServiceRef = useRef(null);
 
   // ✅ NEW: Request lock to prevent duplicate API calls
   const isRequestInProgressRef = useRef(false);
 
-  // Initialize chat session once when component mounts
+  // Initialize services once when component mounts
   useEffect(() => {
     chatSessionRef.current = new GeminiProxyChatSession({
       temperature: 0.7,
       maxOutputTokens: 800,
       model: "gemini-2.5-flash",
     });
-    logDebug("TripChatbot", "Chat session initialized");
+    longcatServiceRef.current = new LongCatService();
+    logDebug("TripChatbot", "Chat services initialized");
   }, []); // Empty dependency array = runs once on mount
 
   const [messages, setMessages] = useState([
     {
       id: 1,
       role: "assistant",
-      content: `Hey there! 👋 I'm Rover, your personal AI travel buddy for your trip to ${
-        trip?.userSelection?.location || "your destination"
-      }! 
+      content: `Hey there! 👋 Welcome to your AI travel assistants!
 
-I'm here to help make your trip amazing. Ask me anything:
-• 🎒 What should I pack?
-• 🍜 Where are the best local restaurants?
-• 🎭 What activities would you recommend?
-• 🚕 How do I get around?
-• 💡 Any insider tips for ${trip?.userSelection?.location || "my destination"}?
+**Meet Your Travel Team:**
 
-What would you like to know? 😊`,
+🚀 **Rover (Fast Mode)** - Your quick-response buddy
+   • Best for: Quick questions, local tips, directions
+   • Specializes in: Philippine destinations, real-time help
+   • Speed: Lightning fast ⚡
+
+🧠 **Eva (Thinking Mode)** - Your strategic planner
+   • Best for: Complex decisions, budget planning, comparisons
+   • Specializes in: Deep analysis, itinerary optimization
+   • Power: Advanced reasoning 💭
+
+**Your trip to ${trip?.userSelection?.location || "your destination"}:**
+📅 ${trip?.userSelection?.duration || 0} days | 👥 ${
+        trip?.userSelection?.travelers || "Not specified"
+      } | 💰 ${
+        trip?.userSelection?.customBudget
+          ? `₱${trip.userSelection.customBudget.toLocaleString()}`
+          : trip?.userSelection?.budget || "Not set"
+      }
+
+**Try asking:**
+• "What are the must-visit spots in ${
+        trip?.userSelection?.location || "my destination"
+      }?" (Rover 🚀)
+• "Compare hotel options and help me decide" (Eva 🧠)
+• "Where's the best local food?" (Rover 🚀)
+• "Optimize my budget for activities vs accommodation" (Eva 🧠)
+
+Which assistant would you like to chat with? 😊`,
       timestamp: new Date(),
     },
   ]);
@@ -80,6 +112,17 @@ What would you like to know? 😊`,
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Smart AI suggestion based on input
+  useEffect(() => {
+    if (input.trim().length > 10 && isLongCatOnline) {
+      // Analyze input to suggest best AI
+      const shouldUseEva = LongCatService.shouldUseThinking(input);
+      setSuggestedProvider(shouldUseEva ? "longcat" : "gemini");
+    } else {
+      setSuggestedProvider(null);
+    }
+  }, [input, isLongCatOnline]);
 
   // Auto-scroll to bottom when new messages arrive
   // ✅ FIX: Use setTimeout to ensure DOM is fully rendered before scrolling
@@ -106,9 +149,10 @@ What would you like to know? 😊`,
   // Check backend health status on mount
   useEffect(() => {
     checkBackendHealth();
+    checkLongCatHealth();
   }, []);
 
-  // Health check function
+  // Health check function for Gemini
   const checkBackendHealth = async () => {
     try {
       console.log("🔍 Starting backend health check...");
@@ -169,6 +213,39 @@ What would you like to know? 😊`,
     }
   };
 
+  // Health check function for LongCat
+  const checkLongCatHealth = async () => {
+    try {
+      console.log("🔍 TripChatbot: Starting LongCat health check...");
+      console.log("🔍 TripChatbot: longcatServiceRef.current exists?", !!longcatServiceRef.current);
+
+      const health = await longcatServiceRef.current?.checkHealth();
+      
+      console.log("📦 TripChatbot: Received health data:", health);
+      console.log("📦 TripChatbot: health.configured =", health?.configured);
+      console.log("📦 TripChatbot: health.valid =", health?.valid);
+
+      if (health && health.configured && health.valid) {
+        setIsLongCatOnline(true);
+        console.log("✅ TripChatbot: LongCat marked as ONLINE");
+        logDebug("TripChatbot", "LongCat health check completed", health);
+      } else {
+        setIsLongCatOnline(false);
+        console.log("⚠️ TripChatbot: LongCat marked as OFFLINE");
+        console.log("⚠️ TripChatbot: Reason:", {
+          healthExists: !!health,
+          configured: health?.configured,
+          valid: health?.valid
+        });
+        logDebug("TripChatbot", "LongCat not available", health);
+      }
+    } catch (error) {
+      setIsLongCatOnline(false);
+      console.error("❌ TripChatbot: LongCat Health Check Failed:", error);
+      logError("TripChatbot", "LongCat health check error", error);
+    }
+  };
+
   // Get trip context for AI
   const getTripContext = () => {
     const context = {
@@ -188,6 +265,100 @@ What would you like to know? 😊`,
       transportMode: trip?.transportMode?.mode || "Not specified",
     };
     return context;
+  };
+
+  // Send message using Gemini
+  const sendGeminiMessage = async (userMessage, tripContext) => {
+    const isFirstUserMessage = messages.length === 1;
+
+    let fullPrompt;
+    if (isFirstUserMessage) {
+      const systemPrompt = `You are Rover, a friendly AI travel assistant for TravelRover. Help travelers with their trip to ${
+        tripContext.destination
+      }!
+
+TRIP DETAILS:
+🌍 Destination: ${tripContext.destination}
+📅 Duration: ${tripContext.duration} days (${tripContext.travelDates})
+👥 Travelers: ${tripContext.travelers}
+💰 Budget: ${tripContext.budget}
+${
+  tripContext.hasItinerary
+    ? "✅ Itinerary: Planned"
+    : "📝 Itinerary: Not created yet"
+}
+${tripContext.hasHotels ? "✅ Hotels: Arranged" : "🏨 Hotels: Not arranged"}
+${tripContext.hasFlights ? "✅ Flights: Arranged" : "✈️ Flights: Not arranged"}
+🚗 Transport: ${tripContext.transportMode}
+
+BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 paragraphs max. Use emojis naturally.`;
+
+      fullPrompt = `${systemPrompt}\n\nTraveler: ${userMessage}`;
+    } else {
+      fullPrompt = userMessage;
+    }
+
+    if (!chatSessionRef.current) {
+      throw new Error("Gemini chat session not initialized");
+    }
+
+    const result = await chatSessionRef.current.sendMessage(fullPrompt, {
+      requestType: "simple_query",
+      chat_mode: true,
+    });
+
+    const response = result.response;
+    return (
+      response.text() ||
+      "I couldn't generate a response right now. Please try again! 😊"
+    );
+  };
+
+  // Send message using LongCat
+  const sendLongCatMessage = async (userMessage, tripContext, useThinking) => {
+    // Build conversation history for LongCat
+    const conversationMessages = [
+      {
+        role: "system",
+        content: `You are Rover, a friendly AI travel assistant for TravelRover. Help travelers with their trip to ${
+          tripContext.destination
+        }!
+
+TRIP DETAILS:
+🌍 Destination: ${tripContext.destination}
+📅 Duration: ${tripContext.duration} days (${tripContext.travelDates})
+👥 Travelers: ${tripContext.travelers}
+💰 Budget: ${tripContext.budget}
+${
+  tripContext.hasItinerary
+    ? "✅ Itinerary: Planned"
+    : "📝 Itinerary: Not created yet"
+}
+${tripContext.hasHotels ? "✅ Hotels: Arranged" : "🏨 Hotels: Not arranged"}
+${tripContext.hasFlights ? "✅ Flights: Arranged" : "✈️ Flights: Not arranged"}
+🚗 Transport: ${tripContext.transportMode}
+
+BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 paragraphs max. Use emojis naturally.`,
+      },
+      // Add recent conversation history (last 10 messages)
+      ...messages.slice(-10).map((msg) => ({
+        role: msg.role === "assistant" ? "assistant" : "user",
+        content: msg.content,
+      })),
+      {
+        role: "user",
+        content: userMessage,
+      },
+    ];
+
+    const result = await longcatServiceRef.current.chat(conversationMessages, {
+      model: useThinking ? "thinking" : "chat",
+      temperature: 0.7,
+      maxTokens: 2000,
+      enableThinking: useThinking,
+    });
+
+    return result.content;
   };
 
   // Send message to AI chat
@@ -214,6 +385,9 @@ What would you like to know? 😊`,
     setInput("");
     setIsLoading(true);
 
+    // Auto-detect if thinking mode should be used
+    const shouldUseThinking = LongCatService.shouldUseThinking(userMessage);
+
     // ✅ Set lock to prevent concurrent requests
     isRequestInProgressRef.current = true;
 
@@ -221,75 +395,41 @@ What would you like to know? 😊`,
       logDebug("TripChatbot", "Sending message", {
         messageLength: userMessage.length,
         conversationLength: messages.length,
+        provider: aiProvider,
+        thinkingMode: shouldUseThinking && aiProvider === "longcat",
       });
 
       const tripContext = getTripContext();
+      let assistantMessage;
 
-      // ✅ IMPROVED: Check if this is the first user message
-      // (Skip welcome message at index 0, so first user message is when length === 1)
-      const isFirstUserMessage = messages.length === 1;
-
-      let fullPrompt;
-
-      if (isFirstUserMessage) {
-        // First message: Send full system prompt with trip context
-        const systemPrompt = `You are Rover, a friendly AI travel assistant for TravelRover. Help travelers with their trip to ${
-          tripContext.destination
-        }!
-
-TRIP DETAILS:
-🌍 Destination: ${tripContext.destination}
-📅 Duration: ${tripContext.duration} days (${tripContext.travelDates})
-👥 Travelers: ${tripContext.travelers}
-💰 Budget: ${tripContext.budget}
-${
-  tripContext.hasItinerary
-    ? "✅ Itinerary: Planned"
-    : "📝 Itinerary: Not created yet"
-}
-${tripContext.hasHotels ? "✅ Hotels: Arranged" : "🏨 Hotels: Not arranged"}
-${tripContext.hasFlights ? "✅ Flights: Arranged" : "✈️ Flights: Not arranged"}
-🚗 Transport: ${tripContext.transportMode}
-
-BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 paragraphs max. Use emojis naturally.`;
-
-        fullPrompt = `${systemPrompt}\n\nTraveler: ${userMessage}`;
+      // Route to appropriate AI provider
+      if (aiProvider === "longcat" && isLongCatOnline) {
+        // Use LongCat
+        assistantMessage = await sendLongCatMessage(
+          userMessage,
+          tripContext,
+          shouldUseThinking
+        );
       } else {
-        // Subsequent messages: Just send the new message
-        // (The persistent session maintains context automatically)
-        fullPrompt = userMessage;
+        // ✅ IMPROVED: Notify user if Eva was selected but unavailable
+        if (aiProvider === "longcat" && !isLongCatOnline) {
+          toast.info("Eva Thinking Mode is currently unavailable. Rover is helping you instead! 🚀", {
+            duration: 4000,
+          });
+          logDebug("TripChatbot", "Fallback to Gemini: LongCat offline");
+        }
+        
+        // Use Gemini (default)
+        assistantMessage = await sendGeminiMessage(userMessage, tripContext);
       }
-
-      logDebug("TripChatbot", "Using chat session", {
-        isFirstMessage: isFirstUserMessage,
-        messageCount: messages.length,
-      });
-
-      // ✅ FIX: Use persistent chat session (maintains conversation context)
-      if (!chatSessionRef.current) {
-        throw new Error("Chat session not initialized");
-      }
-
-      // Send message through persistent session
-      const result = await chatSessionRef.current.sendMessage(fullPrompt, {
-        requestType: "simple_query",
-        chat_mode: true,
-      });
-
-      const response = result.response;
-      const assistantMessage =
-        response.text() ||
-        "I couldn't generate a response right now. Please try again! 😊";
-
-      logDebug("TripChatbot", "Received response", {
-        responseLength: assistantMessage.length,
-      });
 
       const assistantMsg = {
         id: Date.now() + 1,
         role: "assistant",
         content: assistantMessage,
         timestamp: new Date(),
+        provider: aiProvider,
+        thinkingMode: shouldUseThinking && aiProvider === "longcat",
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
@@ -410,39 +550,83 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
 
   return (
     <div className="flex flex-col h-full min-h-[600px] bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 shadow-lg overflow-hidden">
-      {/* Chat Header - Enhanced Premium Design */}
+      {/* Chat Header - Enhanced Premium Design with Dual AI Display */}
       <div className="relative flex items-center gap-4 px-5 py-4 border-b border-gray-200 dark:border-slate-700 bg-gradient-to-r from-sky-50 via-blue-50/80 to-sky-50 dark:from-sky-950/50 dark:via-blue-950/40 dark:to-sky-950/50">
         {/* Subtle background pattern */}
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] dark:opacity-[0.05]"></div>
 
-        {/* Rover Avatar - Larger with glow effect */}
-        <div className="relative flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg overflow-hidden bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900 dark:to-blue-900 ring-2 ring-sky-200/50 dark:ring-sky-700/50 transition-transform hover:scale-105 duration-300">
+        {/* Active AI Avatar - Switches based on selection */}
+        <div
+          className={`relative flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg overflow-hidden ring-2 transition-all duration-300 hover:scale-105 ${
+            aiProvider === "longcat"
+              ? "bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 ring-purple-200/50 dark:ring-purple-700/50"
+              : "bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900 dark:to-blue-900 ring-sky-200/50 dark:ring-sky-700/50"
+          }`}
+        >
           {/* Glow effect */}
-          <div className="absolute inset-0 bg-gradient-to-br from-sky-400/20 to-blue-600/20 blur-md"></div>
-          <img
-            src="/rover-avatar.png"
-            alt="Rover"
-            className="relative z-10 w-full h-full object-cover"
-            onError={(e) => {
-              e.target.style.display = "none";
-              e.target.nextSibling.style.display = "flex";
-            }}
-          />
-          <Bot
-            className="relative z-10 h-7 w-7 text-sky-600 dark:text-sky-400"
-            style={{ display: "none" }}
-          />
+          <div
+            className={`absolute inset-0 blur-md ${
+              aiProvider === "longcat"
+                ? "bg-gradient-to-br from-purple-400/20 to-pink-600/20"
+                : "bg-gradient-to-br from-sky-400/20 to-blue-600/20"
+            }`}
+          ></div>
+
+          {aiProvider === "longcat" ? (
+            <>
+              <img
+                src="/eva-avatar.png"
+                alt="Eva"
+                className="relative z-10 w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.style.display = "none";
+                  e.target.nextSibling.style.display = "flex";
+                }}
+              />
+              <Brain
+                className="relative z-10 h-7 w-7 text-purple-600 dark:text-purple-400"
+                style={{ display: "none" }}
+              />
+            </>
+          ) : (
+            <>
+              <img
+                src="/rover-avatar.png"
+                alt="Rover"
+                className="relative z-10 w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.style.display = "none";
+                  e.target.nextSibling.style.display = "flex";
+                }}
+              />
+              <Bot
+                className="relative z-10 h-7 w-7 text-sky-600 dark:text-sky-400"
+                style={{ display: "none" }}
+              />
+            </>
+          )}
         </div>
 
-        {/* Header Content */}
+        {/* Header Content - Dynamic based on selected AI */}
         <div className="flex-1 relative z-10">
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-0.5">
-            Rover
-            <Sparkles className="h-4 w-4 text-sky-500 animate-pulse" />
+            {aiProvider === "longcat" ? (
+              <>
+                Eva
+                <Brain className="h-4 w-4 text-purple-500 animate-pulse" />
+              </>
+            ) : (
+              <>
+                Rover
+                <Zap className="h-4 w-4 text-sky-500 animate-pulse" />
+              </>
+            )}
           </h3>
           <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-            Your AI Travel Buddy •{" "}
-            {trip?.userSelection?.location || "Ready to help"}
+            {aiProvider === "longcat"
+              ? "AI Strategic Planner • Deep Thinking Mode"
+              : "AI Travel Buddy • Fast Response Mode"}{" "}
+            • {trip?.userSelection?.location || "Ready to help"}
           </p>
         </div>
 
@@ -466,6 +650,8 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
                   ? "ring-2 ring-sky-300/50 dark:ring-sky-600/50 bg-white dark:bg-slate-800"
                   : message.isError
                   ? "bg-red-500 ring-2 ring-red-300"
+                  : message.provider === "longcat"
+                  ? "bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 ring-2 ring-purple-200/30 dark:ring-purple-700/30"
                   : "bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900 dark:to-blue-900 ring-2 ring-sky-200/30 dark:ring-sky-700/30"
               }`}
             >
@@ -490,19 +676,40 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
                 <Bot className="h-5 w-5 text-white" />
               ) : (
                 <>
-                  <img
-                    src="/rover-avatar.png"
-                    alt="Rover"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                      e.target.nextSibling.style.display = "block";
-                    }}
-                  />
-                  <Bot
-                    className="h-5 w-5 text-sky-600 dark:text-sky-400"
-                    style={{ display: "none" }}
-                  />
+                  {/* Show Eva avatar for LongCat messages, Rover for Gemini */}
+                  {message.provider === "longcat" ? (
+                    <>
+                      <img
+                        src="/eva-avatar.png"
+                        alt="Eva"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                          e.target.nextSibling.style.display = "block";
+                        }}
+                      />
+                      <Brain
+                        className="h-5 w-5 text-purple-600 dark:text-purple-400"
+                        style={{ display: "none" }}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <img
+                        src="/rover-avatar.png"
+                        alt="Rover"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                          e.target.nextSibling.style.display = "block";
+                        }}
+                      />
+                      <Bot
+                        className="h-5 w-5 text-sky-600 dark:text-sky-400"
+                        style={{ display: "none" }}
+                      />
+                    </>
+                  )}
                 </>
               )}
               {/* Fallback User icon (always rendered but hidden unless image fails) */}
@@ -531,6 +738,26 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
                     : "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-200/50 dark:border-slate-700/50 shadow-gray-100 dark:shadow-slate-900/20"
                 }`}
               >
+                {/* AI Provider Badge for assistant messages */}
+                {message.role === "assistant" && message.provider && (
+                  <div className="flex items-center gap-1.5 mb-2 pb-2 border-b border-gray-200 dark:border-slate-700">
+                    {message.provider === "longcat" ? (
+                      <>
+                        <Brain className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                        <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">
+                          Eva {message.thinkingMode ? "Thinking" : "AI"}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-3 w-3 text-sky-600 dark:text-sky-400" />
+                        <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">
+                          Rover Fast
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
                 <p className="text-[15px] leading-loose whitespace-pre-wrap font-normal">
                   {message.content}
                 </p>
@@ -548,28 +775,62 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
         {/* Loading Indicator - Enhanced animation */}
         {isLoading && (
           <div className="flex gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex-shrink-0 w-11 h-11 rounded-2xl bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900 dark:to-blue-900 flex items-center justify-center overflow-hidden shadow-md ring-2 ring-sky-200/30 dark:ring-sky-700/30">
-              <img
-                src="/rover-avatar.png"
-                alt="Rover"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = "none";
-                  e.target.nextSibling.style.display = "block";
-                }}
-              />
-              <Bot
-                className="h-6 w-6 text-sky-600 dark:text-sky-400"
-                style={{ display: "none" }}
-              />
+            <div
+              className={`flex-shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden shadow-md ring-2 ${
+                aiProvider === "longcat"
+                  ? "bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 ring-purple-200/30 dark:ring-purple-700/30"
+                  : "bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900 dark:to-blue-900 ring-sky-200/30 dark:ring-sky-700/30"
+              }`}
+            >
+              {aiProvider === "longcat" ? (
+                <>
+                  <img
+                    src="/eva-avatar.png"
+                    alt="Eva"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      e.target.nextSibling.style.display = "block";
+                    }}
+                  />
+                  <Brain
+                    className="h-6 w-6 text-purple-600 dark:text-purple-400"
+                    style={{ display: "none" }}
+                  />
+                </>
+              ) : (
+                <>
+                  <img
+                    src="/rover-avatar.png"
+                    alt="Rover"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      e.target.nextSibling.style.display = "block";
+                    }}
+                  />
+                  <Bot
+                    className="h-6 w-6 text-sky-600 dark:text-sky-400"
+                    style={{ display: "none" }}
+                  />
+                </>
+              )}
             </div>
             <div className="bg-white dark:bg-slate-800 px-5 py-3.5 rounded-2xl shadow-sm border border-gray-200/50 dark:border-slate-700/50">
               <div className="flex items-center gap-3">
-                <div style={{ animation: 'spin 1s linear infinite' }}>
-                  <Loader2 className="h-5 w-5 text-sky-500" />
+                <div style={{ animation: "spin 1s linear infinite" }}>
+                  <Loader2
+                    className={`h-5 w-5 ${
+                      aiProvider === "longcat"
+                        ? "text-purple-500"
+                        : "text-sky-500"
+                    }`}
+                  />
                 </div>
                 <span className="text-[15px] text-gray-600 dark:text-gray-400 font-medium">
-                  Rover is thinking
+                  {aiProvider === "longcat"
+                    ? "Eva is thinking"
+                    : "Rover is thinking"}
                   <span className="inline-flex">
                     <span className="animate-pulse delay-0">.</span>
                     <span className="animate-pulse delay-100">.</span>
@@ -581,6 +842,153 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
           </div>
         )}
 
+        {/* Quick Start Example Questions - Only show for first-time users */}
+        {messages.length === 1 && (
+          <div className="mt-6 px-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+            <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-3 text-center">
+              ✨ Try these example questions:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Rover Examples - Always available */}
+              <button
+                onClick={() => {
+                  setAiProvider("gemini");
+                  setInput(
+                    `What are the must-visit spots in ${
+                      trip?.userSelection?.location || "my destination"
+                    }?`
+                  );
+                  inputRef.current?.focus();
+                }}
+                className="group flex items-start gap-2.5 p-3 rounded-xl bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border border-sky-200 dark:border-sky-800 hover:border-sky-400 dark:hover:border-sky-600 hover:shadow-md transition-all duration-300 text-left cursor-pointer"
+              >
+                <Zap className="h-4 w-4 text-sky-600 dark:text-sky-400 flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-sky-900 dark:text-sky-100 mb-0.5">
+                    Must-visit spots
+                  </p>
+                  <p className="text-xs text-sky-700 dark:text-sky-300 line-clamp-2">
+                    Quick local recommendations
+                  </p>
+                </div>
+              </button>
+
+              {/* Eva Example - Show with availability indicator */}
+              <button
+                onClick={() => {
+                  if (isLongCatOnline) {
+                    setAiProvider("longcat");
+                    setInput(
+                      "Compare hotel options and help me decide which is best for my budget"
+                    );
+                  } else {
+                    setAiProvider("gemini");
+                    setInput(
+                      "Compare hotel options and help me decide which is best for my budget"
+                    );
+                    toast.info("Rover will help you compare hotels! 🚀");
+                  }
+                  inputRef.current?.focus();
+                }}
+                className={`group flex items-start gap-2.5 p-3 rounded-xl ${
+                  isLongCatOnline
+                    ? "bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border border-purple-200 dark:border-purple-800 hover:border-purple-400 dark:hover:border-purple-600"
+                    : "bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border border-sky-200 dark:border-sky-800 hover:border-sky-400 dark:hover:border-sky-600"
+                } hover:shadow-md transition-all duration-300 text-left cursor-pointer`}
+              >
+                {isLongCatOnline ? (
+                  <Brain className="h-4 w-4 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                ) : (
+                  <Zap className="h-4 w-4 text-sky-600 dark:text-sky-400 flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-xs font-semibold mb-0.5 ${
+                    isLongCatOnline
+                      ? "text-purple-900 dark:text-purple-100"
+                      : "text-sky-900 dark:text-sky-100"
+                  }`}>
+                    Compare hotels {!isLongCatOnline && "(via Rover)"}
+                  </p>
+                  <p className={`text-xs line-clamp-2 ${
+                    isLongCatOnline
+                      ? "text-purple-700 dark:text-purple-300"
+                      : "text-sky-700 dark:text-sky-300"
+                  }`}>
+                    {isLongCatOnline ? "Deep analysis & recommendations" : "Analysis & recommendations"}
+                  </p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  setAiProvider("gemini");
+                  setInput(
+                    "Where can I find the best local food and restaurants?"
+                  );
+                  inputRef.current?.focus();
+                }}
+                className="group flex items-start gap-2.5 p-3 rounded-xl bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border border-sky-200 dark:border-sky-800 hover:border-sky-400 dark:hover:border-sky-600 hover:shadow-md transition-all duration-300 text-left cursor-pointer"
+              >
+                <Zap className="h-4 w-4 text-sky-600 dark:text-sky-400 flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-sky-900 dark:text-sky-100 mb-0.5">
+                    Best local food
+                  </p>
+                  <p className="text-xs text-sky-700 dark:text-sky-300 line-clamp-2">
+                    Fast restaurant suggestions
+                  </p>
+                </div>
+              </button>
+
+              {/* Eva Budget Example - Show with availability indicator */}
+              <button
+                onClick={() => {
+                  if (isLongCatOnline) {
+                    setAiProvider("longcat");
+                    setInput(
+                      "Help me optimize my budget between activities and accommodation"
+                    );
+                  } else {
+                    setAiProvider("gemini");
+                    setInput(
+                      "Help me optimize my budget between activities and accommodation"
+                    );
+                    toast.info("Rover will help with budget planning! 🚀");
+                  }
+                  inputRef.current?.focus();
+                }}
+                className={`group flex items-start gap-2.5 p-3 rounded-xl ${
+                  isLongCatOnline
+                    ? "bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border border-purple-200 dark:border-purple-800 hover:border-purple-400 dark:hover:border-purple-600"
+                    : "bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border border-sky-200 dark:border-sky-800 hover:border-sky-400 dark:hover:border-sky-600"
+                } hover:shadow-md transition-all duration-300 text-left cursor-pointer`}
+              >
+                {isLongCatOnline ? (
+                  <Brain className="h-4 w-4 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                ) : (
+                  <Zap className="h-4 w-4 text-sky-600 dark:text-sky-400 flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-xs font-semibold mb-0.5 ${
+                    isLongCatOnline
+                      ? "text-purple-900 dark:text-purple-100"
+                      : "text-sky-900 dark:text-sky-100"
+                  }`}>
+                    Optimize budget {!isLongCatOnline && "(via Rover)"}
+                  </p>
+                  <p className={`text-xs line-clamp-2 ${
+                    isLongCatOnline
+                      ? "text-purple-700 dark:text-purple-300"
+                      : "text-sky-700 dark:text-sky-300"
+                  }`}>
+                    {isLongCatOnline ? "Strategic planning & allocation" : "Planning & allocation"}
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -588,6 +996,175 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
       <div className="relative px-5 py-4 border-t border-gray-200 dark:border-slate-700 bg-gradient-to-r from-gray-50 via-white to-gray-50 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800">
         {/* Subtle top shadow */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-slate-600 to-transparent"></div>
+
+        {/* AI Provider Selector - Enhanced Professional Design */}
+        <div className="mb-4 p-3 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-slate-800 dark:to-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-sky-500" />
+              Choose Your AI Assistant
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {aiProvider === "gemini" ? "⚡ Fast" : "🧠 Thinking"}
+            </span>
+          </div>
+
+          <div className="flex gap-2">
+            {/* Rover Fast Button - Always available */}
+            <button
+              onClick={() => setAiProvider("gemini")}
+              disabled={isBackendOnline === false}
+              className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-300 ${
+                aiProvider === "gemini"
+                  ? "bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-lg shadow-sky-200 dark:shadow-sky-900/50 scale-105"
+                  : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-sky-50 dark:hover:bg-slate-600 border border-gray-200 dark:border-slate-600"
+              } ${isBackendOnline === false ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+            >
+              <div className="flex items-center gap-2">
+                <Zap
+                  className={`h-4 w-4 ${
+                    aiProvider === "gemini" ? "text-white" : "text-sky-500"
+                  }`}
+                />
+                <span className="font-bold text-sm">Rover Fast</span>
+                {isBackendOnline === true && (
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                )}
+              </div>
+              <span
+                className={`text-xs ${
+                  aiProvider === "gemini"
+                    ? "text-white/90"
+                    : "text-gray-500 dark:text-gray-400"
+                }`}
+              >
+                Quick answers & local tips
+              </span>
+            </button>
+
+            {/* Eva Thinking Button - Show status */}
+            <button
+              onClick={() => {
+                if (isLongCatOnline) {
+                  setAiProvider("longcat");
+                } else {
+                  toast.warning("Eva Thinking Mode isn't available right now. Rover Fast is ready to help! 🚀", {
+                    duration: 4000,
+                  });
+                }
+              }}
+              disabled={!isLongCatOnline}
+              className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-300 ${
+                aiProvider === "longcat"
+                  ? "bg-gradient-to-br from-purple-500 to-pink-600 text-white shadow-lg shadow-purple-200 dark:shadow-purple-900/50 scale-105"
+                  : isLongCatOnline
+                  ? "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-slate-600 border border-gray-200 dark:border-slate-600 cursor-pointer"
+                  : "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-600 border border-gray-300 dark:border-slate-700 cursor-not-allowed opacity-60"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Brain
+                  className={`h-4 w-4 ${
+                    aiProvider === "longcat"
+                      ? "text-white"
+                      : isLongCatOnline
+                      ? "text-purple-500"
+                      : "text-gray-400"
+                  }`}
+                />
+                <span className="font-bold text-sm">Eva Thinking</span>
+                {isLongCatOnline === true && (
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                )}
+                {isLongCatOnline === false && (
+                  <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                )}
+              </div>
+              <span
+                className={`text-xs ${
+                  aiProvider === "longcat"
+                    ? "text-white/90"
+                    : isLongCatOnline
+                    ? "text-gray-500 dark:text-gray-400"
+                    : "text-gray-400 dark:text-gray-600"
+                }`}
+              >
+                {isLongCatOnline === false ? "Currently unavailable" : "Deep analysis & planning"}
+              </span>
+            </button>
+          </div>
+
+          {/* Status explanation when Eva is offline */}
+          {isLongCatOnline === false && (
+            <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                <span>ℹ️</span>
+                <span>Eva is taking a break. Rover is ready to help with all your travel questions!</span>
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Smart Suggestion Banner - Shows when AI recommendation differs from current selection */}
+        {suggestedProvider &&
+          suggestedProvider !== aiProvider &&
+          input.trim().length > 10 &&
+          // ✅ IMPROVED: Only show Eva suggestion if it's actually available
+          (suggestedProvider !== "longcat" || isLongCatOnline) && (
+            <div
+              className={`mb-3 p-3 rounded-xl border-2 transition-all duration-300 animate-in fade-in slide-in-from-top-2 ${
+                suggestedProvider === "longcat"
+                  ? "bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-300 dark:border-purple-700"
+                  : "bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/20 dark:to-blue-950/20 border-sky-300 dark:border-sky-700"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                {suggestedProvider === "longcat" ? (
+                  <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                ) : (
+                  <Zap className="h-5 w-5 text-sky-600 dark:text-sky-400 flex-shrink-0" />
+                )}
+
+                <div className="flex-1">
+                  <p
+                    className={`text-sm font-semibold mb-0.5 ${
+                      suggestedProvider === "longcat"
+                        ? "text-purple-900 dark:text-purple-100"
+                        : "text-sky-900 dark:text-sky-100"
+                    }`}
+                  >
+                    💡{" "}
+                    {suggestedProvider === "longcat"
+                      ? "Eva Thinking"
+                      : "Rover Fast"}{" "}
+                    recommended
+                  </p>
+                  <p
+                    className={`text-xs ${
+                      suggestedProvider === "longcat"
+                        ? "text-purple-700 dark:text-purple-300"
+                        : "text-sky-700 dark:text-sky-300"
+                    }`}
+                  >
+                    {suggestedProvider === "longcat"
+                      ? "This question needs deep analysis or comparison"
+                      : "This is a quick question - Rover can answer faster"}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setAiProvider(suggestedProvider)}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 active:scale-95 shadow-sm ${
+                    suggestedProvider === "longcat"
+                      ? "bg-gradient-to-br from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white"
+                      : "bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white"
+                  }`}
+                >
+                  Switch →
+                </button>
+              </div>
+            </div>
+          )}
 
         <form onSubmit={handleSubmit} className="flex gap-3 mb-3">
           <div className="flex-1 relative group">
@@ -616,7 +1193,7 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
             }
           >
             {isLoading ? (
-              <div style={{ animation: 'spin 1s linear infinite' }}>
+              <div style={{ animation: "spin 1s linear infinite" }}>
                 <Loader2 className="h-5 w-5" />
               </div>
             ) : (

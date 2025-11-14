@@ -330,7 +330,7 @@ function TripGenerationModal({
                         {isComplete ? (
                           <FaCheck className="text-4xl text-white animate-bounce" />
                         ) : (
-                          <div style={{ animation: 'spin 1s linear infinite' }}>
+                          <div style={{ animation: "spin 1s linear infinite" }}>
                             <FaCompass className="text-4xl text-white" />
                           </div>
                         )}
@@ -465,7 +465,9 @@ function TripGenerationModal({
                             {isCompleted ? (
                               <FaCheck className="text-white text-xl" />
                             ) : isCurrent ? (
-                              <div style={{ animation: 'spin 1s linear infinite' }}>
+                              <div
+                                style={{ animation: "spin 1s linear infinite" }}
+                              >
                                 <FaSpinner className="text-white text-xl" />
                               </div>
                             ) : (
@@ -507,7 +509,7 @@ function TripGenerationModal({
                 {validationPhase && current === "validation" && (
                   <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 dark:from-purple-950/30 dark:via-pink-950/30 dark:to-purple-950/30 rounded-2xl p-5 border border-purple-200 dark:border-purple-800">
                     <div className="flex items-center gap-3 mb-2">
-                      <div style={{ animation: 'spin 1s linear infinite' }}>
+                      <div style={{ animation: "spin 1s linear infinite" }}>
                         <FaSpinner className="text-purple-500 dark:text-purple-400" />
                       </div>
                       <h4 className="font-semibold text-purple-900 dark:text-purple-100">

@@ -8,7 +8,7 @@ import { FaLock, FaUser, FaEye, FaEyeSlash, FaArrowLeft } from "react-icons/fa";
 const AdminLogin = () => {
   const [credentials, setCredentials] = useState({
     username: "",
-    password: ""
+    password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -20,7 +20,7 @@ const AdminLogin = () => {
     if (adminUser) {
       try {
         const adminData = JSON.parse(adminUser);
-        
+
         // Check if session is still valid (8 hours)
         if (adminData.expiresAt && new Date(adminData.expiresAt) > new Date()) {
           navigate("/admin");
@@ -37,15 +37,15 @@ const AdminLogin = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setCredentials(prev => ({
+    setCredentials((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    
+
     // Validate inputs
     if (!credentials.username.trim() || !credentials.password.trim()) {
       toast.error("Please enter both username and password");
@@ -55,7 +55,7 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     // Simulate network delay for security
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
     try {
       // Default admin credentials
@@ -67,12 +67,17 @@ const AdminLogin = () => {
       const isBusinessHours = currentHour >= 3 && currentHour <= 23;
 
       if (!isBusinessHours) {
-        toast.error("Admin access is restricted during off-hours (3 AM - 11 PM)");
+        toast.error(
+          "Admin access is restricted during off-hours (3 AM - 11 PM)"
+        );
         setIsLoading(false);
         return;
       }
 
-      if (credentials.username === defaultUsername && credentials.password === defaultPassword) {
+      if (
+        credentials.username === defaultUsername &&
+        credentials.password === defaultPassword
+      ) {
         // Create admin session
         const adminSession = {
           username: credentials.username,
@@ -84,28 +89,27 @@ const AdminLogin = () => {
           lastActivity: new Date().toISOString(),
           loginIP: "localhost", // In production, get actual IP
         };
-        
+
         localStorage.setItem("adminUser", JSON.stringify(adminSession));
-        
+
         toast.success("Admin login successful! Welcome back.", {
-          description: "Redirecting to admin dashboard..."
+          description: "Redirecting to admin dashboard...",
         });
-        
+
         setTimeout(() => {
           navigate("/admin");
         }, 1000);
-        
       } else {
         // Rate limiting simulation
         toast.error("Invalid credentials. Access denied.", {
-          description: "Please check your username and password."
+          description: "Please check your username and password.",
         });
       }
     } catch (error) {
       console.error("Login error:", error);
       toast.error("Login failed. Please try again.");
     }
-    
+
     setIsLoading(false);
   };
 
@@ -125,9 +129,7 @@ const AdminLogin = () => {
             <div className="mx-auto w-20 h-20 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mb-6 shadow-2xl">
               <FaLock className="text-white text-2xl" />
             </div>
-            <h1 className="text-4xl font-bold text-white mb-2">
-              Admin Portal
-            </h1>
+            <h1 className="text-4xl font-bold text-white mb-2">Admin Portal</h1>
             <p className="text-blue-200 text-lg">
               Secure access to TravelRover administration
             </p>
@@ -198,9 +200,9 @@ const AdminLogin = () => {
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center gap-2">
-                    <div 
+                    <div
                       className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                      style={{ animation: 'spin 1s linear infinite' }}
+                      style={{ animation: "spin 1s linear infinite" }}
                     ></div>
                     Authenticating...
                   </div>
@@ -211,12 +213,15 @@ const AdminLogin = () => {
             </form>
 
             {/* Default Credentials Info - Development Only */}
-            {process.env.NODE_ENV === 'development' && (
+            {process.env.NODE_ENV === "development" && (
               <div className="mt-6 p-4 bg-blue-500/20 border border-blue-400/30 rounded-lg">
                 <p className="text-xs text-blue-200 text-center">
-                  <strong>Development Mode:</strong><br/>
-                  Username: <code className="bg-black/30 px-1 rounded">admin</code> | 
-                  Password: <code className="bg-black/30 px-1 rounded">admin</code>
+                  <strong>Development Mode:</strong>
+                  <br />
+                  Username:{" "}
+                  <code className="bg-black/30 px-1 rounded">admin</code> |
+                  Password:{" "}
+                  <code className="bg-black/30 px-1 rounded">admin</code>
                 </p>
               </div>
             )}

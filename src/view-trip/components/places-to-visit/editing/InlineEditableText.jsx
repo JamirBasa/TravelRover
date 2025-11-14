@@ -243,7 +243,7 @@ function InlineEditableText({
         {isSaving ? (
           <div
             className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full"
-            style={{ animation: 'spin 1s linear infinite' }}
+            style={{ animation: "spin 1s linear infinite" }}
             role="status"
             aria-label="Saving..."
           />

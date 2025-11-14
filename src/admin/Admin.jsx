@@ -930,9 +930,9 @@ const Admin = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-100 flex items-center justify-center px-4">
         <div className="text-center">
-          <div 
+          <div
             className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-sky-500 border-t-transparent rounded-full mx-auto mb-4"
-            style={{ animation: 'spin 1s linear infinite' }}
+            style={{ animation: "spin 1s linear infinite" }}
           ></div>
           <p className="text-sky-700 font-medium text-sm sm:text-base">
             Verifying admin access...
@@ -1100,9 +1100,9 @@ const Admin = () => {
             {loading && (
               <div className="flex justify-center items-center py-12">
                 <div className="text-center">
-                  <div 
+                  <div
                     className="rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4"
-                    style={{ animation: 'spin 1s linear infinite' }}
+                    style={{ animation: "spin 1s linear infinite" }}
                   ></div>
                   <p className="text-gray-600 font-medium">
                     Loading dashboard statistics...
@@ -1842,11 +1842,14 @@ const Admin = () => {
                         <td className="px-4 py-3 text-sm text-gray-600 hidden xl:table-cell">
                           <div className="flex items-center gap-2">
                             <span className="text-base">🕒</span>
-                            {new Date(trip.created_at).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric'
-                            })}
+                            {new Date(trip.created_at).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              }
+                            )}
                           </div>
                         </td>
 

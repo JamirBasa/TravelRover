@@ -155,7 +155,9 @@ const PersonalInfoStep = ({ profileData, handleInputChange }) => {
           <div>
             <label className="block text-xs font-semibold text-gray-800 dark:text-gray-200 mb-1.5">
               Middle Name{" "}
-              <span className="text-gray-400 dark:text-gray-500 text-xs">(Optional)</span>
+              <span className="text-gray-400 dark:text-gray-500 text-xs">
+                (Optional)
+              </span>
             </label>
             <Input
               value={profileData.middleName}
@@ -170,7 +172,9 @@ const PersonalInfoStep = ({ profileData, handleInputChange }) => {
             <label className="block text-xs font-semibold text-gray-800 dark:text-gray-200 mb-1.5 flex items-center gap-1">
               <FaCalendar className="text-sky-600 dark:text-sky-400 text-xs" />
               Date of Birth *{" "}
-              <span className="text-gray-400 dark:text-gray-500 font-normal">(18+)</span>
+              <span className="text-gray-400 dark:text-gray-500 font-normal">
+                (18+)
+              </span>
             </label>
             <Input
               type="date"

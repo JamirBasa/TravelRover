@@ -1060,9 +1060,9 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
-            <div 
+            <div
               className="rounded-full h-5 w-5 border-b-2 border-sky-600 dark:border-sky-500"
-              style={{ animation: 'spin 1s linear infinite' }}
+              style={{ animation: "spin 1s linear infinite" }}
             ></div>
             <span>Loading map...</span>
           </div>
@@ -1184,7 +1184,7 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
             {/* Updating Indicator */}
             {isUpdating && !isGeocoding && (
               <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-sky-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div style={{ animation: 'spin 1s linear infinite' }}>
+                <div style={{ animation: "spin 1s linear infinite" }}>
                   <RefreshCw className="h-4 w-4" />
                 </div>
                 <span className="text-sm font-medium">Updating map...</span>
@@ -1242,7 +1242,7 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
                   variant="outline"
                   className="ml-2 gap-1.5 text-sky-600 dark:text-sky-400 border-sky-300 dark:border-sky-700"
                 >
-                  <div style={{ animation: 'spin 1s linear infinite' }}>
+                  <div style={{ animation: "spin 1s linear infinite" }}>
                     <RefreshCw className="h-3 w-3" />
                   </div>
                   Updating
@@ -1260,7 +1260,11 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
                 className="gap-2 h-9 text-sm"
                 title="Refresh map locations"
               >
-                <div style={isGeocoding ? { animation: 'spin 1s linear infinite' } : {}}>
+                <div
+                  style={
+                    isGeocoding ? { animation: "spin 1s linear infinite" } : {}
+                  }
+                >
                   <RefreshCw className="h-4 w-4" />
                 </div>
                 Refresh

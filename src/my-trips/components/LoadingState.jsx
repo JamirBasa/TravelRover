@@ -24,7 +24,7 @@ function LoadingState() {
             {/* Main spinning container - PERFECTLY CENTERED */}
             <div className="absolute inset-0 brand-gradient rounded-full shadow-xl shadow-sky-500/30 dark:shadow-sky-500/20 flex items-center justify-center">
               {/* ✅ FIX: Use inline style to force animation */}
-              <div style={{ animation: 'spin 1s linear infinite' }}>
+              <div style={{ animation: "spin 1s linear infinite" }}>
                 <AiOutlineLoading3Quarters className="h-8 w-8 text-white" />
               </div>
             </div>

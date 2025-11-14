@@ -110,9 +110,9 @@ function WeatherForecast({ trip }) {
     return (
       <div className="bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 dark:from-sky-950/30 dark:via-blue-950/30 dark:to-indigo-950/30 rounded-lg border border-sky-200 dark:border-sky-800 p-6 shadow-md">
         <div className="flex items-center justify-center gap-3">
-          <div 
-            className="w-5 h-5 border-2 border-sky-500 dark:border-sky-400 border-t-transparent rounded-full" 
-            style={{ animation: 'spin 1s linear infinite' }}
+          <div
+            className="w-5 h-5 border-2 border-sky-500 dark:border-sky-400 border-t-transparent rounded-full"
+            style={{ animation: "spin 1s linear infinite" }}
           />
           <p className="text-sm text-gray-600 dark:text-gray-400 tracking-wide">
             Loading weather forecast...
@@ -122,7 +122,7 @@ function WeatherForecast({ trip }) {
     );
   }
 
-    // Show helpful message if forecast not available
+  // Show helpful message if forecast not available
   if (error || !weatherData || !weatherData.available) {
     logDebug("WeatherForecast", "Not available due to error or missing data", {
       hasError: !!error,
@@ -147,7 +147,9 @@ function WeatherForecast({ trip }) {
       if (daysUntilTrip > 14) {
         const daysRemaining = daysUntilTrip - 14;
         forecastTitle = "Weather Info Available Soon";
-        forecastMessage = `Check back in ${daysRemaining} day${daysRemaining > 1 ? 's' : ''}`;
+        forecastMessage = `Check back in ${daysRemaining} day${
+          daysRemaining > 1 ? "s" : ""
+        }`;
         forecastDetail = `Weather forecasts become available 14 days before your trip. Your trip starts ${daysUntilTrip} days from now.`;
       } else if (daysUntilTrip < 0) {
         forecastTitle = "Trip Already Started";
@@ -156,7 +158,8 @@ function WeatherForecast({ trip }) {
       } else {
         forecastTitle = "Weather Data Unavailable";
         forecastMessage = "Unable to load weather information";
-        forecastDetail = error || "Please try refreshing the page or check back later.";
+        forecastDetail =
+          error || "Please try refreshing the page or check back later.";
       }
     }
 
@@ -200,8 +203,9 @@ function WeatherForecast({ trip }) {
 
   // Calculate trip alignment
   const tripStartDate = trip?.userSelection?.startDate;
-  const tripDuration = trip?.userSelection?.duration || weatherData.forecast.length;
-  
+  const tripDuration =
+    trip?.userSelection?.duration || weatherData.forecast.length;
+
   return (
     <div className="bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 dark:from-sky-950/30 dark:via-blue-950/30 dark:to-indigo-950/30 rounded-xl border border-sky-200 dark:border-sky-800 p-6 shadow-lg">
       {/* Header */}
@@ -215,18 +219,24 @@ function WeatherForecast({ trip }) {
               Weather for Your Trip
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
-              {weatherData.location} • {tripStartDate ? new Date(tripStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Your dates'}
+              {weatherData.location} •{" "}
+              {tripStartDate
+                ? new Date(tripStartDate).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "Your dates"}
             </p>
           </div>
         </div>
-        
+
         {/* Temperature Unit Toggle */}
         <button
           onClick={() => setShowFahrenheit(!showFahrenheit)}
           className="px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
           title="Toggle temperature unit"
         >
-          {showFahrenheit ? '°F' : '°C'}
+          {showFahrenheit ? "°F" : "°C"}
         </button>
       </div>
 
@@ -257,7 +267,10 @@ function WeatherForecast({ trip }) {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {recommendation.packingList.slice(0, 6).map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <div
+                  key={idx}
+                  className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+                >
                   <span className="w-1.5 h-1.5 bg-amber-500 rounded-full flex-shrink-0" />
                   <span>{item}</span>
                 </div>
@@ -276,7 +289,10 @@ function WeatherForecast({ trip }) {
               </div>
               <ul className="space-y-2">
                 {recommendation.tips.map((tip, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <li
+                    key={idx}
+                    className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"
+                  >
                     <span className="text-amber-500 mt-0.5">•</span>
                     <span>{tip}</span>
                   </li>
@@ -294,67 +310,80 @@ function WeatherForecast({ trip }) {
           Daily Weather Forecast
         </h4>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {weatherData.forecast.slice(0, Math.min(5, tripDuration)).map((day, index) => {
-            const temp = showFahrenheit ? celsiusToFahrenheit(day.tempMax) : day.tempMax;
-            const tempLow = showFahrenheit ? celsiusToFahrenheit(day.tempMin) : day.tempMin;
-            
-            return (
-              <div
-                key={day.date}
-                className="bg-white dark:bg-slate-900/50 rounded-xl p-4 border border-sky-100 dark:border-sky-900 hover:shadow-md hover:border-sky-300 dark:hover:border-sky-700 transition-all"
-              >
-                {/* Date */}
-                <div className="text-center mb-3">
-                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                    {index === 0 ? "Today" : new Date(day.date).toLocaleDateString("en-US", { weekday: "short" })}
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                    {new Date(day.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </p>
-                </div>
+          {weatherData.forecast
+            .slice(0, Math.min(5, tripDuration))
+            .map((day, index) => {
+              const temp = showFahrenheit
+                ? celsiusToFahrenheit(day.tempMax)
+                : day.tempMax;
+              const tempLow = showFahrenheit
+                ? celsiusToFahrenheit(day.tempMin)
+                : day.tempMin;
 
-                {/* Weather Icon & Condition */}
-                <div className="text-center mb-3">
-                  <div className="text-4xl mb-2">{day.icon}</div>
-                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                    {getSimpleWeatherDescription(day.condition)}
-                  </p>
-                </div>
+              return (
+                <div
+                  key={day.date}
+                  className="bg-white dark:bg-slate-900/50 rounded-xl p-4 border border-sky-100 dark:border-sky-900 hover:shadow-md hover:border-sky-300 dark:hover:border-sky-700 transition-all"
+                >
+                  {/* Date */}
+                  <div className="text-center mb-3">
+                    <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      {index === 0
+                        ? "Today"
+                        : new Date(day.date).toLocaleDateString("en-US", {
+                            weekday: "short",
+                          })}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                      {new Date(day.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
 
-                {/* Temperature - Prominent */}
-                <div className="text-center mb-3 pb-3 border-b border-gray-100 dark:border-gray-800">
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                      {temp}°
-                    </span>
-                    <div className="text-left">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
-                        High
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 leading-tight">
-                        {tempLow}° low
-                      </p>
+                  {/* Weather Icon & Condition */}
+                  <div className="text-center mb-3">
+                    <div className="text-4xl mb-2">{day.icon}</div>
+                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                      {getSimpleWeatherDescription(day.condition)}
+                    </p>
+                  </div>
+
+                  {/* Temperature - Prominent */}
+                  <div className="text-center mb-3 pb-3 border-b border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                        {temp}°
+                      </span>
+                      <div className="text-left">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
+                          High
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 leading-tight">
+                          {tempLow}° low
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Rain Indicator - Prominent if rainy */}
-                {day.rainChance === "Yes" && (
-                  <div className="flex items-center justify-center gap-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg px-2 py-2 text-xs font-medium">
-                    <CloudRain className="h-4 w-4" />
-                    <span>Rain Expected</span>
-                  </div>
-                )}
-                
-                {day.rainChance === "No" && (
-                  <div className="flex items-center justify-center gap-1.5 text-gray-500 dark:text-gray-400 text-xs">
-                    <Sun className="h-3.5 w-3.5" />
-                    <span>No rain</span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  {/* Rain Indicator - Prominent if rainy */}
+                  {day.rainChance === "Yes" && (
+                    <div className="flex items-center justify-center gap-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg px-2 py-2 text-xs font-medium">
+                      <CloudRain className="h-4 w-4" />
+                      <span>Rain Expected</span>
+                    </div>
+                  )}
+
+                  {day.rainChance === "No" && (
+                    <div className="flex items-center justify-center gap-1.5 text-gray-500 dark:text-gray-400 text-xs">
+                      <Sun className="h-3.5 w-3.5" />
+                      <span>No rain</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
         </div>
       </div>
 
@@ -378,43 +407,48 @@ function WeatherForecast({ trip }) {
 
       {showDetails && (
         <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 animate-in fade-in duration-200">
-          {weatherData.forecast.slice(0, Math.min(5, tripDuration)).map((day) => (
-            <div
-              key={`details-${day.date}`}
-              className="bg-gray-50 dark:bg-slate-900/30 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
-            >
-              <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                {new Date(day.date).toLocaleDateString("en-US", { weekday: "short" })}
-              </p>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
-                    <Droplets className="h-3.5 w-3.5" />
-                    Humidity
-                  </span>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {day.humidity}%
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
-                    <Wind className="h-3.5 w-3.5" />
-                    Wind
-                  </span>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {day.windSpeed} km/h
-                  </span>
+          {weatherData.forecast
+            .slice(0, Math.min(5, tripDuration))
+            .map((day) => (
+              <div
+                key={`details-${day.date}`}
+                className="bg-gray-50 dark:bg-slate-900/30 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
+              >
+                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                  {new Date(day.date).toLocaleDateString("en-US", {
+                    weekday: "short",
+                  })}
+                </p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                      <Droplets className="h-3.5 w-3.5" />
+                      Humidity
+                    </span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                      {day.humidity}%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                      <Wind className="h-3.5 w-3.5" />
+                      Wind
+                    </span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                      {day.windSpeed} km/h
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       )}
 
       {/* Footer */}
       <div className="mt-6 pt-4 border-t border-sky-200 dark:border-sky-800">
         <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-          Weather data from OpenWeatherMap • Updates every hour • Forecast accuracy may vary
+          Weather data from OpenWeatherMap • Updates every hour • Forecast
+          accuracy may vary
         </p>
       </div>
     </div>

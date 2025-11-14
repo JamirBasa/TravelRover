@@ -57,9 +57,9 @@ export const LoadingSpinner = ({
   if (minimal) {
     return (
       <div className="flex items-center justify-center gap-3 p-4">
-        <div 
-          className="w-5 h-5 border-2 border-sky-500 dark:border-sky-400 border-t-transparent rounded-full" 
-          style={{ animation: 'spin 1s linear infinite' }}
+        <div
+          className="w-5 h-5 border-2 border-sky-500 dark:border-sky-400 border-t-transparent rounded-full"
+          style={{ animation: "spin 1s linear infinite" }}
         />
         <span className="text-sm text-gray-600 dark:text-gray-400 tracking-wide">
           {message}
@@ -91,7 +91,7 @@ export const LoadingSpinner = ({
             {/* Main spinning container - PERFECTLY CENTERED */}
             <div className="absolute inset-0 brand-gradient rounded-full shadow-xl shadow-sky-500/30 dark:shadow-sky-500/20 flex items-center justify-center">
               {/* ✅ FIX: Inline style animation to bypass CSS conflicts */}
-              <div style={{ animation: 'spin 1s linear infinite' }}>
+              <div style={{ animation: "spin 1s linear infinite" }}>
                 <AiOutlineLoading3Quarters className="h-8 w-8 text-white" />
               </div>
             </div>

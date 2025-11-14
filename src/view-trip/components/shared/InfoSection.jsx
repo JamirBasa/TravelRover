@@ -261,9 +261,9 @@ function InfoSection({ trip }) {
                   <div className="relative w-16 h-16">
                     <div className="absolute inset-0 brand-gradient rounded-full opacity-20 animate-ping" />
                     <div className="absolute inset-0 brand-gradient rounded-full shadow-xl flex items-center justify-center">
-                      <div 
-                        className="w-6 h-6 border-2 border-white border-t-transparent rounded-full" 
-                        style={{ animation: 'spin 1s linear infinite' }}
+                      <div
+                        className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
+                        style={{ animation: "spin 1s linear infinite" }}
                       />
                     </div>
                   </div>
