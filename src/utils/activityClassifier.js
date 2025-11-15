@@ -23,34 +23,55 @@ export function isLogisticsItem(item) {
     return false; // Unknown format, treat as activity
   }
 
-  // Exclude meals
+  // Exclude meals (generic and specific patterns)
   if (text.includes('breakfast') || text.includes('lunch') || text.includes('dinner') ||
       text.includes('meal') || text.includes('snack') || text.includes('coffee break') ||
-      text.includes('brunch') || text.includes('eating') || text.includes('food stop')) {
+      text.includes('brunch') || text.includes('eating') || text.includes('food stop') ||
+      text.includes('breakfast at') || text.includes('lunch at') || text.includes('dinner at') ||
+      text.includes('eat at') || text.includes('dine at') || text.includes('food court') ||
+      text.includes('merienda') || text.includes('light meal') || text.includes('quick bite')) {
     return true;
   }
 
-  // Exclude transit and transportation
+  // Exclude transit and transportation (expanded patterns)
   if (text.includes('transfer') || text.includes('arrive') || text.includes('arrival') ||
       text.includes('depart') || text.includes('departure') ||
       text.includes('bus to') || text.includes('flight to') || text.includes('drive to') ||
+      text.includes('taxi to') || text.includes('grab to') || text.includes('uber to') ||
       text.includes('taxi') || text.includes('grab') || text.includes('jeepney') ||
-      text.includes('transport') || text.includes('travel to')) {
+      text.includes('transport') || text.includes('travel to') || text.includes('ride to') ||
+      text.includes('van transfer') || text.includes('shuttle to') || text.includes('ferry to') ||
+      text.includes('airport transfer') || text.includes('ground transfer') ||
+      text.includes('proceed to') || text.includes('head to') || text.includes('commute to')) {
     return true;
   }
 
-  // Exclude hotel operations
+  // Exclude hotel operations (comprehensive patterns)
   if (text.includes('check-in') || text.includes('check in') || 
       text.includes('check-out') || text.includes('check out') ||
+      text.includes('checkout') || text.includes('checkin') ||
       text.includes('return to hotel') || text.includes('hotel return') ||
       text.includes('back to hotel') || text.includes('rest at hotel') ||
-      text.includes('hotel rest') || text.includes('freshen up')) {
+      text.includes('hotel rest') || text.includes('freshen up') ||
+      text.includes('hotel check') || text.includes('settle in') ||
+      text.includes('unpack') || text.includes('prepare for next day')) {
     return true;
   }
 
-  // Exclude rest/downtime
+  // Exclude rest/downtime (expanded patterns)
   if (text.includes('rest') || text.includes('relax') || text.includes('free time') ||
-      text.includes('leisure time') || text.includes('downtime')) {
+      text.includes('leisure time') || text.includes('downtime') ||
+      text.includes('rest period') || text.includes('break time') ||
+      text.includes('chill') || text.includes('unwind') || text.includes('recuperate')) {
+    return true;
+  }
+
+  // Exclude airport operations
+  if (text.includes('airport') && (
+      text.includes('arrival') || text.includes('departure') ||
+      text.includes('flight') || text.includes('terminal') ||
+      text.includes('boarding') || text.includes('check-in')
+  )) {
     return true;
   }
 

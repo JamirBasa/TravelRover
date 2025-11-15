@@ -7,28 +7,37 @@ import {
   isValidPricing,
   isValidRating,
 } from "./locationDataValidator";
+import { buildGooglePlacesQuery } from "@/utils/googlePlacesQueryBuilder";
 
 /**
  * LocationInfoWindow Component
  * Displays detailed information popup when a marker is clicked with place photo
+ * ✅ Enhanced with optimized Google Places queries for better photo accuracy
  */
-export function LocationInfoWindow({ selectedLocation, onClose }) {
+/* global google */
+export function LocationInfoWindow({ selectedLocation, onClose, trip }) {
   const [placePhoto, setPlacePhoto] = useState(null);
   const [isLoadingPhoto, setIsLoadingPhoto] = useState(false);
 
   useEffect(() => {
     if (!selectedLocation) return;
 
-    // Fetch place photo using Google Places API
+    // Fetch place photo using Google Places API with optimized query
     const fetchPlacePhoto = async () => {
       setIsLoadingPhoto(true);
       try {
+        // ✅ Use optimized query builder for better place results
+        const optimizedQuery = buildGooglePlacesQuery(
+          { placeName: selectedLocation.name, name: selectedLocation.name },
+          trip
+        );
+
         const service = new google.maps.places.PlacesService(
           document.createElement("div")
         );
 
         const request = {
-          query: selectedLocation.name,
+          query: optimizedQuery || selectedLocation.name,
           fields: ["photos", "name"],
         };
 
@@ -48,14 +57,14 @@ export function LocationInfoWindow({ selectedLocation, onClose }) {
           }
           setIsLoadingPhoto(false);
         });
-      } catch (error) {
+      } catch {
         // Silently handle photo fetch errors
         setIsLoadingPhoto(false);
       }
     };
 
     fetchPlacePhoto();
-  }, [selectedLocation]);
+  }, [selectedLocation, trip]);
 
   if (!selectedLocation || !selectedLocation.coordinates) return null;
 

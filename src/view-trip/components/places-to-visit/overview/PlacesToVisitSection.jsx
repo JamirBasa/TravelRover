@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import PlaceCardItem from "../../shared/PlaceCardItem";
 
-function PlacesToVisitSection({ placesToVisit }) {
+function PlacesToVisitSection({ placesToVisit, trip }) {
   const scrollContainerRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -138,7 +138,7 @@ function PlacesToVisitSection({ placesToVisit }) {
               className="place-card-item flex-shrink-0 snap-start
                        w-[calc(100%-20px)] sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
             >
-              <PlaceCardItem place={place} />
+              <PlaceCardItem place={place} trip={trip} />
             </div>
           ))}
         </div>

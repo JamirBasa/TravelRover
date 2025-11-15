@@ -59,7 +59,7 @@ const LocationStep = ({ profileData, handleInputChange }) => {
   return (
     <div className="max-w-2xl mx-auto">
       {/* Location Section - Ultra Compact */}
-      <div className="brand-card p-5 border-sky-200">
+      <div className="brand-card p-5 border-sky-200 dark:border-sky-700 bg-white dark:bg-slate-800">
         <div className="flex items-center gap-2 mb-4">
           <div className="brand-gradient p-1.5 rounded-lg">
             <FaMapMarkerAlt className="text-white text-base" />
@@ -72,8 +72,8 @@ const LocationStep = ({ profileData, handleInputChange }) => {
         <div className="space-y-3">
           {/* Region/Province Selection */}
           <div>
-            <label className="block text-xs font-semibold text-gray-800 mb-1.5 flex items-center gap-1">
-              <FaMapSigns className="text-sky-600 text-xs" />
+            <label className="block text-xs font-semibold text-gray-800 dark:text-gray-200 mb-1.5 flex items-center gap-1">
+              <FaMapSigns className="text-sky-600 dark:text-sky-400 text-xs" />
               Region/Province *
             </label>
             <Select
@@ -87,8 +87,8 @@ const LocationStep = ({ profileData, handleInputChange }) => {
 
           {/* City Selection */}
           <div>
-            <label className="block text-xs font-semibold text-gray-800 mb-1.5 flex items-center gap-1">
-              <FaMapMarkerAlt className="text-sky-600 text-xs" />
+            <label className="block text-xs font-semibold text-gray-800 dark:text-gray-200 mb-1.5 flex items-center gap-1">
+              <FaMapMarkerAlt className="text-sky-600 dark:text-sky-400 text-xs" />
               City/Municipality *
             </label>
             {cityOptions.length > 0 ? (

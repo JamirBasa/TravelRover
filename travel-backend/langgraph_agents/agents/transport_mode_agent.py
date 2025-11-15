@@ -106,7 +106,13 @@ class TransportModeAgent(BaseAgent):
                 # ✅ CHECK: If route has "practical" flag, treat as ground_preferred even if time exceeds threshold
                 if ground_route.get("practical", False):
                     logger.info(f"✅ Ground transport preferred (practical override): {ground_route['travel_time']} hours with excellent service")
-                    return self._create_ground_preferred_result(ground_route, convenience, regional_context)
+                    # ✅ FIX: Override convenience message for practical routes
+                    convenience_override = {
+                        **convenience,
+                        "user_message": f"Well-established route with frequent service",
+                        "level": "CONVENIENT"  # Override level to CONVENIENT
+                    }
+                    return self._create_ground_preferred_result(ground_route, convenience_override, regional_context)
                 elif convenience["level"] == "IMPRACTICAL" or ground_route.get("impractical", False):
                     logger.info(f"⚠️ Ground transport impractical: {ground_route['travel_time']}+ hours")
                     return self._create_flight_required_result(ground_route, convenience, regional_context)

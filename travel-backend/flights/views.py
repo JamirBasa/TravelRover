@@ -122,6 +122,22 @@ class FlightSearchView(APIView):
                 if parsed_flight:
                     flights.append(parsed_flight)
         
+        # ✅ FIX: Deduplicate flights by flight number + departure time
+        # SerpAPI often returns same flight in both best_flights and other_flights
+        seen_flights = set()
+        deduplicated_flights = []
+        
+        for flight in flights:
+            flight_key = f"{flight.get('flight_number', 'N/A')}_{flight.get('departure', 'N/A')}"
+            if flight_key not in seen_flights:
+                seen_flights.add(flight_key)
+                deduplicated_flights.append(flight)
+            else:
+                logger.info(f"Removed duplicate flight: {flight.get('name')} {flight.get('flight_number')}")
+        
+        logger.info(f"Deduplicated {len(flights)} flights to {len(deduplicated_flights)}")
+        flights = deduplicated_flights
+        
         # Get price insights
         price_insights = self.get_price_insights(results)
         
@@ -177,6 +193,8 @@ class FlightSearchView(APIView):
             return {
                 'name': airline,
                 'price': formatted_price,
+                'price_per_person': formatted_price,  # 🆕 SerpAPI prices are per-person by default
+                'pricing_note': 'per person',  # 🆕 Explicit label for frontend
                 'departure': departure_time,
                 'arrival': arrival_time,
                 'duration': duration,

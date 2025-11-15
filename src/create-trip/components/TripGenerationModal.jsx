@@ -78,6 +78,13 @@ const ALL_STEPS = [
     required: true, // Always shown
   },
   {
+    id: "validation",
+    label: "Quality Check",
+    icon: FaCheck,
+    color: "from-purple-500 to-pink-500",
+    required: true, // 🆕 Always validate
+  },
+  {
     id: "finalize",
     label: "Complete",
     icon: FaCheck,
@@ -91,6 +98,7 @@ function deriveProgress({
   flightLoading,
   hotelLoading,
   langGraphLoading,
+  validationPhase, // 🆕 NEW: Track validation progress
   includeFlights = false,
   includeHotels = false,
   groundTransportPreferred = false,
@@ -157,13 +165,25 @@ function deriveProgress({
     (!includeHotels || doneHotels) &&
     ((!includeFlights && !includeHotels) || doneLang);
 
-  if (allRequestedServicesDone && !loading) {
+  if (allRequestedServicesDone) {
     completed.push("itinerary");
-    completed.push("finalize");
+
+    // 🆕 NEW: Add validation step tracking
+    if (validationPhase && ["validation", "saving"].includes(validationPhase)) {
+      completed.push("validation");
+    }
+
+    if (!loading && validationPhase === "saving") {
+      completed.push("finalize");
+    }
   }
 
   const current =
-    activeSteps.find((s) => !completed.includes(s.id))?.id || "finalize";
+    activeSteps.find((s) => !completed.includes(s.id))?.id ||
+    (validationPhase &&
+    ["parsing", "autofix", "validation"].includes(validationPhase)
+      ? "validation"
+      : "finalize");
   const progressRatio = completed.length / activeSteps.length;
   const progress = Math.min(100, Math.round(progressRatio * 100));
 
@@ -189,6 +209,7 @@ function TripGenerationModal({
   flightLoading = false,
   hotelLoading = false,
   langGraphLoading = false,
+  validationPhase = null, // 🆕 NEW: 'parsing' | 'autofix' | 'validation' | 'saving'
   destination = "Your Dream Destination",
   duration = 3,
   includeFlights = false,
@@ -209,6 +230,7 @@ function TripGenerationModal({
         flightLoading,
         hotelLoading,
         langGraphLoading,
+        validationPhase, // 🆕 Pass validation phase
         includeFlights,
         includeHotels,
         groundTransportPreferred,
@@ -218,6 +240,7 @@ function TripGenerationModal({
       flightLoading,
       hotelLoading,
       langGraphLoading,
+      validationPhase, // 🆕 Add to dependencies
       includeFlights,
       includeHotels,
       groundTransportPreferred,
@@ -307,14 +330,9 @@ function TripGenerationModal({
                         {isComplete ? (
                           <FaCheck className="text-4xl text-white animate-bounce" />
                         ) : (
-                          <FaCompass
-                            className="text-4xl text-white"
-                            style={{
-                              animation: "spin 3s linear infinite",
-                              transformOrigin: "center center",
-                              willChange: "transform",
-                            }}
-                          />
+                          <div style={{ animation: "spin 1s linear infinite" }}>
+                            <FaCompass className="text-4xl text-white" />
+                          </div>
                         )}
                       </div>
                     </div>
@@ -447,14 +465,11 @@ function TripGenerationModal({
                             {isCompleted ? (
                               <FaCheck className="text-white text-xl" />
                             ) : isCurrent ? (
-                              <FaSpinner
-                                className="text-white text-xl"
-                                style={{
-                                  animation: "spin 1s linear infinite",
-                                  transformOrigin: "center center",
-                                  willChange: "transform",
-                                }}
-                              />
+                              <div
+                                style={{ animation: "spin 1s linear infinite" }}
+                              >
+                                <FaSpinner className="text-white text-xl" />
+                              </div>
                             ) : (
                               <Icon
                                 className={`text-xl ${
@@ -489,6 +504,36 @@ function TripGenerationModal({
                     );
                   })}
                 </div>
+
+                {/* 🆕 Validation Phase Details */}
+                {validationPhase && current === "validation" && (
+                  <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 dark:from-purple-950/30 dark:via-pink-950/30 dark:to-purple-950/30 rounded-2xl p-5 border border-purple-200 dark:border-purple-800">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div style={{ animation: "spin 1s linear infinite" }}>
+                        <FaSpinner className="text-purple-500 dark:text-purple-400" />
+                      </div>
+                      <h4 className="font-semibold text-purple-900 dark:text-purple-100">
+                        {validationPhase === "parsing" &&
+                          "Parsing AI Response..."}
+                        {validationPhase === "autofix" &&
+                          "Optimizing Itinerary..."}
+                        {validationPhase === "validation" &&
+                          "Validating Travel Plan..."}
+                        {validationPhase === "saving" && "Saving Your Trip..."}
+                      </h4>
+                    </div>
+                    <p className="text-sm text-purple-700 dark:text-purple-300">
+                      {validationPhase === "parsing" &&
+                        "Converting AI response to structured itinerary"}
+                      {validationPhase === "autofix" &&
+                        "Ensuring optimal activity pacing and scheduling"}
+                      {validationPhase === "validation" &&
+                        "Checking locations, travel times, and hotel references"}
+                      {validationPhase === "saving" &&
+                        "Finalizing your personalized travel plan"}
+                    </p>
+                  </div>
+                )}
 
                 {/* Quote Section */}
                 <div className="bg-gradient-to-br from-sky-50 via-blue-50 to-sky-50 dark:from-sky-950/30 dark:via-blue-950/30 dark:to-sky-950/30 rounded-2xl p-6 border border-sky-100 dark:border-sky-800">

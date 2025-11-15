@@ -40,11 +40,8 @@ class CoordinatorAgent(BaseAgent):
             finally:
                 loop.close()
         except RuntimeError:
-            # If we're already in an async context, run in thread pool
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(self._run_in_new_loop, input_data)
-                return future.result()
+            # If we're already in an async context, run in new loop
+            return self._run_in_new_loop(input_data)
     
     def _run_in_new_loop(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Run async logic in a new event loop"""
@@ -874,6 +871,96 @@ class CoordinatorAgent(BaseAgent):
                     flight_response = flights_data.get('data', {})
                 else:
                     flight_response = flights_data
+                
+                # ✅ FIX: Check if flight search failed (e.g. inactive airports)
+                if flight_response and not flight_response.get('success', True):
+                    logger.warning(f"⚠️  Flight search failed: {flight_response.get('error', 'Unknown error')}")
+                    # Keep the error response for frontend to display
+                    flight_response['flight_search_failed'] = True
+                
+                # 🆕 CRITICAL FIX: Add pricing metadata for frontend budget calculator
+                elif flight_response and 'flights' in flight_response:
+                    flights_list = flight_response.get('flights', [])
+                    
+                    # ✅ NEW: Warn if no flights returned
+                    if len(flights_list) == 0:
+                        logger.warning(f"⚠️  Flight search succeeded but returned 0 flights")
+                        if flight_response.get('airport_status'):
+                            logger.warning(f"   Airport issue: {flight_response.get('airport_status')}")
+                            
+                            # 🆕 AUTO-REROUTE: If destination is inactive, try alternatives automatically
+                            airport_status = flight_response.get('airport_status', {})
+                            if airport_status.get('airport_type') == 'destination' and airport_status.get('alternatives'):
+                                logger.info(f"🔄 Attempting auto-reroute to alternative airports...")
+                                
+                                # Try first alternative (usually the closest/best option)
+                                best_alternative = airport_status['alternatives'][0]
+                                alt_code = best_alternative['code']
+                                alt_name = best_alternative['name']
+                                
+                                logger.info(f"✈️  Auto-rerouting: {trip_params['destination']} → {alt_name} ({alt_code})")
+                                
+                                # Retry flight search with alternative airport
+                                try:
+                                    from_airport = flight_response.get('search_params', {}).get('from', 'MNL')
+                                    alternative_flight_params = {
+                                        'flight_params': {
+                                            'from_airport': from_airport,
+                                            'to_airport': alt_code,
+                                            'departure_date': trip_params.get('start_date'),
+                                            'return_date': trip_params.get('end_date'),
+                                            'adults': trip_params.get('travelers', 1) if isinstance(trip_params.get('travelers', 1), int) else 1,
+                                            'trip_type': 'round-trip'
+                                        }
+                                    }
+                                    
+                                    alternative_result = await self.flight_agent.execute(alternative_flight_params)
+                                    
+                                    if alternative_result.get('success') and alternative_result.get('data', {}).get('flights'):
+                                        alt_flights = alternative_result['data']['flights']
+                                        logger.info(f"✅ Found {len(alt_flights)} flights to {alt_name}!")
+                                        
+                                        # ✅ CRITICAL: Update flight response with rerouted flights AND mark as successful
+                                        flight_response = alternative_result['data']
+                                        flight_response['success'] = True  # Mark as successful after reroute!
+                                        flight_response['rerouted'] = True
+                                        flight_response['reroute_info'] = {
+                                            'original_destination': trip_params['destination'],
+                                            'alternative_airport': alt_code,
+                                            'alternative_name': alt_name,
+                                            'ground_transport': {
+                                                'mode': airport_status.get('transport', 'bus'),
+                                                'travel_time': airport_status.get('travel_time', 'Unknown'),
+                                                'recommendation': airport_status.get('recommendation', '')
+                                            }
+                                        }
+                                        flights_list = alt_flights
+                                        
+                                        logger.info(f"🚌 Ground transport from {alt_name}: {airport_status.get('transport', 'bus')} ({airport_status.get('travel_time', 'Unknown')})")
+                                    else:
+                                        logger.warning(f"⚠️  Auto-reroute to {alt_name} also returned no flights")
+                                        
+                                except Exception as reroute_error:
+                                    logger.error(f"❌ Auto-reroute failed: {reroute_error}")
+                    
+                    travelers = trip_params.get('travelers', 1)
+                    travelers_num = travelers if isinstance(travelers, int) else 1
+                    
+                    for flight in flights_list:
+                        if 'price' in flight:
+                            # Mark that SerpAPI prices are per-person
+                            flight['price_per_person'] = flight['price']
+                            flight['travelers'] = travelers_num
+                            flight['pricing_note'] = 'per person (SerpAPI standard)'
+                            
+                            # Calculate total for group
+                            try:
+                                price_numeric = int(str(flight['price']).replace('₱', '').replace(',', ''))
+                                flight['total_for_group'] = f"₱{price_numeric * travelers_num:,}"
+                            except:
+                                flight['total_for_group'] = flight['price']
+                    
+                    logger.info(f"✅ Enhanced {len(flights_list)} flights with pricing metadata for {travelers_num} travelers")
             else:
                 # When flights not requested, return null (not success: false)
                 flight_response = None
