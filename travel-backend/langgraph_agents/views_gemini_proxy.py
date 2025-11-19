@@ -241,19 +241,47 @@ Generate realistic, logistically accurate itineraries with ACCURATE travel times
             # Add ground transport context if available
             if ground_transport_context:
                 gt = ground_transport_context
+                
+                # 🔧 FIX: Safely extract cost information (can be dict or string)
+                cost_data = gt.get('cost', 'N/A')
+                if isinstance(cost_data, dict):
+                    cost_min = cost_data.get('min', 'N/A')
+                    cost_max = cost_data.get('max', 'N/A')
+                    cost_range = f"₱{cost_min}-{cost_max}"
+                elif isinstance(cost_data, str):
+                    # Already formatted string like "₱200-350"
+                    cost_range = cost_data
+                    # Try to extract min/max for template usage
+                    if '-' in cost_data:
+                        parts = cost_data.replace('₱', '').split('-')
+                        cost_min = parts[0].strip() if len(parts) > 0 else 'N/A'
+                        cost_max = parts[1].strip() if len(parts) > 1 else 'N/A'
+                    else:
+                        cost_min = cost_max = 'N/A'
+                else:
+                    cost_range = 'N/A'
+                    cost_min = cost_max = 'N/A'
+                
+                # Safely handle operators (can be list or string)
+                operators = gt.get('operators', [])
+                if isinstance(operators, list):
+                    operators_str = ', '.join(operators) if operators else ''
+                else:
+                    operators_str = str(operators) if operators else ''
+                
                 enhanced_prompt += f"""
 🚌 ACTIVE GROUND TRANSPORT RECOMMENDATION:
 Mode: {gt.get('primary_mode', 'bus/van')}
 Travel Time: {gt.get('travel_time', 'N/A')}
-Cost Range: ₱{gt.get('cost', {}).get('min', 'N/A')}-{gt.get('cost', {}).get('max', 'N/A')}
-{f"Operators: {', '.join(gt.get('operators', []))}" if gt.get('operators') else ''}
+Cost Range: {cost_range}
+{f"Operators: {operators_str}" if operators_str else ''}
 {f"Frequency: {gt.get('frequency')}" if gt.get('frequency') else ''}
 {f"Notes: {gt.get('notes')}" if gt.get('notes') else ''}
 {'⭐ SCENIC ROUTE - Mention the scenic views in the itinerary!' if gt.get('scenic') else ''}
 
 CRITICAL: Include this ground transport information in Day 1 arrival details!
-- IF ground_preferred mode: "Travel from [user's origin city] to [destination] via {gt.get('primary_mode', 'bus')} ({gt.get('travel_time', 'X hours')}, ₱{gt.get('cost', {}).get('min', 'X')}-{gt.get('cost', {}).get('max', 'X')})"
-- IF flying to nearest airport: "Arrive at [nearest airport with code], then take {gt.get('primary_mode', 'bus')} to [destination] ({gt.get('travel_time', 'X hours')}, ₱{gt.get('cost', {}).get('min', 'X')}-{gt.get('cost', {}).get('max', 'X')})"
+- IF ground_preferred mode: "Travel from [user's origin city] to [destination] via {gt.get('primary_mode', 'bus')} ({gt.get('travel_time', 'X hours')}, ₱{cost_min}-{cost_max})"
+- IF flying to nearest airport: "Arrive at [nearest airport with code], then take {gt.get('primary_mode', 'bus')} to [destination] ({gt.get('travel_time', 'X hours')}, ₱{cost_min}-{cost_max})"
 
 """
                 logger.info(f"✅ Added ground transport context to prompt: {gt.get('primary_mode')} ({gt.get('travel_time')})")
@@ -377,15 +405,18 @@ CRITICAL: Include this ground transport information in Day 1 arrival details!
         # Only access response.text if finish_reason is STOP (1)
         try:
             response_text = response.text
+            logger.info(f"✅ Extracted response text, type: {type(response_text)}")
         except Exception as e:
             logger.error(f"❌ Failed to extract response text: {str(e)}")
             # Fallback: try to extract from parts
             try:
                 response_text = candidate.content.parts[0].text
-            except:
+                logger.info(f"✅ Fallback extraction successful, type: {type(response_text)}")
+            except Exception as fallback_error:
+                logger.error(f"❌ Fallback extraction also failed: {str(fallback_error)}")
                 return Response({
                     'success': False,
-                    'error': f'Failed to extract response text: {str(e)}',
+                    'error': f'Failed to extract response text: {str(e)}. Fallback also failed: {str(fallback_error)}',
                     'error_type': 'parsing_error',
                     'metadata': {
                         'execution_time': execution_time,
@@ -400,9 +431,21 @@ CRITICAL: Include this ground transport information in Day 1 arrival details!
         is_valid_json = False
         parsed_data = None
         try:
-            parsed_data = json.loads(response_text)
-            is_valid_json = True
-            logger.info("✅ Response is valid JSON")
+            # 🔧 FIX: Ensure response_text is actually a string before parsing
+            if isinstance(response_text, dict):
+                # Already parsed/is a dict, use directly
+                parsed_data = response_text
+                is_valid_json = True
+                logger.info("✅ Response is already a dictionary")
+            elif isinstance(response_text, str):
+                # Parse JSON string
+                parsed_data = json.loads(response_text)
+                is_valid_json = True
+                logger.info("✅ Response is valid JSON")
+            else:
+                logger.error(f"❌ Unexpected response type: {type(response_text)}")
+                parsed_data = None
+                is_valid_json = False
         except json.JSONDecodeError as e:
             logger.warning(f"⚠️ Response is not valid JSON: {str(e)}")
         
@@ -437,9 +480,24 @@ CRITICAL: Include this ground transport information in Day 1 arrival details!
         except Exception as e:
             logger.warning(f"Could not extract usage metadata: {str(e)}")
         
+        # 🔧 FIX: Ensure data field is always in the expected format
+        # If JSON parsing failed but we still have a response, wrap it properly
+        response_data = parsed_data if is_valid_json else response_text
+        
+        # ✅ CRITICAL: Ensure response_data is never a plain string when caller expects dict
+        # If we couldn't parse JSON, return the raw text but mark it clearly
+        if not is_valid_json and isinstance(response_text, str):
+            logger.warning("⚠️ Returning raw text response (not JSON)")
+            # Wrap in a structure so callers don't try to call .get() on a string
+            response_data = {
+                '_raw_text': response_text,
+                '_is_raw': True,
+                '_error': 'Response was not valid JSON'
+            }
+        
         return Response({
             'success': True,
-            'data': parsed_data if is_valid_json else response_text,
+            'data': response_data,
             'raw_response': response_text if is_valid_json else None,
             'metadata': metadata
         })
