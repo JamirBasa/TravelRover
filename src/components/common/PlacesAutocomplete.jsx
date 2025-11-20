@@ -421,7 +421,10 @@ export function PlacesAutocomplete({
         {/* Loading spinner */}
         {isLoading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <div className="w-5 h-5 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
+            <div
+              className="w-5 h-5 border-2 border-sky-500 border-t-transparent rounded-full"
+              style={{ animation: "spin 1s linear infinite" }}
+            ></div>
           </div>
         )}
       </div>

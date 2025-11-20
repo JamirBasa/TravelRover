@@ -735,7 +735,7 @@ function Hotels({ trip }) {
                 <h4 className="font-bold text-sky-900 dark:text-sky-300 mb-3 text-base">
                   {hotels.realHotels.length > 0
                     ? "Verified Hotels"
-                    : "Booking Tips"}
+                    : "AI-Generated Recommendations"}
                 </h4>
 
                 {hotels.realHotels.length > 0 ? (
@@ -780,12 +780,12 @@ function Hotels({ trip }) {
                 ) : (
                   <ul className="text-sm text-sky-800 dark:text-sky-400 space-y-2 font-medium">
                     <li className="flex items-start gap-2">
-                      <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
-                        •
+                      <span className="text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0">
+                        ⚠️
                       </span>
                       <span>
-                        Click "Book Now" to view current prices and availability
-                        on Agoda
+                        These are <strong>AI-generated estimates</strong> -
+                        ratings and prices may not reflect real hotels
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
@@ -793,7 +793,17 @@ function Hotels({ trip }) {
                         •
                       </span>
                       <span>
-                        Compare amenities and guest reviews before booking
+                        Click "Book Now" to search real hotels on Agoda with
+                        current prices
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-sky-600 dark:text-sky-500 mt-0.5 flex-shrink-0">
+                        •
+                      </span>
+                      <span>
+                        For verified hotels, create a new trip with{" "}
+                        <strong>"Include Accommodation Search"</strong> enabled
                       </span>
                     </li>
                     <li className="flex items-start gap-2">

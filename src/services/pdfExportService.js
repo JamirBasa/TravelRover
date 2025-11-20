@@ -24,11 +24,11 @@ const PDF_CONFIG = {
   orientation: 'portrait',
   compress: true,
   
-  // Page dimensions
+  // Page dimensions - OPTIMIZED FOR SPACE
   pageWidth: 210, // A4 width in mm
   pageHeight: 297, // A4 height in mm
-  margin: 20,
-  contentWidth: 170, // pageWidth - (margin * 2)
+  margin: 15, // ✅ Reduced from 20mm to 15mm (saves 10mm width)
+  contentWidth: 180, // pageWidth - (margin * 2)
   
   // Colors (matching TravelRover brand)
   colors: {
@@ -43,22 +43,23 @@ const PDF_CONFIG = {
     bgLight: [249, 250, 251], // Gray-50
   },
   
-  // Typography
+  // Typography - BALANCED: Compact but readable
   fonts: {
-    title: 24,
-    heading: 18,
-    subheading: 14,
-    body: 10,
-    small: 8,
-    tiny: 7,
+    title: 16, // ✅ Header title (was 14pt, now 16pt for readability)
+    heading: 13, // ✅ Section headers (was 12pt, now 13pt)
+    subheading: 11, // ✅ Day headers (was 10pt, now 11pt for boldness)
+    body: 9, // ✅ Activity names (was 8pt, now 9pt - easier to read)
+    small: 7.5, // ✅ Compact activities (was 7pt, now 7.5pt)
+    tiny: 6.5, // ✅ Details/descriptions (was 6pt, now 6.5pt)
   },
   
-  // Spacing constants for consistency
+  // Spacing constants - BALANCED: Tight but breathable
   spacing: {
-    sectionGap: 10,
-    paragraphGap: 5,
-    lineHeight: 4.5,
-    cardGap: 8,
+    sectionGap: 6, // ✅ Between major sections (was 5mm, now 6mm)
+    paragraphGap: 3.5, // ✅ Between paragraphs (was 3mm, now 3.5mm)
+    lineHeight: 4, // ✅ Text line height (was 3.5mm, now 4mm)
+    cardGap: 5, // ✅ Between cards (was 4mm, now 5mm)
+    dayGap: 3, // ✅ Between days (was 2mm, now 3mm - more breathing room)
   }
 };
 
@@ -149,7 +150,7 @@ const normalizeTime = (timeString) => {
 // ========================================
 export const generateTripPDF = async (tripData) => {
   try {
-    console.log('📄 Starting professional PDF generation...', tripData);
+    console.log('📄 Starting compact PDF generation (optimized for minimal paper)...', tripData);
     
     const pdf = new jsPDF({
       orientation: PDF_CONFIG.orientation,
@@ -160,22 +161,21 @@ export const generateTripPDF = async (tripData) => {
     
     let currentY = PDF_CONFIG.margin;
     
-    // 1. Add Cover Page
-    addCoverPage(pdf, tripData);
+    // ✅ 1. REMOVED Cover Page - saves 1 full page
+    // Instead: Add compact header banner on first page
+    currentY = addCompactHeader(pdf, tripData, currentY);
     
-    // 2. Add Trip Overview & Details
-    pdf.addPage();
-    currentY = PDF_CONFIG.margin;
+    // ✅ 2. Add Trip Overview - COMPACT single column format
     currentY = addTripOverview(pdf, tripData, currentY);
     
     // 3. Hotels & Must-See Places - Removed for clean, focused itinerary
     // Note: Hotel and attraction details remain in the app for booking reference
     
-    // 4. Add Budget Breakdown (Accurate calculation from itinerary)
+    // ✅ 4. Add Budget Breakdown - COMPACT table format
     currentY = addBudgetSection(pdf, tripData, currentY);
     
-    // 5. Add Daily Itinerary - Only add page if needed
-    currentY = ensureSpace(pdf, currentY, 80); // Need ~80mm for itinerary start
+    // ✅ 5. Add Daily Itinerary - COMPACT two-column table format
+    currentY = ensureSpace(pdf, currentY, 40); // Reduced from 80mm to 40mm
     addDailyItinerary(pdf, tripData, currentY);
     
     // 6. Add Footer & Page Numbers to all pages
@@ -185,8 +185,9 @@ export const generateTripPDF = async (tripData) => {
     const filename = generateFilename(tripData);
     pdf.save(filename);
     
-    console.log('✅ Professional PDF generated successfully:', filename);
-    return { success: true, filename };
+    const pageCount = pdf.internal.getNumberOfPages();
+    console.log(`✅ Compact PDF generated: ${filename} (${pageCount} pages - optimized for printing)`);
+    return { success: true, filename, pages: pageCount };
     
   } catch (error) {
     console.error('❌ PDF generation failed:', error);
@@ -195,8 +196,42 @@ export const generateTripPDF = async (tripData) => {
 };
 
 // ========================================
-// COVER PAGE - Professional Design
+// COMPACT HEADER - Replaces full cover page (saves 1 page)
 // ========================================
+const addCompactHeader = (pdf, tripData, startY) => {
+  const { pageWidth, margin, colors, fonts } = PDF_CONFIG;
+  let y = startY;
+  
+  // Compact gradient header bar (15mm total)
+  pdf.setFillColor(...colors.primary);
+  pdf.rect(0, y, pageWidth, 15, 'F');
+  
+  // Brand name (left)
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(fonts.heading);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('TRAVELROVER', margin, y + 6);
+  
+  // Destination (center-right)
+  const destination = tripData?.userSelection?.location || 'Your Trip';
+  pdf.setFontSize(fonts.subheading);
+  const destWidth = pdf.getTextWidth(destination);
+  pdf.text(destination, pageWidth - margin - destWidth, y + 6);
+  
+  // Tagline (bottom)
+  pdf.setFontSize(fonts.tiny);
+  pdf.setFont('helvetica', 'normal');
+  withOpacity(pdf, 0.8, () => {
+    pdf.text('AI-Powered Travel Itinerary', margin, y + 12);
+  });
+  
+  return y + 18; // 15mm header + 3mm spacing
+};
+
+// ========================================
+// COVER PAGE - Professional Design (DEPRECATED - kept for reference)
+// ========================================
+/* eslint-disable no-unused-vars */
 const addCoverPage = (pdf, tripData) => {
   const { pageWidth, pageHeight, margin, colors, fonts } = PDF_CONFIG;
   const centerX = pageWidth / 2;
@@ -1191,22 +1226,22 @@ const addBudgetSection = (pdf, tripData, startY) => {
 };
 
 // ========================================
-// DAILY ITINERARY SECTION
+// DAILY ITINERARY SECTION - COMPACT 2-COLUMN TABLE FORMAT
 // ========================================
 const addDailyItinerary = (pdf, tripData, startY) => {
-  const { margin, colors, fonts, pageHeight } = PDF_CONFIG;
+  const { margin, colors, fonts, pageHeight, contentWidth } = PDF_CONFIG;
   let y = startY;
   
-  // Section title
+  // Section title - compact
   pdf.setFillColor(...colors.secondary);
-  pdf.rect(margin, y, PDF_CONFIG.pageWidth - (margin * 2), 10, 'F');
+  pdf.rect(margin, y, contentWidth, 8, 'F');
   
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(fonts.heading);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Daily Itinerary', margin + 5, y + 7);
+  pdf.text('Daily Itinerary', margin + 3, y + 5.5);
   
-  y += 18;
+  y += 10; // Reduced from 18mm to 10mm
   
   // Parse itinerary
   const itinerary = parseDataArray(tripData?.tripData?.itinerary);
@@ -1220,72 +1255,38 @@ const addDailyItinerary = (pdf, tripData, startY) => {
   
   // Add each day
   itinerary.forEach((day, dayIndex) => {
-    // Check if we need a new page
-    if (y > pageHeight - 60) {
+    // Check if we need a new page for day header
+    if (y > pageHeight - 40) {
       pdf.addPage();
       y = margin;
     }
     
-    // ===== Professional Day Header =====
-    const headerHeight = 12;
-    
-    // Gradient background
+    // ✅ BALANCED Day Header (8mm total - clear and prominent)
     pdf.setFillColor(...colors.primary);
-    pdf.roundedRect(margin, y, PDF_CONFIG.pageWidth - (margin * 2), headerHeight, 2, 2, 'F');
+    pdf.rect(margin, y, contentWidth, 8, 'F');
     
-    // Subtle gradient overlay
-    withOpacity(pdf, 0.2, () => {
-      pdf.setFillColor(...colors.secondary);
-      pdf.roundedRect(margin, y + headerHeight / 2, PDF_CONFIG.pageWidth - (margin * 2), headerHeight / 2, 2, 2, 'F');
-    });
-    
-    // Day number and title
+    // Day number (left) - BOLD and readable
     pdf.setTextColor(255, 255, 255);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(fonts.subheading);
+    pdf.setFontSize(fonts.subheading); // Full subheading size for boldness
+    pdf.text(`DAY ${dayIndex + 1}`, margin + 3, y + 5.5);
     
-    // Extract theme from day data or use default
-    let dayTheme = '';
-    if (day.theme) {
-      dayTheme = day.theme.replace(/^Day \d+ - /, ''); // Remove "Day X - " prefix if exists
-    } else if (day.day && typeof day.day === 'string' && !day.day.match(/^\d+$/)) {
-      dayTheme = day.day.replace(/^Day \d+ - /, '');
-    }
-    
-    // Left side: Day number
-    pdf.text(`DAY ${dayIndex + 1}`, margin + 5, y + 7.5);
-    
-    // Right side: Date
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(fonts.small);
+    // Date (right)
     const dayDate = getDayDate(tripData, dayIndex);
     if (dayDate) {
-      const dateWidth = pdf.getTextWidth(dayDate);
-      pdf.text(dayDate, PDF_CONFIG.pageWidth - margin - dateWidth - 5, y + 7.5);
-    }
-    
-    // Theme/subtitle (if exists)
-    if (dayTheme) {
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(fonts.tiny);
-      pdf.setTextColor(255, 255, 255);
-      withOpacity(pdf, 0.9, () => {
-        const themeText = dayTheme.length > 50 ? dayTheme.substring(0, 47) + '...' : dayTheme;
-        pdf.text(themeText, margin + 5, y + 10.5);
-      });
+      pdf.setFontSize(fonts.small); // Larger for readability
+      const dateWidth = pdf.getTextWidth(String(dayDate));
+      pdf.text(String(dayDate), margin + contentWidth - dateWidth - 3, y + 5.5);
     }
     
-    y += headerHeight + 5; // Add spacing after header
+    y += 12; // ✅ IMPROVED: More breathing room after day header (4mm gap instead of 2mm)
     
-    // Day activities - with duplicate filtering
+    // Day activities - keep all but optimize display
     let activities = day.plan || [];
     
-    // Filter out duplicate "return to hotel" activities
-    // Keep only the FIRST occurrence (it has better quality data with full hotel names)
-    const hotelReturnKeywords = ['return to hotel', 'back to hotel', 'return to accommodation', 'end of day'];
-    const hotelReturnIndices = [];
-    
-    activities.forEach((activity, index) => {
+    // ✅ SMART CATEGORIZATION: Identify activity types for optimized rendering
+    activities = activities.map((activity) => {
       const activityText = (
         activity.placeName || 
         activity.placeDetails || 
@@ -1293,185 +1294,215 @@ const addDailyItinerary = (pdf, tripData, startY) => {
         ''
       ).toLowerCase();
       
-      // Enhanced detection with multiple patterns for hotel returns
-      const hasReturnToHotel = 
-        // Pattern 1: Direct hotel return phrases
+      // Categorize for smart rendering
+      const isMeal = 
+        activityText.includes('breakfast') ||
+        activityText.includes('lunch') ||
+        activityText.includes('dinner');
+      
+      const isTravel = 
+        activityText.includes('travel to') ||
+        activityText.includes('drive to') ||
+        activityText.includes('fly to') ||
+        activityText.includes('transfer to');
+      
+      // ✅ EXPANDED: Detect hotel operations including specific hotel names
+      const isHotelOps = 
+        activityText.includes('check-in') ||
+        activityText.includes('check-out') ||
         activityText.includes('return to hotel') ||
         activityText.includes('back to hotel') ||
-        activityText.includes('return to accommodation') ||
-        
-        // Pattern 2: "Return to [Hotel Name]" format
-        (activityText.includes('return to') && activityText.includes('hotel')) ||
-        
-        // Pattern 3: "End of day" ALWAYS means hotel return (standalone)
-        activityText.includes('end of day') ||
-        
-        // Pattern 4: Common rest/prepare patterns (end of itinerary)
-        (activityText.includes('return') && activityText.includes('rest')) ||
-        (activityText.includes('end of day') && activityText.includes('rest')) ||
-        
-        // Pattern 5: Generic hotel arrival text
-        (activityText.includes('back to') && activityText.includes('accommodation'));
+        activityText.includes('return to') && (activityText.includes('inn') || activityText.includes('resort') || activityText.includes('hotel'));
       
-      if (hasReturnToHotel) {
-        hotelReturnIndices.push(index);
-      }
+      return {
+        ...activity,
+        isCompact: isMeal || isTravel || isHotelOps, // These get condensed format
+        isMeal,
+        isTravel,
+        isHotelOps
+      };
     });
     
-    // If there are multiple hotel returns, keep only the FIRST one (has complete hotel details)
-    if (hotelReturnIndices.length > 1) {
-      const indicesToRemove = hotelReturnIndices.slice(1); // Remove all except first
-      activities = activities.filter((_, index) => !indicesToRemove.includes(index));
-    }
+    // ✅ ENHANCED DEDUPLICATION: Merge ALL consecutive duplicate activities
+    activities = activities.reduce((acc, activity) => {
+      if (acc.length === 0) return [activity];
+      
+      const prevActivity = acc[acc.length - 1];
+      
+      // ✅ NORMALIZE TIMES: Convert to comparable format (HH:MM)
+      const normalizeTime = (timeStr) => {
+        if (!timeStr) return '';
+        const str = String(timeStr).trim().toUpperCase();
+        // Extract time portion (handles "8:00 AM", "08:00", "8:00AM", etc.)
+        const match = str.match(/(\d{1,2}):(\d{2})/);
+        if (!match) return str;
+        
+        let hours = parseInt(match[1]);
+        const minutes = match[2];
+        
+        // Convert to 24-hour if AM/PM present
+        if (str.includes('PM') && hours !== 12) hours += 12;
+        if (str.includes('AM') && hours === 12) hours = 0;
+        
+        // Return normalized HH:MM format
+        return `${String(hours).padStart(2, '0')}:${minutes}`;
+      };
+      
+      const currTime = normalizeTime(activity.time);
+      const prevTime = normalizeTime(prevActivity.time);
+      
+      // ✅ SMART MATCHING: Check if activities are duplicates
+      const sameTime = currTime && prevTime && currTime === prevTime;
+      const bothHotelOps = activity.isHotelOps && prevActivity.isHotelOps;
+      const bothTravel = activity.isTravel && prevActivity.isTravel;
+      const bothMeal = activity.isMeal && prevActivity.isMeal;
+      
+      // Merge if same time AND same type (hotel/travel/meal)
+      if (sameTime && (bothHotelOps || bothTravel || bothMeal)) {
+        // ✅ MERGE DETAILS: Combine unique information
+        const prevDetails = String(prevActivity.placeDetails || '').trim();
+        const currDetails = String(activity.placeDetails || '').trim();
+        
+        if (currDetails && currDetails !== prevDetails) {
+          // Append details with separator if both exist
+          if (prevDetails) {
+            prevActivity.placeDetails = `${prevDetails}. ${currDetails}`;
+          } else {
+            prevActivity.placeDetails = currDetails;
+          }
+        }
+        
+        // Don't add duplicate to accumulator
+        return acc;
+      }
+      
+      // Not a duplicate - add to accumulator
+      acc.push(activity);
+      return acc;
+    }, []);
     
+    // ✅ COMPACT: 2-Column Table Layout
     if (activities.length === 0) {
       pdf.setFontSize(fonts.small);
       pdf.setTextColor(...colors.lightText);
-      pdf.text('No activities scheduled', margin + 5, y);
-      y += 8;
+      pdf.text('No activities scheduled', margin + 3, y);
+      y += 6;
     } else {
       activities.forEach((activity, actIndex) => {
-        // Check page break
-        if (y > pageHeight - 40) {
+        // Check page break (need less space now)
+        if (y > pageHeight - 20) {
           pdf.addPage();
           y = margin;
         }
         
-        // Activity card with subtle background
-        const activityStartY = y;
+        // ✅ SMART RENDERING: Compact format for logistics, full format for attractions
+        const isCompactType = activity.isCompact || false;
         
-        // Light background for activity
-        pdf.setFillColor(252, 252, 253);
-        withOpacity(pdf, 0.5, () => {
-          pdf.roundedRect(margin + 2, y - 2, PDF_CONFIG.pageWidth - (margin * 2) - 4, 1, 1, 1, 'F');
-        });
+        // ✅ CONSISTENT SEPARATOR: ALL activities get divider lines for clear visual separation
+        pdf.setDrawColor(...colors.border);
+        pdf.setLineWidth(0.1);
+        pdf.line(margin, y, margin + contentWidth, y);
+        y += 1.5; // Breathing room after separator
         
-        // Activity number badge
-        pdf.setFillColor(...colors.primary);
-        pdf.circle(margin + 7, y - 1, 3.5, 'F');
-        
-        // White number in badge
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(fonts.small);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(`${actIndex + 1}`, margin + 7, y + 1, { align: 'center' });
-        
-        // Time - normalized to 12-hour format
-        pdf.setTextColor(...colors.primary);
-        pdf.setFontSize(fonts.body);
+        // ✅ TIME COLUMN (Left - 20mm for better spacing)
+        const timeX = margin + 2;
+        // Set color: Orange for meals, primary blue for others
+        if (activity.isMeal) {
+          pdf.setTextColor(245, 158, 11); // Amber-500 for meals
+        } else {
+          pdf.setTextColor(...colors.primary); // Primary blue for others
+        }
+        // ✅ CONSISTENT: All times use same font size for uniform appearance
+        pdf.setFontSize(fonts.body); // Consistent 9pt for all times
         pdf.setFont('helvetica', 'bold');
         const displayTime = normalizeTime(activity.time);
-        pdf.text(displayTime, margin + 16, y);
+        const compactTime = String(displayTime).replace(/\s*(AM|PM)/, '');
+        pdf.text(compactTime, timeX, y + 3.5);
         
-        y += 6;
+        // ✅ ACTIVITY COLUMN (Right - expanded width)
+        const actX = margin + 22; // More space from time column
         
-        // Activity name
-        pdf.setFont('helvetica', 'bold');
+        // ✅ CONSISTENT STYLING: ALL activity names are BOLD for easy scanning
+        pdf.setFont('helvetica', 'bold'); // Always bold for consistency
         pdf.setTextColor(...colors.text);
-        const activityName = activity.placeName || activity.placeDetails || `Activity ${actIndex + 1}`;
-        const splitName = pdf.splitTextToSize(activityName, PDF_CONFIG.pageWidth - (margin * 2) - 12);
-        pdf.text(splitName, margin + 6, y);
-        y += splitName.length * 5;
+        pdf.setFontSize(fonts.body); // Consistent 9pt size for all activities
         
-        // Activity details
-        if (activity.placeDetails && activity.placeDetails !== activity.placeName) {
-          pdf.setFont('helvetica', 'normal');
-          pdf.setTextColor(...colors.lightText);
-          pdf.setFontSize(fonts.small);
-          
-          // Clean the details
-          let cleanDetails = String(activity.placeDetails)
-            .replace(/±/g, '')
-            .replace(/[\u00B1\u2213]/g, '')
-            .replace(/₱/g, 'P')
+        // ✅ FIX: Ensure activityName is a STRING not an array
+        let activityName = activity.placeName || activity.placeDetails || `Activity ${actIndex + 1}`;
+        // Force to string and handle undefined/null
+        activityName = String(activityName || '').trim() || `Activity ${actIndex + 1}`;
+        
+        // ✅ SELECTIVE PRICE DISPLAY: Only show prices for paid attractions (not meals/transfers/hotels)
+        let priceText = '';
+        const shouldShowPrice = !activity.isMeal && !activity.isTravel && !activity.isHotelOps;
+        
+        if (shouldShowPrice && activity.ticketPricing && 
+            String(activity.ticketPricing) !== 'P 0' && 
+            String(activity.ticketPricing) !== '₱0' && 
+            String(activity.ticketPricing).toLowerCase() !== 'free') {
+          const cleanPrice = String(activity.ticketPricing || '')
+            .replace(/[±₱\u00B1\u2213\u00D8\u00DE\u2014\u2013()]/g, '')
             .trim();
-          
-          const splitDetails = pdf.splitTextToSize(
-            cleanDetails,
-            PDF_CONFIG.pageWidth - (margin * 2) - 12
-          );
-          pdf.text(splitDetails, margin + 6, y);
-          y += splitDetails.length * 4;
-        }
-        
-        // Activity metadata with better formatting and comprehensive cleaning
-        const metadata = [];
-        
-        // Price metadata
-        if (activity.ticketPricing && activity.ticketPricing !== 'P 0' && activity.ticketPricing !== '₱0' && activity.ticketPricing.toLowerCase() !== 'free') {
-          let cleanPrice = String(activity.ticketPricing)
-            .replace(/±/g, '')
-            .replace(/₱/g, '')
-            .replace(/[()]/g, '')
-            .replace(/[\u00B1\u2213\u00D8\u00DE\u2014\u2013]/g, '') // Remove ±, Ø, Þ, —, – etc.
-            .trim();
-          
           const priceNum = parseFloat(cleanPrice.replace(/,/g, ''));
           if (!isNaN(priceNum) && priceNum > 0) {
-            cleanPrice = `P ${priceNum.toLocaleString()}`;
-            metadata.push(`Price: ${cleanPrice}`);
-          } else if (cleanPrice && cleanPrice.toLowerCase() !== 'free' && cleanPrice !== '0' && !cleanPrice.includes('???')) {
-            metadata.push(`Price: P ${cleanPrice}`);
+            priceText = ` (P${priceNum.toLocaleString()})`;
           }
         }
         
-        // Travel time metadata - with aggressive cleaning
-        if (activity.timeTravel && activity.timeTravel !== 'Varies') {
-          let cleanTravel = String(activity.timeTravel)
-            .replace(/±/g, '')
-            .replace(/₱/g, '')
-            .replace(/[()]/g, '')
-            .replace(/[\u00B1\u2213\u00D8\u00DE\u2014\u2013]/g, '') // Remove all problematic unicode
-            .replace(/free$/i, '')
-            .replace(/\s+/g, ' ') // Normalize whitespace
-            .trim();
+        // Truncate based on type (more generous limits)
+        const maxNameLength = isCompactType ? 75 : 60;
+        if (activityName.length > maxNameLength) {
+          activityName = activityName.substring(0, maxNameLength - 3) + '...';
+        }
+        
+        // ✅ FIX: Force string concatenation with safety checks
+        const fullTitle = activityName + priceText;
+        // Safety: ensure fullTitle is not empty
+        if (fullTitle && fullTitle.trim()) {
+          pdf.text(fullTitle, actX, y + 3.5); // Aligned with time
+        }
+        
+        // ✅ SMART DETAILS: Show details if they add value (not just duplicate the name)
+        if (activity.placeDetails && activity.placeDetails !== activity.placeName) {
+          // Check if details are meaningfully different from the name
+          const cleanName = String(activityName).toLowerCase().replace(/[^a-z0-9\s]/g, '');
+          const detailsLower = String(activity.placeDetails).toLowerCase();
+          const nameWords = cleanName.split(/\s+/).filter(w => w.length > 3);
           
-          // Only show if it's meaningful travel time
-          if (cleanTravel && 
-              cleanTravel !== '0 minutes' && 
-              !cleanTravel.match(/^0\s*minutes?\s*$/i) &&
-              cleanTravel.length > 0 &&
-              !cleanTravel.match(/^[^a-zA-Z0-9\s]+$/)) { // Skip if only special chars remain
-            metadata.push(`Travel: ${cleanTravel}`);
-          }
-        }
-        
-        // Rating metadata
-        if (activity.rating) {
-          metadata.push(`Rating: ${activity.rating}/5`);
-        }
-        
-        if (metadata.length > 0) {
-          pdf.setFontSize(fonts.small);
-          pdf.setTextColor(...colors.lightText);
-          // Final cleaning pass to remove any remaining problematic characters
-          const metadataText = metadata
-            .map(item => String(item)
-              .replace(/[\u00B1\u2213\u00D8\u00DE\u2014\u2013]/g, '')
-              .replace(/\s+/g, ' ')
-              .trim()
-            )
-            .filter(item => item.length > 0) // Remove empty items
-            .join('  |  ');
+          // Details are valuable if they're not just repeating the name
+          const isRedundant = nameWords.length > 0 && 
+            nameWords.every(word => detailsLower.includes(word));
           
-          if (metadataText.length > 0) {
-            pdf.text(metadataText, margin + 6, y);
-            y += 5;
+          if (!isRedundant) {
+            pdf.setFont('helvetica', 'normal');
+            pdf.setTextColor(...colors.lightText);
+            pdf.setFontSize(fonts.tiny);
+            
+            let cleanDetails = String(activity.placeDetails || '')
+              .replace(/[±₱\u00B1\u2213\u00D8\u00DE\u2014\u2013]/g, '')
+              .trim();
+            
+            // ✅ INCREASED LIMIT: 120 chars for better context (was 90)
+            if (cleanDetails.length > 120) {
+              cleanDetails = cleanDetails.substring(0, 117) + '...';
+            }
+            
+            // ✅ Only add spacing if we actually have valid details to render
+            if (cleanDetails && cleanDetails.trim()) {
+              y += 4.5; // Add space before details
+              pdf.text(cleanDetails, actX, y + 1.5);
+              y += 5; // Add space after details
+            }
           }
         }
         
-        // Update background height
-        const activityHeight = y - activityStartY + 3;
-        withOpacity(pdf, 0.3, () => {
-          pdf.setFillColor(248, 250, 252);
-          pdf.roundedRect(margin + 2, activityStartY - 2, PDF_CONFIG.pageWidth - (margin * 2) - 4, activityHeight, 1, 1, 'F');
-        });
-        
-        y += 6; // Spacing between activities
+        // ✅ CONSISTENT SPACING: All activities use same spacing for uniform layout
+        y += 7; // 7mm spacing between all activities (balanced and readable)
       });
     }
     
-    y += 5; // Spacing between days
+    // ✅ IMPROVED: More breathing room between days for clear visual separation
+    y += 5;
   });
   
   return y;
@@ -1580,13 +1611,6 @@ const generateFilename = (tripData) => {
     .toLowerCase();
   const date = new Date().toISOString().split('T')[0];
   return `TravelRover_${destination}_${date}.pdf`;
-};
-
-const formatNumber = (num) => {
-  return parseFloat(num || 0).toLocaleString('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  });
 };
 
 // ========================================

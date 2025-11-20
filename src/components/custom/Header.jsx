@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
@@ -132,25 +133,25 @@ function Header() {
     localStorage.removeItem("user");
     localStorage.removeItem("userProfile");
     localStorage.removeItem("tripDraft");
-    
+
     // Clear sessionStorage
     sessionStorage.clear();
-    
+
     // Google OAuth logout
     googleLogout();
-    
+
     // Update state
     setUser(null);
-    
+
     // Show success toast
     toast.success("Logged out successfully", {
       description: "You have been signed out. See you next time!",
       duration: 3000,
     });
-    
+
     // ✅ Redirect to homepage with replace to prevent back navigation
     navigate("/", { replace: true });
-    
+
     console.log("✅ User logged out and redirected to homepage");
   }, [navigate]); // ✅ Add navigate to dependencies
 
@@ -192,28 +193,6 @@ function Header() {
                   My Trips
                 </Button>
               </nav>
-
-              {/* Divider */}
-              <div className="h-6 w-px bg-gray-300 dark:bg-slate-600"></div>
-
-              {/* Dark Mode Toggle */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative rounded-full cursor-pointer hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 dark:hover:from-sky-900/30 dark:hover:to-blue-900/30 transition-all duration-300 hover:shadow-md group"
-                onClick={toggleTheme}
-                aria-label="Toggle dark mode"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-sky-400/20 to-blue-600/20 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500 delay-200 blur-md"></div>
-                {isDarkMode ? (
-                  <Sun className="h-5 w-5 text-sky-600 dark:text-sky-400 transition-all duration-500 group-hover:rotate-180 group-hover:scale-110 relative z-10" />
-                ) : (
-                  <Moon className="h-5 w-5 text-gray-600 transition-all duration-500 group-hover:rotate-[-15deg] group-hover:scale-110 relative z-10" />
-                )}
-              </Button>
-
-              {/* Divider */}
-              <div className="h-6 w-px bg-gray-300 dark:bg-slate-600"></div>
 
               <div className="flex items-center gap-2.5">
                 <span className="text-gray-700 dark:text-gray-300 font-medium text-sm hidden sm:block">
@@ -259,6 +238,43 @@ function Header() {
                       </div>
                     </div>
 
+                    {/* Dark Mode Toggle */}
+                    <div className="py-2">
+                      <div
+                        className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors duration-150 rounded-md"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {isDarkMode ? (
+                              <Moon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                            ) : (
+                              <Sun className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                            )}
+                            <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+                              Dark Mode
+                            </span>
+                          </div>
+                          <Switch
+                            checked={isDarkMode}
+                            onCheckedChange={(checked) => {
+                              toggleTheme();
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                            className="cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-px bg-gray-200 dark:bg-slate-700"></div>
+
                     {/* Settings */}
                     <div className="py-2">
                       <button
@@ -298,51 +314,18 @@ function Header() {
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-4">
-              {/* Dark Mode Toggle for non-logged users */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative rounded-full cursor-pointer hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 dark:hover:from-sky-900/30 dark:hover:to-blue-900/30 transition-all duration-300 hover:shadow-md group"
-                onClick={toggleTheme}
-                aria-label="Toggle dark mode"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-sky-400/20 to-blue-600/20 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500 delay-200 blur-md"></div>
-                {isDarkMode ? (
-                  <Sun className="h-5 w-5 text-sky-600 dark:text-sky-400 transition-all duration-500 group-hover:rotate-180 group-hover:scale-110 relative z-10" />
-                ) : (
-                  <Moon className="h-5 w-5 text-gray-600 transition-all duration-500 group-hover:rotate-[-15deg] group-hover:scale-110 relative z-10" />
-                )}
-              </Button>
-
-              <Button
-                onClick={() => setOpenDialog(true)}
-                disabled={isLoggingIn}
-                className="brand-button px-6 py-2 cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all duration-300"
-              >
-                {isLoggingIn ? "Signing in..." : "Sign In"}
-              </Button>
-            </div>
+            <Button
+              onClick={() => setOpenDialog(true)}
+              disabled={isLoggingIn}
+              className="brand-button px-6 py-2 cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all duration-300"
+            >
+              {isLoggingIn ? "Signing in..." : "Sign In"}
+            </Button>
           )}
         </div>
 
         {/* Mobile Navigation */}
         <div className="flex md:hidden items-center gap-3">
-          {/* Dark Mode Toggle - Mobile */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative rounded-full cursor-pointer hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 dark:hover:from-sky-900/30 dark:hover:to-blue-900/30 transition-all duration-300 group"
-            onClick={toggleTheme}
-            aria-label="Toggle dark mode"
-          >
-            {isDarkMode ? (
-              <Sun className="h-5 w-5 text-sky-600 dark:text-sky-400 transition-all duration-300 group-hover:rotate-180" />
-            ) : (
-              <Moon className="h-5 w-5 text-gray-600 transition-all duration-300" />
-            )}
-          </Button>
-
           {user ? (
             /* Mobile Menu for Logged In Users */
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -376,6 +359,40 @@ function Header() {
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
                       {user?.email}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dark Mode Toggle */}
+                <div className="py-4 border-b border-gray-200 dark:border-slate-700">
+                  <div
+                    className="px-2 py-2 hover:bg-sky-50 dark:hover:bg-sky-950/30 transition-colors duration-150 rounded-lg"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {isDarkMode ? (
+                          <Moon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                        ) : (
+                          <Sun className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                        )}
+                        <span className="text-base text-gray-700 dark:text-gray-300 font-medium">
+                          Dark Mode
+                        </span>
+                      </div>
+                      <Switch
+                        checked={isDarkMode}
+                        onCheckedChange={(checked) => {
+                          toggleTheme();
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                        className="cursor-pointer"
+                      />
                     </div>
                   </div>
                 </div>

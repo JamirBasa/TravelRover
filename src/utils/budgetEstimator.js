@@ -83,24 +83,24 @@ const checkInactiveAirport = (cityOrCode) => {
 // Legacy exports maintained for backward compatibility
 const BASE_DAILY_COSTS = {
   'budget-friendly': {
-    accommodation: ACCOMMODATION_RANGES.BUDGET.average,
-    food: MEAL_COSTS.CASUAL.average * 3, // 3 meals per day
-    activities: ACTIVITY_COSTS.STANDARD_ACTIVITY.average,
-    transport: TRANSPORT_COSTS.JEEPNEY.average * 10, // Multiple trips
-    miscellaneous: 200,
+    accommodation: ACCOMMODATION_RANGES.BUDGET.average, // ₱1,150
+    food: (MEAL_COSTS.STREET_FOOD.average * 2 + MEAL_COSTS.FAST_FOOD.average), // ₱370 (2 street food + 1 fast food)
+    activities: ACTIVITY_COSTS.GOVERNMENT.average, // ₱100 (free/cheap activities)
+    transport: TRANSPORT_COSTS.JEEPNEY.average * 8, // ₱152 (8 trips, not 10)
+    miscellaneous: 150, // Reduced from 200
   },
   moderate: {
-    accommodation: ACCOMMODATION_RANGES.MODERATE.average,
-    food: MEAL_COSTS.MID_RANGE.average * 3,
-    activities: ACTIVITY_COSTS.ISLAND_TOUR.average,
-    transport: TRANSPORT_COSTS.GRAB_AIRPORT.average,
+    accommodation: ACCOMMODATION_RANGES.MODERATE.average, // ₱2,250
+    food: MEAL_COSTS.MID_RANGE.average * 3, // ₱1,800
+    activities: ACTIVITY_COSTS.ISLAND_TOUR.average, // ₱1,650
+    transport: TRANSPORT_COSTS.GRAB_AIRPORT.average, // ₱350
     miscellaneous: 500,
   },
   luxury: {
-    accommodation: ACCOMMODATION_RANGES.LUXURY.average,
-    food: MEAL_COSTS.FINE_DINING.average * 3,
-    activities: ACTIVITY_COSTS.DIVING.average,
-    transport: TRANSPORT_COSTS.TAXI.average * 5, // Multiple trips
+    accommodation: ACCOMMODATION_RANGES.LUXURY.average, // ₱10,000
+    food: MEAL_COSTS.FINE_DINING.average * 3, // ₱4,200
+    activities: ACTIVITY_COSTS.DIVING.average, // ₱3,500
+    transport: TRANSPORT_COSTS.TAXI.average * 5, // ₱750 (multiple trips)
     miscellaneous: 1000,
   },
 };
@@ -268,6 +268,7 @@ export const calculateEstimatedBudget = (params) => {
     budgetLevel = 'moderate', // 'budget-friendly', 'moderate', 'luxury'
     includeFlights = false,
     startDate = null, // NEW: For timing-based flight pricing
+    transportAnalysis = null, // ✅ NEW: Transport mode analysis from backend
   } = params;
   
   // Validate inputs
@@ -289,7 +290,12 @@ export const calculateEstimatedBudget = (params) => {
     regionCode,
     costIndex: cappedCostIndex,
     destMultiplier: cappedDestMultiplier,
-    budgetLevel
+    budgetLevel,
+    transportAnalysis: transportAnalysis ? {
+      isGroundPreferred: transportAnalysis.groundTransport?.preferred,
+      hasGroundRoute: !!transportAnalysis.groundTransport,
+      includeFlights
+    } : 'not provided'
   });
   
   // Get base daily costs for budget level
@@ -306,9 +312,16 @@ export const calculateEstimatedBudget = (params) => {
   // Calculate base total
   let totalCost = dailyCostPerPerson * duration * travelerCount;
   
-  // Add flight costs with IMPROVED timing multiplier
+  // ✅ NEW: Add flight or ground transport costs based on preference
   let flightCost = 0;
-  if (includeFlights) {
+  let groundTransportCost = 0;
+  
+  // Check if ground transport is preferred and available
+  const isGroundPreferred = transportAnalysis?.groundTransport?.preferred === true;
+  const groundRoute = transportAnalysis?.groundTransport;
+  
+  if (includeFlights && !isGroundPreferred) {
+    // Only calculate flight costs if ground transport is NOT preferred
     const baseFlightCost = estimateFlightCost(departureLocation, destination, null); // Get base cost first
     
     if (startDate) {
@@ -337,6 +350,24 @@ export const calculateEstimatedBudget = (params) => {
     }
     
     totalCost += flightCost;
+  } else if (isGroundPreferred && groundRoute) {
+    // ✅ Use ground transport costs when preferred (₱200-700 vs ₱2,500-5,000)
+    const fareRange = groundRoute.fare_range || { min: 200, max: 700 };
+    const avgFare = Math.round((fareRange.min + fareRange.max) / 2);
+    
+    // Add 20% contingency for luggage/unexpected fees
+    const fareWithContingency = Math.round(avgFare * 1.2);
+    
+    groundTransportCost = fareWithContingency * travelerCount;
+    totalCost += groundTransportCost;
+    
+    console.log('🚌 Ground Transport Cost Calculation:', {
+      fareRange,
+      avgFare,
+      fareWithContingency,
+      travelers: travelerCount,
+      total: groundTransportCost
+    });
   }
   
   // Round to nearest 100 for cleaner display
@@ -348,7 +379,8 @@ export const calculateEstimatedBudget = (params) => {
     food: Math.round((dailyCosts.food * (cappedCostIndex / 100) * cappedDestMultiplier * duration * travelerCount) / 100) * 100,
     activities: Math.round((dailyCosts.activities * (cappedCostIndex / 100) * cappedDestMultiplier * duration * travelerCount) / 100) * 100,
     transport: Math.round((dailyCosts.transport * (cappedCostIndex / 100) * cappedDestMultiplier * duration * travelerCount) / 100) * 100,
-    flights: flightCost,
+    flights: flightCost, // ✅ Will be 0 if ground transport preferred
+    groundTransport: groundTransportCost, // ✅ NEW: Ground transport costs (₱200-700)
     miscellaneous: Math.round((dailyCosts.miscellaneous * (cappedCostIndex / 100) * cappedDestMultiplier * duration * travelerCount) / 100) * 100,
   };
   

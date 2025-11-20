@@ -26,6 +26,10 @@ import {
   getValidationSuggestion,
 } from "../utils/itineraryValidator";
 import { autoFixItinerary } from "../utils/itineraryAutoFix";
+import {
+  classifyActivities,
+  getActivityConstraints,
+} from "../utils/activityClassifier";
 import { validateHotelData } from "../utils/hotelValidation";
 import {
   formatTravelersDisplay,
@@ -122,6 +126,9 @@ function CreateTrip() {
   const [transportModeResult, setTransportModeResult] = useState(null);
   const [transportAnalysisComplete, setTransportAnalysisComplete] =
     useState(false);
+
+  // 🆕 OPTIMIZATION: Track validation progress for better UX
+  const [validationPhase, setValidationPhase] = useState(null); // 'parsing', 'autofix', 'validation', 'saving'
   const [userProfile, setUserProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
@@ -235,10 +242,12 @@ function CreateTrip() {
         activities: location.state.categoryActivities,
         keywords: location.state.categoryKeywords,
         focus: location.state.categoryFocus,
+        recommendedDestinations: location.state.recommendedDestinations, // ✅ NEW
       };
 
       console.log("🏠 Received selected category from home:", categoryData);
 
+      // ✅ Store category data for AI prompt enhancement
       setFormData((prev) => ({
         ...prev,
         selectedCategory: categoryData.type,
@@ -246,30 +255,50 @@ function CreateTrip() {
         categoryActivities: categoryData.activities,
         categoryKeywords: categoryData.keywords,
         categoryFocus: categoryData.focus,
+        recommendedDestinations: categoryData.recommendedDestinations, // ✅ NEW
+        // ✅ Pre-populate specific requests with category focus
+        specificRequests:
+          prev.specificRequests ||
+          `I'm interested in a ${categoryData.name.toLowerCase()} trip. Please focus on ${categoryData.keywords
+            .split(",")[0]
+            .trim()}.`,
       }));
+
+      // ✅ NOTE: Toast will be shown below in consolidated notification section
     }
 
     if ((hasLocation || hasCategory) && !hasShownHomeToast.current) {
       const searchedLocation = location.state?.searchedLocation;
       const categoryName = location.state?.categoryName;
       const categoryKeywords = location.state?.categoryKeywords;
+      const recommendedDestinations = location.state?.recommendedDestinations;
 
       if (hasLocation && hasCategory) {
+        // Both location and category selected
         toast.success(
           `Perfect! Planning your ${categoryName} trip to ${searchedLocation}`,
           {
             description: `We'll focus on ${
               categoryKeywords?.split(",")[0] || "amazing experiences"
             }`,
+            duration: 6000,
           }
         );
       } else if (hasCategory) {
-        toast.success(`Perfect! Let's plan your ${categoryName} trip`, {
-          description: `We'll focus on ${
-            categoryKeywords?.split(",")[0] || "relevant activities"
-          }`,
+        // Only category selected - show destinations
+        const destList = recommendedDestinations
+          ?.slice(0, 3)
+          .map((d) => d.city)
+          .join(", ");
+
+        toast.success(`🎯 ${categoryName} Adventure Awaits!`, {
+          description: destList
+            ? `Top picks: ${destList}. Select one below to start planning! 👇`
+            : `Let's plan your perfect ${categoryName.toLowerCase()} trip!`,
+          duration: 8000,
         });
       } else {
+        // Only location selected
         toast.success(
           `Great choice! Planning your trip to ${searchedLocation}`
         );
@@ -345,6 +374,7 @@ function CreateTrip() {
             duration: formData.duration,
             travelers: travelerCount,
             includeFlights: flightData.includeFlights || false,
+            transportAnalysis: flightData.transportAnalysis || null, // ✅ NEW: Pass transport mode analysis
             startDate: formData.startDate,
           });
 
@@ -359,9 +389,26 @@ function CreateTrip() {
                 budgetTier.range.replace(/[^0-9]/g, "")
               );
 
-              const absoluteMinimum = Math.max(
-                Math.floor(recommendedBudget * 0.9),
-                formData.duration * 1200
+              // ✅ FIXED: Use SAME minimum calculation as BudgetSelector
+              // Matches BudgetSelector.jsx lines 80-132
+              const travelers = formData.travelers || 1;
+              const duration = formData.duration || 3;
+
+              const getMinPerPersonPerDay = (travelerCount) => {
+                if (travelerCount >= 11) return 600;
+                if (travelerCount >= 6) return 700;
+                if (travelerCount >= 3) return 800;
+                return 1000;
+              };
+
+              const minPerPersonPerDay = getMinPerPersonPerDay(travelers);
+              const tieredMinimum = minPerPersonPerDay * duration * travelers;
+              const budgetTier90Percent = Math.floor(recommendedBudget * 0.9);
+
+              // Use the LOWER value (more lenient)
+              const absoluteMinimum = Math.min(
+                tieredMinimum,
+                budgetTier90Percent
               );
 
               const customBudgetAmount = parseInt(customBudget);
@@ -369,6 +416,9 @@ function CreateTrip() {
               console.log("💰 Budget revalidation after service change:", {
                 customBudgetAmount,
                 absoluteMinimum,
+                tieredMinimum,
+                budgetTier90Percent,
+                calculation: "Min of (tiered OR 90%) - matches BudgetSelector",
                 servicesAdded: Object.entries(currentServices)
                   .filter(([, enabled]) => enabled)
                   .map(([service]) => service),
@@ -417,6 +467,7 @@ function CreateTrip() {
     }
   }, [
     flightData.includeFlights,
+    flightData.transportAnalysis, // ✅ NEW: Added to dependency array
     hotelData.includeHotels,
     customBudget,
     currentStep,
@@ -752,10 +803,30 @@ function CreateTrip() {
                 duration: formData.duration,
                 travelers: travelerCount,
                 includeFlights: flightData.includeFlights || false,
+                transportAnalysis: flightData.transportAnalysis || null, // ✅ NEW: Pass transport mode analysis
                 startDate: formData.startDate,
               });
 
               console.log("📊 Budget estimates received:", budgetEstimates);
+              console.log("🚌 Transport analysis passed:", {
+                hasTransportAnalysis: !!flightData.transportAnalysis,
+                isGroundPreferred:
+                  flightData.transportAnalysis?.groundTransport?.preferred,
+                includeFlights: flightData.includeFlights,
+                includeHotels: hotelData.includeHotels,
+                departureCity: flightData.departureCity,
+                destination: formData.location,
+              });
+
+              // ⚠️ WARNING: If transport analysis is missing, budget might be incorrect
+              if (flightData.includeFlights && !flightData.transportAnalysis) {
+                console.warn(
+                  "⚠️ VALIDATION WARNING: includeFlights=true but transportAnalysis is missing!"
+                );
+                console.warn(
+                  "This may cause budget to include flight costs even for ground-preferred routes"
+                );
+              }
 
               if (budgetEstimates) {
                 const budgetTier =
@@ -770,15 +841,39 @@ function CreateTrip() {
                     budgetTier.range.replace(/[^0-9]/g, "")
                   );
 
-                  const absoluteMinimum = Math.max(
-                    Math.floor(recommendedBudget * 0.9),
-                    formData.duration * 1200
+                  // ✅ FIXED: Use SAME minimum calculation as BudgetSelector
+                  // Matches BudgetSelector.jsx lines 80-132
+                  const travelers = formData.travelers || 1;
+                  const duration = formData.duration || 3;
+
+                  const getMinPerPersonPerDay = (travelerCount) => {
+                    if (travelerCount >= 11) return 600;
+                    if (travelerCount >= 6) return 700;
+                    if (travelerCount >= 3) return 800;
+                    return 1000;
+                  };
+
+                  const minPerPersonPerDay = getMinPerPersonPerDay(travelers);
+                  const tieredMinimum =
+                    minPerPersonPerDay * duration * travelers;
+                  const budgetTier90Percent = Math.floor(
+                    recommendedBudget * 0.9
+                  );
+
+                  // Use the LOWER value (more lenient)
+                  const absoluteMinimum = Math.min(
+                    tieredMinimum,
+                    budgetTier90Percent
                   );
 
                   console.log("💰 Budget validation check:", {
                     customBudgetAmount,
                     recommendedBudget,
+                    tieredMinimum,
+                    budgetTier90Percent,
                     absoluteMinimum,
+                    calculation:
+                      "Min of (tiered OR 90%) - matches BudgetSelector",
                     isValid: customBudgetAmount >= absoluteMinimum,
                   });
 
@@ -807,29 +902,10 @@ function CreateTrip() {
 
                   console.log("✅ Budget validation PASSED");
 
-                  // Soft warning if below recommended (but above minimum)
-                  if (customBudgetAmount < recommendedBudget) {
-                    const percentBelow = Math.round(
-                      ((recommendedBudget - customBudgetAmount) /
-                        recommendedBudget) *
-                        100
-                    );
-
-                    if (percentBelow > 3) {
-                      const services = [];
-                      if (flightData.includeFlights) services.push("flights");
-                      if (hotelData.includeHotels) services.push("hotels");
-                      const serviceText =
-                        services.length > 0
-                          ? ` (including ${services.join(" and ")})`
-                          : "";
-
-                      toast.warning("Budget below recommended amount", {
-                        description: `Your budget is ${percentBelow}% below our recommendation (₱${recommendedBudget.toLocaleString()})${serviceText}. This may limit accommodation and activity options. You can proceed, but expect basic choices.`,
-                        duration: 6000,
-                      });
-                    }
-                  }
+                  // ✅ REMOVED: Confusing warning with inconsistent recommended budget
+                  // User already saw budget comparison in BudgetSelector display
+                  // No need to show duplicate warning with potentially different calculation
+                  // (Transport analysis timing can cause discrepancy: ₱11,500 vs ₱12,600)
                 }
               }
             } catch (error) {
@@ -874,8 +950,8 @@ function CreateTrip() {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
-    useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [currentStep]);
 
   // Google Login
@@ -1074,7 +1150,7 @@ function CreateTrip() {
           setTransportAnalysisComplete(true);
           console.warn(
             "⚠️ Transport mode analysis not available (backend may have skipped it). " +
-            "This is non-critical - proceeding with trip generation."
+              "This is non-critical - proceeding with trip generation."
           );
         }
 
@@ -1261,6 +1337,15 @@ function CreateTrip() {
           flightData,
           hotelData,
           langGraphResults,
+          // ✅ NEW: Category-specific context for AI
+          categoryContext: formData?.selectedCategory
+            ? {
+                type: formData.selectedCategory,
+                name: formData.categoryName,
+                keywords: formData.categoryKeywords,
+                activities: formData.categoryActivities,
+              }
+            : null,
         });
 
         console.log(
@@ -1338,7 +1423,7 @@ function CreateTrip() {
               throw new Error("Generated itinerary contains no activities");
             }
 
-            // � AUTO-FIX: Correct grand total if it doesn't match calculated sum
+            //  AUTO-FIX: Correct grand total if it doesn't match calculated sum
             if (testParse.dailyCosts && Array.isArray(testParse.dailyCosts)) {
               const calculatedGrandTotal = testParse.dailyCosts.reduce(
                 (sum, day) => sum + (day.breakdown?.subtotal || 0),
@@ -1524,7 +1609,7 @@ function CreateTrip() {
       } catch (error) {
         console.error("❌ Trip generation error:", error);
 
-        // ✅ ENHANCED: Immediately stop all loading states and reset transport analysis
+        // ✅ Immediately stop all loading states and reset transport analysis
         setLoading(false);
         setFlightLoading(false);
         setHotelLoading(false);
@@ -1532,14 +1617,42 @@ function CreateTrip() {
         setTransportModeResult(null);
         setTransportAnalysisComplete(false);
 
-        // ✅ ENHANCED: Better error messages based on error type
-        if (error.code === "ECONNABORTED") {
+        // ✅ NEW: Handle rate limit errors silently - user doesn't need technical details
+        if (
+          error.message?.includes("Rate limit") ||
+          error.message?.includes("429") ||
+          error.message?.includes("quota")
+        ) {
+          // Extract wait time if available
+          const retryMatch =
+            error.message.match(/retry in (\d+)/i) ||
+            error.message.match(/wait (\d+)/i);
+          const waitTime = retryMatch ? parseInt(retryMatch[1]) : null;
+
+          toast.error("Processing Delayed", {
+            description: waitTime
+              ? `Your request is being processed. This may take up to ${waitTime} seconds. Please wait...`
+              : "Your request is being processed. This may take a moment. Please wait and try again shortly.",
+            duration: 8000,
+          });
+          return;
+        }
+
+        // ✅ Timeout errors - suggest optimization
+        if (
+          error.code === "ECONNABORTED" ||
+          error.message?.includes("timeout")
+        ) {
           toast.error("Request Timeout", {
             description:
               "The generation took too long. Try reducing the trip duration or simplifying requirements.",
             duration: 6000,
           });
-        } else if (
+          return;
+        }
+
+        // ✅ Network errors - check server
+        if (
           error.code === "ERR_NETWORK" ||
           error.message?.includes("Network Error")
         ) {
@@ -1676,6 +1789,7 @@ function CreateTrip() {
           }
         : null;
 
+      setValidationPhase("parsing"); // 🆕 Track progress for user
       let parsedTripData;
       try {
         parsedTripData = JSON.parse(TripData);
@@ -1705,6 +1819,7 @@ function CreateTrip() {
       }
 
       // 🔧 AUTO-FIX: Ensure activity counts meet constraints before validation
+      setValidationPhase("autofix"); // 🆕 Track progress
       console.log("🔧 Running auto-fix on itinerary...");
       console.log("📦 Trip data structure:", {
         hasItinerary: !!parsedTripData?.itinerary,
@@ -1737,6 +1852,7 @@ function CreateTrip() {
       }
 
       // Location validation
+      setValidationPhase("validation"); // 🆕 Track progress
       console.log("🔍 Validating location consistency...");
       const { validateTripLocations, getValidationSummary } = await import(
         "../utils/locationValidator"
@@ -1779,6 +1895,47 @@ function CreateTrip() {
       console.log("📋 Itinerary Validation Results:", itineraryValidation);
       console.log("🏃 Activity Count Validation Results:", activityValidation);
 
+      // 🆕 DEBUG: Show detailed activity breakdown per day
+      console.log("\n📊 DETAILED ACTIVITY BREAKDOWN:");
+      parsedTripData?.itinerary?.forEach((day, index) => {
+        const dayNum = day.day || index + 1;
+        const { activities, logistics, activityCount } = classifyActivities(
+          day.plan || []
+        );
+        const isFirstDay = dayNum === 1;
+        const isLastDay = dayNum === parsedTripData.itinerary.length;
+        const constraints = getActivityConstraints(
+          isFirstDay,
+          isLastDay,
+          formData.activityPreference || 2
+        );
+
+        console.log(
+          `\nDay ${dayNum} (${
+            isFirstDay ? "Arrival" : isLastDay ? "Departure" : "Middle"
+          }):`
+        );
+        console.log(`  Total Items: ${day.plan?.length || 0}`);
+        console.log(
+          `  Tourist Activities: ${activityCount} (Target: ${constraints.min}-${constraints.max})`
+        );
+        console.log(
+          `    ✅ Activities:`,
+          activities.map((a) => a.placeName || a)
+        );
+        console.log(`  Logistics Items: ${logistics.length}`);
+        console.log(
+          `    📦 Logistics:`,
+          logistics.map((a) => a.placeName || a)
+        );
+        console.log(
+          `  Status: ${
+            activityCount <= constraints.max ? "✅ VALID" : "❌ EXCEEDS LIMIT"
+          }`
+        );
+      });
+      console.log("\n");
+
       if (
         !itineraryValidation.isValid &&
         itineraryValidation.errors.length > 0
@@ -1808,17 +1965,52 @@ function CreateTrip() {
           activityValidation.errors
         );
 
-        const errorMessages = activityValidation.errors
-          .map((err) => (typeof err === "string" ? err : err.message))
-          .join("\n");
+        // 🔧 SMART RETRY: Try one more aggressive auto-fix before giving up
+        console.log("🔄 Attempting aggressive auto-fix...");
 
-        toast.error("Activity Pace Validation Failed", {
-          description: `The itinerary doesn't match your selected activity pace (${activityValidation.activityPreference} activities/day):\n${errorMessages}\n\nPlease try generating again.`,
-          duration: 10000,
-        });
+        try {
+          // Force-fix all day activity counts to strict limits
+          const { autoFixItinerary } = await import(
+            "../utils/itineraryAutoFix"
+          );
+          const aggressiveFixed = autoFixItinerary(parsedTripData, {
+            ...formData,
+            activityPreference: Math.max(1, formData.activityPreference - 1), // Lower preference
+          });
 
-        setLoading(false);
-        return;
+          // Re-validate after aggressive fix
+          const revalidation = validateActivityCount(
+            aggressiveFixed.tripData || parsedTripData,
+            formData
+          );
+
+          if (revalidation.isValid) {
+            console.log("✅ Aggressive auto-fix succeeded!");
+            parsedTripData = aggressiveFixed.tripData || parsedTripData;
+
+            toast.success("Itinerary Optimized", {
+              description:
+                "We've adjusted your itinerary to ensure a comfortable pace. You can modify activities later.",
+              duration: 4000,
+            });
+          } else {
+            throw new Error("Aggressive fix failed");
+          }
+        } catch (fixError) {
+          console.error("❌ Aggressive auto-fix failed:", fixError);
+
+          const errorMessages = activityValidation.errors
+            .map((err) => (typeof err === "string" ? err : err.message))
+            .join("\n");
+
+          toast.error("Activity Pace Validation Failed", {
+            description: `The itinerary doesn't match your selected activity pace (${activityValidation.activityPreference} activities/day):\n${errorMessages}\n\nPlease try generating again.`,
+            duration: 10000,
+          });
+
+          setLoading(false);
+          return;
+        }
       }
 
       if (activityValidation.warnings.length > 0) {
@@ -2203,6 +2395,8 @@ function CreateTrip() {
       }
 
       // ✅ FIX 1: Ensure budget field is always included in userSelection with multiple formats
+      setValidationPhase("saving"); // 🆕 Track final phase
+      console.log("💾 Preparing trip document for Firebase...");
       const budgetValue = customBudget
         ? `Custom: ₱${customBudget}`
         : formData.budget || "Moderate";
@@ -2411,6 +2605,14 @@ function CreateTrip() {
               place={place}
               onPlaceChange={setPlace}
               isPreFilled={!!place}
+              categoryData={
+                formData.selectedCategory
+                  ? {
+                      name: formData.categoryName,
+                      recommendedDestinations: formData.recommendedDestinations,
+                    }
+                  : null
+              }
             />
             <DateRangePicker
               startDate={formData.startDate}
@@ -2506,6 +2708,14 @@ function CreateTrip() {
             place={place}
             onPlaceChange={setPlace}
             isPreFilled={!!place}
+            categoryData={
+              formData.selectedCategory
+                ? {
+                    name: formData.categoryName,
+                    recommendedDestinations: formData.recommendedDestinations,
+                  }
+                : null
+            }
           />
         );
     }
@@ -2716,6 +2926,7 @@ function CreateTrip() {
         flightLoading={flightLoading}
         hotelLoading={hotelLoading}
         langGraphLoading={langGraphLoading}
+        validationPhase={validationPhase} // 🆕 Pass validation phase
         destination={formData?.location}
         duration={formData?.duration}
         includeFlights={flightData.includeFlights}

@@ -2,7 +2,9 @@
 /* Note: @import and @custom-variant are valid Tailwind v4 directives */
 /* If you see linting warnings, they can be safely ignored or suppressed in .vscode/settings.json */
 @import "tailwindcss";
-@import "tw-animate-css";
+
+/* ✅ CRITICAL: Animation utilities must be defined in main CSS for Tailwind v4 */
+/* tw-animate-css may not work properly with v4's new architecture */
 
 @custom-variant dark (&:is(.dark *));
 
@@ -342,7 +344,13 @@ a:not(:disabled),
    CORE ANIMATIONS (Minimal Set)
    ============================================ */
 
-/* Loading: Spin (infinite) */
+/* ================================
+   🎨 ANIMATIONS & LOADING STATES
+   ================================ */
+
+/* ✅ BEST SOLUTION: Define keyframes first, then animations */
+/* Tailwind v4 requires keyframes to be defined before usage */
+
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -352,11 +360,18 @@ a:not(:disabled),
   }
 }
 
-.animate-spin {
-  animation: spin 1s linear infinite;
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(-25%);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
 }
 
-/* Status: Pulse (attention) */
 @keyframes pulse {
   0%,
   100% {
@@ -367,11 +382,6 @@ a:not(:disabled),
   }
 }
 
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Status: Ping (ripple effect) */
 @keyframes ping {
   75%,
   100% {
@@ -380,8 +390,26 @@ a:not(:disabled),
   }
 }
 
-.animate-ping {
-  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+/* ✅ CRITICAL: Use :where() for low specificity to allow overrides */
+/* But add both class and attribute selectors for maximum compatibility */
+.animate-spin,
+[class*="animate-spin"] {
+  animation: spin 1s linear infinite !important;
+}
+
+.animate-bounce,
+[class*="animate-bounce"] {
+  animation: bounce 1s infinite !important;
+}
+
+.animate-pulse,
+[class*="animate-pulse"] {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
+}
+
+.animate-ping,
+[class*="animate-ping"] {
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite !important;
 }
 
 /* Hero: Blob (ambient motion) */

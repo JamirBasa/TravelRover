@@ -235,7 +235,7 @@ const safetySettings = [
 export const model = USE_PROXY
   ? null // Model not needed in proxy mode
   : genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-flash", // ✅ Faster experimental model
       safetySettings,
     });
 
