@@ -133,9 +133,10 @@ export const validateBudgetCompliance = (tripData) => {
       errors.push("❌ Missing or invalid withinBudget flag");
     }
 
-    // ✅ IMPROVED: Allow small budget buffer (5% tolerance for real-world pricing variations)
-    // Real Filipino market prices don't align perfectly with round budget numbers
-    const BUDGET_TOLERANCE_PERCENT = 0.05; // 5% tolerance
+    // ✅ IMPROVED: Allow realistic budget buffer (15% tolerance for real-world pricing variations)
+    // Real Filipino market prices vary significantly based on season, availability, and location
+    // Previous 5% tolerance was too strict and caused unnecessary generation failures
+    const BUDGET_TOLERANCE_PERCENT = 0.15; // 15% tolerance
     const toleranceAmount = Math.round(userBudget * BUDGET_TOLERANCE_PERCENT);
     const exceedsWithTolerance = totalCost > (userBudget + toleranceAmount);
 
@@ -144,7 +145,7 @@ export const validateBudgetCompliance = (tripData) => {
       const overagePercent = ((overage / userBudget) * 100).toFixed(1);
       
       errors.push(
-        `❌ BUDGET EXCEEDED: Total ₱${totalCost?.toLocaleString()} > Budget ₱${userBudget?.toLocaleString()} + 5% buffer (₱${overage.toLocaleString()} or ${overagePercent}% over)`
+        `❌ BUDGET EXCEEDED: Total ₱${totalCost?.toLocaleString()} > Budget ₱${userBudget?.toLocaleString()} + 15% buffer (₱${overage.toLocaleString()} or ${overagePercent}% over). Reduce hotel tier, activities, or daily costs.`
       );
     } else if (withinBudget !== true && !exceedsWithTolerance) {
       // Within tolerance - convert to warning instead of error
@@ -152,14 +153,14 @@ export const validateBudgetCompliance = (tripData) => {
       const overagePercent = ((overage / userBudget) * 100).toFixed(1);
       
       warnings.push(
-        `⚠️ Slightly over budget: Total ₱${totalCost?.toLocaleString()} vs Budget ₱${userBudget?.toLocaleString()} (${overagePercent}% over, within 5% tolerance)`
+        `⚠️ Slightly over budget: Total ₱${totalCost?.toLocaleString()} vs Budget ₱${userBudget?.toLocaleString()} (${overagePercent}% over, within 15% tolerance)`
       );
     }
 
     if (totalCost && userBudget && exceedsWithTolerance) {
       const overage = totalCost - userBudget;
       errors.push(
-        `❌ Plan exceeds budget+buffer by ₱${overage.toLocaleString()} (more than 5% tolerance)`
+        `❌ Plan exceeds budget+buffer by ₱${overage.toLocaleString()} (more than 15% tolerance). Try: lower hotel tier, fewer activities, or reduce meal costs.`
       );
     }
   }

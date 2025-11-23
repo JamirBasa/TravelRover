@@ -694,13 +694,14 @@ export const HOTEL_CONFIG = {
   },
   // Google Places API uses 0-4 price level scale
   // Map our 1-6 scale to Google's 0-4 scale
+  // Optimized for traveler accuracy: no free attractions, accurate pricing bands
   GOOGLE_PRICE_LEVEL_MAP: {
-    1: 0, // Budget → Free/Inexpensive
-    2: 1, // Economy → Inexpensive
-    3: 2, // Moderate → Moderate
-    4: 3, // Upscale → Expensive
-    5: 4, // Luxury → Very Expensive
-    6: 4, // Ultra-Luxury → Very Expensive
+    1: 1, // Budget ₱500-1.5k → Inexpensive (actual budget hotels, not free attractions)
+    2: 2, // Economy ₱1.5-3.5k → Moderate (expanded coverage)
+    3: 2, // Moderate ₱3.5-8k → Moderate (same level for better range coverage)
+    4: 3, // Upscale ₱8-15k → Expensive
+    5: 4, // Luxury ₱15-30k → Very Expensive
+    6: 4, // Ultra-Luxury ₱30k+ → Very Expensive
   },
   // Accommodation type mapping to Google Places types
   ACCOMMODATION_TYPE_MAP: {
@@ -721,4 +722,38 @@ export const HOTEL_CONFIG = {
   },
   DEFAULT_CHECKIN_DAYS: 7, // Days from now
   DEFAULT_CHECKOUT_DAYS: 10, // Days from now
+};
+
+// ✨ RETRY STRATEGY FOR BUDGET COMPLIANCE
+// Helps AI generate budget-compliant trips on retries by auto-adjusting constraints
+export const BUDGET_RETRY_STRATEGY = {
+  // Hotel tier reduction sequence: 5-star → 3-star → 2-star on retries
+  HOTEL_TIER_REDUCTION: {
+    1: { name: "Luxury", description: "5-star hotels, full amenities" },
+    2: { name: "Mid-Range", description: "3-star hotels, good comfort" },
+    3: { name: "Budget", description: "Budget hotels, basic amenities" },
+  },
+  
+  // Activity reduction strategy: Cut expensive activities first
+  ACTIVITY_REDUCTION_PERCENT: {
+    1: 0, // Retry 1: No reduction (try AI prompt first)
+    2: 0.1, // Retry 2: Cut 10% of activities (keep best ones)
+    3: 0.2, // Retry 3: Cut 20% of activities
+  },
+  
+  // Budget buffer targets
+  BUDGET_TARGETS: {
+    1: 0.10, // Retry 1: Aim for 10% under budget (conservative)
+    2: 0.15, // Retry 2: Allow up to 15% over (if activities cut)
+    3: 0.15, // Retry 3: Same as retry 2
+  },
+  
+  // User feedback messages for each retry
+  RETRY_MESSAGES: {
+    1: "🔄 Optimizing your itinerary to fit your budget perfectly...",
+    2: "💡 Adjusting plan with better hotel selection and free activities...",
+    3: "🎯 Creating a smart budget-conscious plan with essential experiences...",
+  },
+  
+  MAX_RETRIES: 3,
 };

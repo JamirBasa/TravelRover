@@ -19,8 +19,14 @@ function BudgetBreakdown({ trip, className = "" }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const budgetInfo = calculateTotalBudget(trip);
 
-  // Don't render if no budget data
-  if (budgetInfo.total === 0) {
+  // Don't render if no breakdown data at all
+  const hasAnyData = 
+    budgetInfo.breakdown.activities > 0 || 
+    budgetInfo.breakdown.hotels > 0 || 
+    budgetInfo.breakdown.flights > 0 ||
+    budgetInfo.breakdown.groundTransport > 0;
+    
+  if (!hasAnyData) {
     return null;
   }
 
@@ -54,10 +60,10 @@ function BudgetBreakdown({ trip, className = "" }) {
           </div>
           <div className="text-left flex-1">
             <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-0.5">
-              Budget Breakdown
+              Cost Breakdown
             </h3>
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium">
-              Total:{" "}
+              Estimated Total:{" "}
               <span className="font-bold brand-gradient-text">
                 {formatCurrency(budgetInfo.total)}
               </span>
@@ -82,11 +88,11 @@ function BudgetBreakdown({ trip, className = "" }) {
           id="budget-details"
           className="border-t-2 border-gray-200 dark:border-slate-700 p-4 sm:p-6 bg-gray-50/50 dark:bg-slate-800/30"
         >
-          {/* Total Budget Highlight */}
+          {/* Total Estimated Cost Highlight */}
           <div className="bg-gradient-to-br from-sky-50 via-blue-50 to-sky-50 dark:from-sky-950/30 dark:via-blue-950/30 dark:to-sky-950/30 rounded-lg p-4 sm:p-5 mb-6 border-2 border-sky-200 dark:border-sky-800 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm sm:text-base font-bold text-gray-700 dark:text-gray-200">
-                Total Estimated Budget
+                Total Estimated Cost
               </span>
               <span className="text-xl sm:text-2xl font-bold brand-gradient-text">
                 {formatCurrency(budgetInfo.total)}
@@ -118,7 +124,7 @@ function BudgetBreakdown({ trip, className = "" }) {
                     ></div>
                   </div>
                   <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                    {percentages.activities.toFixed(1)}% of total budget
+                    {percentages.activities.toFixed(1)}% of estimated cost
                   </span>
                 </div>
               </div>
@@ -146,7 +152,7 @@ function BudgetBreakdown({ trip, className = "" }) {
                     ></div>
                   </div>
                   <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                    {percentages.hotels.toFixed(1)}% of total budget
+                    {percentages.hotels.toFixed(1)}% of estimated cost
                   </span>
                 </div>
               </div>
@@ -174,11 +180,80 @@ function BudgetBreakdown({ trip, className = "" }) {
                     ></div>
                   </div>
                   <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                    {percentages.flights.toFixed(1)}% of total budget
+                    {percentages.flights.toFixed(1)}% of estimated cost
                   </span>
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Budget vs Cost Comparison */}
+          <div className="mt-6 p-4 bg-white dark:bg-slate-900/50 rounded-lg border-2 border-gray-200 dark:border-slate-700 shadow-sm">
+            <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+              <span className="text-lg">💰</span>
+              Budget Summary
+            </h4>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Your Budget:</span>
+                <span className="font-bold text-gray-900 dark:text-gray-100">
+                  {(() => {
+                    if (trip?.userSelection?.budgetAmount) {
+                      return `₱${trip.userSelection.budgetAmount.toLocaleString()}`;
+                    }
+                    if (trip?.userSelection?.customBudget) {
+                      const amount = parseInt(trip.userSelection.customBudget);
+                      return !isNaN(amount) ? `₱${amount.toLocaleString()}` : "Not set";
+                    }
+                    return "Not set";
+                  })()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Estimated Cost:</span>
+                <span className="font-bold brand-gradient-text">
+                  {formatCurrency(budgetInfo.total)}
+                </span>
+              </div>
+              {(() => {
+                const userBudget = trip?.userSelection?.budgetAmount || 
+                  (trip?.userSelection?.customBudget ? parseInt(trip.userSelection.customBudget) : null);
+                const estimatedCost = budgetInfo.total;
+                
+                if (userBudget && estimatedCost > 0) {
+                  const difference = userBudget - estimatedCost;
+                  const percentDiff = Math.abs((difference / userBudget) * 100);
+                  const isUnder = difference >= 0;
+                  
+                  return (
+                    <>
+                      <div className="h-px bg-gray-200 dark:bg-slate-700 my-2"></div>
+                      <div className={`flex items-center justify-between p-2 rounded ${
+                        isUnder 
+                          ? "bg-green-50 dark:bg-green-950/30" 
+                          : "bg-amber-50 dark:bg-amber-950/30"
+                      }`}>
+                        <span className={`text-sm font-medium ${
+                          isUnder 
+                            ? "text-green-700 dark:text-green-400" 
+                            : "text-amber-700 dark:text-amber-400"
+                        }`}>
+                          {isUnder ? "Under Budget ✅" : "Over Budget ⚠️"}
+                        </span>
+                        <span className={`font-bold ${
+                          isUnder 
+                            ? "text-green-700 dark:text-green-400" 
+                            : "text-amber-700 dark:text-amber-400"
+                        }`}>
+                          {isUnder ? "+" : "-"}₱{Math.abs(difference).toLocaleString()} ({percentDiff.toFixed(1)}%)
+                        </span>
+                      </div>
+                    </>
+                  );
+                }
+                return null;
+              })()}
+            </div>
           </div>
 
           {/* Footer Note */}

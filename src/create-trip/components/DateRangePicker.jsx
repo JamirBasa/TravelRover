@@ -1,9 +1,8 @@
 // src/create-trip/components/DateRangePicker.jsx
 // SIMPLIFIED VERSION - Reduced information overload
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import {
-  FaCalendarAlt,
   FaClock,
   FaPlane,
   FaExclamationTriangle,
@@ -33,6 +32,27 @@ import {
   formatDateDisplay,
 } from "../../utils/flightPricingAnalyzer";
 import { DurationCategoryBadge } from "../../components/common/DurationCategoryBadge";
+
+// ✅ NEW: Enhanced native date input with professional styling
+function DateInputWithIcon({ value, onChange, min, disabled, name, label }) {
+  return (
+    <div>
+      <label className="block text-base font-medium text-gray-800 dark:text-gray-200 mb-2">
+        {label} *
+      </label>
+      <input
+        type="date"
+        min={min}
+        value={value || ""}
+        onChange={onChange}
+        disabled={disabled}
+        name={name}
+        autoComplete="off"
+        className="w-full text-base py-3 px-4 rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:focus:ring-sky-900 focus:ring-offset-0 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      />
+    </div>
+  );
+}
 
 function DateRangePicker({
   startDate,
@@ -146,75 +166,38 @@ function DateRangePicker({
         <p className="text-gray-700 dark:text-gray-300 text-base font-medium">
           Select your travel dates to plan the perfect itinerary 📅
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-          📍 All dates are in Philippine Time (PHT, UTC+8)
-        </p>
       </div>
 
       {/* Date Selection */}
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-base font-medium text-gray-800 dark:text-gray-200 mb-2">
-              <FaCalendarAlt className="inline mr-2" />
-              Start Date *
-            </label>
-            <Input
-              type="date"
-              min={getMinDate()}
-              value={startDate || ""}
-              onChange={(e) => onStartDateChange(e.target.value)}
-              className="text-base py-3 px-3 rounded-lg border-2 focus:border-black dark:focus:border-sky-500 h-auto dark:bg-slate-900 dark:text-white dark:border-slate-600"
-              placeholder="Select start date"
-            />
-          </div>
-          <div>
-            <label className="block text-base font-medium text-gray-800 dark:text-gray-200 mb-2">
-              End Date *
-            </label>
-            <Input
-              type="date"
-              min={getMinEndDate(startDate)}
-              value={endDate || ""}
-              onChange={(e) => onEndDateChange(e.target.value)}
-              className="text-base py-3 px-3 rounded-lg border-2 focus:border-black dark:focus:border-sky-500 h-auto dark:bg-slate-900 dark:text-white dark:border-slate-600"
-              disabled={!startDate}
-              placeholder="Select end date"
-            />
-          </div>
+          <DateInputWithIcon
+            value={startDate}
+            onChange={(e) => onStartDateChange(e.target.value)}
+            min={getMinDate()}
+            name="startDate"
+            label="Start Date"
+          />
+          <DateInputWithIcon
+            value={endDate}
+            onChange={(e) => onEndDateChange(e.target.value)}
+            min={getMinEndDate(startDate)}
+            name="endDate"
+            label="End Date"
+            disabled={!startDate}
+          />
         </div>
 
         {/* Show calculated duration */}
         {duration > 0 && !dateError && durationValidation?.valid && (
-          <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3">
+            <div className="flex items-center gap-2">
               <FaClock className="text-green-600 dark:text-green-400 flex-shrink-0" />
               <span className="font-medium text-green-800 dark:text-green-300">
-                Trip Duration: {duration} {duration === 1 ? "day" : "days"}
+                {duration} {duration === 1 ? "day" : "days"} •{" "}
+                {formatDateDisplay(startDate)} to {formatDateDisplay(endDate)}
               </span>
-              {/* ✅ IMPROVED: Cross-platform category badge with responsive design */}
-              {durationValidation.category && (
-                <DurationCategoryBadge
-                  category={durationValidation.category}
-                  showLabel={true}
-                  size="md"
-                />
-              )}
             </div>
-            {/* ✅ ADDED: Show date range confirmation */}
-            <p className="text-xs text-green-600 dark:text-green-400 mt-1 ml-6">
-              {startDate &&
-                endDate &&
-                `${formatDateDisplay(startDate)} to ${formatDateDisplay(
-                  endDate
-                )}`}
-            </p>
-            {/* ✅ NEW: Show duration recommendation if any */}
-            {durationValidation.recommendation && (
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 ml-6 italic">
-                {durationValidation.recommendation}
-              </p>
-            )}
           </div>
         )}
 
@@ -311,67 +294,26 @@ function DateRangePicker({
         {bookingAdvice &&
           bookingAdvice.warnings.length > 0 &&
           bookingAdvice.warnings[0].level === "critical" && (
-            <div className="relative overflow-hidden bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/40 dark:to-orange-950/40 border-2 border-red-300 dark:border-red-700 rounded-xl p-5 shadow-md">
-              {/* Animated pulse background */}
-              <div className="absolute inset-0 bg-gradient-to-r from-red-100/20 to-orange-100/20 dark:from-red-900/10 dark:to-orange-900/10 animate-pulse"></div>
-
-              <div className="relative">
-                {/* Header with timing and price impact */}
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <h4 className="text-base font-bold text-red-900 dark:text-red-200 leading-tight">
-                    ✈️ Flight Booking Alert: {bookingAdvice.timing.description}
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-700 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <FaExclamationTriangle className="text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="text-sm font-bold text-red-900 dark:text-red-200 mb-2">
+                    Flight Booking Alert: {bookingAdvice.timing.description}
                   </h4>
-                  <span className="flex-shrink-0 text-[10px] font-bold text-white bg-gradient-to-r from-red-600 to-orange-600 dark:from-red-700 dark:to-orange-700 px-2.5 py-1 rounded-full shadow-sm whitespace-nowrap">
-                    {bookingAdvice.pricing.impact.toUpperCase()}
-                  </span>
-                </div>
-
-                {/* Row 1: Warning message */}
-                <div className="mb-3 p-3 bg-white/60 dark:bg-slate-800/40 backdrop-blur-sm rounded-lg border border-red-200 dark:border-red-800">
-                  <p className="text-sm text-red-800 dark:text-red-300 flex items-start gap-2">
-                    <FaExclamationTriangle className="text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
-                    <span className="font-medium">
-                      {bookingAdvice.warnings[0].message}
-                    </span>
+                  <p className="text-sm text-red-800 dark:text-red-300 mb-3">
+                    {bookingAdvice.warnings[0].message}
                   </p>
-                </div>
 
-                {/* Row 2: Tip text (separate row) */}
-                <div className="mb-3 p-3 bg-blue-50/60 dark:bg-blue-950/30 backdrop-blur-sm rounded-lg border border-blue-200 dark:border-blue-800">
-                  <p className="text-xs text-blue-700 dark:text-blue-400 flex items-start gap-2">
-                    <span className="flex-shrink-0 mt-0.5">💡</span>
-                    <span>
-                      Consider adjusting your travel dates below to save on
-                      costs, whether you book flights or arrange your own
-                      transportation.
-                    </span>
-                  </p>
-                </div>
-
-                {/* Enhanced flexible date suggestions */}
-                {bookingAdvice.flexibleDates.length > 0 &&
-                  bookingAdvice.pricing.multiplier >= 2.0 && (
-                    <div className="mt-4 p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/40 dark:to-emerald-950/40 rounded-xl border-2 border-green-300 dark:border-green-700 shadow-sm">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-sm">
-                          <FaLightbulb className="text-white text-xs" />
-                        </div>
-                        <div className="flex-1">
-                          <span className="text-[11px] text-green-700 dark:text-green-400">
-                            Save up to{" "}
-                            {Math.max(
-                              ...bookingAdvice.flexibleDates.map(
-                                (d) => d.savingsPercent
-                              )
-                            )}
-                            % by adjusting your travel dates
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                  {/* Simplified date suggestions */}
+                  {bookingAdvice.flexibleDates.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-red-700 dark:text-red-400 font-medium">
+                        Consider these alternative dates:
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         {bookingAdvice.flexibleDates
-                          .slice(0, 3)
+                          .slice(0, 2)
                           .map((suggestion, idx) => (
                             <button
                               key={idx}
@@ -379,37 +321,21 @@ function DateRangePicker({
                                 onStartDateChange(suggestion.startDate);
                                 onEndDateChange(suggestion.endDate);
                               }}
-                              className="group relative text-left p-3 bg-white dark:bg-slate-900 rounded-lg border-2 border-green-300 dark:border-green-700 hover:border-green-500 dark:hover:border-green-500 hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
+                              className="text-left p-3 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800 rounded hover:bg-red-25 dark:hover:bg-red-900/20 transition-colors cursor-pointer"
                             >
-                              {/* Hover gradient overlay */}
-                              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
-                              <div className="relative">
-                                <div className="flex items-center justify-between mb-1.5">
-                                  <span className="font-bold text-green-900 dark:text-green-200 text-xs">
-                                    {suggestion.label}
-                                  </span>
-                                  <span className="text-[10px] font-bold text-white bg-gradient-to-r from-green-600 to-emerald-600 px-2 py-0.5 rounded-full shadow-sm">
-                                    -{suggestion.savingsPercent}%
-                                  </span>
-                                </div>
-                                <div className="text-[11px] text-green-700 dark:text-green-400 font-medium mb-1">
-                                  {formatDateDisplay(suggestion.startDate)}
-                                </div>
-                                <div className="text-[10px] text-green-600 dark:text-green-500 flex items-center gap-1">
-                                  <span>💵</span>
-                                  <span>
-                                    ~₱
-                                    {Math.round(suggestion.savingsPercent * 50)}
-                                    /person cheaper
-                                  </span>
-                                </div>
+                              <div className="font-medium text-red-900 dark:text-red-200 text-sm">
+                                {suggestion.label}
+                              </div>
+                              <div className="text-xs text-red-700 dark:text-red-400">
+                                {formatDateDisplay(suggestion.startDate)} • -
+                                {suggestion.savingsPercent}%
                               </div>
                             </button>
                           ))}
                       </div>
                     </div>
                   )}
+                </div>
               </div>
             </div>
           )}

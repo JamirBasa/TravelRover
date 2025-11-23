@@ -233,14 +233,12 @@ function SpecificRequests({
 
       {/* Request Input */}
       <div className="space-y-4">
-        {/* Context-Aware Info Card - SIMPLIFIED */}
+        {/* Context-Aware Info Card - Simplified */}
         {formData.location && (
-          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-            <p className="text-blue-800 dark:text-blue-300 text-sm">
-              💡 List specific places in{" "}
-              <span className="font-semibold">{formData.location}</span> you
-              want to visit (e.g., "Visit Fort Santiago", "Try sisig", "Sunset
-              at Manila Bay")
+          <div className="border border-gray-200 dark:border-slate-700 rounded-lg p-3">
+            <p className="text-gray-700 dark:text-gray-300 text-sm">
+              List specific places in {formData.location} you want to visit
+              (e.g., landmarks, restaurants, activities).
             </p>
           </div>
         )}
@@ -281,7 +279,7 @@ function SpecificRequests({
         <div>
           <label className="block text-base font-medium text-gray-800 dark:text-gray-200 mb-2">
             <FaListAlt className="inline mr-2" />
-            Specific Places & Activities (Optional)
+            (Optional) Specific Places & Activities
           </label>
           <textarea
             className="w-full py-3 px-3 border-2 rounded-lg resize-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 transition-all bg-white dark:bg-slate-900 text-gray-900 dark:text-white border-gray-300 dark:border-slate-600 dark:focus:border-sky-500 dark:focus:ring-sky-800"

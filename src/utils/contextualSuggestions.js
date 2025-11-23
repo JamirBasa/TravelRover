@@ -232,10 +232,35 @@ export function generateSmartPlaceholder(context) {
   
   // Add destination-specific example
   if (location) {
-    const cityName = location.split(',')[0]; // Extract just the city name
-    placeholder += `• Visit [landmark name] - e.g., "Visit Fort Santiago"\n`;
+    const cityName = location.toLowerCase().split(',')[0].trim();
+    
+    // Location-specific examples
+    const locationExamples = {
+      'zamboanga': '"Visit Fort Pilar"',
+      'cebu': '"Visit Magellan\'s Cross"',
+      'manila': '"Visit Fort Santiago"',
+      'boracay': '"Visit Puka Beach"',
+      'palawan': '"Visit Las Cabanas Beach"',
+      'bohol': '"Visit Chocolate Hills"',
+      'davao': '"Visit Philippine Eagle Center"',
+      'siargao': '"Visit Cloud 9"',
+      'baguio': '"Visit Burnham Park"',
+      'vigan': '"Visit Calle Crisologo"',
+      'iloilo': '"Visit Fort San Pedro"',
+      'bacolod': '"Visit The Ruins"',
+      'batanes': '"Visit Basco Lighthouse"',
+      'sagada': '"Visit Sumaguing Cave"',
+      'la union': '"Visit Urbiztondo Beach"'
+    };
+    
+    // Find matching location or use generic
+    const example = Object.keys(locationExamples).find(loc => 
+      cityName.includes(loc) || loc.includes(cityName)
+    );
+    
+    placeholder += `• Visit [landmark name] - e.g., ${locationExamples[example] || '"Visit local landmarks"'}\n`;
   } else {
-    placeholder += `• Visit [landmark name] - e.g., "Visit Rizal Park"\n`;
+    placeholder += `• Visit [landmark name] - e.g., "Visit local landmarks"\n`;
   }
   
   // Add category-specific example
