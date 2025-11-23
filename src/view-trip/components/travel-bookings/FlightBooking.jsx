@@ -389,6 +389,11 @@ function FlightBooking({ trip }) {
       throw new Error("No trip data available");
     }
 
+    // ✅ NEW: Don't render if ground transport is preferred
+    if (trip?.transportMode?.mode === "ground_preferred") {
+      return null;
+    }
+
     const hasFlightData = trip?.hasRealFlights && trip?.realFlightData?.success;
     const flights = trip?.realFlightData?.flights || [];
 
@@ -445,116 +450,80 @@ function FlightBooking({ trip }) {
         routeWarning.type === "inactive_destination";
 
       return (
-        <div className="bg-orange-50 dark:bg-orange-950/30 rounded-xl shadow-lg border-2 border-orange-300 dark:border-orange-700 p-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/50 rounded-full flex items-center justify-center flex-shrink-0">
-              <AlertTriangle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-orange-900 dark:text-orange-100 mb-2">
-                {isOriginInactive
-                  ? `No Airport in ${routeWarning.info.name}`
-                  : "No Direct Flights Available"}
-              </h3>
-              <p className="text-orange-800 dark:text-orange-200 mb-4">
-                {routeWarning.info.message}
-              </p>
-
-              <div className="bg-white dark:bg-slate-900 rounded-lg p-4 mb-4">
-                <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-                  {isOriginInactive ? "🚌" : "✈️"} Recommended Route:
-                </h4>
-                <div className="space-y-2.5 text-sm">
-                  {isOriginInactive ? (
-                    // Origin city has no airport - need ground transport first
-                    <>
-                      <div className="flex items-start gap-2">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center text-xs font-bold text-orange-700 dark:text-orange-300">
-                          1
-                        </span>
-                        <span className="text-gray-700 dark:text-gray-300 flex-1">
-                          Take {routeWarning.info.transport} from{" "}
-                          {routeWarning.info.name} to{" "}
-                          {routeWarning.info.alternativeNames[0]} (
-                          {routeWarning.info.travelTime})
-                        </span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center text-xs font-bold text-sky-700 dark:text-sky-300">
-                          2
-                        </span>
-                        <span className="text-gray-700 dark:text-gray-300 flex-1">
-                          Fly from {routeWarning.info.alternativeNames[0]} to{" "}
-                          {trip?.userSelection?.location}
-                        </span>
-                      </div>
-                      {routeWarning.info.recommendation && (
-                        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700">
-                          <p className="text-xs text-gray-600 dark:text-gray-400">
-                            💡 <span className="font-semibold">Tip:</span>{" "}
-                            {routeWarning.info.recommendation}
-                          </p>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    // Destination has no airport
-                    <>
-                      <div className="flex items-start gap-2">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center text-xs font-bold text-sky-700 dark:text-sky-300">
-                          1
-                        </span>
-                        <span className="text-gray-700 dark:text-gray-300 flex-1">
-                          Fly to {routeWarning.info.alternativeNames[0]} (
-                          {routeWarning.info.alternatives[0]})
-                        </span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center text-xs font-bold text-orange-700 dark:text-orange-300">
-                          2
-                        </span>
-                        <span className="text-gray-700 dark:text-gray-300 flex-1">
-                          Take {routeWarning.info.transport} to{" "}
-                          {trip?.userSelection?.location} (
-                          {routeWarning.info.travelTime})
-                        </span>
-                      </div>
-                      {routeWarning.info.recommendation && (
-                        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700">
-                          <p className="text-xs text-gray-600 dark:text-gray-400">
-                            💡 <span className="font-semibold">Tip:</span>{" "}
-                            {routeWarning.info.recommendation}
-                          </p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {routeWarning.info.alternatives.map((altCode, index) => (
-                  <Button
-                    key={altCode}
-                    onClick={() =>
-                      window.open(
-                        generateTripComURL({
-                          [isOriginInactive ? "origin" : "destination"]:
-                            altCode,
-                        }),
-                        "_blank"
-                      )
-                    }
-                    className="brand-button cursor-pointer"
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Search Flights {isOriginInactive ? "from" : "to"}{" "}
-                    {routeWarning.info.alternativeNames[index]}
-                  </Button>
-                ))}
-              </div>
-            </div>
+        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md border border-gray-200 dark:border-slate-700 p-5">
+          {/* Header */}
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              {isDestinationInactive ? routeWarning.info.name : trip?.userSelection?.location}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              {routeWarning.info.message}
+            </p>
           </div>
+
+          {/* Journey Steps */}
+          <div className="space-y-3">
+            {isOriginInactive ? (
+              // Origin city has no airport - need ground transport first
+              <>
+                <div className="flex gap-4">
+                  <div className="text-sm font-semibold text-sky-600 dark:text-sky-400 flex-shrink-0 w-8">1</div>
+                  <div>
+                    <p className="text-sm text-gray-900 dark:text-gray-100">
+                      <span className="font-medium">{routeWarning.info.transport}</span> to {routeWarning.info.alternativeNames[0]}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">{routeWarning.info.travelTime}</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="text-sm font-semibold text-sky-600 dark:text-sky-400 flex-shrink-0 w-8">2</div>
+                  <div>
+                    <p className="text-sm text-gray-900 dark:text-gray-100">
+                      <span className="font-medium">Fly</span> to {trip?.userSelection?.location}
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              // Destination has no airport
+              <>
+                <div className="flex gap-4">
+                  <div className="text-sm font-semibold text-sky-600 dark:text-sky-400 flex-shrink-0 w-8">1</div>
+                  <div>
+                    <p className="text-sm text-gray-900 dark:text-gray-100">
+                      <span className="font-medium">Fly</span> to {routeWarning.info.alternativeNames[0]} ({routeWarning.info.alternatives[0]})
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="text-sm font-semibold text-sky-600 dark:text-sky-400 flex-shrink-0 w-8">2</div>
+                  <div>
+                    <p className="text-sm text-gray-900 dark:text-gray-100">
+                      <span className="font-medium">{routeWarning.info.transport}</span> to {trip?.userSelection?.location}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">{routeWarning.info.travelTime}</p>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Action Button */}
+          <Button
+            onClick={() =>
+              window.open(
+                generateTripComURL({
+                  [isOriginInactive ? "origin" : "destination"]:
+                    routeWarning.info.alternatives[0],
+                }),
+                "_blank"
+              )
+            }
+            className="brand-button cursor-pointer w-full mt-5"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            View Alternative Options
+          </Button>
         </div>
       );
     }
@@ -721,55 +690,51 @@ function FlightBooking({ trip }) {
             </div>
           )}
 
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
-          {/* Header Section */}
-          <div className="brand-gradient px-5 sm:px-8 py-6 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white dark:bg-white/10 opacity-5 rounded-full -translate-y-6 translate-x-6"></div>
-            <div className="absolute bottom-0 left-0 w-20 h-20 bg-white dark:bg-white/10 opacity-5 rounded-full translate-y-4 -translate-x-4"></div>
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
+          {/* Minimalist Header */}
+          <div className="brand-gradient px-4 sm:px-6 py-5 relative overflow-hidden">
+            {/* Decorative Background Elements */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-8 translate-x-8"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-6 -translate-x-6"></div>
 
-            <div className="relative">
-              <div className="flex items-start sm:items-center justify-between gap-4">
-                <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white dark:bg-white/90 rounded-xl flex items-center justify-center shadow-lg border border-white/30 flex-shrink-0">
-                    <Plane className="h-6 w-6 sm:h-7 sm:w-7 text-sky-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight">
-                      Available Flights
-                    </h2>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sky-100 text-xs sm:text-sm">
-                      <span className="flex items-center gap-1.5">
-                        <span className="text-base">✈️</span>
-                        <span className="font-medium">
-                          {validFlights.length}{" "}
-                          {validFlights.length === 1 ? "flight" : "flights"}{" "}
-                          available
-                        </span>
-                      </span>
-                      <span className="hidden sm:inline">•</span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="text-base">🎯</span>
-                        <span>Real-time prices</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="hidden lg:flex items-center gap-4">
-                  <div className="text-right bg-white/10 rounded-lg px-4 py-2 backdrop-blur-sm">
-                    <div className="text-2xl font-bold text-white">
-                      {validFlights.length}
-                    </div>
-                    <div className="text-xs text-sky-100 font-medium">
-                      Total Flights
-                    </div>
-                  </div>
+            <div className="relative flex items-center justify-between gap-6">
+              {/* Left: Title & Count */}
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-2xl font-bold text-white mb-1">
+                    Flights
+                  </h2>
+                  <p className="text-sm text-white/80 font-medium">
+                    {validFlights.length}{" "}
+                    {validFlights.length === 1 ? "option" : "options"} available
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="p-5 sm:p-8">
+          <div className="p-4 sm:p-6 bg-gray-50 dark:bg-slate-950">
+            {/* Sort Controls - Below Header */}
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Sort by:
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="text-sm border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-white cursor-pointer font-medium transition-all hover:border-sky-400"
+                >
+                  <option value="price">💰 Price (Low to High)</option>
+                  <option value="duration">⏱️ Flight Duration</option>
+                  <option value="best">⭐ Best Value</option>
+                </select>
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                {sortedFlights.length}{" "}
+                {sortedFlights.length === 1 ? "result" : "results"}
+              </div>
+            </div>
             {/* ✅ NEW: Data Quality Indicator */}
             {dataQualityScore !== undefined && dataQualityScore < 100 && (
               <div className="mb-6 bg-amber-50 dark:bg-amber-950/30 border-l-4 border-amber-400 dark:border-amber-600 rounded-lg p-4 sm:p-5 shadow-sm">
@@ -842,29 +807,8 @@ function FlightBooking({ trip }) {
               </div>
             )}
 
-            {/* Sort Options */}
-            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-gray-100 dark:border-slate-700">
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Sort by:
-                </span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="text-sm border-2 border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-600 focus:border-sky-500 dark:focus:border-sky-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white cursor-pointer font-medium transition-all hover:border-sky-400 dark:hover:border-sky-500"
-                >
-                  <option value="price">💰 Price (Low to High)</option>
-                  <option value="departure">🕐 Departure Time</option>
-                  <option value="duration">⏱️ Flight Duration</option>
-                </select>
-              </div>
-              <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium">
-                Showing {sortedFlights.length}{" "}
-                {sortedFlights.length === 1 ? "result" : "results"}
-              </div>
-            </div>
-
-            <div className="space-y-4 sm:space-y-5">
+            {/* Flight List */}
+            <div className="space-y-4">
               {sortedFlights.map((flight, index) => (
                 <FlightCard
                   key={index}
@@ -1024,80 +968,84 @@ function FlightBooking({ trip }) {
 // Individual Flight Card Component
 function FlightCard({ flight, onBook, trip, formatDuration }) {
   return (
-    <div className="border-2 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-xl transition-all duration-300 hover:shadow-2xl hover:border-sky-400 dark:hover:border-sky-500 hover:-translate-y-0.5 group overflow-hidden">
-      <div className="p-5 sm:p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 sm:gap-6">
+    <div className="border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-xl transition-all duration-300 hover:shadow-lg dark:hover:shadow-sky-500/20 hover:border-sky-300 dark:hover:border-sky-600 group overflow-hidden">
+      <div className="p-4 sm:p-5">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-5">
           {/* Flight Details */}
           <div className="flex-1 min-w-0">
-            {/* Airline Name and Badges */}
-            <div className="flex flex-wrap items-center gap-2 mb-4">
-              <div className="flex items-center gap-2.5 mr-2">
-                <div className="w-9 h-9 bg-sky-100 dark:bg-sky-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Plane className="h-4.5 w-4.5 text-sky-600 dark:text-sky-400" />
-                </div>
-                <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base sm:text-lg">
-                  {flight.name}
-                </h3>
+            {/* Airline Name and Icon */}
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="w-8 h-8 bg-sky-100 dark:bg-sky-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Plane className="h-4 w-4 text-sky-600 dark:text-sky-400" />
               </div>
-              {flight.is_best && (
-                <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-950/50 dark:to-emerald-950/50 text-green-800 dark:text-green-400 text-xs font-semibold px-2.5 py-1 border border-green-300 dark:border-green-700">
-                  <Star className="h-3 w-3 mr-1 fill-current" />
-                  Best Value
-                </Badge>
-              )}
-              {flight.flight_number && (
-                <Badge
-                  variant="outline"
-                  className="text-xs font-medium border-gray-300 dark:border-slate-600 px-2.5 py-1"
-                >
-                  {flight.flight_number}
-                </Badge>
-              )}
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm line-clamp-1">
+                {flight.name}
+              </h3>
             </div>
 
+            {/* Badges Row - Separate Line */}
+            {(flight.is_best || flight.flight_number) && (
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                {flight.is_best && (
+                  <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-950/50 dark:to-emerald-950/50 text-green-800 dark:text-green-400 text-xs font-semibold px-2.5 py-1 border border-green-300 dark:border-green-700">
+                    <Star className="h-3 w-3 mr-1 fill-current" />
+                    Best Value
+                  </Badge>
+                )}
+                {flight.flight_number && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs font-medium border-gray-300 dark:border-slate-600 px-2.5 py-1"
+                  >
+                    {flight.flight_number}
+                  </Badge>
+                )}
+              </div>
+            )}
+
             {/* Flight Times and Route */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-4">
-              <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3">
-                <div className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-1.5 flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-3">
+              <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2.5">
+                <div className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-1 flex items-center gap-1.5">
+                  <Calendar className="h-3 w-3" />
                   Departure
                 </div>
-                <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                <div className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
                   {flight.departure}
                 </div>
               </div>
-              <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3">
-                <div className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-1.5 flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" />
+              <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2.5">
+                <div className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-1 flex items-center gap-1.5">
+                  <Clock className="h-3 w-3" />
                   Arrival
                 </div>
-                <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                <div className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
                   {flight.arrival}
                 </div>
               </div>
-              <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3">
-                <div className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-1.5 flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" />
+              <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2.5">
+                <div className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-1 flex items-center gap-1.5">
+                  <Clock className="h-3 w-3" />
                   Duration
                 </div>
-                <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                <div className="font-semibold text-gray-900 dark:text-gray-100 text-xs">
                   {formatDuration(flight.duration)}
                 </div>
               </div>
             </div>
 
             {/* Flight Features */}
-            <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
-              <span className="flex items-center gap-1.5 bg-gray-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
-                <Shield className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-400 font-medium">
+              <span className="flex items-center gap-1.5 bg-gray-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">
+                <Shield className="h-3 w-3 text-gray-500 dark:text-gray-400" />
                 {flight.stops === 0 ? "✈️ Non-stop" : `${flight.stops} stop(s)`}
               </span>
-              <span className="flex items-center gap-1.5 bg-gray-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
-                <Users className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+              <span className="flex items-center gap-1.5 bg-gray-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">
+                <Users className="h-3 w-3 text-gray-500 dark:text-gray-400" />
                 {trip?.userSelection?.travelers}
               </span>
               {flight.aircraft_type && (
-                <span className="bg-gray-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
+                <span className="bg-gray-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">
                   ✈️ {flight.aircraft_type}
                 </span>
               )}
@@ -1105,61 +1053,39 @@ function FlightCard({ flight, onBook, trip, formatDuration }) {
           </div>
 
           {/* Price and Booking */}
-          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-4 lg:gap-3 pt-4 sm:pt-0 border-t sm:border-t-0 lg:border-l-2 border-gray-100 dark:border-slate-700 lg:pl-6">
+          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 lg:border-l border-gray-100 dark:border-slate-700 lg:pl-5">
             <div className="text-center sm:text-right lg:text-right flex-1 sm:flex-initial">
-              {/* 🆕 ENHANCED: Use backend pricing metadata when available */}
-              {flight.pricing_note ? (
-                <>
-                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-                    {flight.pricing_note}
-                  </div>
-                  <div className="text-3xl sm:text-2xl lg:text-3xl font-bold text-green-600 dark:text-green-500 mb-1">
-                    {flight.price_per_person || flight.price}
-                  </div>
-                  {flight.total_for_group && flight.travelers > 1 && (
-                    <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-                      {flight.total_for_group} total for {flight.travelers}{" "}
-                      travelers
-                    </div>
-                  )}
-                </>
-              ) : (
-                // Fallback: Legacy calculation
-                <>
-                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-                    Price{" "}
-                    {trip?.userSelection?.travelers > 1
-                      ? "Per Person"
-                      : "Total"}
-                  </div>
-                  <div className="text-3xl sm:text-2xl lg:text-3xl font-bold text-green-600 dark:text-green-500 mb-1">
-                    {flight.price}
-                  </div>
-                  {trip?.userSelection?.travelers > 1 && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                      ₱
-                      {(
-                        parseFloat((flight.price || "0").replace(/[₱,]/g, "")) *
-                        trip.userSelection.travelers
-                      ).toLocaleString()}{" "}
-                      total for {trip.userSelection.travelers}{" "}
-                      {trip.userSelection.travelers === 2
-                        ? "travelers"
-                        : "people"}
-                    </div>
-                  )}
-                </>
+              {/* Price Display */}
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                {flight.pricing_note || "Per Person"}
+              </div>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-500 mb-0.5">
+                {flight.price_per_person || flight.price}
+              </div>
+              {/* Show total for group only when multiple travelers */}
+              {trip?.userSelection?.travelers > 1 && (
+                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                  {flight.total_for_group ||
+                    `₱${(
+                      parseFloat(
+                        (
+                          flight.price_per_person ||
+                          flight.price ||
+                          "0"
+                        ).replace(/[₱,]/g, "")
+                      ) * trip.userSelection.travelers
+                    ).toLocaleString()}`}{" "}
+                  total for {trip.userSelection.travelers} travelers
+                </div>
               )}
             </div>
 
             <Button
               onClick={onBook}
-              className="brand-button cursor-pointer group-hover:scale-105 group-hover:shadow-lg transition-all duration-300 w-full sm:w-auto lg:w-full min-w-[140px] h-12 sm:h-11 lg:h-12 text-base font-bold"
+              className="bg-sky-600 dark:bg-sky-500 hover:bg-sky-700 dark:hover:bg-sky-600 active:bg-sky-800 dark:active:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer shadow-md hover:shadow-lg active:shadow-inner w-full sm:w-auto lg:w-full min-w-[140px] border border-sky-700 dark:border-sky-600"
             >
-              <span className="flex items-center justify-center gap-2">
-                <span>Book Now</span>
-                <ExternalLink className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-              </span>
+              <span>Book Now</span>
+              <ExternalLink className="h-4 w-4" />
             </Button>
           </div>
         </div>

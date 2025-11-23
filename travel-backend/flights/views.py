@@ -83,8 +83,11 @@ class FlightSearchView(APIView):
             "api_key": settings.SERPAPI_KEY
         }
         
-        # ✅ FIXED: Correct trip type mapping
-        if trip_type == 'round-trip' and return_date:
+        # ✅ CRITICAL: Track trip type for pricing logic
+        # Round-trip prices include BOTH legs (outbound + return) in a single price
+        is_round_trip = trip_type == 'round-trip' and return_date
+        
+        if is_round_trip:
             params["return_date"] = return_date
             params["type"] = "1"  # ✅ 1 = Round trip
         else:
@@ -110,7 +113,7 @@ class FlightSearchView(APIView):
         if "best_flights" in results and results["best_flights"]:
             logger.info(f"Found {len(results['best_flights'])} best flights")
             for flight in results["best_flights"][:3]:
-                parsed_flight = self.parse_flight_data(flight, is_best=True)
+                parsed_flight = self.parse_flight_data(flight, is_best=True, trip_type=trip_type)
                 if parsed_flight:
                     flights.append(parsed_flight)
         
@@ -118,7 +121,7 @@ class FlightSearchView(APIView):
         if "other_flights" in results and results["other_flights"]:
             logger.info(f"Found {len(results['other_flights'])} other flights")
             for flight in results["other_flights"][:5]:
-                parsed_flight = self.parse_flight_data(flight, is_best=False)
+                parsed_flight = self.parse_flight_data(flight, is_best=False, trip_type=trip_type)
                 if parsed_flight:
                     flights.append(parsed_flight)
         
@@ -157,7 +160,7 @@ class FlightSearchView(APIView):
             'total_results': len(flights)
         }
 
-    def parse_flight_data(self, flight_data, is_best=False):
+    def parse_flight_data(self, flight_data, is_best=False, trip_type='round-trip'):
         """Parse individual flight data from SerpAPI response"""
         try:
             # Extract flight information
@@ -170,12 +173,17 @@ class FlightSearchView(APIView):
             # Get airline info
             airline = first_flight.get('airline', 'Unknown Airline')
             
-            # Get price
+            # Get price (SerpAPI returns NUMERIC price per person)
             price = flight_data.get('price', 0)
             if not price:
                 return None
-                
-            formatted_price = f"₱{price:,}"
+            
+            # ✅ CRITICAL: SerpAPI pricing behavior
+            # - Round-trip: Price INCLUDES both outbound + return legs (complete journey)
+            # - One-way: Price is for single leg only
+            # DO NOT double round-trip prices - they are already complete!
+            price_numeric = int(price) if isinstance(price, (int, float)) else 0
+            formatted_price = f"₱{price_numeric:,}"
             
             # Get departure and arrival times
             departure_airport = first_flight.get('departure_airport', {})
@@ -190,11 +198,18 @@ class FlightSearchView(APIView):
             # Count stops
             stops = len(flights_info) - 1 if len(flights_info) > 1 else 0
             
+            # ✅ CRITICAL: Add trip_type so frontend knows pricing is complete
+            is_round_trip = trip_type == 'round-trip'
+            pricing_label = 'per person (round-trip)' if is_round_trip else 'per person (one-way)'
+            
             return {
                 'name': airline,
-                'price': formatted_price,
-                'price_per_person': formatted_price,  # 🆕 SerpAPI prices are per-person by default
-                'pricing_note': 'per person',  # 🆕 Explicit label for frontend
+                'price': formatted_price,              # Display: "₱11,444" (complete round-trip)
+                'price_numeric': price_numeric,        # Raw number: 11444
+                'price_per_person': formatted_price,   # Same as price (already per-person)
+                'pricing_note': pricing_label,         # Clear label with trip type
+                'trip_type': trip_type,                # ✅ NEW: 'round-trip' or 'one-way'
+                'is_complete_price': is_round_trip,    # ✅ NEW: True if price includes all legs
                 'departure': departure_time,
                 'arrival': arrival_time,
                 'duration': duration,

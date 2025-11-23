@@ -46,6 +46,24 @@ const TravelServicesSelector = ({
 
   // ✅ ENHANCED: Analyze transport mode based on route (with backend API)
   const [transportAnalysis, setTransportAnalysis] = React.useState(null);
+  
+  // ✅ NEW: Detect same-city scenario for special handling
+  const isSameCity = useMemo(() => {
+    if (!formData?.location || !flightData.departureCity) return false;
+    
+    const normalizeCity = (city) => 
+      city.toLowerCase()
+        .trim()
+        .split(',')[0] // Extract city from "City, Province, Country"
+        .replace(/\s+/g, ' ')
+        .replace(/\b(city|metro|province)\b/gi, '')
+        .trim();
+    
+    const dest = normalizeCity(formData.location);
+    const depart = normalizeCity(flightData.departureCity);
+    
+    return dest === depart;
+  }, [formData?.location, flightData.departureCity]);
 
   React.useEffect(() => {
     if (!formData?.location || !flightData.departureCity) {
@@ -175,30 +193,58 @@ const TravelServicesSelector = ({
 
   const priceRangeOptions = [
     { value: 1, label: "Budget", icon: "💰", desc: "₱500-1.5k/night" },
-    { value: 2, label: "Economy", icon: "🏷️", desc: "₱1.5-2.5k/night" },
-    { value: 3, label: "Mid-Range", icon: "⭐", desc: "₱2.5-5k/night" },
-    { value: 4, label: "Upscale", icon: "✨", desc: "₱5-10k/night" },
-    { value: 5, label: "Luxury", icon: "💎", desc: "₱10-20k/night" },
-    { value: 6, label: "Ultra-Luxury", icon: "👑", desc: "₱20k+/night" },
+    { value: 2, label: "Economy", icon: "🏷️", desc: "₱1.5-3.5k/night" },
+    { value: 3, label: "Mid-Range", icon: "⭐", desc: "₱3.5-8k/night" },
+    { value: 4, label: "Upscale", icon: "✨", desc: "₱8-15k/night" },
+    { value: 5, label: "Luxury", icon: "💎", desc: "₱15-30k/night" },
+    { value: 6, label: "Ultra-Luxury", icon: "👑", desc: "₱30k+/night" },
   ];
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div className="text-center mb-6">
+      <div className="text-center mb-8">
         <h2 className="text-2xl font-bold brand-gradient-text mb-2">
           Travel Services
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 text-sm max-w-2xl mx-auto">
-          Select services to include. Your choices affect budget calculations in
-          the next step.
+        <p className="text-gray-600 dark:text-gray-400 text-sm">
+          Choose services to include in your trip.
         </p>
       </div>
 
-      {/* ✅ SIMPLIFIED: Compact Transport Recommendation Banner */}
-      {transportAnalysis && formData?.location && flightData.departureCity && (
-        <div
-          className={`brand-card p-4 border-2 mb-6 ${
+      {/* ✅ SMART: Show Local Trip Banner for Same-City, Transport Analysis for Inter-City */}
+      {formData?.location && flightData.departureCity && (
+        isSameCity ? (
+          // 🏙️ LOCAL TRIP BANNER (Same City)
+          <div className="brand-card p-4 border-2 border-indigo-300 dark:border-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 mb-6">
+            <div className="flex items-start gap-3">
+              <div className="text-3xl flex-shrink-0">🏙️</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <h3 className="font-bold text-base text-indigo-900 dark:text-indigo-200">
+                    Local Experience in {formData.location.split(',')[0]}
+                  </h3>
+                  <span className="px-1.5 py-0.5 bg-indigo-200 dark:bg-indigo-800 text-[10px] font-semibold rounded text-indigo-800 dark:text-indigo-200">
+                    Staycation
+                  </span>
+                </div>
+                <p className="text-xs text-gray-700 dark:text-gray-300 mb-2">
+                  Perfect for exploring your own city! No inter-city travel needed.
+                </p>
+                <div className="flex items-center gap-2 text-xs text-indigo-700 dark:text-indigo-300">
+                  <span>✓ Focus on local activities</span>
+                  <span className="text-gray-400">•</span>
+                  <span>✓ Consider staycation hotels</span>
+                  <span className="text-gray-400">•</span>
+                  <span>✓ Use taxis/Grab for transport</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : transportAnalysis ? (
+          // 🚌 TRANSPORT ANALYSIS BANNER (Inter-City)
+          <div
+            className={`brand-card p-4 border-2 mb-6 ${
             transportAnalysis.groundTransport?.preferred === true &&
             !transportAnalysis.recommendation
               ?.toLowerCase()
@@ -219,7 +265,7 @@ const TravelServicesSelector = ({
               !transportAnalysis.recommendation
                 ?.toLowerCase()
                 .includes("not recommended")
-                ? "🚌"
+                ? transportAnalysis.groundTransport?.hasFerry ? "⛴️" : "🚌"
                 : transportAnalysis.mode === "flight_required" ||
                   transportAnalysis.groundTransportNotice?.available ||
                   transportAnalysis.recommendation
@@ -250,7 +296,9 @@ const TravelServicesSelector = ({
                   !transportAnalysis.recommendation
                     ?.toLowerCase()
                     .includes("not recommended")
-                    ? "Ground Transport Recommended"
+                    ? transportAnalysis.groundTransport?.hasFerry 
+                      ? "Ferry Recommended" 
+                      : "Ground Transport Recommended"
                     : transportAnalysis.mode === "flight_required" ||
                       transportAnalysis.groundTransportNotice?.available ||
                       transportAnalysis.recommendation
@@ -272,7 +320,9 @@ const TravelServicesSelector = ({
               </div>
 
               <p className="text-xs text-gray-700 dark:text-gray-300 mb-2 line-clamp-2">
-                {transportAnalysis.recommendation}
+                {transportAnalysis.groundTransport?.hasFerry 
+                  ? `Ferry service available from ${flightData.departureCity || 'your location'} to ${formData?.location?.split(',')[0] || 'your destination'}. This is the most practical and scenic option for this route.`
+                  : transportAnalysis.recommendation}
               </p>
 
               {/* ✅ ENHANCED Ground Transport Details - With Confidence & Ferry Info */}
@@ -444,20 +494,34 @@ const TravelServicesSelector = ({
               {transportAnalysis.warning &&
                 !transportAnalysis.groundTransportNotice && (
                   <p className="text-xs text-amber-800 dark:text-amber-300 mt-2">
-                    ⚠️ {transportAnalysis.warning}
+                    ⚠️ {transportAnalysis.groundTransport?.hasFerry 
+                      ? `Ferry travel takes ${transportAnalysis.groundTransport?.travelTime || '8-12 hours'}. Consider booking overnight ferry for comfortable journey, or plan to arrive the next day.`
+                      : transportAnalysis.warning}
                   </p>
                 )}
             </div>
           </div>
         </div>
+        ) : null
       )}
 
       {/* Side-by-Side Service Cards - RESPONSIVE LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* FLIGHT CARD */}
-        <div className="brand-card p-5 border-2 border-gray-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-600 transition-all">
+        <div className={`brand-card p-5 border-2 transition-all relative ${
+          isSameCity 
+            ? "border-gray-300 dark:border-slate-600 opacity-60 cursor-not-allowed" 
+            : "border-gray-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-600"
+        }`}>
+          {/* Same-city notice */}
+          {isSameCity && (
+            <div className="absolute top-2 right-2 px-2 py-1 bg-gray-200 dark:bg-slate-700 text-[10px] font-semibold text-gray-700 dark:text-gray-300 rounded">
+              Not needed
+            </div>
+          )}
           <div
             onClick={() => {
+              if (isSameCity) return; // Prevent toggling for same-city
               const isEnabled = !flightData.includeFlights;
               onFlightDataChange({
                 ...flightData,
@@ -470,19 +534,21 @@ const TravelServicesSelector = ({
                   : {}),
               });
             }}
-            className="flex items-center justify-between mb-4 cursor-pointer group"
+            className={`flex items-center justify-between mb-4 ${
+              !isSameCity ? "cursor-pointer group" : ""
+            }`}
           >
             <div className="flex items-center gap-3">
               <div
                 className={`p-2 rounded-lg transition-all ${
-                  flightData.includeFlights
+                  flightData.includeFlights && !isSameCity
                     ? "brand-gradient"
                     : "bg-gray-100 dark:bg-slate-800 group-hover:bg-sky-100 dark:group-hover:bg-sky-950/30"
                 }`}
               >
                 <FaPlane
                   className={`text-lg ${
-                    flightData.includeFlights
+                    flightData.includeFlights && !isSameCity
                       ? "text-white"
                       : "text-gray-400 dark:text-gray-500"
                   }`}
@@ -491,30 +557,26 @@ const TravelServicesSelector = ({
               <div>
                 <h3
                   className={`font-bold text-base ${
-                    flightData.includeFlights
+                    flightData.includeFlights && !isSameCity
                       ? "brand-gradient-text"
-                      : "text-gray-700 dark:text-gray-300"
+                      : "text-gray-500 dark:text-gray-400"
                   }`}
                 >
-                  Transport Options
+                  {isSameCity ? "Flights" : "Transport Options"}
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {flightData.includeFlights
-                    ? transportAnalysis?.flightInfo?.direct
-                      ? "Direct flights available"
-                      : "Flights with connections"
-                    : "Click to search transport"}
+                  {isSameCity ? "Not needed for local trip" : flightData.includeFlights ? "Enabled" : "Click to search"}
                 </p>
               </div>
             </div>
             <div
               className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                flightData.includeFlights
+                flightData.includeFlights && !isSameCity
                   ? "border-sky-500 bg-sky-500"
                   : "border-gray-300 dark:border-slate-600"
               }`}
             >
-              {flightData.includeFlights && (
+              {flightData.includeFlights && !isSameCity && (
                 <FaCheck className="text-white text-xs" />
               )}
             </div>
@@ -595,17 +657,31 @@ const TravelServicesSelector = ({
               {/* Flight Recommendation Alert */}
               {flightRecommendation &&
                 flightRecommendation.type !== "optimal" &&
-                !transportAnalysis?.groundTransport?.preferred && (
+                !transportAnalysis?.groundTransport?.preferred &&
+                !transportAnalysis?.groundTransport?.available && (
                   <div
                     className={`p-2.5 rounded-lg border text-xs animate-fade-in-scale stagger-1 ${
                       flightRecommendation.type === "same-city"
                         ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300"
+                        : flightRecommendation.type === "limited-service"
+                        ? "bg-sky-50 dark:bg-sky-950/30 border-sky-300 dark:border-sky-700 text-sky-900 dark:text-sky-300"
                         : "bg-orange-50 dark:bg-orange-950/30 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-300"
                     }`}
                   >
                     <div className="flex items-start gap-1.5">
-                      <FaExclamationTriangle className="mt-0.5 flex-shrink-0" />
-                      <span>{flightRecommendation.message}</span>
+                      {flightRecommendation.type === "limited-service" ? (
+                        <FaPlane className="mt-0.5 flex-shrink-0 text-sky-600 dark:text-sky-400" />
+                      ) : (
+                        <FaExclamationTriangle className="mt-0.5 flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold mb-1">
+                          {flightRecommendation.type === "limited-service" 
+                            ? `${flightRecommendation.cityName || formData?.location?.split(',')[0]} - Limited Airport Service`
+                            : "Flight Advisory"}
+                        </div>
+                        <span>{flightRecommendation.message}</span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -946,6 +1022,18 @@ const TravelServicesSelector = ({
               key="hotel-content"
               className="space-y-3 animate-expand-height"
             >
+              {/* ✅ NEW: Staycation hint for same-city trips */}
+              {isSameCity && (
+                <div className="p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <span className="text-lg flex-shrink-0">💡</span>
+                    <p className="text-xs text-purple-900 dark:text-purple-200">
+                      <strong>Staycation Tip:</strong> Treat yourself to a local hotel experience - perfect for a weekend getaway without leaving the city!
+                    </p>
+                  </div>
+                </div>
+              )}
+              
               {/* Auto-populated indicator */}
               {hotelData.preferredType &&
                 profileSummary?.accommodationPreference ===

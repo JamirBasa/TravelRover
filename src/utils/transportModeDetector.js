@@ -285,17 +285,48 @@ export const determineTransportModeLocal = (
   // Step 1: Check ground transport availability FIRST
   const groundRoute = findGroundRoute(normDeparture, normDestination);
 
-  // Step 1a: PRIORITY CHECK - Handle LIMITED service airports ONLY if no practical ground route
-  if (destHasLimitedService && destAirportData && !groundRoute) {
-    // First check if LIMITED airport still has SOME direct flight service
+  // Step 1a: PRIORITY CHECK - Handle LIMITED/NO service airports
+  // ✨ NEW LOGIC: Prioritize ground routes over alternative airports
+  if (destHasLimitedService && destAirportData) {
+    // CHECK 1: If ground route exists to destination → USE IT (preferred over flights to alternatives)
+    if (groundRoute) {
+      // Ground route exists - return as primary option
+      // (convenience classification not needed here since we're defaulting to ground)
+      return {
+        mode: TRANSPORT_MODE.GROUND_PREFERRED,
+        primaryMode: groundRoute.modes?.[0] === 'ferry' ? TRANSPORT_MODE.FERRY : TRANSPORT_MODE.BUS,
+        searchFlights: false, // Don't auto-search flights - ground is best option
+        hasAirport: false, // Destination has no practical airport service
+        recommendation: `${groundRoute.modes.join("/")} recommended to ${normDestination}. ${groundRoute.notes || 'Available regularly.'}`,
+        groundTransport: {
+          available: true,
+          practical: true,
+          preferred: true,
+          travelTime: `${groundRoute.travelTime} hours`,
+          distance: `${groundRoute.distance} km`,
+          modes: groundRoute.modes,
+          cost: `₱${groundRoute.cost.min.toLocaleString()}-${groundRoute.cost.max.toLocaleString()}`,
+          frequency: groundRoute.frequency,
+          operators: groundRoute.operators,
+          scenic: groundRoute.scenic || false,
+          notes: groundRoute.notes,
+          hasOvernightOption: groundRoute.hasOvernightOption,
+        },
+        flightAlternative: bothHaveAirports && departureAirport ? {
+          available: true,
+          fromAirport: departureAirport,
+          reason: "Flights available to major hubs, but ground transport is more direct to your destination"
+        } : null,
+        warning: `${normDestination}: Limited airport service. Ground transport is most direct option.`
+      };
+    }
+
+    // CHECK 2: If no ground route but airport has direct flights → use them
     const limitedFlightCheck = hasDirectFlight(departureAirport, destinationAirport);
-    
-    // If there ARE direct flights to the LIMITED airport, use regular flight logic
     if (limitedFlightCheck?.direct) {
       // Don't return early - fall through to normal flight logic below
-      // (This allows limited airports with direct flights to be handled properly)
     } else {
-      // No direct flights - recommend alternative airport
+      // CHECK 3: No ground route AND no direct flights → suggest alternative airport
       const alternative = destAirportData.alternatives?.[0];
       const alternativeName = destAirportData.alternativeNames?.[0];
       
@@ -318,32 +349,32 @@ export const determineTransportModeLocal = (
         }
       }
     
-    // Build detailed recommendation - CONCISE & ACTIONABLE
-    let detailedRecommendation = destAirportData.recommendation;
-    
-    // If we have ground route info, create SCANNABLE recommendation
-    if (groundRouteInfo && alternative) {
-      const altCityName = PHILIPPINE_AIRPORTS[alternative]?.city || alternative;
-      // OPTIMIZED: Single sentence, action-oriented
-      detailedRecommendation = `Fly to ${altCityName} (${alternative}), then ${groundRouteInfo.modes} to ${normDestination} (${groundRouteInfo.travelTime}, ${groundRouteInfo.cost}).`;
-    } else if (!detailedRecommendation && alternative) {
-      // Fallback if no ground route info - still concise
-      detailedRecommendation = `Fly to ${alternativeName || alternative}, then ground transport to ${normDestination}.`;
-    }
-    
-    return {
-      mode: TRANSPORT_MODE.FLIGHT_REQUIRED,
-      searchFlights: includeFlights,
-      hasAirport: false,
-      recommendation: detailedRecommendation || `${normDestination} has limited airport service. Fly to nearby hub instead.`,
-      warning: groundRouteInfo 
-        ? `${normDestination}: No direct flights. ${alternative} + ${groundRouteInfo.travelTime} transfer.`
-        : `${normDestination}: Limited airport service. Use nearby hub.`,
-      alternative: alternative,
-      alternativeName: alternativeName,
-      destinationAirport: destinationAirport,
-      notes: destAirportData.notes,
-      groundRouteFromAlternative: groundRouteInfo
+      // Build detailed recommendation - CONCISE & ACTIONABLE
+      let detailedRecommendation = destAirportData.recommendation;
+      
+      // If we have ground route info, create SCANNABLE recommendation
+      if (groundRouteInfo && alternative) {
+        const altCityName = PHILIPPINE_AIRPORTS[alternative]?.city || alternative;
+        // OPTIMIZED: Single sentence, action-oriented
+        detailedRecommendation = `Fly to ${altCityName} (${alternative}), then ${groundRouteInfo.modes} to ${normDestination} (${groundRouteInfo.travelTime}, ${groundRouteInfo.cost}).`;
+      } else if (!detailedRecommendation && alternative) {
+        // Fallback if no ground route info - still concise
+        detailedRecommendation = `Fly to ${alternativeName || alternative}, then ground transport to ${normDestination}.`;
+      }
+      
+      return {
+        mode: TRANSPORT_MODE.FLIGHT_REQUIRED,
+        searchFlights: includeFlights,
+        hasAirport: false,
+        recommendation: detailedRecommendation || `${normDestination} has limited airport service. Fly to nearby hub instead.`,
+        warning: groundRouteInfo 
+          ? `${normDestination}: No direct flights. ${alternative} + ${groundRouteInfo.travelTime} transfer.`
+          : `${normDestination}: Limited airport service. Use nearby hub.`,
+        alternative: alternative,
+        alternativeName: alternativeName,
+        destinationAirport: destinationAirport,
+        notes: destAirportData.notes,
+        groundRouteFromAlternative: groundRouteInfo
       };
     }
   }

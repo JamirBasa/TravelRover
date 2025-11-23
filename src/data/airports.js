@@ -36,7 +36,10 @@ export const PHILIPPINE_AIRPORTS = {
     type: 'international',
     coordinates: { lat: 14.5086, lng: 121.0194 },
     aliases: ['Manila', 'Metro Manila', 'Manila City', 'Quezon', 'Quezon City', 
-              'Pasay', 'Makati', 'Taguig', 'San Juan', 'Las Piñas', 'Caloocan', 'Parañaque']
+              'Pasay', 'Makati', 'Taguig', 'San Juan', 'Las Piñas', 'Caloocan', 'Parañaque',
+              'Laguna', 'San Pablo', 'Lucena', 'Batangas', 'Anilao', 'Mabini', 'Nasugbu',
+              'Puerto Galera', 'Mindoro', 'San Jose (Mindoro)', 'La Union', 'San Fernando (La Union)',
+              'Elyu', 'Alaminos', 'Hundred Islands', 'Pangasinan']
   },
 
   // === LUZON - CENTRAL ===
@@ -50,7 +53,7 @@ export const PHILIPPINE_AIRPORTS = {
     type: 'international',
     coordinates: { lat: 15.1859, lng: 120.5600 },
     aliases: ['Pampanga', 'Angeles', 'Angeles City', 'Clark', 'Tarlac', 
-              'Nueva Ecija', 'Cabanatuan', 'San Fernando (La Union)', 'Dagupan']
+              'Nueva Ecija', 'Cabanatuan', 'Dagupan', 'Olongapo', 'Zambales']
   },
 
   'SFS': {
@@ -93,7 +96,8 @@ export const PHILIPPINE_AIRPORTS = {
     status: AIRPORT_STATUS.ACTIVE,
     type: 'domestic',
     coordinates: { lat: 17.6433, lng: 121.7331 },
-    aliases: ['Tuguegarao', 'Cagayan', 'Mountain Province', 'Ifugao']
+    aliases: ['Tuguegarao', 'Cagayan', 'Mountain Province', 'Ifugao', 
+              'Sagada', 'Banaue', 'Bontoc', 'Batad']
   },
 
   // === LUZON - ILOCOS ===
@@ -106,7 +110,8 @@ export const PHILIPPINE_AIRPORTS = {
     status: AIRPORT_STATUS.ACTIVE,
     type: 'international',
     coordinates: { lat: 18.1781, lng: 120.5319 },
-    aliases: ['Laoag', 'Ilocos Norte', 'Ilocos Sur', 'Vigan', 'Abra']
+    aliases: ['Laoag', 'Ilocos Norte', 'Ilocos Sur', 'Vigan', 'Abra',
+              'Pagudpud', 'Pagudpod', 'Paoay']
   },
 
   // === LUZON - SOUTH ===
@@ -144,7 +149,20 @@ export const PHILIPPINE_AIRPORTS = {
     status: AIRPORT_STATUS.ACTIVE,
     type: 'domestic',
     coordinates: { lat: 13.1575, lng: 123.7350 },
-    aliases: ['Legazpi', 'Legazpi City']
+    aliases: ['Legazpi', 'Legazpi City', 'Albay', 'Mayon', 'Donsol', 
+              'Camarines Norte', 'Daet', 'Calaguas', 'Calaguas Island']
+  },
+
+  'MBT': {
+    code: 'MBT',
+    name: 'Moises R. Espinosa Airport',
+    city: 'Masbate',
+    region: 'Masbate',
+    regionCode: 'bicol',
+    status: AIRPORT_STATUS.ACTIVE,
+    type: 'domestic',
+    coordinates: { lat: 12.3694, lng: 123.6297 },
+    aliases: ['Masbate', 'Masbate City']
   },
 
   'DRP': {
@@ -169,7 +187,8 @@ export const PHILIPPINE_AIRPORTS = {
     status: AIRPORT_STATUS.ACTIVE,
     type: 'international',
     coordinates: { lat: 10.3075, lng: 123.9792 },
-    aliases: ['Cebu', 'Cebu City', 'Mactan']
+    aliases: ['Cebu', 'Cebu City', 'Mactan', 'Moalboal', 'Oslob', 
+              'Malapascua', 'Bantayan', 'Bantayan Island', 'Camotes', 'Camotes Islands']
   },
 
   // === VISAYAS - NEGROS ===
@@ -182,7 +201,7 @@ export const PHILIPPINE_AIRPORTS = {
     status: AIRPORT_STATUS.ACTIVE,
     type: 'domestic',
     coordinates: { lat: 9.3337, lng: 123.3004 },
-    aliases: ['Dumaguete', 'Dumaguete City']
+    aliases: ['Dumaguete', 'Dumaguete City', 'Siquijor', 'Apo Island', 'Dauin', 'Bais']
   },
 
   'BCD': {
@@ -207,7 +226,7 @@ export const PHILIPPINE_AIRPORTS = {
     status: AIRPORT_STATUS.ACTIVE,
     type: 'international',
     coordinates: { lat: 10.8331, lng: 122.4933 },
-    aliases: ['Iloilo', 'Iloilo City']
+    aliases: ['Iloilo', 'Iloilo City', 'Guimaras', 'Antique', 'San Jose de Buenavista']
   },
 
   // === VISAYAS - BOHOL ===
@@ -220,7 +239,8 @@ export const PHILIPPINE_AIRPORTS = {
     status: AIRPORT_STATUS.ACTIVE,
     type: 'international',
     coordinates: { lat: 9.5757, lng: 123.8534 }, // New airport on Panglao Island (opened Nov 2018)
-    aliases: ['Bohol', 'Tagbilaran', 'Tagbilaran City', 'Panglao', 'Panglao Island'],
+    aliases: ['Bohol', 'Tagbilaran', 'Tagbilaran City', 'Panglao', 'Panglao Island',
+              'Anda', 'Chocolate Hills', 'Loboc'],  
     notes: 'Replaced old Tagbilaran Airport in November 2018. Located on Panglao Island, serving all of Bohol province.',
     oldAirport: {
       name: 'Old Tagbilaran Airport',
@@ -252,7 +272,7 @@ export const PHILIPPINE_AIRPORTS = {
     status: AIRPORT_STATUS.ACTIVE,
     type: 'domestic',
     coordinates: { lat: 11.9244, lng: 121.9539 },
-    aliases: ['Caticlan', 'Boracay', 'Malay']
+    aliases: ['Caticlan', 'Boracay', 'Malay', 'Boracay Island']
   },
 
   // === VISAYAS - CAPIZ ===
@@ -278,7 +298,7 @@ export const PHILIPPINE_AIRPORTS = {
     status: AIRPORT_STATUS.ACTIVE,
     type: 'international',
     coordinates: { lat: 7.1255, lng: 125.6456 },
-    aliases: ['Davao', 'Davao City', 'City of Mati']
+    aliases: ['Davao', 'Davao City', 'Samal', 'Samal Island', 'Mati', 'City of Mati']
   },
 
   // === MINDANAO - NORTHERN MINDANAO ===
@@ -291,7 +311,8 @@ export const PHILIPPINE_AIRPORTS = {
     status: AIRPORT_STATUS.ACTIVE,
     type: 'domestic',
     coordinates: { lat: 8.6017, lng: 124.4567 },
-    aliases: ['Cagayan', 'Cagayan de Oro']
+    aliases: ['Cagayan', 'Cagayan de Oro', 'CDO', 'Camiguin', 'Bukidnon', 
+              'Malaybalay', 'Iligan']
   },
 
   'OZC': {
@@ -361,6 +382,18 @@ export const PHILIPPINE_AIRPORTS = {
     aliases: ['Surigao']
   },
 
+  'IAO': {
+    code: 'IAO',
+    name: 'Sayak Airport',
+    city: 'Siargao',
+    region: 'Surigao del Norte',
+    regionCode: 'caraga',
+    status: AIRPORT_STATUS.ACTIVE,
+    type: 'domestic',
+    coordinates: { lat: 9.8591, lng: 126.0139 },
+    aliases: ['Siargao', 'Siargao Island', 'General Luna', 'Cloud 9', 'Dapa']
+  },
+
   // === MINDANAO - ZAMBOANGA ===
   'ZAM': {
     code: 'ZAM',
@@ -390,6 +423,22 @@ export const PHILIPPINE_AIRPORTS = {
     recommendation: '✈️→🚌 Limited flights. Ground transport to/from Zamboanga is convenient (3 hrs, ₱200-350).'
   },
 
+  'JOL': {
+    code: 'JOL',
+    name: 'Jolo Airport',
+    city: 'Jolo',
+    region: 'Sulu',
+    regionCode: 'barmm',
+    status: AIRPORT_STATUS.LIMITED,
+    type: 'domestic',
+    coordinates: { lat: 6.0534, lng: 121.0007 },
+    aliases: ['Jolo', 'Jolo City', 'Sulu'],
+    notes: 'Very limited commercial service - ferry from Zamboanga is the most practical option',
+    alternatives: ['ZAM'],
+    alternativeNames: ['Zamboanga City'],
+    recommendation: '⛴️ Ferry from Zamboanga is recommended (8-12 hrs, ₱500-800). Limited airport service available.'
+  },
+
   // === MINDANAO - COTABATO ===
   'CBO': {
     code: 'CBO',
@@ -413,7 +462,7 @@ export const PHILIPPINE_AIRPORTS = {
     status: AIRPORT_STATUS.ACTIVE,
     type: 'international',
     coordinates: { lat: 6.0580, lng: 125.0961 },
-    aliases: ['GenSan', 'General Santos']
+    aliases: ['GenSan', 'General Santos', 'Lake Sebu', 'Tboli', 'South Cotabato', 'Koronadal']
   },
 
   // === PALAWAN ===
@@ -426,7 +475,20 @@ export const PHILIPPINE_AIRPORTS = {
     status: AIRPORT_STATUS.ACTIVE,
     type: 'international',
     coordinates: { lat: 9.7421, lng: 118.7588 },
-    aliases: ['Puerto Princesa', 'Palawan']
+    aliases: ['Puerto Princesa', 'Palawan', 'El Nido', 'Sabang', 'Underground River',
+              'Port Barton', 'San Vicente', 'Balabac', 'Cuyo']
+  },
+
+  'USU': {
+    code: 'USU',
+    name: 'Francisco B. Reyes Airport',
+    city: 'Busuanga',
+    region: 'Palawan',
+    regionCode: 'mimaropa',
+    status: AIRPORT_STATUS.ACTIVE,
+    type: 'domestic',
+    coordinates: { lat: 12.1215, lng: 120.1002 },
+    aliases: ['Coron', 'Busuanga', 'Coron Island']
   },
 };
 
@@ -441,7 +503,7 @@ export const INTERNATIONAL_AIRPORTS = ['MNL', 'CEB', 'CRK', 'DVO', 'ILO', 'KLO',
 export const ACTIVE_DOMESTIC_AIRPORTS = ['TUG', 'WNP', 'LGP', 'DGT', 'BCD', 'RXS', 'CGY', 'BXU', 'SUG', 'CBO', 'MPH'];
 
 // Airports with limited/seasonal service
-export const LIMITED_SERVICE_AIRPORTS = ['BAG', 'SFS', 'DRP', 'BSO', 'MBL'];
+export const LIMITED_SERVICE_AIRPORTS = ['BAG', 'SFS', 'DRP', 'BSO', 'MBL', 'PAG', 'JOL'];
 
 // Inactive airports (no commercial service)
 export const INACTIVE_AIRPORTS = ['BAG'];

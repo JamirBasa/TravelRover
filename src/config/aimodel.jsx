@@ -637,6 +637,53 @@ export const chatSession = USE_PROXY
       ],
     });
 
+// ✅ RATE LIMIT MANAGEMENT: Track API calls to respect free tier quota
+const rateLimiter = {
+  queue: [],
+  processing: false,
+  lastRequestTime: 0,
+  requestCount: 0,
+  windowStart: Date.now(),
+  
+  // Free tier limits: 10 requests per minute for gemini-2.5-flash
+  MAX_REQUESTS_PER_MINUTE: 10,
+  MIN_REQUEST_INTERVAL: 6000, // 6 seconds between requests (buffer)
+  WINDOW_DURATION: 60000, // 1 minute window
+  
+  async waitForRateLimit() {
+    const now = Date.now();
+    
+    // Reset counter if window expired
+    if (now - this.windowStart >= this.WINDOW_DURATION) {
+      this.requestCount = 0;
+      this.windowStart = now;
+    }
+    
+    // If approaching limit, wait for window reset
+    if (this.requestCount >= this.MAX_REQUESTS_PER_MINUTE) {
+      const waitTime = this.WINDOW_DURATION - (now - this.windowStart) + 1000; // +1s buffer
+      console.warn(`⏳ Rate limit reached (${this.requestCount}/${this.MAX_REQUESTS_PER_MINUTE}). Waiting ${Math.ceil(waitTime/1000)}s...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      
+      // Reset after waiting
+      this.requestCount = 0;
+      this.windowStart = Date.now();
+    }
+    
+    // Enforce minimum interval between requests
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    if (timeSinceLastRequest < this.MIN_REQUEST_INTERVAL) {
+      const delay = this.MIN_REQUEST_INTERVAL - timeSinceLastRequest;
+      console.log(`⏱️ Spacing requests: waiting ${Math.ceil(delay/1000)}s...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    
+    this.lastRequestTime = Date.now();
+    this.requestCount++;
+    console.log(`📊 API call ${this.requestCount}/${this.MAX_REQUESTS_PER_MINUTE} in current window`);
+  }
+};
+
 /**
  * Generate itinerary with retry logic and validation
  * @param {string} userInput - User's travel requirements
@@ -648,7 +695,10 @@ export const generateItineraryWithRetry = async (userInput, maxRetries = 3) => {
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`Attempt ${attempt}/${maxRetries} - Generating itinerary...`);
+      console.log(`🚀 Attempt ${attempt}/${maxRetries} - Generating itinerary...`);
+
+      // ✅ CRITICAL: Wait for rate limit clearance before making request
+      await rateLimiter.waitForRateLimit();
 
       const result = await chatSession.sendMessage(userInput);
       const responseText = result.response.text();
@@ -658,7 +708,7 @@ export const generateItineraryWithRetry = async (userInput, maxRetries = 3) => {
       try {
         itinerary = JSON.parse(responseText);
       } catch (parseError) {
-        console.error(`JSON parse error on attempt ${attempt}:`, parseError);
+        console.error(`❌ JSON parse error on attempt ${attempt}:`, parseError);
         throw new Error(`Invalid JSON response: ${parseError.message}`);
       }
 
@@ -666,13 +716,13 @@ export const generateItineraryWithRetry = async (userInput, maxRetries = 3) => {
       const validation = validateItinerary(itinerary);
       if (!validation.valid) {
         console.warn(
-          `Validation failed on attempt ${attempt}:`,
+          `⚠️ Validation failed on attempt ${attempt}:`,
           validation.errors
         );
         if (attempt < maxRetries) {
           // Retry with validation feedback
           console.log(
-            `Validation feedback: Previous response had issues: ${validation.errors.join(
+            `🔄 Validation feedback: Previous response had issues: ${validation.errors.join(
               ", "
             )}. Retrying with strict validation...`
           );
@@ -681,29 +731,49 @@ export const generateItineraryWithRetry = async (userInput, maxRetries = 3) => {
         throw new Error(`Validation failed: ${validation.errors.join(", ")}`);
       }
 
-      console.log("✓ Itinerary generated and validated successfully");
+      console.log("✅ Itinerary generated and validated successfully");
       return itinerary;
     } catch (error) {
       lastError = error;
-      console.error(`Attempt ${attempt} failed:`, error.message);
+      console.error(`❌ Attempt ${attempt} failed:`, error.message);
+
+      // ✅ ENHANCED: Extract retry delay from error message if provided
+      let retryDelay = 1000 * Math.pow(2, attempt); // Default exponential backoff
+      
+      if (error.message?.includes("retry in")) {
+        const match = error.message.match(/retry in (\d+(?:\.\d+)?)\s*s/i);
+        if (match) {
+          retryDelay = Math.ceil(parseFloat(match[1]) * 1000) + 1000; // API suggested delay + 1s buffer
+          console.log(`⏳ API suggested retry delay: ${Math.ceil(retryDelay/1000)}s`);
+        }
+      }
 
       // Check for rate limit (429) or server errors (500, 503)
-      const isRetriable =
-        error.message?.includes("429") ||
-        error.message?.includes("500") ||
-        error.message?.includes("503") ||
-        error.message?.includes("RESOURCE_EXHAUSTED");
+      const isRateLimit = error.message?.includes("429") || 
+                          error.message?.includes("RESOURCE_EXHAUSTED") ||
+                          error.message?.includes("quota");
+      const isServerError = error.message?.includes("500") || 
+                            error.message?.includes("503");
+      const isRetriable = isRateLimit || isServerError;
 
       if (isRetriable && attempt < maxRetries) {
-        const delay = Math.min(1000 * Math.pow(2, attempt), 10000); // Exponential backoff: 2s, 4s, 8s
-        console.log(`Retrying in ${delay}ms...`);
-        await new Promise((resolve) => setTimeout(resolve, delay));
+        // Cap delay at 60 seconds for rate limits
+        const cappedDelay = Math.min(retryDelay, 60000);
+        console.log(`🔄 ${isRateLimit ? 'Rate limit' : 'Server error'} detected. Retrying in ${Math.ceil(cappedDelay/1000)}s...`);
+        await new Promise((resolve) => setTimeout(resolve, cappedDelay));
+        
+        // Reset rate limiter window after long wait
+        if (cappedDelay > 30000) {
+          rateLimiter.requestCount = 0;
+          rateLimiter.windowStart = Date.now();
+        }
+        
         continue;
       }
 
       if (attempt === maxRetries) {
         throw new Error(
-          `Failed after ${maxRetries} attempts: ${lastError.message}`
+          `AI generation failed after ${maxRetries} attempts: ${lastError.message}`
         );
       }
     }

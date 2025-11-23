@@ -227,23 +227,22 @@ function LocationSelector({ place, onPlaceChange, isPreFilled, categoryData }) {
               />
               <div className="flex-1">
                 <h4
-                  className={`font-medium ${
+                  className={`font-medium text-sm ${
                     isPreFilled
-                      ? "text-green-800 dark:text-green-300"
+                      ? "text-gray-700 dark:text-gray-300"
                       : "text-sky-800 dark:text-sky-300"
                   }`}
                 >
-                  {isPreFilled ? "Pre-selected City" : "Selected City"}
+                  {isPreFilled ? "Your Location" : "Selected City"}
                 </h4>
                 <p
-                  className={`text-sm ${
+                  className={`text-base font-semibold ${
                     isPreFilled
-                      ? "text-green-700 dark:text-green-400"
+                      ? "text-gray-900 dark:text-white"
                       : "text-sky-700 dark:text-sky-300"
                   }`}
                 >
                   {place.label}
-                  {isPreFilled && " - Ready to continue or change anytime"}
                 </p>
                 {!isPreFilled && (
                   <p className="text-xs text-sky-600 dark:text-sky-400 mt-1">

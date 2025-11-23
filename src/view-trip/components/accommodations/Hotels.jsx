@@ -6,6 +6,13 @@ import {
 } from "../../../services/AccommodationVerification";
 import { logDebug } from "../../../utils/productionLogger";
 import { parseDataArray } from "../../../utils/jsonParsers";
+import {
+  extractPrice,
+  calculateValueScore,
+  validateBudgetTier,
+  identifySpecialHotels,
+  enrichHotelWithValidation,
+} from "../../../utils/hotelPricingValidator";
 
 function Hotels({ trip }) {
   const [verifiedHotels, setVerifiedHotels] = useState([]);
@@ -267,71 +274,126 @@ function Hotels({ trip }) {
   }, [getHotelsData]);
 
   // ========================================
-  // EXTRACT PRICE
-  // ========================================
-  const extractPrice = useCallback((hotel) => {
-    const priceStr =
-      hotel?.pricePerNight || hotel?.priceRange || hotel?.price_range || "0";
-
-    if (typeof priceStr === "string" && priceStr.includes("-")) {
-      const rangeMatch = priceStr.match(/[\d,]+/g);
-      if (rangeMatch && rangeMatch.length >= 1) {
-        return parseFloat(rangeMatch[0].replace(/,/g, ""));
-      }
-    }
-
-    const numPrice = parseFloat(String(priceStr).replace(/[₱$€£,]/g, ""));
-    return isNaN(numPrice) ? 0 : numPrice;
-  }, []);
-
-  // ========================================
-  // SORT HOTELS BY SOURCE & PRICE (MEMOIZED)
+  // SORT HOTELS BY VALUE SCORE + BUDGET TIER (MEMOIZED)
   // ========================================
   const hotels = useMemo(() => {
     // Separate real and AI hotels
     const realHotels = verifiedHotels.filter((h) => h.isRealHotel);
     const aiHotels = verifiedHotels.filter((h) => !h.isRealHotel);
 
-    // Sort each group by price (lowest to highest)
-    const sortByPrice = (a, b) => {
-      const priceA = extractPrice(a);
-      const priceB = extractPrice(b);
+    // Get user's budget level from trip
+    const budgetLevel = trip?.userSelection?.hotelData?.budgetLevel || 3; // Default to Mid-Range
+
+    // ✅ ENHANCED: Multi-criteria sorting algorithm
+    // Priority: Budget compliance > Value Score (price + rating + reviews) > Price
+    const sortByValueScore = (a, b) => {
+      // Get prices
+      const priceA = extractPrice(
+        a?.pricePerNight || a?.priceRange || a?.price_range
+      );
+      const priceB = extractPrice(
+        b?.pricePerNight || b?.priceRange || b?.price_range
+      );
+
+      // Handle missing prices
       if (priceA === 0 && priceB === 0) return 0;
       if (priceA === 0) return 1; // Hotels without price go to end
       if (priceB === 0) return -1;
-      return priceA - priceB; // Ascending order (lowest first)
+
+      // Step 1: Sort by budget compliance (within budget = first)
+      const complianceA = validateBudgetTier(priceA, budgetLevel);
+      const complianceB = validateBudgetTier(priceB, budgetLevel);
+
+      if (complianceA.isCompliant !== complianceB.isCompliant) {
+        return complianceA.isCompliant ? -1 : 1; // Budget-compliant first
+      }
+
+      // Step 2: Sort by value score (rating + reviews + price balance)
+      const scoreA = calculateValueScore(a);
+      const scoreB = calculateValueScore(b);
+
+      if (scoreA !== scoreB) {
+        return scoreB - scoreA; // Higher value score first
+      }
+
+      // Step 3: Sort by lowest price as tiebreaker
+      return priceA - priceB;
     };
 
-    const sortedRealHotels = realHotels.sort(sortByPrice);
-    const sortedAiHotels = aiHotels.sort(sortByPrice);
-    const allSorted = [...realHotels, ...aiHotels].sort(sortByPrice);
+    const sortedRealHotels = [...realHotels].sort(sortByValueScore);
+    const sortedAiHotels = [...aiHotels].sort(sortByValueScore);
+    const allSorted = [...realHotels, ...aiHotels].sort(sortByValueScore);
 
-    // ✅ LIMIT TO TOP 5 BEST VALUE HOTELS (lowest prices)
+    // ✅ Identify special hotels (cheapest, top-rated, best value)
+    const specialHotels = identifySpecialHotels(allSorted, budgetLevel);
+
+    // ✅ Enrich all hotels with validation and badge data
+    const enrichedHotels = allSorted.map((hotel) =>
+      enrichHotelWithValidation(hotel, budgetLevel, specialHotels)
+    );
+
+    // ✅ Determine default hotel for itinerary (best value within budget, then cheapest)
+    const defaultHotel =
+      specialHotels.budgetCompliantHotels.length > 0
+        ? specialHotels.budgetCompliantHotels[0] // First budget-compliant = best value within budget
+        : allSorted[0]; // Fallback to first hotel
+
+    // Mark the default hotel
+    const hotelsWithDefault = enrichedHotels.map((h) => ({
+      ...h,
+      isDefaultHotel:
+        h.name === defaultHotel.name || h.hotelName === defaultHotel.hotelName,
+    }));
+
+    // ✅ LIMIT TO TOP 5 BEST VALUE HOTELS
     const MAX_HOTELS_TO_SHOW = 5;
 
     return {
-      realHotels: sortedRealHotels.slice(0, MAX_HOTELS_TO_SHOW),
-      aiHotels: sortedAiHotels.slice(0, MAX_HOTELS_TO_SHOW),
-      allHotels: allSorted.slice(0, MAX_HOTELS_TO_SHOW),
+      realHotels: sortedRealHotels.slice(0, MAX_HOTELS_TO_SHOW).map((h) => {
+        const enriched = hotelsWithDefault.find(
+          (eh) => eh.name === h.name || eh.hotelName === h.hotelName
+        );
+        return enriched || h;
+      }),
+      aiHotels: sortedAiHotels.slice(0, MAX_HOTELS_TO_SHOW).map((h) => {
+        const enriched = hotelsWithDefault.find(
+          (eh) => eh.name === h.name || eh.hotelName === h.hotelName
+        );
+        return enriched || h;
+      }),
+      allHotels: hotelsWithDefault.slice(0, MAX_HOTELS_TO_SHOW),
       // Store original counts for display
       totalRealHotels: realHotels.length,
       totalAiHotels: aiHotels.length,
       totalAllHotels: allSorted.length,
+      // Special hotel indicators
+      specialHotels,
+      defaultHotel,
+      budgetLevel,
     };
-  }, [verifiedHotels, extractPrice]);
+  }, [verifiedHotels, trip?.userSelection?.hotelData?.budgetLevel]);
 
   // ========================================
   // CALCULATE AVERAGE PRICE (MEMOIZED)
   // ========================================
   const avgPrice = useMemo(() => {
     const hotelsWithPrices = hotels.allHotels.filter(
-      (hotel) => extractPrice(hotel) > 0
+      (hotel) =>
+        extractPrice(
+          hotel?.pricePerNight || hotel?.priceRange || hotel?.price_range
+        ) > 0
     );
     return hotelsWithPrices.length > 0
-      ? hotelsWithPrices.reduce((sum, hotel) => sum + extractPrice(hotel), 0) /
-          hotelsWithPrices.length
+      ? hotelsWithPrices.reduce(
+          (sum, hotel) =>
+            sum +
+            extractPrice(
+              hotel?.pricePerNight || hotel?.priceRange || hotel?.price_range
+            ),
+          0
+        ) / hotelsWithPrices.length
       : 0;
-  }, [hotels, extractPrice]);
+  }, [hotels.allHotels]);
 
   // ========================================
   // GENERATE AGODA BOOKING URL
@@ -627,53 +689,33 @@ function Hotels({ trip }) {
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-8 translate-x-8"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-6 -translate-x-6"></div>
 
-          <div className="relative flex items-center justify-between gap-4">
-            {/* Left: Title & Info */}
-            <div className="flex items-center gap-4 flex-1 min-w-0">
-              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                <span className="text-white text-2xl">🏨</span>
-              </div>
+          <div className="relative flex items-center justify-between gap-6">
+            {/* Left: Title & Count */}
+            <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="flex-1 min-w-0">
-                <h2 className="text-xl md:text-2xl font-bold text-white mb-1.5">
-                  {hotels.realHotels.length > 0
-                    ? "Verified Accommodations"
-                    : "Recommended Accommodations"}
+                <h2 className="text-2xl font-bold text-white mb-1">
+                  Accommodations
                 </h2>
-                <div className="flex items-center gap-2 flex-wrap text-white/90 text-xs md:text-sm">
-                  <span className="font-medium">
-                    {hotels.allHotels.length} top choice
-                    {hotels.allHotels.length !== 1 ? "s" : ""}
-                  </span>
-                  {hotels.realHotels.length > 0 && (
-                    <>
-                      <span className="hidden sm:inline">•</span>
-                      <span className="hidden sm:inline">
-                        Sorted by best value
-                      </span>
-                    </>
-                  )}
-                  {hotels.totalAllHotels > hotels.allHotels.length && (
-                    <>
-                      <span className="hidden sm:inline">•</span>
-                      <span className="hidden sm:inline text-white/80">
-                        Selected from {hotels.totalAllHotels} options
-                      </span>
-                    </>
-                  )}
-                </div>
+                <p className="text-sm text-white/80 font-medium">
+                  {hotels.allHotels.length}{" "}
+                  {hotels.allHotels.length === 1 ? "option" : "options"}{" "}
+                  available
+                </p>
               </div>
             </div>
 
             {/* Right: Average Price Badge */}
             {avgPrice > 0 && (
-              <div className="hidden md:flex flex-col items-end bg-white/20 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/30">
-                <div className="text-xs text-white/80 font-medium mb-0.5">
+              <div className="flex flex-col items-end bg-white/15 backdrop-blur-sm rounded-lg px-5 py-3 border border-white/20">
+                <div className="text-xs text-white/70 font-medium uppercase tracking-wide mb-0.5">
                   Average
                 </div>
-                <div className="text-xl font-bold text-white">
+                <div className="text-2xl font-bold text-white leading-tight">
                   ₱{Math.round(avgPrice).toLocaleString()}
                 </div>
-                <div className="text-xs text-white/75">per night</div>
+                <div className="text-xs text-white/70 font-medium">
+                  per night
+                </div>
               </div>
             )}
           </div>

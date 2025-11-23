@@ -448,12 +448,12 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
                   </div>
                 </div>
 
-                {/* Total Budget */}
+                {/* Your Budget */}
                 <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-base">💰</span>
                     <span className="text-white/90 font-semibold text-sm">
-                      Total Budget
+                      Your Budget
                     </span>
                   </div>
                   <p className="font-bold text-white text-base leading-relaxed">

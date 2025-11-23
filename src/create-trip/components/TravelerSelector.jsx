@@ -171,8 +171,7 @@ const TravelerSelector = React.memo(
             How many travelers?
           </h2>
           <p className="text-gray-600 dark:text-gray-400 text-base max-w-2xl mx-auto leading-relaxed">
-            Choose your group size to get personalized recommendations for
-            accommodations and activities
+            Select your group size for tailored recommendations.
           </p>
         </div>
 
@@ -203,44 +202,18 @@ const TravelerSelector = React.memo(
           )}
 
           {/* Info Card - Enhanced Professional Design */}
-          <div className="brand-card p-6 shadow-xl border-sky-200 dark:border-sky-800 bg-gradient-to-br from-white to-sky-50/30 dark:from-slate-900 dark:to-sky-950/20">
-            <div className="flex items-start gap-4">
-              <div className="brand-gradient p-3 rounded-2xl flex-shrink-0 shadow-lg">
-                <FaInfoCircle className="text-white text-xl" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold brand-gradient-text text-base mb-2">
-                  Why Group Size Matters
-                </h3>
-                <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed mb-3">
-                  Your group size helps us curate the perfect experience by
-                  recommending:
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                    <span className="text-sky-500 dark:text-sky-400 mt-0.5">
-                      ✓
-                    </span>
-                    <span>
-                      Suitable accommodations with appropriate room
-                      configurations
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                    <span className="text-sky-500 dark:text-sky-400 mt-0.5">
-                      ✓
-                    </span>
-                    <span>Activities that work best for your party size</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                    <span className="text-sky-500 dark:text-sky-400 mt-0.5">
-                      ✓
-                    </span>
-                    <span>Transportation options and dining experiences</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
+          <div className="brand-card p-5 shadow-lg border-sky-200">
+            <h3 className="text-base font-bold brand-gradient-text mb-2">
+              Why Group Size Matters
+            </h3>
+            <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+              We use your group size to recommend:
+            </p>
+            <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+              <li>Accommodations with suitable room options</li>
+              <li>Activities matched to your group</li>
+              <li>Transportation and dining arrangements</li>
+            </ul>
           </div>
 
           {/* Budget Preview Card */}

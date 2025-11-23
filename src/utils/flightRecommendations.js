@@ -427,6 +427,15 @@ const LIMITED_SERVICE_AIRPORTS = {
   },
   
   // === MINDANAO - SOUTHERN (SULU/TAWI-TAWI) ===
+  "JOL": {
+    name: "Jolo",
+    alternatives: ["ZAM"],
+    alternativeNames: ["Zamboanga"],
+    transport: "ferry",
+    travelTime: "8-12 hours from Zamboanga City",
+    notes: "Jolo has limited airport service. Ferry is the most practical option.",
+    recommendation: "Fly to Zamboanga, then ferry to Jolo (Sulu archipelago)"
+  },
   "TAW": {
     name: "Tawi-Tawi",
     alternatives: ["TWT"],
@@ -470,6 +479,21 @@ function getAirportCity(code) {
   return AIRPORT_CITIES[code] || code;
 }
 
+// Destinations that have DIRECT COMMERCIAL FLIGHTS (don't show routing warnings)
+// These are listed in LIMITED_SERVICE_AIRPORTS for context but shouldn't trigger alerts
+const HAS_DIRECT_FLIGHTS = [
+  "Dumaguete",      // DGT - Sibulan Airport
+  "Siargao",        // IAO - Sayak Airport
+  "Panglao",        // TAG - Panglao-Bohol International
+  "Coron",          // USU - Busuanga Airport (alternative name)
+  "Busuanga",       // USU - Francisco B. Reyes Airport
+  "Masbate",        // MBT - Masbate Airport
+  "Legazpi",        // LGP - Legazpi Airport
+  "Legaspi",        // LGP - Alternative spelling
+  "Camiguin",       // CGY - Camiguin Airport (though ferry more common)
+  "Tawi-Tawi",      // TWT - Sanga-Sanga Airport
+];
+
 // Helper to check if airport has commercial flights
 function hasCommercialFlights(airportCode) {
   if (!airportCode) return false;
@@ -480,6 +504,30 @@ function hasCommercialFlights(airportCode) {
 function hasLimitedService(airportCode) {
   if (!airportCode) return false;
   return airportCode.toUpperCase() in LIMITED_SERVICE_AIRPORTS;
+}
+
+// Helper to check if destination city matches a limited-service airport by name
+function findLimitedServiceByCity(destinationCity) {
+  if (!destinationCity) return null;
+  
+  const normalizedDest = destinationCity.toLowerCase().trim();
+  
+  for (const [code, info] of Object.entries(LIMITED_SERVICE_AIRPORTS)) {
+    // Check if destination contains the airport's city name
+    if (normalizedDest.includes(info.name.toLowerCase())) {
+      // ✅ CRITICAL: Skip destinations that have direct commercial flights
+      // These are listed in LIMITED_SERVICE_AIRPORTS for routing context only
+      if (HAS_DIRECT_FLIGHTS.some(place => 
+        normalizedDest.includes(place.toLowerCase())
+      )) {
+        return null; // Don't show warning for destinations with direct flights
+      }
+      
+      return { code, ...info };
+    }
+  }
+  
+  return null;
 }
 
 /**
@@ -692,7 +740,26 @@ export function getFlightRecommendationMessage({
     };
   }
 
-  // Check for limited service airports (like BAG)
+  // ✅ CRITICAL: Check destination city name FIRST (handles geocoded cases like Baguio → CRK)
+  const limitedServiceInfo = findLimitedServiceByCity(destination);
+  if (limitedServiceInfo) {
+    const altCities = limitedServiceInfo.alternatives.map(code => getAirportCity(code)).join(" or ");
+    
+    return {
+      type: "limited-service",
+      message: `✈️→🚌 Fly to ${altCities}, then ${limitedServiceInfo.transport} (${limitedServiceInfo.travelTime})`,
+      recommendation: "connect-via-major-hub",
+      destinationAirportCode: limitedServiceInfo.code, // ✅ Pass actual destination code (BAG)
+      alternativeAirportCode: airportCode, // ✅ Pass recommended alternative (CRK)
+      alternativeAirports: limitedServiceInfo.alternatives,
+      groundTransport: limitedServiceInfo.transport,
+      travelTime: limitedServiceInfo.travelTime,
+      notes: limitedServiceInfo.notes,
+      cityName: limitedServiceInfo.name
+    };
+  }
+
+  // Fallback: Check for limited service airports by code (like BAG)
   if (hasLimitedService(airportCode)) {
     const airportInfo = LIMITED_SERVICE_AIRPORTS[airportCode];
     const altCities = airportInfo.alternatives.map(code => getAirportCity(code)).join(" or ");
@@ -701,6 +768,7 @@ export function getFlightRecommendationMessage({
       type: "limited-service",
       message: `✈️→🚌 Fly to ${altCities}, then ${airportInfo.transport} (${airportInfo.travelTime})`,
       recommendation: "connect-via-major-hub",
+      destinationAirportCode: airportCode,
       alternativeAirports: airportInfo.alternatives,
       groundTransport: airportInfo.transport,
       travelTime: airportInfo.travelTime,
