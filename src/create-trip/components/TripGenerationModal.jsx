@@ -575,7 +575,8 @@ function TripGenerationModal({
                             Building Your Itinerary
                           </h4>
                           <p className="text-sky-800 dark:text-sky-400/80 text-xs leading-snug">
-                            AI-powered analysis to create your perfect day-by-day plan.
+                            AI-powered analysis to create your perfect
+                            day-by-day plan.
                           </p>
                         </div>
                       </div>
@@ -587,16 +588,32 @@ function TripGenerationModal({
                       <div className="bg-emerald-50 dark:bg-emerald-950/30 border-l-4 border-emerald-400 dark:border-emerald-600 rounded-lg p-4">
                         <div className="flex gap-3">
                           <div className="flex-shrink-0 pt-0.5 text-lg">
-                            {transportAnalysis?.groundTransport?.hasFerry ? "⛴️" : <FaBus className="text-emerald-600 dark:text-emerald-400 text-sm" />}
+                            {transportAnalysis?.groundTransport?.hasFerry ? (
+                              "⛴️"
+                            ) : (
+                              <FaBus className="text-emerald-600 dark:text-emerald-400 text-sm" />
+                            )}
                           </div>
                           <div>
                             <h4 className="font-semibold text-emerald-900 dark:text-emerald-300 text-sm mb-1">
-                              {transportAnalysis?.groundTransport?.hasFerry ? "Ferry Route Selected" : "Ground Transport Route Selected"}
+                              {transportAnalysis?.groundTransport?.hasFerry
+                                ? "Ferry Route Selected"
+                                : "Ground Transport Route Selected"}
                             </h4>
                             <p className="text-emerald-800 dark:text-emerald-400/80 text-xs leading-snug">
                               {transportAnalysis.hasAirport === false
-                                ? `${destination.split(",")[0]} has no direct airport. Using ${transportAnalysis?.groundTransport?.hasFerry ? "ferry" : "ground transport"} instead.`
-                                : `${transportAnalysis?.groundTransport?.hasFerry ? "Ferry" : "Ground transport"} is more practical for this route.`}
+                                ? `${
+                                    destination.split(",")[0]
+                                  } has no direct airport. Using ${
+                                    transportAnalysis?.groundTransport?.hasFerry
+                                      ? "ferry"
+                                      : "ground transport"
+                                  } instead.`
+                                : `${
+                                    transportAnalysis?.groundTransport?.hasFerry
+                                      ? "Ferry"
+                                      : "Ground transport"
+                                  } is more practical for this route.`}
                             </p>
                           </div>
                         </div>
@@ -612,7 +629,8 @@ function TripGenerationModal({
                               Flight Search in Progress
                             </h4>
                             <p className="text-sky-800 dark:text-sky-400/80 text-xs leading-snug">
-                              Searching for available flights and best prices for your travel dates.
+                              Searching for available flights and best prices
+                              for your travel dates.
                             </p>
                           </div>
                         </div>
@@ -642,9 +660,7 @@ function TripGenerationModal({
                               <span className="text-blue-600 dark:text-blue-500 flex-shrink-0">
                                 •
                               </span>
-                              <span>
-                                Optimized routes between locations
-                              </span>
+                              <span>Optimized routes between locations</span>
                             </li>
                           </ul>
                         </div>

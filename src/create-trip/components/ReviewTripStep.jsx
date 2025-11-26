@@ -307,15 +307,20 @@ const ReviewTripStep = ({
             {/* Flight Search Details */}
             {flightData?.includeFlights &&
               // Show different card based on whether ground transport is preferred
-              ((transportAnalysis?.groundTransport?.preferred || transportAnalysis?.groundTransport?.available) ? (
+              (transportAnalysis?.groundTransport?.preferred ||
+              transportAnalysis?.groundTransport?.available ? (
                 // Special card when ground transport is better
                 <div className="brand-card p-4 border-2 border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-900/30">
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="text-sm font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
-                          {transportAnalysis?.groundTransport?.hasFerry ? "⛴️" : "🚌"}
-                          {transportAnalysis?.groundTransport?.hasFerry ? "Ferry Recommended" : "Ground Transport Recommended"}{" "}
+                          {transportAnalysis?.groundTransport?.hasFerry
+                            ? "⛴️"
+                            : "🚌"}
+                          {transportAnalysis?.groundTransport?.hasFerry
+                            ? "Ferry Recommended"
+                            : "Ground Transport Recommended"}{" "}
                           <span className="text-xs font-normal text-gray-600 dark:text-gray-400">
                             (Best option for this route)
                           </span>
@@ -323,9 +328,18 @@ const ReviewTripStep = ({
                       </div>
                       <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                         Based on your route,{" "}
-                        <strong>{transportAnalysis?.groundTransport?.hasFerry ? "ferry travel" : "ground transport"} is more practical</strong>. No
-                        flight search needed—we'll generate your itinerary with
-                        the recommended {transportAnalysis?.groundTransport?.hasFerry ? "ferry" : "bus/van"} travel.
+                        <strong>
+                          {transportAnalysis?.groundTransport?.hasFerry
+                            ? "ferry travel"
+                            : "ground transport"}{" "}
+                          is more practical
+                        </strong>
+                        . No flight search needed—we'll generate your itinerary
+                        with the recommended{" "}
+                        {transportAnalysis?.groundTransport?.hasFerry
+                          ? "ferry"
+                          : "bus/van"}{" "}
+                        travel.
                       </p>
                       <div className="text-[10px] text-gray-500 dark:text-gray-500 italic">
                         💡 Your trip will be generated without flight search. If
@@ -353,7 +367,9 @@ const ReviewTripStep = ({
                           ) : (
                             <FaPlane className="text-blue-500" />
                           )}
-                          {transportAnalysis?.groundTransport?.hasFerry ? "Ferry Travel" : "Flight Search"}
+                          {transportAnalysis?.groundTransport?.hasFerry
+                            ? "Ferry Travel"
+                            : "Flight Search"}
                         </h4>
                         {isFlightDataComplete && (
                           <span className="text-xs font-semibold text-green-600 dark:text-green-400 px-2 py-0.5 bg-green-100 dark:bg-green-900/40 rounded-full">
@@ -506,23 +522,32 @@ const ReviewTripStep = ({
               Ready to Create Your Itinerary
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Your {getDuration()} trip to <strong>{formData.location}</strong> will include:
+              Your {getDuration()} trip to <strong>{formData.location}</strong>{" "}
+              will include:
             </p>
             <ul className="space-y-2">
               <li className="flex items-start gap-3 text-sm">
-                <span className="text-emerald-600 dark:text-emerald-400 flex-shrink-0">✓</span>
+                <span className="text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+                  ✓
+                </span>
                 <span className="text-gray-700 dark:text-gray-300">
-                  Day-by-day activities optimized for {getActivityPaceDisplay().toLowerCase()}
+                  Day-by-day activities optimized for{" "}
+                  {getActivityPaceDisplay().toLowerCase()}
                 </span>
               </li>
               <li className="flex items-start gap-3 text-sm">
-                <span className="text-emerald-600 dark:text-emerald-400 flex-shrink-0">✓</span>
+                <span className="text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+                  ✓
+                </span>
                 <span className="text-gray-700 dark:text-gray-300">
-                  Dining recommendations for your {getBudgetDisplay().toLowerCase()} budget
+                  Dining recommendations for your{" "}
+                  {getBudgetDisplay().toLowerCase()} budget
                 </span>
               </li>
               <li className="flex items-start gap-3 text-sm">
-                <span className="text-emerald-600 dark:text-emerald-400 flex-shrink-0">✓</span>
+                <span className="text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+                  ✓
+                </span>
                 <span className="text-gray-700 dark:text-gray-300">
                   Transportation and travel time estimates
                 </span>
@@ -535,24 +560,39 @@ const ReviewTripStep = ({
                       Analyzing transport options...
                     </span>
                   </li>
-                ) : (transportAnalysis?.groundTransport?.preferred || transportAnalysis?.groundTransport?.available) ? (
+                ) : transportAnalysis?.groundTransport?.preferred ||
+                  transportAnalysis?.groundTransport?.available ? (
                   <li className="flex items-start gap-3 text-sm">
-                    <span className="text-emerald-600 dark:text-emerald-400 flex-shrink-0">{transportAnalysis?.groundTransport?.hasFerry ? "⛴️" : "🚌"}</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+                      {transportAnalysis?.groundTransport?.hasFerry
+                        ? "⛴️"
+                        : "🚌"}
+                    </span>
                     <span className="text-gray-700 dark:text-gray-300">
-                      {transportAnalysis?.groundTransport?.hasFerry ? "Ferry" : "Ground transport"} from {flightData.departureCity || "your city"} ({transportAnalysis.groundTransport.travelTime}, {transportAnalysis.groundTransport.cost})
+                      {transportAnalysis?.groundTransport?.hasFerry
+                        ? "Ferry"
+                        : "Ground transport"}{" "}
+                      from {flightData.departureCity || "your city"} (
+                      {transportAnalysis.groundTransport.travelTime},{" "}
+                      {transportAnalysis.groundTransport.cost})
                     </span>
                   </li>
                 ) : (
                   <li className="flex items-start gap-3 text-sm">
-                    <span className="text-sky-600 dark:text-sky-400 flex-shrink-0">✈️</span>
+                    <span className="text-sky-600 dark:text-sky-400 flex-shrink-0">
+                      ✈️
+                    </span>
                     <span className="text-gray-700 dark:text-gray-300">
-                      Real-time flights from {flightData.departureCity || "your city"}
+                      Real-time flights from{" "}
+                      {flightData.departureCity || "your city"}
                     </span>
                   </li>
                 ))}
               {hotelData?.includeHotels && (
                 <li className="flex items-start gap-3 text-sm">
-                  <span className="text-amber-600 dark:text-amber-400 flex-shrink-0">🏨</span>
+                  <span className="text-amber-600 dark:text-amber-400 flex-shrink-0">
+                    🏨
+                  </span>
                   <span className="text-gray-700 dark:text-gray-300">
                     Hotel recommendations with real photos and reviews
                   </span>

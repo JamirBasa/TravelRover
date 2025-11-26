@@ -454,7 +454,9 @@ function FlightBooking({ trip }) {
           {/* Header */}
           <div className="mb-4">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-              {isDestinationInactive ? routeWarning.info.name : trip?.userSelection?.location}
+              {isDestinationInactive
+                ? routeWarning.info.name
+                : trip?.userSelection?.location}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               {routeWarning.info.message}
@@ -467,19 +469,29 @@ function FlightBooking({ trip }) {
               // Origin city has no airport - need ground transport first
               <>
                 <div className="flex gap-4">
-                  <div className="text-sm font-semibold text-sky-600 dark:text-sky-400 flex-shrink-0 w-8">1</div>
+                  <div className="text-sm font-semibold text-sky-600 dark:text-sky-400 flex-shrink-0 w-8">
+                    1
+                  </div>
                   <div>
                     <p className="text-sm text-gray-900 dark:text-gray-100">
-                      <span className="font-medium">{routeWarning.info.transport}</span> to {routeWarning.info.alternativeNames[0]}
+                      <span className="font-medium">
+                        {routeWarning.info.transport}
+                      </span>{" "}
+                      to {routeWarning.info.alternativeNames[0]}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">{routeWarning.info.travelTime}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                      {routeWarning.info.travelTime}
+                    </p>
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="text-sm font-semibold text-sky-600 dark:text-sky-400 flex-shrink-0 w-8">2</div>
+                  <div className="text-sm font-semibold text-sky-600 dark:text-sky-400 flex-shrink-0 w-8">
+                    2
+                  </div>
                   <div>
                     <p className="text-sm text-gray-900 dark:text-gray-100">
-                      <span className="font-medium">Fly</span> to {trip?.userSelection?.location}
+                      <span className="font-medium">Fly</span> to{" "}
+                      {trip?.userSelection?.location}
                     </p>
                   </div>
                 </div>
@@ -488,20 +500,31 @@ function FlightBooking({ trip }) {
               // Destination has no airport
               <>
                 <div className="flex gap-4">
-                  <div className="text-sm font-semibold text-sky-600 dark:text-sky-400 flex-shrink-0 w-8">1</div>
+                  <div className="text-sm font-semibold text-sky-600 dark:text-sky-400 flex-shrink-0 w-8">
+                    1
+                  </div>
                   <div>
                     <p className="text-sm text-gray-900 dark:text-gray-100">
-                      <span className="font-medium">Fly</span> to {routeWarning.info.alternativeNames[0]} ({routeWarning.info.alternatives[0]})
+                      <span className="font-medium">Fly</span> to{" "}
+                      {routeWarning.info.alternativeNames[0]} (
+                      {routeWarning.info.alternatives[0]})
                     </p>
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="text-sm font-semibold text-sky-600 dark:text-sky-400 flex-shrink-0 w-8">2</div>
+                  <div className="text-sm font-semibold text-sky-600 dark:text-sky-400 flex-shrink-0 w-8">
+                    2
+                  </div>
                   <div>
                     <p className="text-sm text-gray-900 dark:text-gray-100">
-                      <span className="font-medium">{routeWarning.info.transport}</span> to {trip?.userSelection?.location}
+                      <span className="font-medium">
+                        {routeWarning.info.transport}
+                      </span>{" "}
+                      to {trip?.userSelection?.location}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">{routeWarning.info.travelTime}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                      {routeWarning.info.travelTime}
+                    </p>
                   </div>
                 </div>
               </>

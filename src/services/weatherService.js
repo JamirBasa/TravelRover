@@ -25,43 +25,101 @@ const CACHE_DURATION = 3600000; // 1 hour in milliseconds
 // Philippine location mapping for cities that OpenWeatherMap might not recognize
 // Maps local names to API-friendly names or nearby major cities
 const PHILIPPINE_LOCATION_MAP = {
-  'Pagadian': 'Zamboanga,PH', // Use Zamboanga as fallback for Pagadian area
+  // Mindanao - Zamboanga Peninsula & Caraga
+  'Pagadian': 'Zamboanga,PH',
   'Dipolog': 'Zamboanga,PH',
   'Isabela': 'Zamboanga,PH',
   'Marawi': 'Cagayan de Oro,PH',
   'Iligan': 'Cagayan de Oro,PH',
   'Butuan': 'Cagayan de Oro,PH',
   'Surigao': 'Cagayan de Oro,PH',
+  'General Luna': 'Surigao,PH', // Siargao
+  'Siargao': 'Surigao,PH',
+  'Del Carmen': 'Surigao,PH', // Siargao
+  
+  // Visayas - Eastern Visayas
   'Tacloban': 'Cebu,PH',
   'Ormoc': 'Cebu,PH',
   'Catbalogan': 'Tacloban,PH',
-  'San Vicente': 'Puerto Princesa,PH',
-  'Coron': 'Puerto Princesa,PH',
-  'El Nido': 'Puerto Princesa,PH',
-  'Sagada': 'Baguio,PH',
-  'Banaue': 'Baguio,PH',
-  'Vigan': 'Laoag,PH',
-  'Batanes': 'Basco,PH',
-  'Siquijor': 'Dumaguete,PH',
-  'Camiguin': 'Cagayan de Oro,PH',
-  'Siargao': 'Surigao,PH',
+  
+  // Visayas - Central Visayas (Cebu & Bohol)
   'Moalboal': 'Cebu,PH',
   'Oslob': 'Cebu,PH',
   'Bantayan': 'Cebu,PH',
   'Malapascua': 'Cebu,PH',
+  'Badian': 'Cebu,PH',
+  'Tagbilaran': 'Cebu,PH', // Bohol capital
+  'Panglao': 'Cebu,PH', // Bohol
+  'Anda': 'Cebu,PH', // Bohol
+  'Loboc': 'Cebu,PH', // Bohol
+  'Carmen': 'Cebu,PH', // Bohol (Chocolate Hills)
+  
+  // Visayas - Western Visayas (Aklan, Iloilo, Negros)
+  'Malay': 'Kalibo,PH', // Aklan (includes Boracay)
+  'Caticlan': 'Kalibo,PH',
+  'Boracay': 'Kalibo,PH',
+  'Silay': 'Bacolod,PH', // Negros Occidental
+  'Talisay': 'Bacolod,PH', // Negros Occidental
+  'Victorias': 'Bacolod,PH',
+  'Guimaras': 'Iloilo,PH',
+  'Siquijor': 'Dumaguete,PH',
+  
+  // Mindanao - Northern Mindanao
+  'Camiguin': 'Cagayan de Oro,PH',
+  'Mambajao': 'Cagayan de Oro,PH', // Camiguin
+  'Malaybalay': 'Cagayan de Oro,PH', // Bukidnon
+  'Valencia': 'Cagayan de Oro,PH', // Bukidnon
+  
+  // Palawan & MIMAROPA
+  'San Vicente': 'Puerto Princesa,PH',
+  'Coron': 'Puerto Princesa,PH',
+  'El Nido': 'Puerto Princesa,PH',
+  'Port Barton': 'Puerto Princesa,PH',
+  
+  // Luzon - Cordillera & Northern Luzon
+  'Sagada': 'Baguio,PH',
+  'Banaue': 'Baguio,PH',
+  'La Trinidad': 'Baguio,PH', // Benguet
+  'Itogon': 'Baguio,PH',
+  'Vigan': 'Laoag,PH',
+  'Batanes': 'Basco,PH',
+  'Basco': 'Basco,PH',
+  
+  // Luzon - Central & Southern Luzon
+  'Tagaytay': 'Manila,PH', // Cavite
+  'Nasugbu': 'Batangas,PH',
+  'Mabini': 'Batangas,PH', // Anilao
+  'Anilao': 'Batangas,PH',
+  'Laiya': 'Batangas,PH', // San Juan, Batangas
+  'Taal': 'Batangas,PH',
+  
+  // Luzon - Bicol Region
+  'Daraga': 'Legazpi,PH', // Albay
+  'Camalig': 'Legazpi,PH', // Albay
+  'Ligao': 'Legazpi,PH',
+  'Tabaco': 'Legazpi,PH',
+  'Donsol': 'Legazpi,PH', // Sorsogon (whale sharks)
+  'Sorsogon': 'Legazpi,PH',
 };
 
 /**
  * Check if trip dates are within forecast availability (14 days max)
+ * OpenWeatherMap provides 5-day forecast, so we show weather for trips within next 14 days
  */
 export const isForecastAvailable = (startDate) => {
   if (!startDate) return false;
   
   const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0); // Normalize to start of day
+  
   const now = new Date();
+  now.setHours(0, 0, 0, 0); // Normalize to start of day
+  
   const daysUntilTrip = Math.ceil((start - now) / (1000 * 60 * 60 * 24));
   
-  // Weather forecasts typically available for next 14 days
+  // Weather forecast is available when:
+  // 1. Trip is upcoming or ongoing (daysUntilTrip >= 0, not in the past)
+  // 2. Trip starts within next 14 days (API limitation)
   return daysUntilTrip >= 0 && daysUntilTrip <= 14;
 };
 

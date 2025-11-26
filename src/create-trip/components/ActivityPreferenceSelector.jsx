@@ -215,10 +215,15 @@ const ActivityPreferenceSelector = ({
             </div>
             <div className="flex-1">
               <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-base mb-2">
-                {activityOptions.find((opt) => opt.value === activityPreference)?.label}
+                {
+                  activityOptions.find(
+                    (opt) => opt.value === activityPreference
+                  )?.label
+                }
               </h4>
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                Your itinerary will include {activityPreference} activity per day with built-in travel time, meals, and rest.
+                Your itinerary will include {activityPreference} activity per
+                day with built-in travel time, meals, and rest.
               </p>
             </div>
           </div>
@@ -236,7 +241,8 @@ const ActivityPreferenceSelector = ({
               Smart Scheduling Included
             </h4>
             <p className="text-amber-800 dark:text-amber-400 text-sm">
-              Every itinerary includes travel time, meal breaks, and rest periods between activities.
+              Every itinerary includes travel time, meal breaks, and rest
+              periods between activities.
             </p>
           </div>
         </div>

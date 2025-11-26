@@ -80,36 +80,48 @@ function GroundTransportBanner({ transportMode, costBreakdown }) {
               {/* Key Info Grid - Compact */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="text-center">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Travel Time</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Travel Time
+                  </p>
                   <p className="text-sm font-bold text-gray-900 dark:text-white">
                     {ground_transport.travel_time}
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Cost</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Cost
+                  </p>
                   <p className="text-sm font-bold text-gray-900 dark:text-white">
                     {formatCost(ground_transport.cost)}
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Frequency</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Frequency
+                  </p>
                   <p className="text-sm font-bold text-gray-900 dark:text-white">
-                    {ground_transport.frequency?.includes("daily") || ground_transport.frequency?.includes("multiple") ? "Frequent" : "Regular"}
+                    {ground_transport.frequency?.includes("daily") ||
+                    ground_transport.frequency?.includes("multiple")
+                      ? "Frequent"
+                      : "Regular"}
                   </p>
                 </div>
               </div>
 
               {/* Operators */}
-              {ground_transport.operators && ground_transport.operators.length > 0 && (
-                <div className="p-3 bg-white/60 dark:bg-slate-800/60 rounded-lg">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Ferry Operators</p>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {Array.isArray(ground_transport.operators) 
-                      ? ground_transport.operators.join(", ") 
-                      : ground_transport.operators}
-                  </p>
-                </div>
-              )}
+              {ground_transport.operators &&
+                ground_transport.operators.length > 0 && (
+                  <div className="p-3 bg-white/60 dark:bg-slate-800/60 rounded-lg">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                      Ferry Operators
+                    </p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {Array.isArray(ground_transport.operators)
+                        ? ground_transport.operators.join(", ")
+                        : ground_transport.operators}
+                    </p>
+                  </div>
+                )}
 
               {/* Notes/Tips */}
               {ground_transport.notes && (

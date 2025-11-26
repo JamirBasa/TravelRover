@@ -1,14 +1,12 @@
 // src/create-trip/components/LocationSelector.jsx
 import { PlacesAutocomplete } from "../../components/common/PlacesAutocomplete";
-import { FaMapMarkerAlt, FaGlobe } from "react-icons/fa";
-import { Sparkles, Loader2 } from "lucide-react";
+import { MapPin, Sparkles, Loader2, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 function LocationSelector({ place, onPlaceChange, isPreFilled, categoryData }) {
   const [loadingDestination, setLoadingDestination] = useState(null);
 
-  // Simplified handler - only need to manage the place object
   const handlePlaceChange = (selectedPlace) => {
     onPlaceChange(selectedPlace);
   };
@@ -121,137 +119,123 @@ function LocationSelector({ place, onPlaceChange, isPreFilled, categoryData }) {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Main Question */}
-      <div className="text-center mb-8">
+    <div className="max-w-2xl mx-auto space-y-8">
+      {/* Hero Section */}
+      <div className="text-center space-y-3">
         <h2 className="text-2xl font-bold brand-gradient-text mb-3">
           {isPreFilled
             ? "Perfect! Let's plan your trip"
             : categoryData?.name
-            ? `Plan Your ${categoryData.name} Adventure`
-            : "Which city would you like to explore?"}
+            ? `${categoryData.name} Adventures Await`
+            : "Where would you like to go?"}
         </h2>
-        <p className="text-gray-700 dark:text-gray-300 text-base font-medium">
+        <p className="text-gray-600 dark:text-gray-400 text-base leading-relaxed">
           {isPreFilled
-            ? `You've selected ${place?.label || place?.value?.description} ✈️`
+            ? `You've selected ${place?.label || place?.value?.description}`
             : categoryData?.name
-            ? `We've curated the best ${categoryData.name.toLowerCase()} destinations for you`
-            : "Choose a city in the Philippines to start planning your adventure ✈️"}
+            ? `Discover the best ${categoryData.name.toLowerCase()} destinations in the Philippines`
+            : "Choose your destination to start planning your adventure"}
         </p>
       </div>
 
-      {/* ✅ NEW: Category-based Destination Recommendations */}
+      {/* Quick Select Recommendations */}
       {categoryData?.recommendedDestinations && !place && (
-        <div className="mb-6 p-5 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border border-sky-200 dark:border-sky-800 rounded-xl">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-sky-600 dark:text-sky-400" />
-            <h3 className="font-semibold text-sky-900 dark:text-sky-100">
-              Recommended {categoryData.name} Destinations
+        <div className="space-y-4 mb-6">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-sky-500" />
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              Popular {categoryData.name} Destinations
             </h3>
           </div>
-          <div className="grid grid-cols-1 gap-3">
+          
+          <div className="grid grid-cols-1 gap-4">
             {categoryData.recommendedDestinations.map((dest, idx) => (
               <button
                 key={idx}
                 onClick={() => handleQuickSelect(dest)}
                 disabled={loadingDestination === dest.city}
-                className="group text-left p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg hover:border-sky-500 dark:hover:border-sky-500 hover:shadow-md transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                className="group relative overflow-hidden text-left p-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl hover:border-sky-400 dark:hover:border-sky-500 hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      {loadingDestination === dest.city ? (
-                        <div style={{ animation: "spin 1s linear infinite" }}>
-                          <Loader2 className="w-4 h-4 text-sky-500 dark:text-sky-400 flex-shrink-0" />
-                        </div>
-                      ) : (
-                        <FaMapMarkerAlt className="text-sky-500 dark:text-sky-400 flex-shrink-0" />
-                      )}
-                      <h4 className="font-semibold text-gray-900 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
-                        {dest.city}
-                      </h4>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 pl-6">
+                {/* Hover gradient background */}
+                <div className="absolute inset-0 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/20 dark:to-blue-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                
+                <div className="relative flex items-center gap-4">
+                  {/* Icon */}
+                  <div className="shrink-0">
+                    {loadingDestination === dest.city ? (
+                      <div className="w-10 h-10 rounded-full bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
+                        <Loader2 className="w-5 h-5 text-sky-500 animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
+                        <MapPin className="w-5 h-5 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                      {dest.city}
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
                       {dest.reason}
                     </p>
                   </div>
-                  <div className="text-sky-500 dark:text-sky-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {loadingDestination === dest.city ? "..." : "→"}
+                  
+                  {/* Arrow indicator */}
+                  <div className="shrink-0">
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-sky-500 group-hover:translate-x-1 transition-all duration-300" />
                   </div>
                 </div>
               </button>
             ))}
           </div>
-          <p className="text-xs text-gray-600 dark:text-gray-400 mt-4 text-center italic">
-            💡 Click any destination or search for your own below
-          </p>
         </div>
       )}
 
-      {/* Location Input */}
+      {/* Search Section */}
       <div className="space-y-4">
         <div>
-          <label className="block text-base font-semibold text-gray-800 dark:text-gray-200 mb-3">
-            <FaMapMarkerAlt className="inline mr-2 text-sky-500 dark:text-sky-400" />
-            {categoryData?.name ? "Or Search Any City" : "City or Region"} *
+          <label className="block text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">
+            <MapPin className="inline mr-2 text-sky-500" />
+            {categoryData?.name && !place ? "Or search for another destination" : "Search Destination"} *
           </label>
-          <PlacesAutocomplete
-            value={place}
-            onChange={handlePlaceChange}
-            placeholder="Search for cities (e.g., Manila, Cebu, Boracay)..."
-            countryRestriction={["ph"]}
-            restrictToCities={true}
-          />
-          <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 italic">
-            💡 Select a city first. You can list specific places you want to
-            visit in a later step.
+          
+          <div className="relative">
+            <PlacesAutocomplete
+              value={place}
+              onChange={handlePlaceChange}
+              placeholder="e.g., Manila, Palawan, Boracay..."
+              countryRestriction={["ph"]}
+              restrictToCities={true}
+            />
+          </div>
+          
+          <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+            Select your primary destination. You can add specific places later.
           </p>
         </div>
 
-        {/* Unified Selection Indicator */}
+        {/* Selection Confirmation Card */}
         {place && (
-          <div
-            className={`border rounded-lg p-4 shadow-sm ${
-              isPreFilled
-                ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800"
-                : "bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border-sky-200 dark:border-sky-800"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <FaMapMarkerAlt
-                className={
-                  isPreFilled
-                    ? "text-green-600 dark:text-green-400"
-                    : "text-sky-600 dark:text-sky-400"
-                }
-              />
-              <div className="flex-1">
-                <h4
-                  className={`font-medium text-sm ${
-                    isPreFilled
-                      ? "text-gray-700 dark:text-gray-300"
-                      : "text-sky-800 dark:text-sky-300"
-                  }`}
-                >
-                  {isPreFilled ? "Your Location" : "Selected City"}
-                </h4>
-                <p
-                  className={`text-base font-semibold ${
-                    isPreFilled
-                      ? "text-gray-900 dark:text-white"
-                      : "text-sky-700 dark:text-sky-300"
-                  }`}
-                >
-                  {place.label}
-                </p>
-                {!isPreFilled && (
-                  <p className="text-xs text-sky-600 dark:text-sky-400 mt-1">
-                    You'll be able to specify exact places in the next steps
-                  </p>
-                )}
+          <div className="p-5 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border-2 border-sky-200 dark:border-sky-800 rounded-xl animate-fade-in-scale">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shadow-lg">
+                <MapPin className="w-6 h-6 text-white" />
               </div>
+              
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-sky-700 dark:text-sky-400 mb-1">
+                  {isPreFilled ? "Your Selected Location" : "✓ Destination Selected"}
+                </p>
+                <h4 className="text-lg font-bold text-gray-900 dark:text-white">
+                  {place.label}
+                </h4>
+              </div>
+              
               {!isPreFilled && (
-                <div className="w-3 h-3 bg-gradient-to-r from-sky-500 to-blue-500 dark:from-sky-600 dark:to-blue-600 rounded-full animate-pulse"></div>
+                <div className="shrink-0 w-3 h-3 rounded-full bg-gradient-to-r from-sky-500 to-blue-500 animate-pulse shadow-lg" />
               )}
             </div>
           </div>
