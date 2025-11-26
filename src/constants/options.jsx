@@ -733,27 +733,27 @@ export const BUDGET_RETRY_STRATEGY = {
     2: { name: "Mid-Range", description: "3-star hotels, good comfort" },
     3: { name: "Budget", description: "Budget hotels, basic amenities" },
   },
-  
+
   // Activity reduction strategy: Cut expensive activities first
   ACTIVITY_REDUCTION_PERCENT: {
     1: 0, // Retry 1: No reduction (try AI prompt first)
     2: 0.1, // Retry 2: Cut 10% of activities (keep best ones)
     3: 0.2, // Retry 3: Cut 20% of activities
   },
-  
+
   // Budget buffer targets
   BUDGET_TARGETS: {
-    1: 0.10, // Retry 1: Aim for 10% under budget (conservative)
+    1: 0.1, // Retry 1: Aim for 10% under budget (conservative)
     2: 0.15, // Retry 2: Allow up to 15% over (if activities cut)
     3: 0.15, // Retry 3: Same as retry 2
   },
-  
+
   // User feedback messages for each retry
   RETRY_MESSAGES: {
     1: "🔄 Optimizing your itinerary to fit your budget perfectly...",
     2: "💡 Adjusting plan with better hotel selection and free activities...",
     3: "🎯 Creating a smart budget-conscious plan with essential experiences...",
   },
-  
+
   MAX_RETRIES: 3,
 };

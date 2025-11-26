@@ -292,9 +292,9 @@ function CreateTrip() {
           .map((d) => d.city)
           .join(", ");
 
-        toast.success(`🎯 ${categoryName} Adventure Awaits!`, {
+        toast.success(`${categoryName} Adventure Awaits!`, {
           description: destList
-            ? `Top picks: ${destList}. Select one below to start planning! 👇`
+            ? `Top picks: ${destList}`
             : `Let's plan your perfect ${categoryName.toLowerCase()} trip!`,
           duration: 8000,
         });
@@ -1573,15 +1573,30 @@ function CreateTrip() {
             lastError = error;
 
             // ✨ SMART RETRY: Detect budget compliance errors and provide better UX
-            const isBudgetError = error.message?.includes("Budget compliance check failed");
-            
-            if (isBudgetError && attempt < VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS) {
-              const retryMessage = BUDGET_RETRY_STRATEGY.RETRY_MESSAGES[attempt] || "🔄 Optimizing your plan...";
-              
+            const isBudgetError = error.message?.includes(
+              "Budget compliance check failed"
+            );
+
+            if (
+              isBudgetError &&
+              attempt < VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS
+            ) {
+              const retryMessage =
+                BUDGET_RETRY_STRATEGY.RETRY_MESSAGES[attempt] ||
+                "🔄 Optimizing your plan...";
+
               console.log(`💡 Budget optimization on attempt ${attempt}:`);
               console.log(`   ${retryMessage}`);
-              console.log(`   Budget target: ≤ ₱${budgetAmount * (1 - (BUDGET_RETRY_STRATEGY.BUDGET_TARGETS[attempt] * 0.2))?.toLocaleString()}`);
-              
+              console.log(
+                `   Budget target: ≤ ₱${
+                  budgetAmount *
+                  (
+                    1 -
+                    BUDGET_RETRY_STRATEGY.BUDGET_TARGETS[attempt] * 0.2
+                  )?.toLocaleString()
+                }`
+              );
+
               // Show user-friendly message (not technical error)
               toast.info("Optimizing Your Plan", {
                 description: retryMessage,
@@ -1589,7 +1604,9 @@ function CreateTrip() {
               });
 
               await new Promise((resolve) => setTimeout(resolve, 2000));
-            } else if (attempt < VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS) {
+            } else if (
+              attempt < VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS
+            ) {
               console.log("🔄 Retrying with enhanced prompt...");
               await new Promise((resolve) => setTimeout(resolve, 1000));
             }
@@ -1598,11 +1615,13 @@ function CreateTrip() {
 
         if (!aiResponseText) {
           // ✨ Better error messaging for budget failures
-          const isBudgetError = lastError?.message?.includes("Budget compliance check failed");
+          const isBudgetError = lastError?.message?.includes(
+            "Budget compliance check failed"
+          );
           const errorContext = isBudgetError
             ? `Your trip exceeds the ₱${budgetAmount?.toLocaleString()} budget + 15% buffer. Try:\n• Select a cheaper hotel tier\n• Reduce activities\n• Increase trip duration (more days = lower daily cost)`
             : lastError?.message || "Unknown generation error";
-          
+
           throw new Error(
             `AI generation failed after ${VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS} attempts:\n${errorContext}`
           );

@@ -329,7 +329,8 @@ const BudgetSelector = ({
         {isBudgetOverridden && profileBudget && (
           <div className="mt-4 mx-auto max-w-md p-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-800 rounded-lg">
             <p className="text-xs text-amber-800 dark:text-amber-300">
-              <span className="font-semibold">⚡ Override:</span> Using trip budget instead of profile preference
+              <span className="font-semibold">⚡ Override:</span> Using trip
+              budget instead of profile preference
             </p>
           </div>
         )}
@@ -393,11 +394,12 @@ const BudgetSelector = ({
                       <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                         {option.title}
                       </h3>
-                      {recommendation && recommendation.tier === option.title && (
-                        <Badge className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs">
-                          ⭐ Recommended
-                        </Badge>
-                      )}
+                      {recommendation &&
+                        recommendation.tier === option.title && (
+                          <Badge className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs">
+                            ⭐ Recommended
+                          </Badge>
+                        )}
                     </div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                       {option.desc}
@@ -405,7 +407,9 @@ const BudgetSelector = ({
                     {estimate && (
                       <div className="space-y-1">
                         <div className="flex items-baseline gap-2 text-xs">
-                          <span className="text-gray-600 dark:text-gray-400">Total:</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Total:
+                          </span>
                           <p className="font-bold text-sky-700 dark:text-sky-400">
                             {typeof estimate.range === "string"
                               ? estimate.range
@@ -414,9 +418,17 @@ const BudgetSelector = ({
                         </div>
                         {estimate.perDay && (
                           <div className="flex items-baseline gap-2 text-xs">
-                            <span className="text-gray-600 dark:text-gray-400">Per day:</span>
+                            <span className="text-gray-600 dark:text-gray-400">
+                              Per day:
+                            </span>
                             <p className="font-semibold text-emerald-700 dark:text-emerald-400">
-                              {typeof estimate.perDay === "string" ? estimate.perDay : `₱${Math.round((estimate.perDay.min + estimate.perDay.max) / 2).toLocaleString()}`}
+                              {typeof estimate.perDay === "string"
+                                ? estimate.perDay
+                                : `₱${Math.round(
+                                    (estimate.perDay.min +
+                                      estimate.perDay.max) /
+                                      2
+                                  ).toLocaleString()}`}
                             </p>
                           </div>
                         )}
