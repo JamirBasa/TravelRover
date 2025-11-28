@@ -64,137 +64,207 @@ function GroundTransportBanner({ transportMode, costBreakdown }) {
       {/* State 1: Ground Transport Preferred (Green) */}
       {isGroundPreferred && ground_transport && (
         <div className="brand-card border-2 border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50/80 to-emerald-50/80 dark:from-green-950/30 dark:to-emerald-950/30 p-5 shadow-lg animate-fade-in">
-          {/* Header with Icon */}
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
-              <Bus className="h-6 w-6 text-white" />
-            </div>
-
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                <h3 className="text-lg font-bold text-green-900 dark:text-green-100">
-                  Getting There: Ground Transport
+          {/* MINIMALIST: Ferry Route */}
+          {ground_transport.modes?.includes("ferry") ? (
+            <div className="space-y-4">
+              {/* Header */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                  ⛴️ Ferry Recommended
                 </h3>
-                <Badge className="bg-green-600 text-white border-0">
-                  Recommended
-                </Badge>
+                <p className="text-sm text-gray-600 dark:text-gray-500">
+                  {recommendation}
+                </p>
               </div>
 
-              <p className="text-sm text-green-800 dark:text-green-200 mb-4">
-                {recommendation}
-              </p>
-
-              {/* Route Information Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                <div className="flex items-center gap-2 bg-white/60 dark:bg-slate-800/60 p-3 rounded-lg">
-                  <Clock className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Travel Time
-                    </p>
-                    <p className="font-semibold text-gray-900 dark:text-white">
-                      {ground_transport.travel_time}
-                    </p>
-                  </div>
+              {/* Key Info Grid - Compact */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Travel Time
+                  </p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    {ground_transport.travel_time}
+                  </p>
                 </div>
-
-                <div className="flex items-center gap-2 bg-white/60 dark:bg-slate-800/60 p-3 rounded-lg">
-                  <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Cost Range
-                    </p>
-                    <p className="font-semibold text-gray-900 dark:text-white">
-                      {formatCost(ground_transport.cost)}
-                    </p>
-                  </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Cost
+                  </p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    {formatCost(ground_transport.cost)}
+                  </p>
                 </div>
-
-                {ground_transport.distance && (
-                  <div className="flex items-center gap-2 bg-white/60 dark:bg-slate-800/60 p-3 rounded-lg">
-                    <MapPin className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Distance
-                      </p>
-                      <p className="font-semibold text-gray-900 dark:text-white">
-                        {ground_transport.distance}
-                      </p>
-                    </div>
-                  </div>
-                )}
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Frequency
+                  </p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    {ground_transport.frequency?.includes("daily") ||
+                    ground_transport.frequency?.includes("multiple")
+                      ? "Frequent"
+                      : "Regular"}
+                  </p>
+                </div>
               </div>
 
               {/* Operators */}
-              {ground_transport.operators && (
-                <div className="mb-4">
-                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Transport Operators:
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {(() => {
-                      // ✅ FIX: Handle both string and array formats
-                      const operators = Array.isArray(
-                        ground_transport.operators
-                      )
-                        ? ground_transport.operators
-                        : typeof ground_transport.operators === "string"
-                        ? ground_transport.operators
-                            .split(",")
-                            .map((op) => op.trim())
-                        : [ground_transport.operators];
-
-                      return operators.map((operator, idx) => (
-                        <Badge
-                          key={idx}
-                          variant="secondary"
-                          className="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700"
-                        >
-                          {operator}
-                        </Badge>
-                      ));
-                    })()}
+              {ground_transport.operators &&
+                ground_transport.operators.length > 0 && (
+                  <div className="p-3 bg-white/60 dark:bg-slate-800/60 rounded-lg">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                      Ferry Operators
+                    </p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {Array.isArray(ground_transport.operators)
+                        ? ground_transport.operators.join(", ")
+                        : ground_transport.operators}
+                    </p>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Schedule/Frequency */}
-              {ground_transport.frequency && (
-                <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mb-3">
-                  <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  <span>
-                    <strong>Schedule:</strong> {ground_transport.frequency}
-                  </span>
-                </div>
-              )}
-
-              {/* Scenic Badge */}
-              {ground_transport.scenic && (
-                <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-md">
-                  <Mountain className="h-3 w-3 mr-1" />
-                  Scenic Route
-                </Badge>
-              )}
-
-              {/* Additional Notes */}
+              {/* Notes/Tips */}
               {ground_transport.notes && (
-                <div className="mt-3 p-3 bg-green-100/50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                  <p className="text-sm text-green-900 dark:text-green-100">
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-blue-900 dark:text-blue-200">
                     💡 <strong>Tip:</strong> {ground_transport.notes}
                   </p>
                 </div>
               )}
+            </div>
+          ) : (
+            /* Regular Bus/Van Route */
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
+                <Bus className="h-6 w-6 text-white" />
+              </div>
 
-              {/* Flight Skipped Notice */}
-              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                <p className="text-sm text-blue-900 dark:text-blue-100">
-                  ✈️ <strong>Note:</strong> Flight search was skipped for this
-                  route as ground transport is more practical and economical.
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <h3 className="text-lg font-bold text-green-900 dark:text-green-100">
+                    Getting There: Ground Transport
+                  </h3>
+                  <Badge className="bg-green-600 text-white border-0">
+                    Recommended
+                  </Badge>
+                </div>
+
+                <p className="text-sm text-green-800 dark:text-green-200 mb-4">
+                  {recommendation}
                 </p>
+
+                {/* Route Information Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                  <div className="flex items-center gap-2 bg-white/60 dark:bg-slate-800/60 p-3 rounded-lg">
+                    <Clock className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Travel Time
+                      </p>
+                      <p className="font-semibold text-gray-900 dark:text-white">
+                        {ground_transport.travel_time}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-white/60 dark:bg-slate-800/60 p-3 rounded-lg">
+                    <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Cost Range
+                      </p>
+                      <p className="font-semibold text-gray-900 dark:text-white">
+                        {formatCost(ground_transport.cost)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {ground_transport.distance && (
+                    <div className="flex items-center gap-2 bg-white/60 dark:bg-slate-800/60 p-3 rounded-lg">
+                      <MapPin className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Distance
+                        </p>
+                        <p className="font-semibold text-gray-900 dark:text-white">
+                          {ground_transport.distance}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Operators */}
+                {ground_transport.operators && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      Transport Operators:
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {(() => {
+                        // ✅ FIX: Handle both string and array formats
+                        const operators = Array.isArray(
+                          ground_transport.operators
+                        )
+                          ? ground_transport.operators
+                          : typeof ground_transport.operators === "string"
+                          ? ground_transport.operators
+                              .split(",")
+                              .map((op) => op.trim())
+                          : [ground_transport.operators];
+
+                        return operators.map((operator, idx) => (
+                          <Badge
+                            key={idx}
+                            variant="secondary"
+                            className="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700"
+                          >
+                            {operator}
+                          </Badge>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Schedule/Frequency */}
+                {ground_transport.frequency && (
+                  <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mb-3">
+                    <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <span>
+                      <strong>Schedule:</strong> {ground_transport.frequency}
+                    </span>
+                  </div>
+                )}
+
+                {/* Scenic Badge */}
+                {ground_transport.scenic && (
+                  <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-md">
+                    <Mountain className="h-3 w-3 mr-1" />
+                    Scenic Route
+                  </Badge>
+                )}
+
+                {/* Additional Notes */}
+                {ground_transport.notes && (
+                  <div className="mt-3 p-3 bg-green-100/50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <p className="text-sm text-green-900 dark:text-green-100">
+                      💡 <strong>Tip:</strong> {ground_transport.notes}
+                    </p>
+                  </div>
+                )}
+
+                {/* Flight Skipped Notice */}
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-blue-900 dark:text-blue-100">
+                    ✈️ <strong>Note:</strong> Flight search was skipped for this
+                    route as ground transport is more practical and economical.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 

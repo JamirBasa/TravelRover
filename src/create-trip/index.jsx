@@ -14,6 +14,7 @@ import {
   VALIDATION_RULES,
   calculateProgress,
   validateAIResponse,
+  BUDGET_RETRY_STRATEGY,
 } from "../constants/options";
 import { buildOptimizedPrompt } from "../constants/optimizedPrompt";
 import { TRIP_DURATION } from "../constants/tripDurationLimits";
@@ -291,9 +292,9 @@ function CreateTrip() {
           .map((d) => d.city)
           .join(", ");
 
-        toast.success(`🎯 ${categoryName} Adventure Awaits!`, {
+        toast.success(`${categoryName} Adventure Awaits!`, {
           description: destList
-            ? `Top picks: ${destList}. Select one below to start planning! 👇`
+            ? `Top picks: ${destList}`
             : `Let's plan your perfect ${categoryName.toLowerCase()} trip!`,
           duration: 8000,
         });
@@ -1258,22 +1259,37 @@ function CreateTrip() {
             budgetEstimates?.["budgetfriendly"] ||
             budgetEstimates?.["moderate"];
 
-          if (tierData?.range) {
-            budgetAmount = parseInt(tierData.range.replace(/[^0-9]/g, ""));
+          if (tierData?.total) {
+            // ✅ CRITICAL FIX: Use .total field (numeric) instead of .range (formatted string)
+            // This prevents parsing issues and ensures accurate budget caps
+            budgetAmount = tierData.total;
             console.log(
-              `💰 Budget from ${formData.budget} tier:`,
-              budgetAmount
+              `💰 Budget from ${formData.budget} tier (TOTAL):`,
+              budgetAmount,
+              `(per person: ₱${Math.round(
+                budgetAmount / (formData.travelers || 1)
+              ).toLocaleString()})`
             );
+          } else if (tierData?.range) {
+            // Fallback to parsing range if total not available
+            budgetAmount = parseInt(tierData.range.replace(/[^0-9]/g, ""));
+            console.warn(`⚠️ Using .range fallback for budget:`, budgetAmount);
           } else {
             // Fallback to old method if estimates not available
             budgetAmount = calculateBudgetAmount(formData.budget, customBudget);
+            console.warn(
+              `⚠️ Using calculateBudgetAmount fallback:`,
+              budgetAmount
+            );
           }
         } else {
           budgetAmount = 20000; // Default fallback
         }
 
         console.log(
-          `💰 Budget cap enforced: ₱${budgetAmount.toLocaleString()}`
+          `💰 Budget cap enforced: ₱${budgetAmount.toLocaleString()} for ${
+            formData.travelers || 1
+          } traveler(s), ${formData.duration} day(s)`
         );
 
         // ✅ ENHANCED: Tiered minimums based on group size (economies of scale)
@@ -1556,7 +1572,41 @@ function CreateTrip() {
             console.warn(`⚠️ Attempt ${attempt} failed:`, error.message);
             lastError = error;
 
-            if (attempt < VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS) {
+            // ✨ SMART RETRY: Detect budget compliance errors and provide better UX
+            const isBudgetError = error.message?.includes(
+              "Budget compliance check failed"
+            );
+
+            if (
+              isBudgetError &&
+              attempt < VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS
+            ) {
+              const retryMessage =
+                BUDGET_RETRY_STRATEGY.RETRY_MESSAGES[attempt] ||
+                "🔄 Optimizing your plan...";
+
+              console.log(`💡 Budget optimization on attempt ${attempt}:`);
+              console.log(`   ${retryMessage}`);
+              console.log(
+                `   Budget target: ≤ ₱${
+                  budgetAmount *
+                  (
+                    1 -
+                    BUDGET_RETRY_STRATEGY.BUDGET_TARGETS[attempt] * 0.2
+                  )?.toLocaleString()
+                }`
+              );
+
+              // Show user-friendly message (not technical error)
+              toast.info("Optimizing Your Plan", {
+                description: retryMessage,
+                duration: 3000,
+              });
+
+              await new Promise((resolve) => setTimeout(resolve, 2000));
+            } else if (
+              attempt < VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS
+            ) {
               console.log("🔄 Retrying with enhanced prompt...");
               await new Promise((resolve) => setTimeout(resolve, 1000));
             }
@@ -1564,8 +1614,16 @@ function CreateTrip() {
         }
 
         if (!aiResponseText) {
+          // ✨ Better error messaging for budget failures
+          const isBudgetError = lastError?.message?.includes(
+            "Budget compliance check failed"
+          );
+          const errorContext = isBudgetError
+            ? `Your trip exceeds the ₱${budgetAmount?.toLocaleString()} budget + 15% buffer. Try:\n• Select a cheaper hotel tier\n• Reduce activities\n• Increase trip duration (more days = lower daily cost)`
+            : lastError?.message || "Unknown generation error";
+
           throw new Error(
-            `AI generation failed after ${VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS} attempts: ${lastError?.message}`
+            `AI generation failed after ${VALIDATION_RULES.JSON_PARSING.MAX_RETRY_ATTEMPTS} attempts:\n${errorContext}`
           );
         }
 
@@ -1604,7 +1662,8 @@ function CreateTrip() {
           aiResponseText,
           flightResults,
           hotelResults,
-          langGraphResults
+          langGraphResults,
+          budgetAmount
         );
       } catch (error) {
         console.error("❌ Trip generation error:", error);
@@ -1616,6 +1675,15 @@ function CreateTrip() {
         setLangGraphLoading(false);
         setTransportModeResult(null);
         setTransportAnalysisComplete(false);
+
+        // ✨ IMPROVED: Handle budget compliance errors with actionable guidance
+        if (error.message?.includes("Budget compliance check failed")) {
+          toast.error("Trip Exceeds Budget", {
+            description: `Your selected options exceed the ₱${budgetAmount?.toLocaleString()} budget. Try:\n• Choose Budget or Moderate hotel tier\n• Reduce daily activities\n• Extend trip duration (more days = lower daily costs)\n• Use local transport instead of flights`,
+            duration: 8000,
+          });
+          return;
+        }
 
         // ✅ NEW: Handle rate limit errors silently - user doesn't need technical details
         if (
@@ -1750,7 +1818,8 @@ function CreateTrip() {
     TripData,
     flightResults = null,
     hotelResults = null,
-    langGraphResults = null
+    langGraphResults = null,
+    budgetAmountParam = null
   ) => {
     setLoading(true);
 
@@ -2401,10 +2470,19 @@ function CreateTrip() {
         ? `Custom: ₱${customBudget}`
         : formData.budget || "Moderate";
 
-      // ✅ NEW: Store numeric budget amount separately for easy access
-      const numericBudgetAmount = customBudget
-        ? parseFloat(String(customBudget).replace(/[^0-9.]/g, ""))
-        : null;
+      // ✅ CRITICAL FIX: Use the SAME budgetAmount calculated earlier for prompt enforcement
+      // This ensures consistency between budget cap enforcement and saved budget
+      const numericBudgetAmount =
+        budgetAmountParam ||
+        (customBudget
+          ? parseFloat(String(customBudget).replace(/[^0-9.]/g, ""))
+          : calculateBudgetAmount(formData.budget, null));
+
+      console.log(
+        `💾 Saving budget to Firebase: ₱${numericBudgetAmount.toLocaleString()} (${
+          budgetAmountParam ? "from budget cap" : "fallback calculation"
+        })`
+      );
 
       // ✅ FIX 2: Flatten nested tripData if it exists (prevents tripData.tripData structure)
       let finalTripData = parsedTripData;
@@ -2748,62 +2826,6 @@ function CreateTrip() {
               Plan personalized travel experiences tailored just for you
             </p>
           </div>
-
-          {/* User Profile Summary */}
-          {userProfile &&
-            (() => {
-              const profileSummary =
-                UserProfileService.getProfileDisplaySummary(userProfile);
-              return (
-                <div className="mt-4 sm:mt-6 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border border-sky-200 dark:border-sky-800 rounded-lg p-4 sm:p-5 shadow-sm">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-                    <div className="flex items-start sm:items-center gap-3 sm:gap-4 w-full">
-                      <div className="bg-sky-100 dark:bg-sky-900/50 p-2 sm:p-3 rounded-full flex-shrink-0">
-                        <FaUser className="text-sky-600 dark:text-sky-400 text-base sm:text-lg" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-sky-900 dark:text-sky-200 text-base sm:text-lg truncate">
-                          Welcome back, {profileSummary.name}!
-                        </h3>
-                        <p className="text-sky-700 dark:text-sky-400 text-xs sm:text-sm font-medium mt-1">
-                          Creating personalized trips based on your preferences:
-                        </p>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {profileSummary.preferredTripTypes
-                            ?.slice(0, 2)
-                            .map((typeLabel, index) => (
-                              <span
-                                key={index}
-                                className="inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-sky-100 dark:bg-sky-900/50 text-sky-800 dark:text-sky-300"
-                              >
-                                {typeLabel}
-                              </span>
-                            ))}
-                          {profileSummary.preferredTripTypes?.length > 2 && (
-                            <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                              +{profileSummary.preferredTripTypes.length - 2}{" "}
-                              more
-                            </span>
-                          )}
-                        </div>
-                        {profileSummary.travelStyle && (
-                          <p className="text-sky-600 dark:text-sky-400 text-xs mt-2">
-                            <span className="font-medium">Travel Style:</span>{" "}
-                            {profileSummary.travelStyle}
-                          </p>
-                        )}
-                        {profileSummary.hasLocationData && (
-                          <p className="text-sky-600 dark:text-sky-400 text-xs mt-1 truncate">
-                            <span className="font-medium">📍 Home:</span>{" "}
-                            {profileSummary.location}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
         </div>
       </div>
 

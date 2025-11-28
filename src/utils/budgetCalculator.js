@@ -312,15 +312,23 @@ export const calculateTotalBudget = (trip) => {
     logDebug('BudgetCalculator', 'Calculated from transportMode cost range', { cost: breakdown.groundTransport });
   }
   
-  // Calculate total
-  const total = breakdown.activities + breakdown.hotels + breakdown.flights + breakdown.groundTransport;
+  // Calculate total - ensure all values are numbers to avoid NaN
+  const total = 
+    Number(breakdown.activities || 0) + 
+    Number(breakdown.hotels || 0) + 
+    Number(breakdown.flights || 0) + 
+    Number(breakdown.groundTransport || 0);
   
   logDebug('BudgetCalculator', 'Final breakdown', {
     activities: breakdown.activities,
+    activitiesType: typeof breakdown.activities,
     hotels: breakdown.hotels,
+    hotelsType: typeof breakdown.hotels,
     flights: breakdown.flights,
+    flightsType: typeof breakdown.flights,
     groundTransport: breakdown.groundTransport,
-    total
+    total,
+    totalType: typeof total
   });
   
   return {

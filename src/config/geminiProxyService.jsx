@@ -10,12 +10,12 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 export class GeminiProxyService {
-  // ✅ OPTIMIZED: Increased timeouts for complex requests
-  static TIMEOUT_SHORT = 30000; // 30s (was 45s)
-  static TIMEOUT_MEDIUM = 60000; // 1m (was 90s)
-  static TIMEOUT_LONG = 120000; // 2m (was 150s)
-  static TIMEOUT_EXTRA_LONG = 180000; // 3m (was 240s)
-  static TIMEOUT_MAX = 600000; // 10m (was 5m) - for 30-day trips
+  // ✅ INCREASED: Generous timeouts to handle rate limiting + slow Gemini responses
+  static TIMEOUT_SHORT = 45000; // 45s
+  static TIMEOUT_MEDIUM = 90000; // 1.5m
+  static TIMEOUT_LONG = 180000; // 3m (was 2m) - for 3-7 day trips
+  static TIMEOUT_EXTRA_LONG = 300000; // 5m (was 3m) - for 8-14 day trips
+  static TIMEOUT_MAX = 600000; // 10m - for 15+ day trips
 
   // ✅ OPTIMIZED: Adjusted complexity multipliers
   static COMPLEXITY_MULTIPLIERS = {

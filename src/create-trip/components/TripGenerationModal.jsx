@@ -338,26 +338,26 @@ function TripGenerationModal({
                     </div>
                   </div>
 
-                  <h1 className="text-4xl sm:text-5xl font-bold mb-3 tracking-tight">
-                    {isComplete ? "Trip Ready! 🎉" : "Crafting Your Journey"}
+                  <h1 className="text-3xl sm:text-4xl font-bold mb-2 tracking-tight">
+                    {isComplete ? "Trip Ready" : "Crafting Your Journey"}
                   </h1>
-                  <p className="text-xl sm:text-2xl font-light text-white/90 mb-2">
+                  <p className="text-lg sm:text-xl font-light text-white/90 mb-1">
                     {destination}
                   </p>
-                  <p className="text-white/80 text-sm mb-1">
-                    {duration} day{duration > 1 ? "s" : ""} of adventure
+                  <p className="text-white/70 text-xs">
+                    {duration} day{duration > 1 ? "s" : ""}
                   </p>
                   {(includeFlights || includeHotels) && (
-                    <p className="text-white/70 text-xs">
+                    <p className="text-white/60 text-xs mt-1">
                       {groundTransportPreferred
                         ? includeHotels
-                          ? "🚌 Ground Transport + 🏨 Accommodation"
-                          : "🚌 Ground Transport Route"
+                          ? "Ground Transport + Accommodation"
+                          : "Ground Transport"
                         : includeFlights && includeHotels
-                        ? "✈️ Flights + 🏨 Accommodation"
+                        ? "Flights + Accommodation"
                         : includeFlights
-                        ? "✈️ Flights included"
-                        : "🏨 Accommodation included"}
+                        ? "Flights"
+                        : "Accommodation"}
                     </p>
                   )}
                 </div>
@@ -367,9 +367,9 @@ function TripGenerationModal({
               <div className="p-8 space-y-8 bg-white dark:bg-slate-900">
                 {/* Status Badge */}
                 <div className="flex justify-center">
-                  <div className="inline-flex items-center gap-3 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/50 dark:to-blue-950/50 px-6 py-3 rounded-full border border-sky-200 dark:border-sky-800">
+                  <div className="inline-flex items-center gap-2 bg-sky-50 dark:bg-sky-950/30 px-4 py-2 rounded-lg border border-sky-200 dark:border-sky-800">
                     {!isComplete && (
-                      <div className="relative flex h-3 w-3">
+                      <div className="relative flex h-2 w-2">
                         <span
                           className="absolute inline-flex h-full w-full rounded-full bg-sky-400 dark:bg-sky-500 opacity-75"
                           style={{
@@ -377,47 +377,39 @@ function TripGenerationModal({
                               "ping 1s cubic-bezier(0, 0, 0.2, 1) infinite",
                           }}
                         />
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-500 dark:bg-sky-400" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500 dark:bg-sky-400" />
                       </div>
                     )}
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                       {currentStepLabel}
                     </span>
                     {!isComplete && (
-                      <span className="text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-slate-800 px-2 py-1 rounded-full">
-                        ⏱️ {eta}
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {eta}
                       </span>
                     )}
                   </div>
                 </div>
 
                 {/* Progress Bar */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">
-                      Overall Progress
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-gray-600 dark:text-gray-400">
+                      Progress
                     </span>
-                    <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-blue-600 dark:from-sky-400 dark:to-blue-400">
+                    <span className="font-semibold text-sky-600 dark:text-sky-400">
                       {progress}%
                     </span>
                   </div>
                   <div className="relative">
                     <Progress
                       value={progress}
-                      className="h-4 bg-gray-100 dark:bg-slate-800"
+                      className="h-2 bg-gray-200 dark:bg-slate-800"
                     />
                     <div
-                      className="absolute top-0 left-0 h-4 bg-gradient-to-r from-sky-500 via-blue-500 to-sky-600 dark:from-sky-400 dark:via-blue-400 dark:to-sky-500 rounded-full transition-all duration-500 ease-out overflow-hidden"
+                      className="absolute top-0 left-0 h-2 bg-sky-500 dark:bg-sky-400 rounded-full transition-all duration-500 ease-out overflow-hidden"
                       style={{ width: `${progress}%` }}
-                    >
-                      <div
-                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
-                        style={{
-                          animation: "shimmer 2s ease-in-out infinite",
-                          transform: "translateX(-100%)",
-                        }}
-                      />
-                    </div>
+                    />
                   </div>
                 </div>
 
@@ -571,23 +563,20 @@ function TripGenerationModal({
 
                 {/* Info Banners */}
                 {!isComplete && (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {/* Main Progress Info */}
-                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-l-4 border-amber-400 dark:border-amber-600 rounded-xl p-5">
-                      <div className="flex gap-4">
-                        <div className="flex-shrink-0">
-                          <div className="w-10 h-10 bg-amber-100 dark:bg-amber-950/50 rounded-full flex items-center justify-center">
-                            <FaRocket className="text-amber-600 dark:text-amber-400" />
-                          </div>
+                    <div className="bg-sky-50 dark:bg-sky-950/30 border-l-4 border-sky-400 dark:border-sky-600 rounded-lg p-4">
+                      <div className="flex gap-3">
+                        <div className="flex-shrink-0 pt-0.5">
+                          <FaRocket className="text-sky-600 dark:text-sky-400 text-sm" />
                         </div>
                         <div>
-                          <h4 className="font-bold text-amber-900 dark:text-amber-400 mb-1">
-                            Crafting Your Journey
+                          <h4 className="font-semibold text-sky-900 dark:text-sky-300 text-sm mb-1">
+                            Building Your Itinerary
                           </h4>
-                          <p className="text-amber-800 dark:text-amber-400/90 text-sm leading-relaxed">
-                            Our AI is personalizing your perfect itinerary with
-                            smart travel decisions. This usually takes less than
-                            a minute. Please keep this window open.
+                          <p className="text-sky-800 dark:text-sky-400/80 text-xs leading-snug">
+                            AI-powered analysis to create your perfect
+                            day-by-day plan.
                           </p>
                         </div>
                       </div>
@@ -596,174 +585,82 @@ function TripGenerationModal({
                     {/* 🔧 Smart Transport Mode Info - Conditional based on transport analysis */}
                     {groundTransportPreferred &&
                     transportAnalysis?.groundTransport ? (
-                      <div className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 border-l-4 border-emerald-400 dark:border-emerald-600 rounded-xl p-5">
-                        <div className="flex gap-4">
-                          <div className="flex-shrink-0">
-                            <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-950/50 rounded-full flex items-center justify-center">
-                              <FaBus className="text-emerald-600 dark:text-emerald-400" />
-                            </div>
+                      <div className="bg-emerald-50 dark:bg-emerald-950/30 border-l-4 border-emerald-400 dark:border-emerald-600 rounded-lg p-4">
+                        <div className="flex gap-3">
+                          <div className="flex-shrink-0 pt-0.5 text-lg">
+                            {transportAnalysis?.groundTransport?.hasFerry ? (
+                              "⛴️"
+                            ) : (
+                              <FaBus className="text-emerald-600 dark:text-emerald-400 text-sm" />
+                            )}
                           </div>
                           <div>
-                            <h4 className="font-bold text-emerald-900 dark:text-emerald-400 mb-2">
-                              🚌 Ground Transport Route Selected
+                            <h4 className="font-semibold text-emerald-900 dark:text-emerald-300 text-sm mb-1">
+                              {transportAnalysis?.groundTransport?.hasFerry
+                                ? "Ferry Route Selected"
+                                : "Ground Transport Route Selected"}
                             </h4>
-                            <p className="text-emerald-800 dark:text-emerald-400/90 text-sm leading-relaxed mb-2">
+                            <p className="text-emerald-800 dark:text-emerald-400/80 text-xs leading-snug">
                               {transportAnalysis.hasAirport === false
                                 ? `${
                                     destination.split(",")[0]
-                                  } has no direct airport. We've optimized your route with ground transport.`
-                                : transportAnalysis.recommendation ||
-                                  "Ground transport is more practical for this route."}
+                                  } has no direct airport. Using ${
+                                    transportAnalysis?.groundTransport?.hasFerry
+                                      ? "ferry"
+                                      : "ground transport"
+                                  } instead.`
+                                : `${
+                                    transportAnalysis?.groundTransport?.hasFerry
+                                      ? "Ferry"
+                                      : "Ground transport"
+                                  } is more practical for this route.`}
                             </p>
-                            <ul className="text-emerald-800 dark:text-emerald-400/90 text-xs space-y-1.5 leading-relaxed">
-                              <li className="flex items-start gap-2">
-                                <span className="text-emerald-600 dark:text-emerald-500">
-                                  ⏱️
-                                </span>
-                                <span>
-                                  <strong>Travel Time:</strong>{" "}
-                                  {transportAnalysis.groundTransport.travelTime}
-                                </span>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <span className="text-emerald-600 dark:text-emerald-500">
-                                  💰
-                                </span>
-                                <span>
-                                  <strong>Cost:</strong>{" "}
-                                  {transportAnalysis.groundTransport.cost}
-                                </span>
-                              </li>
-                              {transportAnalysis.groundTransport
-                                .operators?.[0] && (
-                                <li className="flex items-start gap-2">
-                                  <span className="text-emerald-600 dark:text-emerald-500">
-                                    🚌
-                                  </span>
-                                  <span>
-                                    <strong>Operators:</strong>{" "}
-                                    {transportAnalysis.groundTransport.operators.join(
-                                      ", "
-                                    )}
-                                  </span>
-                                </li>
-                              )}
-                              <li className="flex items-start gap-2">
-                                <span className="text-emerald-600 dark:text-emerald-500">
-                                  ✓
-                                </span>
-                                <span>
-                                  <strong>Why?</strong> More convenient,
-                                  economical, and practical for this specific
-                                  route
-                                </span>
-                              </li>
-                            </ul>
                           </div>
                         </div>
                       </div>
                     ) : includeFlights ? (
-                      <div className="bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border-l-4 border-sky-400 dark:border-sky-600 rounded-xl p-5">
-                        <div className="flex gap-4">
-                          <div className="flex-shrink-0">
-                            <div className="w-10 h-10 bg-sky-100 dark:bg-sky-950/50 rounded-full flex items-center justify-center">
-                              <FaPlane className="text-sky-600 dark:text-sky-400" />
-                            </div>
+                      <div className="bg-sky-50 dark:bg-sky-950/30 border-l-4 border-sky-400 dark:border-sky-600 rounded-lg p-4">
+                        <div className="flex gap-3">
+                          <div className="flex-shrink-0 pt-0.5">
+                            <FaPlane className="text-sky-600 dark:text-sky-400 text-sm" />
                           </div>
                           <div>
-                            <h4 className="font-bold text-sky-900 dark:text-sky-400 mb-2">
-                              ✈️ Flight Search in Progress
+                            <h4 className="font-semibold text-sky-900 dark:text-sky-300 text-sm mb-1">
+                              Flight Search in Progress
                             </h4>
-                            <p className="text-sky-800 dark:text-sky-400/90 text-sm leading-relaxed mb-2">
-                              Searching for the best flight options and pricing
-                              for your dates.
+                            <p className="text-sky-800 dark:text-sky-400/80 text-xs leading-snug">
+                              Searching for available flights and best prices
+                              for your travel dates.
                             </p>
-                            <ul className="text-sky-800 dark:text-sky-400/90 text-xs space-y-1.5 leading-relaxed">
-                              <li className="flex items-start gap-2">
-                                <span className="text-sky-600 dark:text-sky-500">
-                                  •
-                                </span>
-                                <span>
-                                  Real-time flight availability and pricing
-                                </span>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <span className="text-sky-600 dark:text-sky-500">
-                                  •
-                                </span>
-                                <span>
-                                  Direct and connecting flight options
-                                </span>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <span className="text-sky-600 dark:text-sky-500">
-                                  •
-                                </span>
-                                <span>Multiple airlines and fare classes</span>
-                              </li>
-                            </ul>
                           </div>
                         </div>
                       </div>
                     ) : null}
 
                     {/* Smart Itinerary Planning Info */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-xl p-5">
-                      <div className="flex gap-4">
-                        <div className="flex-shrink-0">
-                          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-950/50 rounded-full flex items-center justify-center">
-                            <FaRoute className="text-blue-600 dark:text-blue-400" />
-                          </div>
+                    <div className="bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-lg p-4">
+                      <div className="flex gap-3">
+                        <div className="flex-shrink-0 pt-0.5">
+                          <FaRoute className="text-blue-600 dark:text-blue-400 text-sm" />
                         </div>
                         <div>
-                          <h4 className="font-bold text-blue-900 dark:text-blue-400 mb-2">
+                          <h4 className="font-semibold text-blue-900 dark:text-blue-300 text-sm mb-1">
                             Intelligent Scheduling
                           </h4>
-                          <ul className="text-blue-800 dark:text-blue-400/90 text-xs space-y-1.5 leading-relaxed">
+                          <ul className="text-blue-800 dark:text-blue-400/80 text-xs space-y-1 leading-snug">
                             <li className="flex items-start gap-2">
-                              <span className="text-blue-600 dark:text-blue-500 mt-0.5">
+                              <span className="text-blue-600 dark:text-blue-500 flex-shrink-0">
                                 •
                               </span>
                               <span>
-                                <strong>Day 1:</strong> Light arrival schedule
-                                with{" "}
-                                {groundTransportPreferred
-                                  ? "travel time"
-                                  : "flight"}{" "}
-                                buffer
+                                Smart pacing: Light arrivals, early departures
                               </span>
                             </li>
                             <li className="flex items-start gap-2">
-                              <span className="text-blue-600 dark:text-blue-500 mt-0.5">
+                              <span className="text-blue-600 dark:text-blue-500 flex-shrink-0">
                                 •
                               </span>
-                              <span>
-                                <strong>Last Day:</strong> Morning activities
-                                with{" "}
-                                {groundTransportPreferred
-                                  ? "4-6 hour"
-                                  : "4-5 hour"}{" "}
-                                departure buffer
-                              </span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                              <span className="text-blue-600 dark:text-blue-500 mt-0.5">
-                                •
-                              </span>
-                              <span>
-                                <strong>Daily Routes:</strong> Optimized
-                                clustering to minimize travel time between
-                                attractions
-                              </span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                              <span className="text-blue-600 dark:text-blue-500 mt-0.5">
-                                •
-                              </span>
-                              <span>
-                                <strong>Realistic Timing:</strong> Traffic, peak
-                                hours, and actual travel conditions factored in
-                              </span>
+                              <span>Optimized routes between locations</span>
                             </li>
                           </ul>
                         </div>

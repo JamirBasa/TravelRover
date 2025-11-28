@@ -307,25 +307,39 @@ const ReviewTripStep = ({
             {/* Flight Search Details */}
             {flightData?.includeFlights &&
               // Show different card based on whether ground transport is preferred
-              (transportAnalysis?.groundTransport?.preferred ? (
+              (transportAnalysis?.groundTransport?.preferred ||
+              transportAnalysis?.groundTransport?.available ? (
                 // Special card when ground transport is better
-                <div className="brand-card p-4 border-2 border-gray-300 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 opacity-75">
+                <div className="brand-card p-4 border-2 border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-900/30">
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-sm font-bold text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                          <FaPlane className="text-gray-400" />
-                          Flight Search{" "}
-                          <span className="text-xs font-normal">
-                            (Not needed for this route)
+                        <h4 className="text-sm font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
+                          {transportAnalysis?.groundTransport?.hasFerry
+                            ? "⛴️"
+                            : "🚌"}
+                          {transportAnalysis?.groundTransport?.hasFerry
+                            ? "Ferry Recommended"
+                            : "Ground Transport Recommended"}{" "}
+                          <span className="text-xs font-normal text-gray-600 dark:text-gray-400">
+                            (Best option for this route)
                           </span>
                         </h4>
                       </div>
                       <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                         Based on your route,{" "}
-                        <strong>ground transport is more practical</strong>. No
-                        flight search needed—we'll generate your itinerary with
-                        the recommended bus/van travel.
+                        <strong>
+                          {transportAnalysis?.groundTransport?.hasFerry
+                            ? "ferry travel"
+                            : "ground transport"}{" "}
+                          is more practical
+                        </strong>
+                        . No flight search needed—we'll generate your itinerary
+                        with the recommended{" "}
+                        {transportAnalysis?.groundTransport?.hasFerry
+                          ? "ferry"
+                          : "bus/van"}{" "}
+                        travel.
                       </p>
                       <div className="text-[10px] text-gray-500 dark:text-gray-500 italic">
                         💡 Your trip will be generated without flight search. If
@@ -348,8 +362,14 @@ const ReviewTripStep = ({
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                          <FaPlane className="text-blue-500" />
-                          Flight Search
+                          {transportAnalysis?.groundTransport?.hasFerry ? (
+                            <span className="text-blue-500">⛴️</span>
+                          ) : (
+                            <FaPlane className="text-blue-500" />
+                          )}
+                          {transportAnalysis?.groundTransport?.hasFerry
+                            ? "Ferry Travel"
+                            : "Flight Search"}
                         </h4>
                         {isFlightDataComplete && (
                           <span className="text-xs font-semibold text-green-600 dark:text-green-400 px-2 py-0.5 bg-green-100 dark:bg-green-900/40 rounded-full">
@@ -497,87 +517,88 @@ const ReviewTripStep = ({
 
         {/* SECTION 4: Ready to Generate */}
         <div className="animate-fade-in-scale stagger-4">
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-2 border-green-200 dark:border-green-800 rounded-lg p-5">
-            <div>
-              <h3 className="font-bold text-green-900 dark:text-green-300 text-lg mb-2">
-                🎉 Ready to Create Your Itinerary!
-              </h3>
-              <p className="text-green-800 dark:text-green-400 text-sm leading-relaxed mb-3">
-                Your personalized <strong>{getDuration()}</strong> itinerary to{" "}
-                <strong>{formData.location}</strong> will include:
-              </p>
-              <ul className="text-green-800 dark:text-green-400 text-sm space-y-2">
-                <li className="flex items-start gap-2">
-                  <span className="text-green-600 dark:text-green-500 mt-0.5 text-base">
-                    ✓
-                  </span>
-                  <span className="leading-relaxed">
-                    Day-by-day activities optimized for your{" "}
-                    {getActivityPaceDisplay().toLowerCase()}
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-600 dark:text-green-500 mt-0.5 text-base">
-                    ✓
-                  </span>
-                  <span className="leading-relaxed">
-                    Dining recommendations matching your{" "}
-                    {getBudgetDisplay().toLowerCase()} budget
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-600 dark:text-green-500 mt-0.5 text-base">
-                    ✓
-                  </span>
-                  <span className="leading-relaxed">
-                    Transportation options and travel time estimates
-                  </span>
-                </li>
-                {/* 🔧 Smart transport mode display - shows ground or flight based on backend analysis */}
-                {flightData?.includeFlights &&
-                  (isLoadingTransport ? (
-                    <li className="flex items-start gap-2">
-                      <span className="text-gray-400 mt-0.5 text-base">⏳</span>
-                      <span className="leading-relaxed text-gray-500 dark:text-gray-400 italic">
-                        Analyzing best transport mode...
-                      </span>
-                    </li>
-                  ) : transportAnalysis?.groundTransport?.preferred ? (
-                    <li className="flex items-start gap-2">
-                      <span className="text-emerald-600 dark:text-emerald-500 mt-0.5 text-base">
-                        🚌
-                      </span>
-                      <span className="leading-relaxed">
-                        <strong>Ground transport route</strong> from{" "}
-                        {flightData.departureCity || "your city"} (
-                        {transportAnalysis.groundTransport.travelTime},{" "}
-                        {transportAnalysis.groundTransport.cost})
-                      </span>
-                    </li>
-                  ) : (
-                    <li className="flex items-start gap-2">
-                      <span className="text-blue-600 dark:text-blue-500 mt-0.5 text-base">
-                        ✈️
-                      </span>
-                      <span className="leading-relaxed">
-                        <strong>Real-time flight search</strong> from{" "}
-                        {flightData.departureCity || "your city"}
-                      </span>
-                    </li>
-                  ))}
-                {hotelData?.includeHotels && (
-                  <li className="flex items-start gap-2">
-                    <span className="text-orange-600 dark:text-orange-500 mt-0.5 text-base">
-                      🏨
-                    </span>
-                    <span className="leading-relaxed">
-                      <strong>Hotel recommendations</strong> with real photos
-                      and reviews
+          <div className="brand-card border-sky-200 dark:border-sky-800 p-6">
+            <h3 className="text-lg font-bold brand-gradient-text mb-1">
+              Ready to Create Your Itinerary
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Your {getDuration()} trip to <strong>{formData.location}</strong>{" "}
+              will include:
+            </p>
+            <ul className="space-y-2">
+              <li className="flex items-start gap-3 text-sm">
+                <span className="text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+                  ✓
+                </span>
+                <span className="text-gray-700 dark:text-gray-300">
+                  Day-by-day activities optimized for{" "}
+                  {getActivityPaceDisplay().toLowerCase()}
+                </span>
+              </li>
+              <li className="flex items-start gap-3 text-sm">
+                <span className="text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+                  ✓
+                </span>
+                <span className="text-gray-700 dark:text-gray-300">
+                  Dining recommendations for your{" "}
+                  {getBudgetDisplay().toLowerCase()} budget
+                </span>
+              </li>
+              <li className="flex items-start gap-3 text-sm">
+                <span className="text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+                  ✓
+                </span>
+                <span className="text-gray-700 dark:text-gray-300">
+                  Transportation and travel time estimates
+                </span>
+              </li>
+              {flightData?.includeFlights &&
+                (isLoadingTransport ? (
+                  <li className="flex items-start gap-3 text-sm">
+                    <span className="text-gray-400 flex-shrink-0">⏳</span>
+                    <span className="text-gray-500 dark:text-gray-400 italic">
+                      Analyzing transport options...
                     </span>
                   </li>
-                )}
-              </ul>
-            </div>
+                ) : transportAnalysis?.groundTransport?.preferred ||
+                  transportAnalysis?.groundTransport?.available ? (
+                  <li className="flex items-start gap-3 text-sm">
+                    <span className="text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+                      {transportAnalysis?.groundTransport?.hasFerry
+                        ? "⛴️"
+                        : "🚌"}
+                    </span>
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {transportAnalysis?.groundTransport?.hasFerry
+                        ? "Ferry"
+                        : "Ground transport"}{" "}
+                      from {flightData.departureCity || "your city"} (
+                      {transportAnalysis.groundTransport.travelTime},{" "}
+                      {transportAnalysis.groundTransport.cost})
+                    </span>
+                  </li>
+                ) : (
+                  <li className="flex items-start gap-3 text-sm">
+                    <span className="text-sky-600 dark:text-sky-400 flex-shrink-0">
+                      ✈️
+                    </span>
+                    <span className="text-gray-700 dark:text-gray-300">
+                      Real-time flights from{" "}
+                      {flightData.departureCity || "your city"}
+                    </span>
+                  </li>
+                ))}
+              {hotelData?.includeHotels && (
+                <li className="flex items-start gap-3 text-sm">
+                  <span className="text-amber-600 dark:text-amber-400 flex-shrink-0">
+                    🏨
+                  </span>
+                  <span className="text-gray-700 dark:text-gray-300">
+                    Hotel recommendations with real photos and reviews
+                  </span>
+                </li>
+              )}
+            </ul>
           </div>
         </div>
 

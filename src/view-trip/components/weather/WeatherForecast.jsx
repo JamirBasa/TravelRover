@@ -2,11 +2,9 @@ import React, { useState, useEffect } from "react";
 import {
   Cloud,
   CloudRain,
-  Sun,
   Wind,
   Droplets,
   AlertCircle,
-  Thermometer,
   Package,
   Lightbulb,
   ChevronDown,
@@ -29,6 +27,7 @@ function WeatherForecast({ trip }) {
   const [error, setError] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showFahrenheit, setShowFahrenheit] = useState(false);
+  const [showPackingTips, setShowPackingTips] = useState(false);
 
   // Add component mount logging
   useEffect(() => {
@@ -199,256 +198,223 @@ function WeatherForecast({ trip }) {
     forecastDays: weatherData.forecast.length,
   });
 
-  const recommendation = getWeatherRecommendation(weatherData.forecast);
-
-  // Calculate trip alignment
+  // Calculate trip date range
   const tripStartDate = trip?.userSelection?.startDate;
-  const tripDuration =
-    trip?.userSelection?.duration || weatherData.forecast.length;
+  const tripDuration = trip?.userSelection?.duration || 5;
+  
+  // Calculate trip end date
+  const tripStart = new Date(tripStartDate);
+  const tripEnd = new Date(tripStart);
+  tripEnd.setDate(tripEnd.getDate() + (tripDuration - 1)); // -1 because start day counts
+  
+  // Filter forecast to only show days within the trip date range
+  const tripForecast = weatherData.forecast.filter(day => {
+    const forecastDate = new Date(day.date);
+    return forecastDate >= tripStart && forecastDate <= tripEnd;
+  });
+  
+  logDebug("WeatherForecast", "Filtered forecast for trip dates", {
+    totalForecast: weatherData.forecast.length,
+    tripForecast: tripForecast.length,
+    tripDuration,
+  });
+
+  const recommendation = getWeatherRecommendation(tripForecast);
 
   return (
-    <div className="bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 dark:from-sky-950/30 dark:via-blue-950/30 dark:to-indigo-950/30 rounded-xl border border-sky-200 dark:border-sky-800 p-6 shadow-lg">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900/50 dark:to-blue-900/50 rounded-xl flex items-center justify-center shadow-sm">
-            <Sun className="h-6 w-6 text-sky-600 dark:text-sky-400" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              Weather for Your Trip
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
-              {weatherData.location} •{" "}
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-gray-700 p-8 shadow-sm space-y-8">
+      {/* Header - Clean & Minimal */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            Weather Forecast
+          </h3>
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <span className="font-medium">{weatherData.location}</span>
+            <span>•</span>
+            <span>
               {tripStartDate
                 ? new Date(tripStartDate).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                   })
                 : "Your dates"}
-            </p>
+            </span>
           </div>
+          {recommendation && (
+            <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
+              {recommendation.summary}
+            </p>
+          )}
         </div>
 
         {/* Temperature Unit Toggle */}
         <button
           onClick={() => setShowFahrenheit(!showFahrenheit)}
-          className="px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+          className="px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
           title="Toggle temperature unit"
         >
           {showFahrenheit ? "°F" : "°C"}
         </button>
       </div>
 
-      {/* Weather Summary Card */}
-      {recommendation && (
-        <div className="mb-6 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-5 shadow-sm">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/50 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Thermometer className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-lg font-bold text-amber-900 dark:text-amber-200 mb-1">
-                {recommendation.summary}
-              </h4>
-              <p className="text-sm text-amber-800 dark:text-amber-300">
-                Here's what to expect and pack for your trip
-              </p>
-            </div>
-          </div>
+      {/* Daily Forecast Cards - Hero Section */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {tripForecast.map((day, index) => {
+          const temp = showFahrenheit
+            ? celsiusToFahrenheit(day.tempMax)
+            : day.tempMax;
+          const tempLow = showFahrenheit
+            ? celsiusToFahrenheit(day.tempMin)
+            : day.tempMin;
 
-          {/* Packing List - Always Visible */}
-          <div className="bg-white/60 dark:bg-slate-900/30 rounded-lg p-4 mb-3">
-            <div className="flex items-center gap-2 mb-3">
-              <Package className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              <h5 className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                Essential Items to Pack
-              </h5>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {recommendation.packingList.slice(0, 6).map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
-                >
-                  <span className="w-1.5 h-1.5 bg-amber-500 rounded-full flex-shrink-0" />
-                  <span>{item}</span>
+          return (
+            <div
+              key={day.date}
+              className="bg-gradient-to-br from-sky-50 to-blue-50 dark:from-slate-800 dark:to-slate-900 rounded-xl p-6 border border-sky-100 dark:border-slate-700 hover:shadow-lg hover:border-sky-300 dark:hover:border-sky-700 transition-all cursor-pointer"
+            >
+              {/* Date Header */}
+              <div className="flex items-baseline justify-between mb-4">
+                <div>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                    {index === 0
+                      ? "Today"
+                      : new Date(day.date).toLocaleDateString("en-US", {
+                          weekday: "long",
+                        })}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {new Date(day.date).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </p>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Travel Tips */}
-          {recommendation.tips.length > 0 && (
-            <div className="bg-white/60 dark:bg-slate-900/30 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                <h5 className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                  Travel Tips
-                </h5>
+                <div className="text-5xl">{day.icon}</div>
               </div>
-              <ul className="space-y-2">
-                {recommendation.tips.map((tip, idx) => (
-                  <li
-                    key={idx}
-                    className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"
-                  >
-                    <span className="text-amber-500 mt-0.5">•</span>
-                    <span>{tip}</span>
-                  </li>
-                ))}
-              </ul>
+
+              {/* Temperature - Large & Prominent */}
+              <div className="mb-4">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold text-gray-900 dark:text-gray-100">
+                    {temp}°
+                  </span>
+                  <span className="text-xl text-gray-500 dark:text-gray-400">
+                    / {tempLow}°
+                  </span>
+                </div>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-1">
+                  {getSimpleWeatherDescription(day.condition)}
+                </p>
+              </div>
+
+              {/* Weather Details - Compact */}
+              <div className="space-y-2 pt-4 border-t border-sky-200 dark:border-slate-700">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <Droplets className="h-4 w-4" />
+                    Humidity
+                  </span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    {day.humidity}%
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <Wind className="h-4 w-4" />
+                    Wind
+                  </span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    {day.windSpeed} km/h
+                  </span>
+                </div>
+                {day.rainChance === "Yes" && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                      <CloudRain className="h-4 w-4" />
+                      Rain
+                    </span>
+                    <span className="font-semibold text-blue-700 dark:text-blue-300">
+                      Expected
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Packing & Travel Tips - Collapsible */}
+      {recommendation && (
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+          <button
+            onClick={() => setShowPackingTips(!showPackingTips)}
+            className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-750 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <Package className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+              <span className="font-semibold text-gray-900 dark:text-gray-100">
+                Packing Recommendations & Travel Tips
+              </span>
+            </div>
+            {showPackingTips ? (
+              <ChevronUp className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            )}
+          </button>
+
+          {showPackingTips && (
+            <div className="mt-4 grid md:grid-cols-2 gap-6 animate-fade-in-scale">
+              {/* Packing List */}
+              <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-5">
+                <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                  <Package className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                  What to Pack
+                </h5>
+                <ul className="space-y-2">
+                  {recommendation.packingList.map((item, idx) => (
+                    <li
+                      key={idx}
+                      className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"
+                    >
+                      <span className="w-1.5 h-1.5 bg-sky-500 rounded-full flex-shrink-0 mt-1.5" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Travel Tips */}
+              {recommendation.tips.length > 0 && (
+                <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-5">
+                  <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                    Travel Tips
+                  </h5>
+                  <ul className="space-y-2">
+                    {recommendation.tips.map((tip, idx) => (
+                      <li
+                        key={idx}
+                        className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"
+                      >
+                        <span className="w-1.5 h-1.5 bg-sky-500 rounded-full flex-shrink-0 mt-1.5" />
+                        <span>{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
 
-      {/* Daily Forecast - Simplified */}
-      <div className="mb-4">
-        <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-          <Cloud className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-          Daily Weather Forecast
-        </h4>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {weatherData.forecast
-            .slice(0, Math.min(5, tripDuration))
-            .map((day, index) => {
-              const temp = showFahrenheit
-                ? celsiusToFahrenheit(day.tempMax)
-                : day.tempMax;
-              const tempLow = showFahrenheit
-                ? celsiusToFahrenheit(day.tempMin)
-                : day.tempMin;
-
-              return (
-                <div
-                  key={day.date}
-                  className="bg-white dark:bg-slate-900/50 rounded-xl p-4 border border-sky-100 dark:border-sky-900 hover:shadow-md hover:border-sky-300 dark:hover:border-sky-700 transition-all"
-                >
-                  {/* Date */}
-                  <div className="text-center mb-3">
-                    <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                      {index === 0
-                        ? "Today"
-                        : new Date(day.date).toLocaleDateString("en-US", {
-                            weekday: "short",
-                          })}
-                    </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                      {new Date(day.date).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </p>
-                  </div>
-
-                  {/* Weather Icon & Condition */}
-                  <div className="text-center mb-3">
-                    <div className="text-4xl mb-2">{day.icon}</div>
-                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                      {getSimpleWeatherDescription(day.condition)}
-                    </p>
-                  </div>
-
-                  {/* Temperature - Prominent */}
-                  <div className="text-center mb-3 pb-3 border-b border-gray-100 dark:border-gray-800">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                        {temp}°
-                      </span>
-                      <div className="text-left">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
-                          High
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 leading-tight">
-                          {tempLow}° low
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Rain Indicator - Prominent if rainy */}
-                  {day.rainChance === "Yes" && (
-                    <div className="flex items-center justify-center gap-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg px-2 py-2 text-xs font-medium">
-                      <CloudRain className="h-4 w-4" />
-                      <span>Rain Expected</span>
-                    </div>
-                  )}
-
-                  {day.rainChance === "No" && (
-                    <div className="flex items-center justify-center gap-1.5 text-gray-500 dark:text-gray-400 text-xs">
-                      <Sun className="h-3.5 w-3.5" />
-                      <span>No rain</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-        </div>
-      </div>
-
-      {/* Detailed Weather Info - Collapsible */}
-      <button
-        onClick={() => setShowDetails(!showDetails)}
-        className="w-full flex items-center justify-center gap-2 py-2 text-sm font-medium text-sky-700 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-300 transition-colors"
-      >
-        {showDetails ? (
-          <>
-            <ChevronUp className="h-4 w-4" />
-            Hide detailed weather info
-          </>
-        ) : (
-          <>
-            <ChevronDown className="h-4 w-4" />
-            Show detailed weather info (humidity, wind speed)
-          </>
-        )}
-      </button>
-
-      {showDetails && (
-        <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 animate-in fade-in duration-200">
-          {weatherData.forecast
-            .slice(0, Math.min(5, tripDuration))
-            .map((day) => (
-              <div
-                key={`details-${day.date}`}
-                className="bg-gray-50 dark:bg-slate-900/30 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
-              >
-                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                  {new Date(day.date).toLocaleDateString("en-US", {
-                    weekday: "short",
-                  })}
-                </p>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
-                      <Droplets className="h-3.5 w-3.5" />
-                      Humidity
-                    </span>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">
-                      {day.humidity}%
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
-                      <Wind className="h-3.5 w-3.5" />
-                      Wind
-                    </span>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">
-                      {day.windSpeed} km/h
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-        </div>
-      )}
-
       {/* Footer */}
-      <div className="mt-6 pt-4 border-t border-sky-200 dark:border-sky-800">
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
         <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-          Weather data from OpenWeatherMap • Updates every hour • Forecast
-          accuracy may vary
+          Data from OpenWeatherMap • Updated hourly
         </p>
       </div>
     </div>

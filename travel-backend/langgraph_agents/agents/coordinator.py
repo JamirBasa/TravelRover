@@ -321,19 +321,36 @@ class CoordinatorAgent(BaseAgent):
             'Tarlac': 'CRK',
             'Nueva Ecija': 'CRK',
             'Cabanatuan': 'CRK',
+            'San Fernando (La Union)': 'MNL',
+            'La Union': 'MNL',
+            'Elyu': 'MNL',
+            'Alaminos': 'MNL',
+            'Hundred Islands': 'MNL',
+            'Pangasinan': 'MNL',
             
             # North Luzon (Cordillera + Ilocos)
             'Baguio': 'BAG',
             'Baguio City': 'BAG',
             'La Trinidad': 'BAG',
             'Benguet': 'BAG',
+            
+            # Mountain Province cities → Tuguegarao (no local commercial airports)
+            'Sagada': 'TUG',
+            'Banaue': 'TUG',
+            'Bontoc': 'TUG',
             'Mountain Province': 'TUG',
             'Ifugao': 'TUG',
+            'Batad': 'TUG',
+            
+            # Ilocos Region
             'Abra': 'LAO',
             'Ilocos Norte': 'LAO',
             'Laoag': 'LAO',
             'Ilocos Sur': 'LAO',
             'Vigan': 'LAO',
+            'Pagudpud': 'LAO',
+            'Pagudpod': 'LAO',
+            'Paoay': 'LAO',
             'Dagupan': 'CRK',
             'San Fernando': 'CRK',
             
@@ -342,51 +359,116 @@ class CoordinatorAgent(BaseAgent):
             'San Pablo': 'MNL',
             'Batangas': 'BSO',
             'Batangas City': 'BSO',
+            'Anilao': 'MNL',
+            'Mabini': 'MNL',
+            'Nasugbu': 'MNL',
+            'Puerto Galera': 'MNL',
+            'Mindoro': 'MNL',
+            'San Jose (Mindoro)': 'MNL',
             'Lucena': 'MNL',
             'Quezon Province': 'MNL',
             'Naga': 'WNP',
             'Naga City': 'WNP',
+            'Camarines Norte': 'LGP',
+            'Daet': 'LGP',
+            'Calaguas': 'LGP',
+            'Calaguas Island': 'LGP',
             'Legazpi': 'LGP',
             'Legazpi City': 'LGP',
+            'Albay': 'LGP',
+            'Mayon': 'LGP',
+            'Donsol': 'LGP',
             'Sorsogon': 'DRP',
+            'Masbate': 'MBT',
+            'Masbate City': 'MBT',
             
             # Visayas
             'Cebu': 'CEB',
             'Cebu City': 'CEB',
+            'Moalboal': 'CEB',
+            'Oslob': 'CEB',
+            'Malapascua': 'CEB',
+            'Bantayan': 'CEB',
+            'Bantayan Island': 'CEB',
+            'Camotes': 'CEB',
+            'Camotes Islands': 'CEB',
             'Dumaguete': 'DGT',
             'Dumaguete City': 'DGT',
+            'Siquijor': 'DGT',
+            'Apo Island': 'DGT',
+            'Dauin': 'DGT',
+            'Bais': 'DGT',
             'Iloilo': 'ILO',
             'Iloilo City': 'ILO',
+            'Guimaras': 'ILO',
+            'Antique': 'ILO',
+            'San Jose de Buenavista': 'ILO',
             'Bacolod': 'BCD',
             'Bacolod City': 'BCD',
+            'Silay': 'BCD',
             'Bohol': 'TAG',
             'Tagbilaran': 'TAG',
             'Tagbilaran City': 'TAG',
+            'Panglao': 'TAG',
+            'Anda': 'TAG',
+            'Chocolate Hills': 'TAG',
             'Kalibo': 'KLO',
-            'Boracay': 'KLO',
+            'Boracay': 'MPH',
+            'Caticlan': 'MPH',
+            'Malay': 'MPH',
             'Roxas': 'RXS',
             'Roxas City': 'RXS',
+            'Capiz': 'RXS',
             
             # Mindanao
             'Davao': 'DVO',
             'Davao City': 'DVO',
+            'Samal': 'DVO',
+            'Samal Island': 'DVO',
+            'Mati': 'DVO',
+            'City of Mati': 'DVO',
             'Cagayan': 'CGY',
             'Cagayan de Oro': 'CGY',
+            'CDO': 'CGY',
+            'Iligan': 'CGY',
+            'Bukidnon': 'CGY',
+            'Malaybalay': 'CGY',
+            'Camiguin': 'CGY',
             'Butuan': 'BXU',
             'Surigao': 'SUG',
-            'City of Mati': 'DVO',
+            'Siargao': 'IAO',
+            'Siargao Island': 'IAO',
+            'General Luna': 'IAO',
+            'Cloud 9': 'IAO',
+            'Dapa': 'IAO',
             'Zamboanga': 'ZAM',
             'Zamboanga City': 'ZAM',
+            'Pagadian': 'PAG',
+            'Pagadian City': 'PAG',
+            'Zamboanga del Sur': 'ZAM',
+            'Dipolog': 'DPL',
+            'Dipolog City': 'DPL',
             'Cotabato': 'CBO',
             'GenSan': 'GES',
             'General Santos': 'GES',
+            'South Cotabato': 'GES',
+            'Lake Sebu': 'GES',
+            'Tboli': 'GES',
+            'Koronadal': 'GES',
             
-            # Tourist destinations
+            # Palawan & Tourist destinations
             'Siargao': 'IAO',
             'Puerto Princesa': 'PPS',
             'Palawan': 'PPS',
             'El Nido': 'PPS',
             'Coron': 'USU',
+            'Busuanga': 'USU',
+            'Sabang': 'PPS',
+            'Underground River': 'PPS',
+            'Port Barton': 'PPS',
+            'San Vicente': 'PPS',
+            'Balabac': 'PPS',
+            'Cuyo': 'PPS',
         }
         
         # Normalize location for flexible matching
@@ -948,17 +1030,44 @@ class CoordinatorAgent(BaseAgent):
                     
                     for flight in flights_list:
                         if 'price' in flight:
-                            # Mark that SerpAPI prices are per-person
-                            flight['price_per_person'] = flight['price']
-                            flight['travelers'] = travelers_num
-                            flight['pricing_note'] = 'per person (SerpAPI standard)'
-                            
-                            # Calculate total for group
+                            # ✅ CRITICAL FIX: Round-trip prices already include both legs!
+                            # SerpAPI returns complete journey price per person - don't multiply again
                             try:
-                                price_numeric = int(str(flight['price']).replace('₱', '').replace(',', ''))
-                                flight['total_for_group'] = f"₱{price_numeric * travelers_num:,}"
-                            except:
+                                # Prefer pre-parsed numeric price (from views.py), fallback to string parsing
+                                if 'price_numeric' in flight and flight['price_numeric']:
+                                    price_numeric = flight['price_numeric']
+                                else:
+                                    # Fallback: parse from formatted string (for backward compatibility)
+                                    price_str = str(flight['price']).replace('₱', '').replace(',', '').strip()
+                                    price_numeric = int(price_str) if price_str else 0
+                                
+                                # ✅ Check if price is already complete (round-trip) or needs calculation
+                                is_complete = flight.get('is_complete_price', False)
+                                trip_type = flight.get('trip_type', 'round-trip')
+                                
+                                if is_complete:
+                                    # Price already includes full journey - just multiply by travelers
+                                    flight['price_per_person'] = flight['price']  # e.g., "₱11,444" (complete round-trip)
+                                    flight['total_for_group'] = f"₱{price_numeric * travelers_num:,}"  # e.g., "₱22,888" for 2 travelers
+                                    logger.debug(f"✈️ {flight.get('name')}: {flight['price']} per person (round-trip) × {travelers_num} travelers = {flight['total_for_group']}")
+                                else:
+                                    # One-way or legacy data - calculate normally
+                                    flight['price_per_person'] = flight['price']
+                                    flight['total_for_group'] = f"₱{price_numeric * travelers_num:,}"
+                                    logger.debug(f"✈️ {flight.get('name')}: {flight['price']} per person (one-way) × {travelers_num} travelers = {flight['total_for_group']}")
+                                
+                                flight['travelers'] = travelers_num
+                                # Keep existing pricing_note from views.py (includes trip type)
+                                if 'pricing_note' not in flight or not flight['pricing_note']:
+                                    flight['pricing_note'] = f'per person ({trip_type})'
+                                
+                            except Exception as e:
+                                logger.warning(f"⚠️ Price calculation failed for {flight.get('name')}: {e}")
+                                # Graceful degradation
+                                flight['price_per_person'] = flight['price']
                                 flight['total_for_group'] = flight['price']
+                                flight['travelers'] = travelers_num
+                                flight['pricing_note'] = 'per person'
                     
                     logger.info(f"✅ Enhanced {len(flights_list)} flights with pricing metadata for {travelers_num} travelers")
             else:

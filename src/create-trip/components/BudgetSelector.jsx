@@ -298,11 +298,11 @@ const BudgetSelector = ({
     <div className="max-w-2xl mx-auto">
       {/* Main Question */}
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold brand-gradient-text mb-3">
+        <h2 className="text-2xl font-bold brand-gradient-text mb-2">
           What's your budget range?
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 text-base max-w-2xl mx-auto leading-relaxed">
-          Choose a budget that works for you - we'll optimize your experience 💰
+        <p className="text-gray-600 dark:text-gray-400 text-sm">
+          Choose a budget that works for you
         </p>
 
         {/* ✅ NEW: Service Change Alert */}
@@ -327,23 +327,11 @@ const BudgetSelector = ({
 
         {/* Budget Override Indicator */}
         {isBudgetOverridden && profileBudget && (
-          <div className="mt-4 mx-auto max-w-md p-3 bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-200 dark:border-amber-800 rounded-lg">
-            <div className="flex items-start gap-2">
-              <span className="text-amber-600 dark:text-amber-400 text-lg">
-                ⚡
-              </span>
-              <div className="text-left flex-1">
-                <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1">
-                  Budget Override Active
-                </p>
-                <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
-                  Your profile preference is{" "}
-                  <span className="font-bold">{profileBudget}</span>, but you've
-                  selected <span className="font-bold">{tripBudget}</span> for
-                  this trip. We'll use your trip-level choice.
-                </p>
-              </div>
-            </div>
+          <div className="mt-4 mx-auto max-w-md p-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-800 rounded-lg">
+            <p className="text-xs text-amber-800 dark:text-amber-300">
+              <span className="font-semibold">⚡ Override:</span> Using trip
+              budget instead of profile preference
+            </p>
           </div>
         )}
       </div>
@@ -393,109 +381,56 @@ const BudgetSelector = ({
                   setShowCustom(false);
                   onCustomBudgetChange("");
                 }}
-                className={`group p-5 cursor-pointer border-2 rounded-xl hover:shadow-xl transition-all duration-300 ${
+                className={`group p-4 cursor-pointer border-2 rounded-lg transition-all ${
                   value === option.title && !customValue
-                    ? "shadow-xl border-sky-500 dark:border-sky-600 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30"
-                    : "border-gray-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-700 hover:shadow-lg"
+                    ? "border-sky-500 dark:border-sky-600 bg-sky-50 dark:bg-sky-950/20"
+                    : "border-gray-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-700"
                 }`}
               >
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 ${
-                      value === option.title && !customValue
-                        ? "brand-gradient shadow-lg"
-                        : "bg-gray-100 dark:bg-slate-800 group-hover:bg-sky-100 dark:group-hover:bg-sky-950/50"
-                    }`}
-                  >
-                    <span
-                      className={
-                        value === option.title && !customValue
-                          ? "text-white"
-                          : "dark:text-gray-300"
-                      }
-                    >
-                      {option.icon}
-                    </span>
-                  </div>
-                  <div className="flex-1">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl flex-shrink-0">{option.icon}</span>
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3
-                        className={`font-semibold text-lg transition-colors ${
-                          value === option.title && !customValue
-                            ? "text-sky-800 dark:text-sky-300"
-                            : "text-gray-800 dark:text-gray-200 group-hover:text-sky-700 dark:group-hover:text-sky-400"
-                        }`}
-                      >
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                         {option.title}
                       </h3>
-                      {/* ✅ NEW: Recommendation Badge */}
                       {recommendation &&
                         recommendation.tier === option.title && (
-                          <Badge
-                            variant="outline"
-                            className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-xs"
-                          >
+                          <Badge className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs">
                             ⭐ Recommended
                           </Badge>
                         )}
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                       {option.desc}
                     </p>
                     {estimate && (
-                      <div className="mt-2 flex items-center gap-2 flex-wrap">
-                        <p className="text-xs font-bold text-sky-700 dark:text-sky-400">
-                          {typeof estimate.range === "string"
-                            ? estimate.range
-                            : `₱${
-                                estimate.range?.toLocaleString() || "0"
-                              }`}{" "}
-                          <span className="font-normal text-gray-600 dark:text-gray-400">
-                            total
+                      <div className="space-y-1">
+                        <div className="flex items-baseline gap-2 text-xs">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Total:
                           </span>
-                        </p>
-                        {formData.travelers &&
-                          formData.travelers > 1 &&
-                          estimate.perPerson && (
-                            <>
-                              <span className="text-gray-400 dark:text-gray-600">
-                                •
-                              </span>
-                              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                                {typeof estimate.perPerson === "string"
-                                  ? estimate.perPerson
-                                  : `₱${
-                                      estimate.perPerson?.toLocaleString() ||
-                                      "0"
-                                    }`}{" "}
-                                <span className="font-normal text-gray-600 dark:text-gray-400">
-                                  per person
-                                </span>
-                              </p>
-                            </>
-                          )}
-                        {estimate.perDay && formData.duration && (
-                          <>
-                            <span className="text-gray-400 dark:text-gray-600">
-                              •
+                          <p className="font-bold text-sky-700 dark:text-sky-400">
+                            {typeof estimate.range === "string"
+                              ? estimate.range
+                              : `₱${estimate.range?.toLocaleString() || "0"}`}
+                          </p>
+                        </div>
+                        {estimate.perDay && (
+                          <div className="flex items-baseline gap-2 text-xs">
+                            <span className="text-gray-600 dark:text-gray-400">
+                              Per day:
                             </span>
-                            <p className="text-xs font-medium text-sky-700 dark:text-sky-400">
+                            <p className="font-semibold text-emerald-700 dark:text-emerald-400">
                               {typeof estimate.perDay === "string"
                                 ? estimate.perDay
-                                : typeof estimate.perDay === "object"
-                                ? `₱${Math.round(
+                                : `₱${Math.round(
                                     (estimate.perDay.min +
                                       estimate.perDay.max) /
                                       2
-                                  ).toLocaleString()}`
-                                : `₱${
-                                    estimate.perDay?.toLocaleString() || "0"
-                                  }`}{" "}
-                              <span className="font-normal text-gray-600 dark:text-gray-400">
-                                per day
-                              </span>
+                                  ).toLocaleString()}`}
                             </p>
-                          </>
+                          </div>
                         )}
                       </div>
                     )}

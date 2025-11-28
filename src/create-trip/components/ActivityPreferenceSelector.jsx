@@ -98,11 +98,10 @@ const ActivityPreferenceSelector = ({
       {/* Header */}
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold brand-gradient-text mb-3">
-          Daily Activity Pace
+          How many activities per day?
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 text-base max-w-2xl mx-auto leading-relaxed">
-          Choose how many activities you'd like per day. We'll optimize your
-          itinerary based on travel times, rest periods, and your preferences.
+        <p className="text-gray-600 dark:text-gray-400 text-sm">
+          Choose your pace—we'll handle travel times, meals, and rest.
         </p>
       </div>
 
@@ -169,14 +168,11 @@ const ActivityPreferenceSelector = ({
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
                     {option.details}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">
-                    <strong>Recommended for:</strong> {option.recommended}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 italic">
-                    ⏰ {option.dailySchedule}
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    {option.recommended}
                   </p>
 
                   {/* ✅ NEW: Activity Estimate Display */}
@@ -218,31 +214,17 @@ const ActivityPreferenceSelector = ({
               <Clock className="text-white text-lg" />
             </div>
             <div className="flex-1">
-              <h4 className="font-semibold brand-gradient-text text-base mb-2">
-                Your Selection:{" "}
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-base mb-2">
                 {
                   activityOptions.find(
                     (opt) => opt.value === activityPreference
                   )?.label
                 }
               </h4>
-              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-2">
-                We'll create a{" "}
-                <strong>{activityPreference} activity per day</strong> itinerary
-                with realistic travel times, meal breaks, and rest periods. Your
-                schedule will be optimized for maximum enjoyment while
-                respecting your chosen pace.
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Your itinerary will include {activityPreference} activity per
+                day with built-in travel time, meals, and rest.
               </p>
-              <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                <span>⏰</span>
-                <span>
-                  {
-                    activityOptions.find(
-                      (opt) => opt.value === activityPreference
-                    )?.dailySchedule
-                  }
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -256,13 +238,11 @@ const ActivityPreferenceSelector = ({
           </div>
           <div className="flex-1 min-w-0">
             <h4 className="font-semibold text-amber-900 dark:text-amber-300 text-base mb-2">
-              ✨ Smart Scheduling Included
+              Smart Scheduling Included
             </h4>
-            <p className="text-amber-800 dark:text-amber-400 text-sm leading-relaxed">
-              Regardless of your activity pace, we'll always include realistic
-              travel times between locations, meal breaks, rest periods, and
-              proper arrival/departure buffers. Your itinerary will be
-              achievable and enjoyable!
+            <p className="text-amber-800 dark:text-amber-400 text-sm">
+              Every itinerary includes travel time, meal breaks, and rest
+              periods between activities.
             </p>
           </div>
         </div>
