@@ -68,11 +68,7 @@ class AdminDashboardStatsView(APIView):
                 'executions_24h': 0
             }
             
-            # TEMPORARILY REMOVED: Revenue statistics
-            # revenue_stats = {
-            #     'total_estimated': 0.0,
-            #     'average_trip_value': 0.0
-            # }
+         
             
             # Trip statistics (only if LangGraph is available)
             if LANGGRAPH_AVAILABLE and TravelPlanningSession:
@@ -94,11 +90,6 @@ class AdminDashboardStatsView(APIView):
                     'new_7d': trips_7d
                 })
                 
-                # TEMPORARILY REMOVED: Revenue stats update
-                # revenue_stats.update({
-                #     'total_estimated': float(total_estimated_revenue),
-                #     'average_trip_value': round(float(total_estimated_revenue) / total_trips if total_trips > 0 else 0, 2)
-                # })
             
             # Agent statistics (only if AgentExecutionLog is available)
             if LANGGRAPH_AVAILABLE and AgentExecutionLog:
@@ -714,70 +705,81 @@ class AdminAPIKeyMonitoringView(APIView):
         """Get real-time API key status and usage information"""
         
         async def async_handler():
+            monitoring_service = None
             try:
-                logger.info("🔍 Admin: Fetching real-time API key statuses")
+                logger.info("=" * 60)
+                logger.info("📊 Admin API Key Monitoring Request")
+                logger.info("=" * 60)
                 
+                # Import here to avoid circular imports (TravelRover pattern)
+                from .services import APIKeyMonitoringService
+                
+                # ✅ Initialize service directly (no context manager)
                 monitoring_service = APIKeyMonitoringService()
                 
-                try:
-                    # Get all API key statuses
-                    api_key_statuses = await monitoring_service.check_all_api_keys()
-                    
-                    # Calculate overall system health
-                    all_services = list(api_key_statuses.values())
-                    healthy_count = len([s for s in all_services if s.get('health') == 'healthy'])
-                    warning_count = len([s for s in all_services if s.get('health') == 'warning'])
-                    error_count = len([s for s in all_services if s.get('health') == 'error'])
-                    critical_count = len([s for s in all_services if s.get('health') == 'critical'])
-                    
-                    # Determine overall health
-                    if critical_count > 0:
-                        overall_health = 'critical'
-                        health_message = f'{critical_count} service(s) in critical state'
-                    elif error_count > 0:
-                        overall_health = 'error'
-                        health_message = f'{error_count} service(s) have errors'
-                    elif warning_count > 0:
-                        overall_health = 'warning'
-                        health_message = f'{warning_count} service(s) need attention'
-                    else:
-                        overall_health = 'healthy'
-                        health_message = 'All services operational'
-                    
-                    # Get recommendations
-                    recommendations = self._generate_recommendations(api_key_statuses)
-                    
-                    return Response({
-                        'success': True,
-                        'api_keys': api_key_statuses,
-                        'system_health': {
-                            'overall_status': overall_health,
-                            'message': health_message,
-                            'healthy_services': healthy_count,
-                            'warning_services': warning_count,
-                            'error_services': error_count,
-                            'critical_services': critical_count,
-                            'total_services': len(all_services)
-                        },
-                        'recommendations': recommendations,
-                        'monitoring_info': {
-                            'check_frequency': '30 seconds (real-time)',
-                            'last_updated': timezone.now().isoformat(),
-                            'next_check': (timezone.now() + timedelta(seconds=30)).isoformat()
-                        }
-                    })
-                    
-                finally:
-                    await monitoring_service.close()
-                    
+                # ✅ Manually create session
+                if not monitoring_service.session or monitoring_service.session.closed:
+                    monitoring_service.session = aiohttp.ClientSession()
+                
+                # ✅ Get all API key statuses (returns LIVE SerpAPI data)
+                result = await monitoring_service.check_all_api_keys()
+                
+                # ✅ Validate result is a dictionary
+                if not isinstance(result, dict):
+                    logger.error(f"❌ Invalid result type: {type(result).__name__}")
+                    raise ValueError(f"Expected dict, got {type(result).__name__}")
+                
+                # ✅ The service already returns the correct format!
+                # Format: { success, api_keys, system_health, recommendations }
+                if not result.get('success'):
+                    logger.error(f"❌ Monitoring failed: {result.get('error')}")
+                    return Response(result, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+                # ✅ Log success
+                system_health = result.get('system_health', {})
+                logger.info(f"✅ Monitoring complete: {system_health.get('overall_status', 'unknown').upper()}")
+                
+                # ✅ Add monitoring metadata (following TravelRover API response format)
+                result['monitoring_info'] = {
+                    'check_frequency': 'Real-time (every request)',
+                    'data_source': 'live_serpapi_api',
+                    'last_updated': timezone.now().isoformat(),
+                    'cache_status': 'disabled'
+                }
+                
+                logger.info("=" * 60)
+                return Response(result, status=status.HTTP_200_OK)
+                
             except Exception as e:
                 logger.error(f"❌ Error in API key monitoring: {str(e)}")
+                logger.error(f"❌ Error type: {type(e).__name__}")
+                import traceback
+                logger.error(traceback.format_exc())
+                
+                # Return error following TravelRover API response format
                 return Response({
                     'success': False,
-                    'error': str(e)
+                    'error': str(e),
+                    'error_type': type(e).__name__,
+                    'api_keys': {},
+                    'system_health': {
+                        'overall_status': 'error',
+                        'message': f'❌ Server error: {str(e)}'
+                    },
+                    'recommendations': []
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            finally:
+                # ✅ Cleanup: Always close session
+                if monitoring_service and monitoring_service.session:
+                    try:
+                        if not monitoring_service.session.closed:
+                            await monitoring_service.session.close()
+                            logger.debug("🧹 Session closed in finally block")
+                    except Exception as cleanup_error:
+                        logger.warning(f"⚠️ Error closing session: {cleanup_error}")
         
-        # Run async handler
+        # ✅ Run async handler (TravelRover async pattern)
         try:
             loop = asyncio.get_event_loop()
         except RuntimeError:
@@ -786,62 +788,6 @@ class AdminAPIKeyMonitoringView(APIView):
         
         return loop.run_until_complete(async_handler())
     
-    def _generate_recommendations(self, api_statuses: Dict[str, Any]) -> list[Dict[str, str]]:
-        """Generate actionable recommendations based on API key statuses"""
-        recommendations = []
-        
-        for service, status_info in api_statuses.items():
-            health = status_info.get('health', 'unknown')
-            service_status = status_info.get('status', 'unknown')
-            
-            if health == 'critical':
-                if 'near_limit' in service_status or 'quota_exceeded' in service_status:
-                    recommendations.append({
-                        'priority': 'high',
-                        'service': service,
-                        'title': f'Upgrade {service.title()} Plan',
-                        'message': f'{service.title()} is near or at quota limit. Consider upgrading your plan.',
-                        'action': 'upgrade_plan'
-                    })
-            elif health == 'error':
-                if 'not_configured' in service_status:
-                    recommendations.append({
-                        'priority': 'medium',
-                        'service': service,
-                        'title': f'Configure {service.title()} API Key',
-                        'message': f'Add {service.title()} API key to environment variables.',
-                        'action': 'configure_key'
-                    })
-                else:
-                    recommendations.append({
-                        'priority': 'medium',
-                        'service': service,
-                        'title': f'Fix {service.title()} Configuration',
-                        'message': f'{service.title()} API key has issues. Check configuration.',
-                        'action': 'fix_configuration'
-                    })
-            elif health == 'warning':
-                if 'high_usage' in service_status:
-                    recommendations.append({
-                        'priority': 'low',
-                        'service': service,
-                        'title': f'Monitor {service.title()} Usage',
-                        'message': f'{service.title()} usage is high. Consider monitoring more closely.',
-                        'action': 'monitor_usage'
-                    })
-        
-        # Add general recommendations
-        if len(recommendations) == 0:
-            recommendations.append({
-                'priority': 'info',
-                'service': 'system',
-                'title': 'All Systems Operational',
-                'message': 'All API keys are working properly. Continue monitoring.',
-                'action': 'continue_monitoring'
-            })
-        
-        return recommendations
-
 
 @method_decorator(csrf_exempt, name='dispatch') 
 class AdminAPIKeyHistoryView(APIView):
@@ -854,29 +800,45 @@ class AdminAPIKeyHistoryView(APIView):
         
         async def async_handler():
             try:
+                logger.info(f"📊 Fetching {service_name} usage history")
+                
+                from .services import APIKeyMonitoringService
                 monitoring_service = APIKeyMonitoringService()
                 
-                try:
-                    days = int(request.GET.get('days', 30))
-                    history = await monitoring_service.get_usage_history(service_name, days)
-                    
+                days = int(request.GET.get('days', 30))
+                
+                # Check if service has usage history method
+                if not hasattr(monitoring_service, 'get_usage_history'):
+                    logger.warning(f"⚠️ Usage history not implemented for {service_name}")
                     return Response({
                         'success': True,
                         'service': service_name,
-                        'history': history,
+                        'history': [],
+                        'message': 'Usage history tracking not yet implemented',
                         'timestamp': timezone.now().isoformat()
                     })
-                    
-                finally:
-                    await monitoring_service.close()
-                    
+                
+                # Get usage history
+                history = await monitoring_service.get_usage_history(service_name, days)
+                
+                return Response({
+                    'success': True,
+                    'service': service_name,
+                    'history': history,
+                    'days': days,
+                    'timestamp': timezone.now().isoformat()
+                })
+                
             except Exception as e:
-                logger.error(f"❌ Error getting API key history: {str(e)}")
+                logger.error(f"❌ Error getting {service_name} history: {str(e)}")
                 return Response({
                     'success': False,
-                    'error': str(e)
+                    'error': str(e),
+                    'service': service_name,
+                    'history': []
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+        # Run async handler
         try:
             loop = asyncio.get_event_loop()
         except RuntimeError:
