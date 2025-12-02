@@ -1,5 +1,6 @@
-import asyncio
 import aiohttp
+import asyncio
+import json
 import os
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
@@ -132,73 +133,330 @@ class APIKeyMonitoringService:
             }
     
     async def _check_serpapi_usage(self, api_key: str) -> Dict[str, Any]:
-        """Monitor SerpAPI real-time usage and quotas"""
-        try:
-            logger.info("🔍 Monitoring SerpAPI usage...")
+        """
+        Monitor SerpAPI real-time usage - fetches LIVE data from source API.
+        
+        Following TravelRover backend proxy pattern with LIVE data verification.
+        
+        Args:
+            api_key: SerpAPI key from Django settings
             
-            # Check account usage endpoint
-            url = "https://serpapi.com/account"
-            params = {'api_key': api_key}
-            
-            response = await self.api_client.make_request(
-                method='GET',
-                url=url,
-                params=params,
-                service_name='SerpAPI'
-            )
-            
-            # Parse SerpAPI usage data
-            searches_left = response.get('searches_left', 0)
-            total_searches = response.get('total_searches_this_month', 100)
-            used_searches = max(0, total_searches - searches_left)
-            usage_percentage = (used_searches / total_searches * 100) if total_searches > 0 else 0
-            
-            # Determine status based on usage limits
-            if searches_left <= 0:
-                health = 'critical'
-                status = 'quota_exceeded'
-                message = '🚨 Monthly quota exhausted - No searches remaining'
-            elif usage_percentage >= 95:
-                health = 'critical'
-                status = 'near_limit'
-                message = f'🚨 Critical: Only {searches_left} searches remaining'
-            elif usage_percentage >= 80:
-                health = 'warning'
-                status = 'high_usage'
-                message = f'⚠️ Warning: {searches_left} searches remaining'
-            else:
-                health = 'healthy'
-                status = 'active'
-                message = f'✅ Healthy: {searches_left} searches available'
-            
+        Returns:
+            Dict with usage stats following TravelRover response format
+        """
+        logger.info("🔍 Fetching LIVE SerpAPI account status from source API...")
+        
+        # ✅ Validate API key format (following TravelRover validation rules)
+        if not api_key or len(api_key.strip()) < 10:
+            logger.error("❌ Invalid SerpAPI key format")
             return {
                 'service': 'serpapi',
-                'status': status,
-                'health': health,
-                'message': message,
-                'usage': {
-                    'used': used_searches,
-                    'remaining': searches_left,
-                    'total': total_searches,
-                    'percentage': round(usage_percentage, 1)
-                },
-                'limits': {
-                    'monthly_quota': total_searches,
-                    'rate_limit': '100 queries/hour',
-                    'reset_date': response.get('next_reset_date', 'Unknown'),
-                    'plan': response.get('plan', 'Free')
-                },
+                'status': 'invalid_key',
+                'health': 'error',
+                'message': '❌ API key is missing or invalid',
+                'error': 'Invalid API key format',
+                'usage': None,
+                'limits': {'monthly_quota': 250},
                 'last_checked': timezone.now().isoformat()
             }
+        
+        try:
+            # ✅ Direct API call to SerpAPI account endpoint (LIVE DATA - NO CACHE)
+            account_url = "https://serpapi.com/account.json"
             
-        except Exception as e:
-            logger.error(f"❌ SerpAPI usage monitoring failed: {str(e)}")
+            # ✅ CACHE-BUSTING: Add timestamp to force fresh data
+            import time
+            cache_buster = int(time.time() * 1000)  # Millisecond timestamp
+            
+            logger.info(f"🔥 Cache-busting parameter: {cache_buster}")
+            logger.info(f"🌐 Fetching from: {account_url}?api_key=***&_t={cache_buster}")
+            
+            # Use aiohttp directly (following backend proxy pattern)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    account_url,
+                    params={
+                        'api_key': api_key.strip(),
+                        '_t': cache_buster  # ✅ Cache-busting parameter
+                    },
+                    timeout=aiohttp.ClientTimeout(total=15),
+                    headers={
+                        # ✅ AGGRESSIVE cache-busting headers
+                        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+                        'Pragma': 'no-cache',
+                        'Expires': '0',
+                        'If-None-Match': '*',
+                        'If-Modified-Since': 'Thu, 01 Jan 1970 00:00:00 GMT',
+                        'User-Agent': f'TravelRover-Admin/1.0-{cache_buster}',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json, */*'
+                    }
+                ) as response:
+                    
+                    logger.info(f"📡 SerpAPI Response Status: {response.status}")
+                    logger.info(f"📡 Response Headers: {dict(response.headers)}")
+                    
+                    # ✅ Handle HTTP errors
+                    if response.status != 200:
+                        error_text = await response.text()
+                        logger.error(f"❌ SerpAPI HTTP {response.status}: {error_text[:300]}")
+                        
+                        return {
+                            'service': 'serpapi',
+                            'status': 'api_error',
+                            'health': 'error',
+                            'message': f'❌ API error: HTTP {response.status}',
+                            'error': f'HTTP {response.status}: {error_text[:100]}',
+                            'usage': None,
+                            'limits': {'monthly_quota': 250},
+                            'last_checked': timezone.now().isoformat()
+                        }
+                    
+                    # ✅ Parse JSON response
+                    try:
+                        data = await response.json()
+                    except Exception as json_error:
+                        logger.error(f"❌ Failed to parse SerpAPI JSON: {str(json_error)}")
+                        response_text = await response.text()
+                        logger.error(f"Response body: {response_text[:500]}")
+                        
+                        return {
+                            'service': 'serpapi',
+                            'status': 'parse_error',
+                            'health': 'error',
+                            'message': '❌ Failed to parse API response',
+                            'error': f'Invalid JSON: {str(json_error)}',
+                            'usage': None,
+                            'limits': {'monthly_quota': 250},
+                            'last_checked': timezone.now().isoformat()
+                        }
+                    
+                    # ✅ Log COMPLETE raw response (following TravelRover debug pattern)
+                    logger.info("=" * 80)
+                    logger.info(f"🔍 RAW SerpAPI Response (LIVE DATA - Cache Buster: {cache_buster}):")
+                    logger.info(f"🔍 Timestamp: {datetime.now().isoformat()}")
+                    logger.info(json.dumps(data, indent=2))
+                    logger.info("=" * 80)
+                    
+                    # ✅ Check for API errors
+                    if 'error' in data:
+                        logger.error(f"❌ SerpAPI error: {data['error']}")
+                        
+                        return {
+                            'service': 'serpapi',
+                            'status': 'access_denied',
+                            'health': 'error',
+                            'message': f"❌ {data['error']}",
+                            'error': data['error'],
+                            'usage': None,
+                            'limits': {'monthly_quota': 250},
+                            'last_checked': timezone.now().isoformat()
+                        }
+                    
+                    # ✅ Parse account data
+                    account_info = data.get('account_info', data)
+                    
+                    # ✅ CRITICAL: Extract LIVE usage data (PROOF IT'S FROM API)
+                    logger.info("=" * 80)
+                    logger.info("📊 EXTRACTING LIVE DATA FROM SERPAPI RESPONSE:")
+                    logger.info("=" * 80)
+                    
+                    # Show exactly what fields exist in the response
+                    logger.info(f"   📋 Available fields in 'account_info': {list(account_info.keys())}")
+                    
+                    # Extract with detailed logging
+                    searches_used_raw = account_info.get('total_searches_this_month')
+                    searches_remaining_raw = account_info.get('plan_searches_left')
+                    
+                    logger.info(f"   🔍 RAW 'total_searches_this_month': {searches_used_raw} (type: {type(searches_used_raw).__name__})")
+                    logger.info(f"   🔍 RAW 'plan_searches_left': {searches_remaining_raw} (type: {type(searches_remaining_raw).__name__})")
+                    
+                    # Convert to integers
+                    searches_used = int(searches_used_raw) if searches_used_raw is not None else 0
+                    searches_remaining = int(searches_remaining_raw) if searches_remaining_raw is not None else 0
+                    
+                    logger.info(f"   ✅ CONVERTED 'total_searches_this_month': {searches_used}")
+                    logger.info(f"   ✅ CONVERTED 'plan_searches_left': {searches_remaining}")
+                    logger.info("=" * 80)
+                    
+                    logger.info(f"📊 LIVE DATA VERIFICATION (Cache Buster: {cache_buster}):")
+                    logger.info(f"   🔴 Used this month: {searches_used} (LIVE from 'total_searches_this_month' field)")
+                    logger.info(f"   🟢 Remaining: {searches_remaining} (LIVE from 'plan_searches_left' field)")
+                    logger.info(f"   📡 Data freshness: {datetime.now().isoformat()}")
+                    logger.info(f"   🔥 Cache-busting token: {cache_buster}")
+                    
+                    # ✅ GET PLAN INFORMATION
+                    plan_name = account_info.get('plan_name', 'Free Plan')
+                    plan_id = str(account_info.get('plan_id', 'free')).lower()
+                    
+                    logger.info(f"   📦 Plan: {plan_name} (ID: {plan_id})")
+                    
+                    # ✅ DETERMINE MAXIMUM QUOTA
+                    SERPAPI_FREE_PLAN_QUOTA = 250
+                    
+                    is_free_plan = ('free' in plan_name.lower() or 
+                                   'free' in plan_id or 
+                                   plan_id == 'free' or
+                                   plan_id == '0')
+                    
+                    if is_free_plan:
+                        monthly_quota = SERPAPI_FREE_PLAN_QUOTA
+                        logger.info(f"   ✅ FREE PLAN DETECTED → Quota: {monthly_quota}")
+                    else:
+                        plan_searches = account_info.get('plan_searches')
+                        plan_searches_per_month = account_info.get('plan_searches_per_month')
+                        
+                        if plan_searches and plan_searches > 0:
+                            monthly_quota = int(plan_searches)
+                            logger.info(f"   ✅ PAID PLAN: Using 'plan_searches': {monthly_quota}")
+                        elif plan_searches_per_month and plan_searches_per_month > 0:
+                            monthly_quota = int(plan_searches_per_month)
+                            logger.info(f"   ✅ PAID PLAN: Using 'plan_searches_per_month': {monthly_quota}")
+                        else:
+                            monthly_quota = searches_used + searches_remaining
+                            logger.warning(f"   ⚠️ PAID PLAN: Calculated quota: {monthly_quota}")
+                
+                # ✅ Validate quota
+                if monthly_quota <= 0:
+                    logger.error(f"❌ Invalid quota: {monthly_quota}, falling back to 250")
+                    monthly_quota = 250
+                
+                # ✅ Calculate usage metrics
+                usage_percentage = (searches_used / monthly_quota * 100) if monthly_quota > 0 else 0
+                
+                # ✅ Verify consistency
+                expected_remaining = monthly_quota - searches_used
+                
+                if searches_remaining != expected_remaining:
+                    logger.warning("⚠️" + "=" * 78)
+                    logger.warning(f"⚠️ DATA INCONSISTENCY DETECTED:")
+                    logger.warning(f"⚠️   SerpAPI 'plan_searches_left': {searches_remaining}")
+                    logger.warning(f"⚠️   Calculated remaining: {expected_remaining}")
+                    logger.warning(f"⚠️   Formula: {monthly_quota} (quota) - {searches_used} (used) = {expected_remaining}")
+                    logger.warning(f"⚠️   Using SerpAPI's value: {searches_remaining} (trusting API)")
+                    logger.warning("⚠️" + "=" * 78)
+                
+                # Extract account details
+                account_id = account_info.get('account_id', 'N/A')
+                account_email = account_info.get('account_email', 'N/A')
+                api_key_valid = account_info.get('api_key_valid', True)
+                
+                # Get reset date
+                next_reset = (
+                    account_info.get('this_month_usage_reset_date') or 
+                    account_info.get('next_reset_date') or
+                    account_info.get('plan_reset_date')
+                )
+                
+                if not next_reset:
+                    now = timezone.now()
+                    next_reset = f"{now.year + 1}-01-01" if now.month == 12 else f"{now.year}-{now.month + 1:02d}-01"
+                
+                logger.info(f"✅ FINAL QUOTA SUMMARY (LIVE DATA FROM SERPAPI):")
+                logger.info(f"   📈 Total Monthly Quota: {monthly_quota}")
+                logger.info(f"   🔴 Searches Used: {searches_used} (LIVE from API)")
+                logger.info(f"   🟢 Searches Remaining: {searches_remaining} (LIVE from API)")
+                logger.info(f"   📊 Usage Percentage: {usage_percentage:.1f}%")
+                logger.info(f"   🔄 Quota Resets: {next_reset}")
+                logger.info(f"   📡 Data Source: live_serpapi_api (cache-busting enabled)")
+                logger.info(f"   🕐 Fetched At: {datetime.now().isoformat()}")
+                logger.info("=" * 80)
+                
+                # ✅ Determine health status
+                if not api_key_valid:
+                    health, status = 'error', 'invalid_key'
+                    message = '❌ API key invalid or expired'
+                elif searches_remaining == 0:
+                    health, status = 'critical', 'quota_exceeded'
+                    message = f'🚨 Quota exhausted - {searches_used}/{monthly_quota} used (100%)'
+                elif usage_percentage >= 95:
+                    health, status = 'critical', 'near_limit'
+                    message = f'🚨 Critical: {searches_remaining} left ({usage_percentage:.0f}% used)'
+                elif usage_percentage >= 80:
+                    health, status = 'warning', 'high_usage'
+                    message = f'⚠️ Warning: {searches_remaining} remaining ({usage_percentage:.0f}% used)'
+                elif usage_percentage >= 50:
+                    health, status = 'degraded', 'moderate_usage'
+                    message = f'⚡ Moderate: {searches_remaining} available ({usage_percentage:.0f}% used)'
+                else:
+                    health, status = 'healthy', 'active'
+                    message = f'✅ Healthy: {searches_remaining}/{monthly_quota} available ({usage_percentage:.0f}% used)'
+                
+                logger.info(f"✅ Status: {message}")
+                logger.info("=" * 80)
+                
+                # Return following TravelRover API format with VERIFIED LIVE data
+                return {
+                    'service': 'serpapi',
+                    'status': status,
+                    'health': health,
+                    'message': message,
+                    'usage': {
+                        'used': searches_used,           # ✅ LIVE from 'total_searches_this_month'
+                        'remaining': searches_remaining,  # ✅ LIVE from 'plan_searches_left'
+                        'total': monthly_quota,
+                        'percentage': round(usage_percentage, 1)
+                    },
+                    'limits': {
+                        'monthly_quota': monthly_quota,
+                        'rate_limit': '100 queries/hour',
+                        'reset_date': next_reset,
+                        'plan': plan_name,
+                        'plan_id': plan_id,
+                        'resets_monthly': True,
+                        'quota_source': 'free_plan_standard',
+                        'cache_busted': True
+                    },
+                    'account_info': {
+                        'account_id': account_id,
+                        'account_email': account_email,
+                        'api_key_valid': api_key_valid
+                    },
+                    'last_checked': timezone.now().isoformat(),
+                    'data_source': 'live_serpapi_api',
+                    'cache_buster_token': cache_buster,
+                    'fetch_timestamp': datetime.now().isoformat()  # ✅ Proof of freshness
+                }
+    
+        except aiohttp.ClientError as e:
+            logger.error(f"❌ Network error: {str(e)}")
             return {
                 'service': 'serpapi',
-                'status': 'active',
-                'health': 'healthy',
-                'message': '✅ API key working - Usage monitoring temporarily unavailable',
-                'usage': {'note': 'Check SerpAPI dashboard for detailed usage'},
+                'status': 'connection_error',
+                'health': 'error',
+                'message': '❌ Network error: Cannot reach SerpAPI',
+                'error': str(e),
+                'usage': None,
+                'limits': {'monthly_quota': 250},
+                'last_checked': timezone.now().isoformat()
+            }
+        
+        except asyncio.TimeoutError:
+            logger.error("❌ Timeout after 15 seconds")
+            return {
+                'service': 'serpapi',
+                'status': 'timeout',
+                'health': 'warning',
+                'message': '⚠️ Request timed out (15s)',
+                'error': 'Timeout',
+                'usage': None,
+                'limits': {'monthly_quota': 250},
+                'last_checked': timezone.now().isoformat()
+            }
+        
+        except Exception as e:
+            logger.error(f"❌ Unexpected error: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            
+            return {
+                'service': 'serpapi',
+                'status': 'monitoring_error',
+                'health': 'error',
+                'message': f'⚠️ Error: {type(e).__name__}',
+                'error': str(e),
+                'usage': None,
+                'limits': {'monthly_quota': 250},
                 'last_checked': timezone.now().isoformat()
             }
     
