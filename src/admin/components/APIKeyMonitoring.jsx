@@ -447,6 +447,134 @@ const APIKeyMonitoring = () => {
                 🕐 Last checked:{" "}
                 {new Date(keyData.last_checked).toLocaleString()}
               </div>
+
+              {/* Enhanced SerpAPI Specific Display */}
+              {service === "serpapi" && keyData.usage && (
+                <div className="space-y-4">
+                  {/* Usage Progress Bar */}
+                  {keyData.usage.percentage !== undefined && (
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          Monthly Quota Usage
+                        </span>
+                        <span className="text-sm font-semibold text-gray-800">
+                          {keyData.usage.percentage}%
+                        </span>
+                      </div>
+
+                      <Progress
+                        value={keyData.usage.percentage}
+                        className={`mb-3 h-3 ${
+                          keyData.usage.percentage >= 95
+                            ? "[&>div]:bg-red-500"
+                            : keyData.usage.percentage >= 80
+                            ? "[&>div]:bg-yellow-500"
+                            : "[&>div]:bg-green-500"
+                        }`}
+                      />
+
+                      {/* Detailed Usage Stats */}
+                      <div className="grid grid-cols-3 gap-3 text-sm">
+                        <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="text-xs text-gray-600 mb-1">Used</div>
+                          <div className="font-bold text-blue-700 text-lg">
+                            {keyData.usage.used?.toLocaleString() || 0}
+                          </div>
+                        </div>
+
+                        <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
+                          <div className="text-xs text-gray-600 mb-1">
+                            Remaining
+                          </div>
+                          <div className="font-bold text-green-700 text-lg">
+                            {keyData.usage.remaining?.toLocaleString() || 0}
+                          </div>
+                        </div>
+
+                        <div className="text-center p-3 bg-purple-50 rounded-lg border border-purple-200">
+                          <div className="text-xs text-gray-600 mb-1">
+                            Total
+                          </div>
+                          <div className="font-bold text-purple-700 text-lg">
+                            {keyData.usage.total?.toLocaleString() || 250}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Monthly Reset Info */}
+                  {keyData.limits?.reset_date && (
+                    <div className="p-3 bg-gradient-to-r from-sky-50 to-blue-50 rounded-lg border border-sky-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FaSync className="text-sky-600" />
+                          <span className="text-sm font-medium text-gray-700">
+                            Quota Resets On:
+                          </span>
+                        </div>
+                        <span className="text-sm font-bold text-sky-700">
+                          {new Date(
+                            keyData.limits.reset_date
+                          ).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 mt-2">
+                        ✅ Full quota ({keyData.limits.monthly_quota} searches)
+                        restored monthly
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Account Info */}
+                  {keyData.account_info && (
+                    <div className="border-t pt-3 space-y-2 text-sm">
+                      {keyData.account_info.account_email && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Account:</span>
+                          <span className="font-medium text-gray-800">
+                            {keyData.account_info.account_email}
+                          </span>
+                        </div>
+                      )}
+                      {keyData.limits?.plan && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Plan:</span>
+                          <span className="font-medium text-gray-800">
+                            {keyData.limits.plan}
+                          </span>
+                        </div>
+                      )}
+                      {keyData.limits?.rate_limit && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Rate Limit:</span>
+                          <span className="font-medium text-gray-800">
+                            {keyData.limits.rate_limit}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Dashboard Link */}
+                  <Button
+                    onClick={() =>
+                      window.open("https://serpapi.com/dashboard", "_blank")
+                    }
+                    variant="outline"
+                    size="sm"
+                    className="w-full flex items-center justify-center gap-2 border-sky-500 text-sky-700 hover:bg-sky-50"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    View SerpAPI Dashboard
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
