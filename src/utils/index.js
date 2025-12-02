@@ -41,6 +41,15 @@ export * from './productionLogger';
 // Budget Calculator (calculateTotalBudget, getBudgetCategory - formatCurrency now from formatters.js)
 export * from './budgetCalculator';
 
+// Budget Diagnostics (runBudgetDiagnostics, quickBudgetCheck, compareRealVsAIPricing)
+export * from './budgetDiagnostics';
+
+// Hotel Booking Diagnostics (runHotelBookingDiagnostics, validateHotelBooking, testAgodaURL)
+export * from './hotelBookingDiagnostics';
+
+// Hotel Quality Filter (filterHotelsByQuality, getHotelQualityTier, QUALITY_TIERS)
+export * from './hotelQualityFilter';
+
 // Network Status (isOnline, checkFirebaseConnectivity, etc.)
 export * from './networkStatus';
 

@@ -24,7 +24,7 @@ const shimmerKeyframes = `
   }
 `;
 
-// Base step definitions - will be filtered based on user preferences and transport mode
+// Base step definitions - will be filtered based on user preferences
 const ALL_STEPS = [
   {
     id: "start",
@@ -35,10 +35,10 @@ const ALL_STEPS = [
   },
   {
     id: "transport",
-    label: "Transport Analysis",
+    label: "Planning Route",
     icon: FaCompass,
     color: "from-purple-500 to-indigo-500",
-    required: true, // ✅ ALWAYS show transport analysis step (determines ground vs. air)
+    required: true, // ✅ ALWAYS show - determines optimal travel method
   },
   {
     id: "langgraph",
@@ -54,14 +54,6 @@ const ALL_STEPS = [
     color: "from-sky-500 to-blue-500",
     condition: (props) =>
       props.includeFlights && !props.groundTransportPreferred, // Only if flights needed
-  },
-  {
-    id: "ground",
-    label: "Ground Route",
-    icon: FaCompass,
-    color: "from-emerald-500 to-green-500",
-    condition: (props) =>
-      props.includeFlights && props.groundTransportPreferred, // Only if ground preferred
   },
   {
     id: "hotels",
@@ -121,7 +113,7 @@ function deriveProgress({
 
   const completed = ["start"];
 
-  // ✅ Transport analysis is complete when langGraph finishes (it runs transport mode internally)
+  // ✅ Route planning completes when langGraph finishes (determines optimal travel method)
   if (doneLang && activeSteps.some((s) => s.id === "transport")) {
     completed.push("transport");
   }
@@ -129,15 +121,6 @@ function deriveProgress({
   // Only add langgraph if it's in active steps (flights or hotels requested)
   if (doneLang && activeSteps.some((s) => s.id === "langgraph")) {
     completed.push("langgraph");
-  }
-
-  // Only add ground transport step if ground is preferred and complete
-  if (
-    groundTransportPreferred &&
-    doneLang &&
-    activeSteps.some((s) => s.id === "ground")
-  ) {
-    completed.push("ground");
   }
 
   // Only add flights if user requested them, not ground preferred, and they're done
@@ -165,7 +148,9 @@ function deriveProgress({
     (!includeHotels || doneHotels) &&
     ((!includeFlights && !includeHotels) || doneLang);
 
-  if (allRequestedServicesDone) {
+  // ✅ FIX: Itinerary step is IN PROGRESS when loading is true and services are done
+  // Mark itinerary as completed only when loading is false (AI generation finished)
+  if (allRequestedServicesDone && !loading) {
     completed.push("itinerary");
 
     // 🆕 NEW: Add validation step tracking
@@ -173,7 +158,7 @@ function deriveProgress({
       completed.push("validation");
     }
 
-    if (!loading && validationPhase === "saving") {
+    if (validationPhase === "saving") {
       completed.push("finalize");
     }
   }
@@ -572,70 +557,80 @@ function TripGenerationModal({
                         </div>
                         <div>
                           <h4 className="font-semibold text-sky-900 dark:text-sky-300 text-sm mb-1">
-                            Building Your Itinerary
+                            Creating Your Itinerary
                           </h4>
                           <p className="text-sky-800 dark:text-sky-400/80 text-xs leading-snug">
-                            AI-powered analysis to create your perfect
-                            day-by-day plan.
+                            AI-powered planning with optimized scheduling and
+                            routes.
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    {/* 🔧 Smart Transport Mode Info - Conditional based on transport analysis */}
-                    {groundTransportPreferred &&
-                    transportAnalysis?.groundTransport ? (
-                      <div className="bg-emerald-50 dark:bg-emerald-950/30 border-l-4 border-emerald-400 dark:border-emerald-600 rounded-lg p-4">
+                    {/* ✅ ENHANCED: Single Smart Travel Method Info - Context-aware & simplified */}
+                    {(includeFlights || groundTransportPreferred) && (
+                      <div
+                        className={`${
+                          groundTransportPreferred
+                            ? "bg-emerald-50 dark:bg-emerald-950/30 border-l-4 border-emerald-400 dark:border-emerald-600"
+                            : "bg-sky-50 dark:bg-sky-950/30 border-l-4 border-sky-400 dark:border-sky-600"
+                        } rounded-lg p-4`}
+                      >
                         <div className="flex gap-3">
                           <div className="flex-shrink-0 pt-0.5 text-lg">
-                            {transportAnalysis?.groundTransport?.hasFerry ? (
-                              "⛴️"
+                            {groundTransportPreferred ? (
+                              transportAnalysis?.groundTransport?.hasFerry ? (
+                                "⛴️"
+                              ) : (
+                                <FaBus
+                                  className={`${
+                                    groundTransportPreferred
+                                      ? "text-emerald-600 dark:text-emerald-400"
+                                      : "text-sky-600 dark:text-sky-400"
+                                  } text-sm`}
+                                />
+                              )
                             ) : (
-                              <FaBus className="text-emerald-600 dark:text-emerald-400 text-sm" />
+                              <FaPlane
+                                className={
+                                  "text-sky-600 dark:text-sky-400 text-sm"
+                                }
+                              />
                             )}
                           </div>
                           <div>
-                            <h4 className="font-semibold text-emerald-900 dark:text-emerald-300 text-sm mb-1">
-                              {transportAnalysis?.groundTransport?.hasFerry
-                                ? "Ferry Route Selected"
-                                : "Ground Transport Route Selected"}
+                            <h4
+                              className={`font-semibold ${
+                                groundTransportPreferred
+                                  ? "text-emerald-900 dark:text-emerald-300"
+                                  : "text-sky-900 dark:text-sky-300"
+                              } text-sm mb-1`}
+                            >
+                              {groundTransportPreferred
+                                ? transportAnalysis?.groundTransport?.hasFerry
+                                  ? "Booking Ferry Route"
+                                  : "Planning Ground Transportation"
+                                : "Searching Flights"}
                             </h4>
-                            <p className="text-emerald-800 dark:text-emerald-400/80 text-xs leading-snug">
-                              {transportAnalysis.hasAirport === false
-                                ? `${
-                                    destination.split(",")[0]
-                                  } has no direct airport. Using ${
-                                    transportAnalysis?.groundTransport?.hasFerry
-                                      ? "ferry"
-                                      : "ground transport"
-                                  } instead.`
-                                : `${
-                                    transportAnalysis?.groundTransport?.hasFerry
-                                      ? "Ferry"
-                                      : "Ground transport"
-                                  } is more practical for this route.`}
+                            <p
+                              className={`${
+                                groundTransportPreferred
+                                  ? "text-emerald-800 dark:text-emerald-400/80"
+                                  : "text-sky-800 dark:text-sky-400/80"
+                              } text-xs leading-snug`}
+                            >
+                              {groundTransportPreferred
+                                ? transportAnalysis?.hasAirport === false
+                                  ? `Best option for reaching ${
+                                      destination.split(",")[0]
+                                    }.`
+                                  : "Most practical route for your journey."
+                                : "Finding available flights for your travel dates."}
                             </p>
                           </div>
                         </div>
                       </div>
-                    ) : includeFlights ? (
-                      <div className="bg-sky-50 dark:bg-sky-950/30 border-l-4 border-sky-400 dark:border-sky-600 rounded-lg p-4">
-                        <div className="flex gap-3">
-                          <div className="flex-shrink-0 pt-0.5">
-                            <FaPlane className="text-sky-600 dark:text-sky-400 text-sm" />
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-sky-900 dark:text-sky-300 text-sm mb-1">
-                              Flight Search in Progress
-                            </h4>
-                            <p className="text-sky-800 dark:text-sky-400/80 text-xs leading-snug">
-                              Searching for available flights and best prices
-                              for your travel dates.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
+                    )}
 
                     {/* Smart Itinerary Planning Info */}
                     <div className="bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-lg p-4">
@@ -645,24 +640,12 @@ function TripGenerationModal({
                         </div>
                         <div>
                           <h4 className="font-semibold text-blue-900 dark:text-blue-300 text-sm mb-1">
-                            Intelligent Scheduling
+                            Smart Scheduling
                           </h4>
-                          <ul className="text-blue-800 dark:text-blue-400/80 text-xs space-y-1 leading-snug">
-                            <li className="flex items-start gap-2">
-                              <span className="text-blue-600 dark:text-blue-500 flex-shrink-0">
-                                •
-                              </span>
-                              <span>
-                                Smart pacing: Light arrivals, early departures
-                              </span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                              <span className="text-blue-600 dark:text-blue-500 flex-shrink-0">
-                                •
-                              </span>
-                              <span>Optimized routes between locations</span>
-                            </li>
-                          </ul>
+                          <p className="text-blue-800 dark:text-blue-400/80 text-xs leading-snug">
+                            Balanced pacing with optimized routes between
+                            locations.
+                          </p>
                         </div>
                       </div>
                     </div>

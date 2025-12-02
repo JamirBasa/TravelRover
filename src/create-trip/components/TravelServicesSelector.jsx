@@ -146,6 +146,12 @@ const TravelServicesSelector = ({
 
   const flightRecommendation = useMemo(() => {
     if (!flightData.includeFlights) return null;
+
+    // ✅ WAIT for airport data before showing recommendation to prevent "unable to determine" flash
+    if (!airportInfo && flightData.departureCity && formData?.location) {
+      return { type: "loading", message: null }; // Silent loading state
+    }
+
     return getFlightRecommendationMessage({
       departureCity: flightData.departureCity,
       destination: formData?.location,
@@ -160,7 +166,7 @@ const TravelServicesSelector = ({
     formData?.location,
     formData?.startDate,
     formData?.endDate,
-    airportInfo?.destination?.code,
+    airportInfo, // ✅ Include full airportInfo object to track loading state
   ]);
 
   const destinationAirportStatus = useMemo(() => {
@@ -672,9 +678,22 @@ const TravelServicesSelector = ({
                   </div>
                 )}
 
+              {/* ✅ Loading Skeleton for Airport Lookup */}
+              {!airportInfo &&
+                flightData.departureCity &&
+                formData?.location && (
+                  <div className="p-2.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 animate-pulse">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-gray-300 dark:bg-slate-600"></div>
+                      <div className="h-3 bg-gray-300 dark:bg-slate-600 rounded w-48"></div>
+                    </div>
+                  </div>
+                )}
+
               {/* Flight Recommendation Alert */}
               {flightRecommendation &&
                 flightRecommendation.type !== "optimal" &&
+                flightRecommendation.type !== "loading" &&
                 !transportAnalysis?.groundTransport?.preferred &&
                 !transportAnalysis?.groundTransport?.available && (
                   <div

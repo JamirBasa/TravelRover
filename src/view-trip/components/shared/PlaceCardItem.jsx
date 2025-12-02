@@ -8,6 +8,85 @@ import { logDebug, logError } from "@/utils/productionLogger";
 // ✅ Import optimized Google Places query builder
 import { buildGooglePlacesQuery } from "@/utils/googlePlacesQueryBuilder";
 
+// ✅ Import activity classifier for logistics detection
+import { isLogisticsItem } from "@/utils/activityClassifier";
+
+/**
+ * Simplify logistics activity text for better user experience
+ * Reduces redundancy and makes hotel-related activities clearer
+ */
+function simplifyLogisticsText(placeName) {
+  if (!placeName) return placeName;
+
+  const lower = placeName.toLowerCase();
+
+  // Meals at hotel - Keep simple but clear
+  if (
+    (lower.includes("breakfast") ||
+      lower.includes("lunch") ||
+      lower.includes("dinner")) &&
+    (lower.includes("hotel") ||
+      lower.includes("homestay") ||
+      lower.includes("resort") ||
+      lower.includes("inn") ||
+      lower.includes("lodge"))
+  ) {
+    const meal = lower.includes("breakfast")
+      ? "Breakfast"
+      : lower.includes("lunch")
+      ? "Lunch"
+      : "Dinner";
+    return `🍽️ ${meal} at hotel`;
+  }
+
+  // Return to hotel - Change to "Evening at hotel" to be less redundant
+  if (
+    lower.includes("return to") &&
+    (lower.includes("hotel") ||
+      lower.includes("homestay") ||
+      lower.includes("resort") ||
+      lower.includes("inn") ||
+      lower.includes("lodge"))
+  ) {
+    return "🌙 Evening at hotel";
+  }
+
+  // Back to hotel
+  if (
+    lower.includes("back to") &&
+    (lower.includes("hotel") ||
+      lower.includes("homestay") ||
+      lower.includes("resort") ||
+      lower.includes("inn") ||
+      lower.includes("lodge"))
+  ) {
+    return "🌙 Evening at hotel";
+  }
+
+  // Rest/Relax at hotel
+  if (
+    (lower.includes("rest") || lower.includes("relax")) &&
+    (lower.includes("hotel") ||
+      lower.includes("homestay") ||
+      lower.includes("resort") ||
+      lower.includes("inn") ||
+      lower.includes("lodge"))
+  ) {
+    return "😴 Rest at hotel";
+  }
+
+  // Check-out - Generic
+  if (
+    lower.includes("check-out") ||
+    lower.includes("check out") ||
+    lower.includes("checkout")
+  ) {
+    return "👋 Check-out from hotel";
+  }
+
+  return placeName;
+}
+
 function PlaceCardItem({ place, trip }) {
   const [photoUrl, setPhotoUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -145,8 +224,17 @@ function PlaceCardItem({ place, trip }) {
   }, [GetPlacePhoto, place?.placeName, place?.activity]);
 
   // Get the correct property names from the data
-  const placeName = place?.placeName || place?.activity || "Unknown Place";
+  const rawPlaceName = place?.placeName || place?.activity || "Unknown Place";
   const placeDetails = place?.placeDetails || place?.description || "";
+
+  // ✅ Detect if this is a logistics item
+  const isLogistics = isLogisticsItem(place);
+
+  // ✅ Simplify logistics text for better UX
+  const placeName = isLogistics
+    ? simplifyLogisticsText(rawPlaceName)
+    : rawPlaceName;
+
   // Generate Google Maps URL with proper place query for directions
   const generateMapsURL = () => {
     const coordinates = place?.geoCoordinates;
@@ -175,7 +263,13 @@ function PlaceCardItem({ place, trip }) {
 
   return (
     <Link to={generateMapsURL()} target="_blank" className="block group h-full">
-      <div className="bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden hover:shadow-xl hover:border-sky-400 dark:hover:border-sky-500 transition-all duration-300 h-full flex flex-col">
+      <div
+        className={`rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 h-full flex flex-col ${
+          isLogistics
+            ? "bg-gray-50 dark:bg-slate-800/50 border-2 border-dashed border-gray-300 dark:border-slate-600 hover:border-gray-400 dark:hover:border-slate-500 opacity-90"
+            : "bg-white dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 hover:border-sky-400 dark:hover:border-sky-500"
+        }`}
+      >
         {/* Place Image - Full width at top */}
         <div className="w-full h-48 flex-shrink-0 overflow-hidden">
           {isLoading ? (
@@ -206,9 +300,20 @@ function PlaceCardItem({ place, trip }) {
         {/* Content Area */}
         <div className="p-5 flex-1 flex flex-col">
           {/* Title */}
-          <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg leading-tight group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors line-clamp-2 mb-3">
-            {placeName}
-          </h3>
+          <div className="mb-3">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg leading-tight group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors line-clamp-2">
+              {placeName}
+            </h3>
+            {isLogistics && (
+              <span
+                className="inline-flex items-center gap-1 mt-1.5 text-xs px-2 py-0.5 bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-400 rounded-full font-medium"
+                title="Included in itinerary (meals, rest, and check-in/out)"
+              >
+                <span className="text-[10px]">✓</span>
+                <span>Included</span>
+              </span>
+            )}
+          </div>
 
           {/* Description */}
           {placeDetails && (
@@ -226,7 +331,7 @@ function PlaceCardItem({ place, trip }) {
               </span>
             )}
 
-            {place?.timeTravel && (
+            {place?.timeTravel && !isLogistics && (
               <span className="inline-flex items-center gap-1.5 bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-md text-xs font-semibold border border-orange-200 dark:border-orange-800">
                 <span>⏰</span>
                 <span>{place.timeTravel}</span>

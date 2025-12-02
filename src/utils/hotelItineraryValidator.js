@@ -104,6 +104,7 @@ function detectGenericReferences(text) {
 /**
  * Validates that Day 1 check-in hotel matches the first hotel in recommendations
  * Enhanced to validate ALL hotel references across all days
+ * ✅ NEW: Also validates that hotel names in itinerary match hotels in the hotels array
  * @param {Object} tripData - The complete trip data object
  * @returns {Object} Validation result with auto-fixes
  */
@@ -125,6 +126,10 @@ export function validateHotelItineraryConsistency(tripData) {
       result.issues.push('No hotels found in trip data');
       return result;
     }
+
+    // ✅ NEW: Extract all valid hotel names from hotels array
+    const validHotelNames = (tripData?.hotels || []).map(h => h.name?.toLowerCase().trim()).filter(Boolean);
+    console.log('🏨 Valid hotel names:', validHotelNames);
 
     // Extract itinerary
     const itinerary = tripData?.itinerary || [];
@@ -150,7 +155,29 @@ export function validateHotelItineraryConsistency(tripData) {
         const placeNameIssues = detectGenericReferences(placeName);
         const placeDetailsIssues = detectGenericReferences(placeDetails);
 
-        if (placeNameIssues.length > 0 || placeDetailsIssues.length > 0) {
+        // ✅ NEW: Check if placeName contains hotel check-in but uses wrong hotel name
+        const isCheckIn = /check-in\s+at\s+(.+?)(?:\s|$)/i.test(placeName);
+        let hasWrongHotelName = false;
+        
+        if (isCheckIn && dayIndex === 0) { // Day 1 check-in
+          const match = placeName.match(/check-in\s+at\s+(.+?)(?:\s*\(|$)/i);
+          if (match) {
+            const itineraryHotelName = match[1].trim().toLowerCase();
+            // Check if this hotel name is in the valid hotels list
+            const isValidHotel = validHotelNames.some(validName => 
+              validName === itineraryHotelName || 
+              itineraryHotelName.includes(validName) ||
+              validName.includes(itineraryHotelName)
+            );
+            
+            if (!isValidHotel) {
+              hasWrongHotelName = true;
+              console.warn(`⚠️ Day ${dayIndex + 1}: Found wrong hotel name "${match[1]}" (expected "${hotelName}")`);
+            }
+          }
+        }
+
+        if (placeNameIssues.length > 0 || placeDetailsIssues.length > 0 || hasWrongHotelName) {
           result.isValid = false;
           hasChanges = true;
 
@@ -158,8 +185,14 @@ export function validateHotelItineraryConsistency(tripData) {
           const originalPlaceDetails = placeDetails;
 
           // Auto-fix
-          correctedItinerary[dayIndex].plan[actIndex].placeName = 
-            replaceGenericReferences(placeName, hotelName);
+          let fixedPlaceName = replaceGenericReferences(placeName, hotelName);
+          
+          // ✅ NEW: Fix wrong hotel name in check-in activity
+          if (hasWrongHotelName) {
+            fixedPlaceName = fixedPlaceName.replace(/check-in\s+at\s+.+?(?=\s*\(|$)/i, `Check-in at ${hotelName}`);
+          }
+          
+          correctedItinerary[dayIndex].plan[actIndex].placeName = fixedPlaceName;
           correctedItinerary[dayIndex].plan[actIndex].placeDetails = 
             replaceGenericReferences(placeDetails, hotelName);
 
@@ -169,13 +202,15 @@ export function validateHotelItineraryConsistency(tripData) {
             correctedPlaceName: correctedItinerary[dayIndex].plan[actIndex].placeName,
             originalPlaceDetails,
             correctedPlaceDetails: correctedItinerary[dayIndex].plan[actIndex].placeDetails,
+            wrongHotelName: hasWrongHotelName,
           };
 
           dayIssues.push(issue);
           result.totalIssues++;
 
+          const fixType = hasWrongHotelName ? 'FIX_WRONG_HOTEL_NAME' : 'FIX_GENERIC_HOTEL_REFERENCE';
           result.fixes.push({
-            type: 'FIX_GENERIC_HOTEL_REFERENCE',
+            type: fixType,
             day: dayIndex + 1,
             activity: actIndex + 1,
             message: `Updated "${originalPlaceName}" to "${correctedItinerary[dayIndex].plan[actIndex].placeName}"`,

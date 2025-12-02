@@ -9,6 +9,8 @@
  * - Removed explanatory prose (AI doesn't need reasoning)
  */
 
+import { TRIP_DURATION } from "./tripDurationLimits";
+
 export const AI_PROMPT_OPTIMIZED = `Generate travel itinerary JSON for {location}, {duration}, {travelers}, {budget}.
 
 🎯 CRITICAL CONSTRAINTS
@@ -68,9 +70,21 @@ export const AI_PROMPT_OPTIMIZED = `Generate travel itinerary JSON for {location
    • Set "withinBudget": false only if grandTotal > {budgetAmount} * 1.15 (triggers regeneration)
 
 7. REQUIRED ITINERARY ELEMENTS
-   • Arrival: "Arrival at [Airport Name]", "Check-in at [Hotel Name]", "Rest".
+   • Arrival Day Structure (choose based on transport mode):
+     
+     FOR DIRECT FLIGHTS:
+     - "Arrival at [Destination Airport]"
+     - "Check-in at [Hotel Name]"
+     - "Rest" or 1-2 activities if time permits
+     
+     FOR REROUTED FLIGHTS (destination has no airport):
+     - "Arrival at [Alternative Airport]" (₱0 - flight booked separately)
+     - "[Bus/Van] from [Airport] to [Destination]" (₱X-Y per person, Z hours) ← SEPARATE ACTIVITY
+     - "Arrival in [Destination]" or "Check-in at [Hotel Name]"
+     
    • Departure: "Check-out from [Hotel Name]", "Departure to [Airport Name]".
    • Meals: Include breakfast, lunch, dinner with cost estimates.
+   • Ground Transport: MUST be separate activity with ticketPricing field for budget tracking.
    
 🏨 CRITICAL: DAY 1 HOTEL CHECK-IN
    • Day 1 check-in MUST use the name of the FIRST hotel in the 'hotels' array.
@@ -144,6 +158,7 @@ const getTravelStyleInfluence = (travelStyle) => {
 /**
  * CONDENSED FLIGHT SUMMARY
  * Replaces verbose flight section (600 tokens → 100 tokens)
+ * ✅ ENHANCED: Now includes arrival airport information for accurate Day 1 itinerary
  */
 export const buildFlightSummary = (flightRecommendations) => {
   if (
@@ -156,6 +171,47 @@ export const buildFlightSummary = (flightRecommendations) => {
   const flights = flightRecommendations.flights.slice(0, 3);
   const recommendedFlight = flights[0]; // Primary recommendation
 
+  // ✅ Extract arrival airport code and name (prioritize reroute_info if available)
+  let arrivalAirportCode, arrivalAirportName, departureAirportCode;
+
+  if (flightRecommendations.rerouted && flightRecommendations.reroute_info) {
+    // Use reroute_info for alternative airport details
+    arrivalAirportCode = flightRecommendations.reroute_info.alternative_airport;
+    arrivalAirportName = flightRecommendations.reroute_info.alternative_name;
+    departureAirportCode =
+      recommendedFlight.departure_airport ||
+      recommendedFlight.departureAirport ||
+      "origin";
+  } else {
+    // Use flight object data
+    arrivalAirportCode =
+      recommendedFlight.arrival_airport ||
+      recommendedFlight.arrivalAirport ||
+      "destination";
+    departureAirportCode =
+      recommendedFlight.departure_airport ||
+      recommendedFlight.departureAirport ||
+      "origin";
+    arrivalAirportName = arrivalAirportCode;
+  }
+
+  // Get full airport name from code (if not already set by reroute_info)
+  if (!arrivalAirportName || arrivalAirportName === arrivalAirportCode) {
+    try {
+      // Import getAirportByCode if available
+      const { getAirportByCode } = require("@/data/airports");
+      const airportData = getAirportByCode(arrivalAirportCode);
+      if (airportData) {
+        arrivalAirportName = `${airportData.name} (${arrivalAirportCode})`;
+      } else {
+        arrivalAirportName = arrivalAirportCode;
+      }
+    } catch (e) {
+      // Fallback to code only if import fails
+      arrivalAirportName = arrivalAirportCode;
+    }
+  }
+
   const flightLines = flights.map((f, index) => {
     const prefix = index === 0 ? "⭐ RECOMMENDED:" : "  Alt:";
     return `${prefix} ${f.airline} (${f.flightNumber || "TBD"}) | ₱${
@@ -163,23 +219,34 @@ export const buildFlightSummary = (flightRecommendations) => {
     } | ${f.departureTime} → ${f.arrivalTime} | ${f.stops || "Non-stop"}`;
   });
 
-  return `✈️ FLIGHTS (from ${flightRecommendations.departureCity || "origin"}):
-${flightLines.join("\n")}
+  // Build reroute context if applicable
+  let rerouteNote = "";
+  if (flightRecommendations.rerouted && flightRecommendations.reroute_info) {
+    const ri = flightRecommendations.reroute_info;
+    rerouteNote = `\n\n🚌 REROUTE NOTE: ${
+      ri.original_destination
+    } has no direct flights. Passengers arrive at ${arrivalAirportName}, then take ${
+      ri.ground_transport?.mode || "bus"
+    } to ${ri.original_destination} (${
+      ri.ground_transport?.travel_time || "travel time varies"
+    }).`;
+  }
 
-🚨 CRITICAL FLIGHT RULES:
+  return `✈️ FLIGHTS (${departureAirportCode} → ${arrivalAirportCode}):
+${flightLines.join("\n")}${rerouteNote}
+
+🚨 CRITICAL FLIGHT & ARRIVAL RULES:
 1. ALWAYS use the RECOMMENDED flight: "${recommendedFlight.airline} (${
     recommendedFlight.flightNumber || "Flight " + recommendedFlight.airline
   })"
-2. NEVER write generic references like "Flight to ${
-    flightRecommendations.destinationCity || "destination"
-  }"
-3. CORRECT format: "Departure: ${recommendedFlight.airline} (${
+2. 🎯 ARRIVAL AIRPORT: Day 1 MUST show "Arrival at ${arrivalAirportName}"
+3. ⚠️ NEVER use departure airport (${departureAirportCode}) for arrival activity - flights land at ${arrivalAirportCode}!
+4. For rerouted trips: Create THREE activities (Arrival at ${arrivalAirportCode} → Ground transport → Check-in)
+5. CORRECT format: "Departure: ${recommendedFlight.airline} (${
     recommendedFlight.flightNumber || "PR123"
   }) - ${recommendedFlight.departureTime}"
-4. WRONG format: "Flight to ${
-    flightRecommendations.destinationCity || "city"
-  }" or "Depart via commercial airline"
-5. For return flights, use the same airline: "${
+6. WRONG format: "Flight to destination" or "Depart via commercial airline"
+7. For return flights, use the same airline: "${
     recommendedFlight.airline
   } (return flight)"`;
 };
@@ -211,38 +278,50 @@ export const buildHotelSummary = (hotelRecommendations, budgetLevel) => {
 
   const tier = BUDGET_TIER_CONFIG[budgetLevel] || BUDGET_TIER_CONFIG[3];
 
-  const hotels = hotelRecommendations.hotels.slice(0, 3);
-  const primaryHotel = hotels[0]; // PRIMARY check-in hotel
+  // ✅ CRITICAL FIX: ONLY show PRIMARY hotel to AI (hotels[0])
+  // Showing multiple hotels causes AI to hallucinate and mention wrong hotels
+  // User will see 3-5 hotel options AFTER generation, but AI should only use ONE
+  const primaryHotel = hotelRecommendations.hotels[0]; // ONLY hotel AI knows about
 
-  const hotelLines = hotels.map((h, index) => {
-    const prefix =
-      index === 0 ? "⭐ PRIMARY (Use for Day 1 check-in):" : "  Alt:";
-    return `${prefix} ${h.name} • ₱${h.price || "N/A"}/night • ${
-      h.location || ""
-    }`;
-  });
-
-  return `🏨 HOTELS - User's Selected Budget Tier: ${
+  return `🏨 HOTEL ASSIGNMENT - User's Selected Budget Tier: ${
     tier.label
   } (₱${tier.min.toLocaleString()}-${tier.max.toLocaleString()}/night)
-${hotelLines.join("\n")}
+
+⭐ YOUR ASSIGNED HOTEL (Use for ALL activities):
+Name: ${primaryHotel.name}
+Price: ₱${primaryHotel.price || "N/A"}/night
+Location: ${primaryHotel.location || ""}
 
 🚨 CRITICAL HOTEL RULES:
-1. ⚠️ STRICT BUDGET ENFORCEMENT: ONLY generate hotels within ${
+1. ⚠️ YOU MUST USE THIS HOTEL ONLY: "${primaryHotel.name}"
+   • This is the ONLY hotel you should mention in the entire itinerary
+   • DO NOT create, invent, or mention ANY other hotel names
+   • DO NOT say "or similar alternatives" or suggest other hotels
+
+2. ⚠️ STRICT BUDGET ENFORCEMENT: ONLY generate hotels within ${
     tier.label
   } tier (₱${tier.min.toLocaleString()}-${tier.max.toLocaleString()}/night)
    • WRONG: Tier 3 (Mid-Range) user but recommending ₱6,000/night hotels (that's Upscale/Tier 4)
    • CORRECT: Tier 3 user = ₱2,500-5,000/night ONLY. NO exceptions.
-2. ALWAYS use the PRIMARY hotel for ALL activities: "${primaryHotel.name}"
-3. NEVER write generic references like "Hotel Check-in" or "Return to hotel"
-4. CORRECT format: "Check-in at ${primaryHotel.name}", "Breakfast at ${
-    primaryHotel.name
-  }", "Return to ${primaryHotel.name}"
-5. WRONG format: "Check-in at hotel", "Hotel breakfast", "Back to accommodation"
-6. Use the exact hotel name "${
-    primaryHotel.name
-  }" in ALL itinerary activities involving the hotel
-7. If no suitable hotels exist in the selected tier, ADJUST the hotel selection or ADD a note to traveler`;
+
+3. ALWAYS use "${primaryHotel.name}" for ALL activities
+   • NEVER write generic references like "Hotel Check-in" or "Return to hotel"
+
+4. CORRECT format examples:
+   • "Check-in at ${primaryHotel.name}"
+   • "Breakfast at ${primaryHotel.name}"
+   • "Return to ${primaryHotel.name}"
+   • "Rest at ${primaryHotel.name}"
+   • "Check-out from ${primaryHotel.name}"
+
+5. WRONG format examples (DO NOT USE):
+   • "Check-in at hotel" ❌
+   • "Hotel breakfast" ❌
+   • "Back to accommodation" ❌
+   • "Check-in at Grand View Hotel" ❌ (if that's not the assigned hotel)
+   • "Stay at Greenfields Inn" ❌ (if that's not the assigned hotel)
+
+6. REMINDER: The ONLY hotel name you should write is "${primaryHotel.name}"`;
 };
 
 /**
@@ -281,17 +360,27 @@ export const buildGroundTransportSummary = (transportMode) => {
   }
 
   // Add critical instructions with proper context
-  summary += `\n\n🚨 CRITICAL: Include ground transport in Day 1 arrival!`;
+  summary += `\n\n🚨 CRITICAL: Add ground transport as SEPARATE ACTIVITY in Day 1!`;
 
   if (transportMode.mode === "ground_preferred") {
-    summary += `\n✅ DIRECT GROUND TRANSPORT: "Travel from [user's origin] to [destination] via ${
-      transportMode.primary_mode || "bus"
-    } (${gt.travel_time}, ₱${gt.cost?.min}-${gt.cost?.max})"`;
+    summary += `\n✅ DIRECT GROUND TRANSPORT: Create TWO activities:`;
+    summary += `\n1. "Departure from [user's origin]" (time based on travel duration)`;
+    summary += `\n2. "${
+      transportMode.primary_mode || "Bus"
+    } to [destination]" - ${gt.travel_time}, ₱${gt.cost?.min}-${
+      gt.cost?.max
+    } per person`;
     summary += `\n(Flight search was SKIPPED - ground transport is preferred for this route)`;
   } else {
-    summary += `\nIF destination lacks direct airport: "Fly to [nearest airport], then ${
-      transportMode.primary_mode || "bus"
-    } to [destination] (${gt.travel_time}, ₱${gt.cost?.min}-${gt.cost?.max})"`;
+    summary += `\n✅ AIRPORT REROUTE: Create THREE activities:`;
+    summary += `\n1. "Arrival at [alternative airport]" (₱0 - flight booked separately)`;
+    summary += `\n2. "${
+      transportMode.primary_mode || "Bus"
+    } from [airport] to [destination]" - ${gt.travel_time}, ticketPricing: "₱${
+      gt.cost?.min
+    }-${gt.cost?.max} per person"`;
+    summary += `\n3. "Check-in at [hotel]" (arrival time = airport arrival + travel time + 30min buffer)`;
+    summary += `\nIMPORTANT: Bus activity MUST have proper ticketPricing field for budget tracking!`;
   }
 
   return summary;
@@ -311,62 +400,30 @@ Activities: Days 1-${dateInfo.totalDays} | Checkout: ${dateInfo.checkoutDate}`;
 /**
  * DURATION-BASED DETAIL LEVEL SYSTEM
  * Prevents MAX_TOKENS errors for long trips
+ * ✅ ENFORCES 7-DAY MAXIMUM (TRIP_DURATION.MAX)
  */
 const getDetailLevelForDuration = (durationDays, budgetAmount) => {
+  // ✅ Enforce maximum duration limit
+  if (durationDays > TRIP_DURATION.MAX) {
+    throw new Error(
+      `Trip duration exceeds maximum of ${TRIP_DURATION.MAX} days. ` +
+        `Please split into shorter trips or reduce duration to ${TRIP_DURATION.MAX} days.`
+    );
+  }
+
   // Calculate daily budget for budget enforcement
   const dailyBudget = budgetAmount
     ? Math.floor(parseInt(budgetAmount.replace(/[₱,]/g, "")) / durationDays)
     : 2000;
 
-  if (durationDays <= 7) {
-    return {
-      level: "FULL",
-      activityCount: "normal", // Use user preference
-      descriptionLimit: 80,
-      instructions: "",
-    };
-  } else if (durationDays <= 14) {
-    return {
-      level: "MODERATE",
-      activityCount: "reduced", // Max 2-3 activities per day
-      descriptionLimit: 60,
-      instructions: `
-⚠️ MODERATE DETAIL MODE (${durationDays} days):
-• Limit to 2-3 key activities per day (ignore activityPreference if > 3)
-• Keep descriptions concise (max 60 characters)
-• Focus on must-see attractions only
-• Combine similar activities when possible
-• BUDGET: Target ₱${dailyBudget.toLocaleString()}/day to stay within total budget`,
-    };
-  } else {
-    return {
-      level: "OVERVIEW",
-      activityCount: "minimal", // Max 1-2 highlights per day
-      descriptionLimit: 40,
-      instructions: `
-🚨 OVERVIEW MODE (${durationDays} days - TOKEN LIMIT PROTECTION):
-• MAXIMUM 1-2 key highlights per day
-• Descriptions: 40 characters max
-• Focus on daily themes, not detailed schedules
-• Example format:
-  Day 1: Arrival + City Center Tour
-  Day 2: Cultural Heritage Sites
-  Day 3: Nature & Hiking
-• Group similar activities: "Historic District Tour (3 sites)" instead of listing each
-• Meals: Just mention "Breakfast/Lunch/Dinner included" without detailed pricing
-• Travel times: Estimate ranges "10-15 min" instead of exact calculations
-
-🚨 CRITICAL BUDGET CONSTRAINT FOR LONG TRIPS:
-• Daily budget target: ₱${dailyBudget.toLocaleString()} (STRICT - do NOT exceed)
-• Prioritize FREE or low-cost activities
-• Use budget accommodations (₱800-1,500/night)
-• Minimize paid attractions - focus on parks, beaches, free viewpoints
-• Transport: Use jeepneys/buses over taxis
-• Meals: Budget eateries (₱150-250/meal per person)
-• If day total exceeds ₱${dailyBudget.toLocaleString()}, CUT activities or use free alternatives
-• CALCULATE grand total and ensure it's BELOW the budget cap`,
-    };
-  }
+  // All trips 1-7 days use FULL detail mode
+  return {
+    level: "FULL",
+    activityCount: "normal", // Use user preference
+    descriptionLimit: 80,
+    instructions: "",
+    dailyBudget,
+  };
 };
 
 /**
@@ -403,19 +460,13 @@ export const buildOptimizedPrompt = ({
     adjustedActivityPreference = "2"; // Force max 2 for long trips
   }
 
-  console.log(`📊 Trip Duration: ${durationDays} days`);
+  console.log(
+    `📊 Trip Duration: ${durationDays} days (MAX: ${TRIP_DURATION.MAX})`
+  );
   console.log(`🎯 Detail Level: ${detailLevel.level}`);
   console.log(
     `🎨 Activity Preference: ${activityPreference} → ${adjustedActivityPreference}`
   );
-  if (durationDays > 14) {
-    const dailyBudget = budgetAmount
-      ? Math.floor(parseInt(budgetAmount.replace(/[₱,]/g, "")) / durationDays)
-      : 2000;
-    console.log(
-      `💰 Daily Budget Target: ₱${dailyBudget.toLocaleString()} (STRICT)`
-    );
-  }
 
   // Get travel style influence text
   const travelStyleInfluence = getTravelStyleInfluence(
@@ -459,16 +510,11 @@ export const buildOptimizedPrompt = ({
     .replace("{activityEndDate}", dateInfo?.activitiesEndDate || "")
     .replace("{checkoutDate}", dateInfo?.checkoutDate || "");
 
-  // ✅ NEW: Add ground transport context if available
+  // Add ground transport context if available
   const groundTransportSummary = buildGroundTransportSummary(transportMode);
   if (groundTransportSummary) {
     prompt += groundTransportSummary;
     console.log("✅ Ground transport context added to prompt");
-  }
-
-  // Add duration-specific instructions
-  if (detailLevel.instructions) {
-    prompt += detailLevel.instructions;
   }
 
   return prompt;

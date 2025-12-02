@@ -30,8 +30,10 @@ function DevMetadata({ trip }) {
         <div className="bg-gray-800 rounded-lg p-3">
           <div className="text-gray-400 mb-1">Real Flights</div>
           <div className="text-gray-200">
-            {trip.hasRealFlights ? (
-              <Badge className="bg-green-600 hover:bg-green-700">✅ Yes</Badge>
+            {trip.hasRealFlights || trip?.realFlightData?.rerouted ? (
+              <Badge className="bg-green-600 hover:bg-green-700">
+                ✅ Yes{trip?.realFlightData?.rerouted ? " (Rerouted)" : ""}
+              </Badge>
             ) : (
               <Badge variant="destructive">❌ No</Badge>
             )}

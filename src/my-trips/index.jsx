@@ -249,41 +249,47 @@ function MyTrips() {
 
         // 3. Hotels
         const hotelMatch =
-          trip.tripData?.tripData?.accommodations?.some(
+          Array.isArray(trip.tripData?.tripData?.accommodations) &&
+          trip.tripData.tripData.accommodations.some(
             (hotel) =>
               containsAnyWord(hotel?.name) ||
               containsAnyWord(hotel?.address) ||
               containsAnyWord(hotel?.description) ||
               containsAnyWord(hotel?.type)
-          ) || false;
+          );
 
         // 4. Activities/Places in itinerary
         const placesMatch =
-          trip.tripData?.tripData?.itinerary?.some((day) =>
-            day?.activities?.some(
-              (activity) =>
-                containsAnyWord(activity?.activity) ||
-                containsAnyWord(activity?.location) ||
-                containsAnyWord(activity?.description) ||
-                containsAnyWord(activity?.placeName) ||
-                containsAnyWord(activity?.placeDetails)
-            )
-          ) || false;
+          Array.isArray(trip.tripData?.tripData?.itinerary) &&
+          trip.tripData.tripData.itinerary.some((day) =>
+            Array.isArray(day?.activities)
+              ? day.activities.some(
+                  (activity) =>
+                    containsAnyWord(activity?.activity) ||
+                    containsAnyWord(activity?.location) ||
+                    containsAnyWord(activity?.description) ||
+                    containsAnyWord(activity?.placeName) ||
+                    containsAnyWord(activity?.placeDetails)
+                )
+              : false
+          );
 
         // 5. Places to visit section
         const attractionsMatch =
-          trip.tripData?.tripData?.placesToVisit?.some(
+          Array.isArray(trip.tripData?.tripData?.placesToVisit) &&
+          trip.tripData.tripData.placesToVisit.some(
             (place) =>
               containsAnyWord(place?.placeName) ||
               containsAnyWord(place?.placeDetails) ||
               containsAnyWord(place?.location)
-          ) || false;
+          );
 
         // 6. Day themes
         const themeMatch =
-          trip.tripData?.tripData?.itinerary?.some((day) =>
+          Array.isArray(trip.tripData?.tripData?.itinerary) &&
+          trip.tripData.tripData.itinerary.some((day) =>
             containsAnyWord(day?.theme)
-          ) || false;
+          );
 
         return (
           titleMatch ||
@@ -316,11 +322,10 @@ function MyTrips() {
           const tripDuration = parseInt(trip.userSelection?.duration);
           switch (filters.duration) {
             case "short":
-              return tripDuration <= 3;
+              return tripDuration <= 3; // 1-3 days
             case "medium":
-              return tripDuration >= 4 && tripDuration <= 7;
-            case "long":
-              return tripDuration > 7;
+              return tripDuration >= 4 && tripDuration <= 7; // 4-7 days (max limit)
+            // ✅ REMOVED: "long" case (> 7 days) - impossible with 7-day maximum
             default:
               return true;
           }

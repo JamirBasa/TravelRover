@@ -14,6 +14,8 @@ import {
 import { logDebug } from "@/utils/productionLogger";
 // ✅ Import budget calculator
 import { calculateTotalBudget } from "@/utils";
+// ✅ Import deduplication utility
+import { cleanItinerary } from "@/utils/itineraryDeduplicator";
 
 // Import existing components from organized folders
 import { InfoSection } from "../shared";
@@ -30,6 +32,26 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
 
   // ✅ Create ref for PlacesToVisit component
   const placesToVisitRef = React.useRef(null);
+
+  // ✅ Create deduplicated itinerary for map component
+  const cleanedItinerary = React.useMemo(() => {
+    if (!trip?.tripData?.itinerary) return [];
+    let parsed = trip.tripData.itinerary;
+    if (typeof parsed === "string") {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch (e) {
+        logDebug("TabbedTripView", "Failed to parse itinerary", { error: e });
+        return [];
+      }
+    }
+    const cleaned = cleanItinerary(Array.isArray(parsed) ? parsed : []);
+    logDebug("TabbedTripView", "Cleaned itinerary for map", {
+      originalDays: Array.isArray(parsed) ? parsed.length : 0,
+      cleanedDays: cleaned.length,
+    });
+    return cleaned;
+  }, [trip?.tripData?.itinerary]);
 
   // ✅ Debug: Log when component mounts
   React.useEffect(() => {
@@ -184,7 +206,7 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
       icon: <Map className="h-5 w-5" />,
       component: (
         <OptimizedRouteMap
-          itinerary={trip?.tripData?.itinerary}
+          itinerary={cleanedItinerary}
           destination={
             trip?.userSelection?.location || trip?.tripData?.destination
           }

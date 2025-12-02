@@ -207,6 +207,7 @@ class FlightSearchView(APIView):
                 'price': formatted_price,              # Display: "₱11,444" (complete round-trip)
                 'price_numeric': price_numeric,        # Raw number: 11444
                 'price_per_person': formatted_price,   # Same as price (already per-person)
+                'price_per_person_numeric': price_numeric,  # ✅ NEW: Numeric per-person price
                 'pricing_note': pricing_label,         # Clear label with trip type
                 'trip_type': trip_type,                # ✅ NEW: 'round-trip' or 'one-way'
                 'is_complete_price': is_round_trip,    # ✅ NEW: True if price includes all legs

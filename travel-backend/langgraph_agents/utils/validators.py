@@ -88,6 +88,22 @@ def validate_trip_params(params: Dict[str, Any]) -> Dict[str, Any]:
     except (ValueError, TypeError) as e:
         raise DataValidationError(f"Travelers must be a valid number (got: {params['travelers']})", field_name='travelers')
     
+    # Validate duration if provided (1-7 days maximum)
+    if 'duration' in params and params['duration']:
+        try:
+            duration = int(params['duration'])
+            if duration < 1 or duration > 7:
+                raise DataValidationError(
+                    "Trip duration must be between 1 and 7 days for optimal planning and budget management",
+                    field_name='duration'
+                )
+            validated_params['duration'] = duration
+        except (ValueError, TypeError):
+            raise DataValidationError(
+                f"Duration must be a valid number between 1 and 7 (got: {params['duration']})",
+                field_name='duration'
+            )
+    
     # Validate dates if provided (using PHT)
     if 'startDate' in params and params['startDate']:
         start_date = parse_date_pht(params['startDate'])

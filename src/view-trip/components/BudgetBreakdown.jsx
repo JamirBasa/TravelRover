@@ -14,6 +14,19 @@ const BudgetBreakdown = ({ tripData }) => {
   const missingPrices = tripData?.missingPrices || [];
   const pricingNotes = tripData?.pricingNotes;
 
+  // 🔍 DIAGNOSTIC: Log trip-level budget data
+  React.useEffect(() => {
+    if (budgetCompliance || dailyCosts.length > 0) {
+      console.group("🔍 Trip-Level Budget Breakdown Data");
+      console.log("Budget Compliance:", budgetCompliance);
+      console.log("Daily Costs:", dailyCosts);
+      console.log("Grand Total:", grandTotal);
+      console.log("Missing Prices:", missingPrices);
+      console.log("Pricing Notes:", pricingNotes);
+      console.groupEnd();
+    }
+  }, [budgetCompliance, dailyCosts, grandTotal, missingPrices, pricingNotes]);
+
   // If no budget data, don't render
   if (!budgetCompliance && !dailyCosts.length) {
     return null;

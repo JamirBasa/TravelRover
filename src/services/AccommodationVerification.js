@@ -211,9 +211,19 @@ export async function verifySingleHotel(hotel) {
       const bestMatch = fuzzyMatches[0];
       const similarity = bestMatch.similarity;
       
-      // console.log(`✅ FUZZY NAME MATCH: ${bestMatch.hotel_name}`);
-      // console.log(`   Similarity: ${(similarity * 100).toFixed(1)}%`);
-      // console.log(`   Database ID: ${bestMatch.hotel_id}`);
+      // ✅ ENHANCED: Log match quality for diagnostics
+      console.log(`🔍 Fuzzy match: "${hotelName}" → "${bestMatch.hotel_name}" (${(similarity * 100).toFixed(1)}% similarity, ID: ${bestMatch.hotel_id})`);
+      
+      // ⚠️ Warning for low-confidence matches
+      if (similarity < 0.75) {
+        console.warn(`⚠️ Low confidence match detected (<75%):`, {
+          searchName: hotelName,
+          matchedName: bestMatch.hotel_name,
+          similarity: `${(similarity * 100).toFixed(1)}%`,
+          hotel_id: bestMatch.hotel_id,
+          recommendation: 'Manual verification recommended'
+        });
+      }
       
       const result = await createSuccessResult(
         bestMatch, 
@@ -224,7 +234,12 @@ export async function verifySingleHotel(hotel) {
       return result;
     }
     
-    // console.log("❌ No name matches found");
+    // ❌ Enhanced logging for failed matches
+    console.error(`❌ No match found for hotel: "${hotelName}"`, {
+      searchedName: hotelName,
+      attemptedId: hotelId || 'none',
+      suggestion: 'Hotel may not exist in database or name mismatch is too large'
+    });
   }
   
   // Strategy 3: Failed - provide diagnostics
@@ -257,11 +272,17 @@ async function createSuccessResult(matchedHotel, originalHotel, score, method) {
       // ✅ Start with original hotel data (but exclude conflicting id fields)
       ...originalHotel,
       
+      // ✅ CRITICAL: Preserve BOTH names to prevent STAY→Star confusion
+      ai_hotel_name: originalHotel.name || originalHotel.hotelName || originalHotel.hotel_name, // Original AI name for display
+      database_hotel_name: matchedHotel.hotel_name, // Database name for reference
+      
       // ✅ CRITICAL: Set the correct Agoda hotel_id from database
       // This MUST come after spread to override any id/hotel_id from originalHotel
       hotel_id: matchedHotel.hotel_id,
-      hotel_name: matchedHotel.hotel_name,
+      hotel_name: matchedHotel.hotel_name, // Database name (might differ from AI name)
       hotelId: matchedHotel.hotel_id, // ✅ Also set camelCase version for compatibility
+      
+      // ✅ IMPORTANT: Keep original AI name for display (don't override with database name)
       name: originalHotel.name || originalHotel.hotelName || matchedHotel.hotel_name,
       hotelName: originalHotel.hotelName || originalHotel.name || matchedHotel.hotel_name,
       
@@ -401,6 +422,9 @@ export function getHotelById(hotelId) {
 export function searchHotelsByName(hotelName) {
   const normalizedSearchName = normalizeString(hotelName);
   
+  console.log(`🔍 Searching hotels for: "${hotelName}"`);
+  console.log(`   Normalized to: "${normalizedSearchName}"`);
+  
   // Search with similarity scoring
   const matches = [];
   
@@ -412,7 +436,8 @@ export function searchHotelsByName(hotelName) {
     if (similarity > 0.65) {
       matches.push({
         ...hotel,
-        similarity: similarity
+        similarity: similarity,
+        normalizedName: normalizedHotelName  // ✅ For debugging
       });
     }
   });
@@ -420,10 +445,24 @@ export function searchHotelsByName(hotelName) {
   // Sort by similarity (highest first)
   matches.sort((a, b) => b.similarity - a.similarity);
   
-  // console.log(`🔍 Found ${matches.length} matches above 65% similarity`);
-  // if (matches.length > 0) {
-  //   console.log(`   Best match: ${matches[0].hotel_name} (${(matches[0].similarity * 100).toFixed(1)}%)`);
-  // }
+  if (matches.length > 0) {
+    const bestMatch = matches[0];
+    console.log(`   ✅ Best match: "${bestMatch.hotel_name}" (${(bestMatch.similarity * 100).toFixed(1)}% similarity)`);
+    console.log(`   Normalized match: "${bestMatch.normalizedName}"`);
+    
+    // ✅ Check if it's now an exact match after normalization
+    if (bestMatch.similarity === 1.0) {
+      console.log(`   🎯 EXACT MATCH achieved through normalization!`);
+    } else if (bestMatch.similarity >= 0.90) {
+      console.log(`   ✓ High confidence match (≥90%)`);
+    } else if (bestMatch.similarity >= 0.85) {
+      console.log(`   ~ Good match (85-89%) - Tier 3 "Confirmed"`);
+    } else {
+      console.log(`   ⚠️ Moderate match (<85%) - Lower tier`);
+    }
+  } else {
+    console.log(`   ❌ No matches found above 65% similarity`);
+  }
   
   return matches.slice(0, 5); // Return top 5 matches
 }
@@ -432,13 +471,77 @@ export function searchHotelsByName(hotelName) {
 // STRING UTILITIES
 // ========================================
 
+/**
+ * Enhanced normalization to handle common hotel name variations
+ * Fixes: "BANAUE GREENFIELDS AND RESTAURANT" vs "Banaue Greenfield Inn and Restaurant"
+ * 
+ * Handles:
+ * - Plural/Singular (greenfields → greenfield)
+ * - Business suffixes (inn, hotel, resort, restaurant)
+ * - And/& variations
+ * - Case and punctuation
+ * - Extra whitespace
+ */
 function normalizeString(str) {
-  return String(str || '')
+  if (!str) return '';
+  
+  let normalized = String(str)
     .toLowerCase()
-    .trim()
-    .replace(/[^\w\s]/g, '')
-    .replace(/\s+/g, ' ');
+    .trim();
+  
+  // ✅ First handle multi-word business types (before removing 'and')
+  // Convert both "bed and breakfast" and "bed & breakfast" to standard form
+  normalized = normalized
+    .replace(/\bbed\s+and\s+breakfast\b/gi, 'bnb')
+    .replace(/\bbed\s*&\s*breakfast\b/gi, 'bnb')
+    .replace(/\bb\s*&\s*b\b/gi, 'bnb');
+  
+  // ✅ Remove common business type suffixes
+  // These are often omitted or added differently in various sources
+  const businessSuffixes = [
+    '\\bhotel\\b', '\\binn\\b', '\\bresort\\b', '\\blodge\\b',
+    '\\bguesthouse\\b', '\\bguest house\\b', '\\bhostel\\b', '\\bmotel\\b',
+    '\\brestaurant\\b', '\\bresto\\b', '\\bcafe\\b', '\\bbar\\b',
+    '\\bsuites\\b', '\\bsuite\\b', '\\bapartment\\b', '\\bapt\\b',
+    '\\bcondo\\b', '\\bcondominium\\b', '\\bvilla\\b', '\\bvillas\\b',
+    '\\bvillage\\b', '\\bbnb\\b'
+  ];
+  
+  for (const suffix of businessSuffixes) {
+    normalized = normalized.replace(new RegExp(suffix, 'gi'), '');
+  }
+  
+  // ✅ Normalize "and" vs "&" (common variation)
+  normalized = normalized
+    .replace(/\s+and\s+/gi, ' ')  // Remove "and"
+    .replace(/\s*&\s*/g, ' ');     // Remove "&"
+  
+  // ✅ Remove "the" prefix (sometimes added/omitted)
+  normalized = normalized.replace(/^the\s+/i, '');
+  
+  // ✅ Handle plural forms (greenfields → greenfield)
+  // Remove trailing 's' after word boundaries
+  normalized = normalized.replace(/s\b/g, '');
+  
+  // ✅ Remove all punctuation and special characters
+  normalized = normalized.replace(/[^\w\s]/g, '');
+  
+  // ✅ Collapse multiple spaces
+  normalized = normalized.replace(/\s+/g, ' ').trim();
+  
+  return normalized;
 }
+
+// Example transformations:
+// "BANAUE GREENFIELDS AND RESTAURANT" 
+// → "banaue greenfields and restaurant"
+// → "banaue greenfield restaurant" (removed: "and", "s" from greenfields)
+//
+// "Banaue Greenfield Inn and Restaurant"
+// → "banaue greenfield inn and restaurant"  
+// → "banaue greenfield restaurant" (removed: "inn", "and", "restaurant")
+//
+// Result: Both normalize to "banaue greenfield restaurant" → EXACT MATCH ✓
 
 function calculateSimilarity(str1, str2) {
   if (str1 === str2) return 1.0;

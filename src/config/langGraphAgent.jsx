@@ -359,6 +359,16 @@ export class LangGraphTravelAgent {
   transformDjangoResponse(data) {
     const results = data.results || {};
 
+    // 🔍 DEBUG: Log raw response structure
+    console.log("🔍 DEBUG transformDjangoResponse input:", {
+      hasResults: !!data.results,
+      resultsKeys: results ? Object.keys(results) : "N/A",
+      hasFlights: !!results.flights,
+      flightsKeys: results.flights ? Object.keys(results.flights) : "N/A",
+      flightsArrayLength: results.flights?.flights?.length || 0,
+      rawFlightsData: results.flights,
+    });
+
     return {
       success: true,
       session_id: data.session_id,
@@ -371,6 +381,8 @@ export class LangGraphTravelAgent {
             current_price: results.flights.current_price || "typical",
             source: "django_langgraph",
             langgraph_analysis: results.flights.langgraph_analysis,
+            rerouted: results.flights.rerouted || false, // ✅ Add rerouted flag
+            reroute_info: results.flights.reroute_info || null, // ✅ Add reroute info
           }
         : null,
 

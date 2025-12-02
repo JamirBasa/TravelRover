@@ -32,11 +32,10 @@ function FilterPopover({ filters, setFilters, clearFilters, userTrips }) {
           const duration = parseInt(trip.userSelection?.duration);
           switch (value) {
             case "short":
-              return duration <= 3;
+              return duration <= 3; // 1-3 days
             case "medium":
-              return duration >= 4 && duration <= 7;
-            case "long":
-              return duration > 7;
+              return duration >= 4 && duration <= 7; // 4-7 days (max limit)
+            // ✅ REMOVED: "long" case (> 7 days) - impossible with 7-day maximum
             default:
               return false;
           }
@@ -158,7 +157,6 @@ function FilterPopover({ filters, setFilters, clearFilters, userTrips }) {
               {[
                 { value: "short", label: "Short", desc: "1-3 days" },
                 { value: "medium", label: "Medium", desc: "4-7 days" },
-                { value: "long", label: "Long", desc: "8+ days" },
               ].map(({ value, label, desc }) => {
                 const count = getFilterCount("duration", value);
                 const isActive = filters.duration === value;
