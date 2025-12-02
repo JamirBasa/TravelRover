@@ -19,12 +19,13 @@ const CITIES_WITHOUT_AIRPORTS = [
 
 // Nearest airport recommendations
 const NEAREST_AIRPORT_INFO = {
-  baguio: { airport: 'Manila (MNL) or Clark (CRK)', transfer: '4-6 hours by bus', cost: '₱500-800' },
+  baguio: { airport: 'Clark (CRK)', transfer: '4-5 hours by bus', cost: '₱600-800' },
   'el nido': { airport: 'Puerto Princesa (PPS)', transfer: '5-6 hours by van', cost: '₱600-1,200' },
-  sagada: { airport: 'Manila (MNL)', transfer: '12 hours by bus', cost: '₱800-1,200' },
+  sagada: { airport: 'Tuguegarao (TUG)', transfer: '5-6 hours by bus', cost: '₱300-500' },
   vigan: { airport: 'Laoag (LAO)', transfer: '2 hours by bus', cost: '₱200-400' },
-  banaue: { airport: 'Manila (MNL)', transfer: '9 hours by bus', cost: '₱600-900' },
-  batad: { airport: 'Manila (MNL)', transfer: '10+ hours', cost: '₱800-1,000' },
+  banaue: { airport: 'Tuguegarao (TUG)', transfer: '6-7 hours by bus', cost: '₱400-600' },
+  bontoc: { airport: 'Tuguegarao (TUG)', transfer: '5-6 hours by bus', cost: '₱350-550' },
+  batad: { airport: 'Tuguegarao (TUG)', transfer: '7-8 hours', cost: '₱500-700' },
   camiguin: { airport: 'Cagayan de Oro (CGY)', transfer: '2 hours by ferry', cost: '₱500' },
   siquijor: { airport: 'Dumaguete or Tagbilaran', transfer: 'Ferry connection', cost: '₱300-500' },
 };

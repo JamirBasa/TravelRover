@@ -16,6 +16,7 @@ import {
   extractActivityTime,
   extractActivityPlaceName,
 } from "../../../../utils";
+import { isLogisticsItem } from "@/utils/activityClassifier";
 
 function RegularActivity({ activity, activityIndex, dayIndex }) {
   // Generate consistent IDs for accessibility
@@ -26,6 +27,9 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
   // Extract enhanced time and place name
   const displayTime = extractActivityTime(activity);
   const cleanPlaceName = extractActivityPlaceName(activity);
+
+  // ✅ Detect if this is a logistics item (meals, returns, check-ins)
+  const isLogistics = isLogisticsItem(activity);
 
   return (
     <Card
@@ -145,20 +149,22 @@ function RegularActivity({ activity, activityIndex, dayIndex }) {
                   </Badge>
                 )}
 
-              {activity?.timeTravel && activity.timeTravel !== "Varies" && (
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "gap-1 px-2 py-0.5 text-xs font-semibold border",
-                    "border-orange-300 dark:border-orange-800",
-                    "bg-orange-50 dark:bg-orange-950/30",
-                    "text-orange-700 dark:text-orange-400",
-                    ANIMATIONS.transition.medium
-                  )}
-                >
-                  <span className="font-bold">{activity.timeTravel}</span>
-                </Badge>
-              )}
+              {activity?.timeTravel &&
+                activity.timeTravel !== "Varies" &&
+                !isLogistics && (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "gap-1 px-2 py-0.5 text-xs font-semibold border",
+                      "border-orange-300 dark:border-orange-800",
+                      "bg-orange-50 dark:bg-orange-950/30",
+                      "text-orange-700 dark:text-orange-400",
+                      ANIMATIONS.transition.medium
+                    )}
+                  >
+                    <span className="font-bold">{activity.timeTravel}</span>
+                  </Badge>
+                )}
 
               {activity?.rating &&
                 activity.rating !== "4.0" &&

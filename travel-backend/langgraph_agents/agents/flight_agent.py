@@ -49,20 +49,20 @@ INACTIVE_AIRPORTS = {
     "SAG": {
         "name": "Sagada",
         "status": "No airport",
-        "alternatives": ["TUG", "MNL"],
-        "alternative_names": ["Tuguegarao", "Manila"],
+        "alternatives": ["TUG"],
+        "alternative_names": ["Tuguegarao"],
         "transport": "bus/van",
-        "travel_time": "8-10 hours from Manila, 6 hours from Baguio",
-        "recommendation": "Travel to Baguio first, then local bus/van to Sagada"
+        "travel_time": "5-6 hours from Tuguegarao",
+        "recommendation": "Fly to Tuguegarao (TUG), then bus/van to Sagada (5-6 hrs, ₱300-500). More convenient than 12-hour direct bus from Manila."
     },
     "BAN": {
         "name": "Banaue",
         "status": "No airport",
-        "alternatives": ["TUG", "MNL"],
-        "alternative_names": ["Tuguegarao", "Manila"],
+        "alternatives": ["TUG"],
+        "alternative_names": ["Tuguegarao"],
         "transport": "bus/van",
-        "travel_time": "9-10 hours from Manila",
-        "recommendation": "Direct overnight bus from Manila or via Baguio"
+        "travel_time": "6-7 hours from Tuguegarao",
+        "recommendation": "Fly to Tuguegarao (TUG), then bus to Banaue Rice Terraces (6-7 hrs, ₱400-600). More convenient than 10-hour direct bus from Manila."
     },
     "PAG": {
         "name": "Pagudpud",
@@ -84,6 +84,24 @@ INACTIVE_AIRPORTS = {
     },
     
     # === CENTRAL LUZON ===
+    "SFS": {
+        "name": "Subic",
+        "status": "Limited service",
+        "alternatives": ["CRK", "MNL"],
+        "alternative_names": ["Clark", "Manila"],
+        "transport": "bus",
+        "travel_time": "1.5 hours from Clark, 3 hours from Manila",
+        "recommendation": "Fly to Clark then take bus to Subic. Limited direct flights available."
+    },
+    "BSO": {
+        "name": "Batangas",
+        "status": "Military base - no commercial flights",
+        "alternatives": ["MNL"],
+        "alternative_names": ["Manila"],
+        "transport": "bus",
+        "travel_time": "2-3 hours from Manila",
+        "recommendation": "Fly to Manila then take bus to Batangas."
+    },
     "SFE": {
         "name": "San Fernando, La Union",
         "status": "No airport",
@@ -148,6 +166,15 @@ INACTIVE_AIRPORTS = {
         "transport": "flight/ferry",
         "travel_time": "1 hour flight from Manila or ferry from various ports",
         "recommendation": "Fly to Masbate or take ferry from Lucena/Pilar"
+    },
+    "DRP": {
+        "name": "Sorsogon",
+        "status": "Limited service",
+        "alternatives": ["LGP"],
+        "alternative_names": ["Legazpi"],
+        "transport": "van/bus",
+        "travel_time": "2 hours from Legazpi",
+        "recommendation": "Fly to Legazpi then take van to Sorsogon. Limited direct service available."
     },
     
     # === MINDORO ===
@@ -363,6 +390,15 @@ INACTIVE_AIRPORTS = {
     },
     
     # === MINDANAO - NORTHERN ===
+    "MBL": {
+        "name": "Malaybalay",
+        "status": "Limited/seasonal service",
+        "alternatives": ["CGY"],
+        "alternative_names": ["Cagayan de Oro"],
+        "transport": "van/bus",
+        "travel_time": "2 hours from Cagayan de Oro",
+        "recommendation": "Fly to Cagayan de Oro then take van to Malaybalay."
+    },
     "CAM": {
         "name": "Camiguin",
         "status": "No commercial airport",
@@ -459,6 +495,24 @@ INACTIVE_AIRPORTS = {
     },
     
     # === MINDANAO - WESTERN (ZAMBOANGA) ===
+    "PAG_CITY": {
+        "name": "Pagadian",
+        "status": "Limited service",
+        "alternatives": ["ZAM"],
+        "alternative_names": ["Zamboanga"],
+        "transport": "bus",
+        "travel_time": "3 hours from Zamboanga",
+        "recommendation": "Fly to Zamboanga then take bus to Pagadian. Limited direct flights available."
+    },
+    "JOL": {
+        "name": "Jolo",
+        "status": "Very limited service",
+        "alternatives": ["ZAM"],
+        "alternative_names": ["Zamboanga"],
+        "transport": "ferry",
+        "travel_time": "8-12 hours ferry from Zamboanga",
+        "recommendation": "Ferry from Zamboanga is recommended. Limited airport service available."
+    },
     "SAN": {
         "name": "Santa Cruz Island (Pink Beach)",
         "status": "No airport",

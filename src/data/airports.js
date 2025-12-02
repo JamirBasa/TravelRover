@@ -65,7 +65,13 @@ export const PHILIPPINE_AIRPORTS = {
     status: AIRPORT_STATUS.LIMITED,
     type: 'domestic',
     coordinates: { lat: 14.7944, lng: 120.2711 },
-    aliases: ['Subic']
+    aliases: ['Subic'],
+    alternatives: ['CRK', 'MNL'],
+    alternativeNames: ['Clark International Airport', 'Manila (NAIA)'],
+    transport: 'Bus from Clark (1.5 hrs) or Manila (3 hrs)',
+    travelTime: '1.5-3 hours',
+    recommendation: 'Fly to Clark (CRK) then take bus to Subic. Limited direct flights available.',
+    notes: 'Subic Bay Airport has limited commercial service. Best route: Fly to Clark → Bus to Subic (1.5 hrs, ₱150-250).'
   },
 
   // === LUZON - NORTH (CORDILLERA) ===
@@ -81,9 +87,9 @@ export const PHILIPPINE_AIRPORTS = {
     aliases: ['Baguio', 'Baguio City', 'La Trinidad', 'Benguet'],
     alternatives: ['CRK'],
     alternativeNames: ['Clark International Airport'],
-    transport: 'Bus from Clark (4-5 hours) or Manila (6-7 hours)',
-    travelTime: '4-7 hours',
-    recommendation: 'Fly to Clark (CRK) then take bus to Baguio.',
+    transport: 'Bus (₱600-800, 4-5 hours) or Private van (₱3,000-5,000 for vehicle)',
+    travelTime: '4-5 hours',
+    recommendation: 'Buses depart regularly from Clark Airport. Joy Bus and Genesis Transport offer comfortable rides with WiFi.',
     notes: 'Loakan Airport is inactive. Best route: Fly to Clark → Bus to Baguio.'
   },
 
@@ -124,7 +130,13 @@ export const PHILIPPINE_AIRPORTS = {
     status: AIRPORT_STATUS.LIMITED,
     type: 'military',
     coordinates: { lat: 14.5747, lng: 120.4923 },
-    aliases: ['Batangas', 'Batangas City']
+    aliases: ['Batangas', 'Batangas City'],
+    alternatives: ['MNL'],
+    alternativeNames: ['Manila (NAIA)'],
+    transport: 'Bus from Manila (2-3 hours)',
+    travelTime: '2-3 hours',
+    recommendation: 'Fly to Manila (MNL) then take bus to Batangas. Military base with no commercial flights.',
+    notes: 'Basa Air Base is primarily military. Best route: Fly to Manila → Bus to Batangas (2-3 hrs, ₱200-350).'
   },
 
   'WNP': {
@@ -174,7 +186,13 @@ export const PHILIPPINE_AIRPORTS = {
     status: AIRPORT_STATUS.LIMITED,
     type: 'domestic',
     coordinates: { lat: 12.9686, lng: 124.0069 },
-    aliases: ['Sorsogon']
+    aliases: ['Sorsogon'],
+    alternatives: ['LGP'],
+    alternativeNames: ['Legazpi Airport (Albay)'],
+    transport: 'Van/bus from Legazpi (2 hours)',
+    travelTime: '2 hours',
+    recommendation: 'Fly to Legazpi (LGP) then take van to Sorsogon. Limited direct service available.',
+    notes: 'Sorsogon Airport has very limited service. Best route: Fly to Legazpi → Van to Sorsogon (2 hrs, ₱150-250).'
   },
 
   // === VISAYAS - CEBU ===

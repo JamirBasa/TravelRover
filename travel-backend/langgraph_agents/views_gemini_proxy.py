@@ -141,7 +141,7 @@ GROUND TRANSPORT CONTEXT (Will be provided when available):
 - scenic: whether route offers scenic views
 - notes: practical tips and recommendations
 
-�🛫 AIRPORT SELECTION (MANDATORY):
+🛫 AIRPORT SELECTION (MANDATORY):
 ✅ IF destination has direct airport → Use it with proper code
 ✅ IF destination has NO direct airport → Recommend NEAREST airport + ground transfer details
 ✅ IF ground_preferred mode → Skip flight search, use ground transport exclusively
@@ -154,9 +154,10 @@ PHILIPPINES AIRPORT GUIDE:
 - Busuanga (USU) for Coron, Siargao (IAO)
 
 ❌ Cities WITHOUT Direct Airports (Use Nearest + Ground Transfer):
-- Baguio → Manila (MNL) 6hrs or Clark (CRK) 4hrs + bus (₱500-800)
+- Baguio → Clark (CRK) 4-5hrs bus (₱600-800) [BAG airport inactive]
 - El Nido → Puerto Princesa (PPS) + 5-6hr van (₱600-1,200)
-- Sagada → Manila (MNL) + 12hr bus (₱800-1,200)
+- Sagada → Tuguegarao (TUG) + 5-6hr bus (₱300-500) [Most convenient route]
+- Banaue → Tuguegarao (TUG) + 6-7hr bus (₱400-600)
 - Vigan → Laoag (LAO) + 2hr bus (₱200-400)
 - Camiguin → Cagayan de Oro (CGY) + 2hr ferry (₱500)
 
@@ -238,8 +239,13 @@ Generate realistic, logistically accurate itineraries with ACCURATE travel times
             # Add system context
             enhanced_prompt = f"{system_context}\n\n"
             
-            # Add ground transport context if available
-            if ground_transport_context:
+            # 🔧 FIX (2025-11-28): Only add ground transport context for ground_preferred mode
+            # Skip for flight_required to avoid confusing Gemini with both flight + ground options
+            # This ensures destinations like Sagada correctly show flights to TUG instead of Manila bus
+            transport_mode = ground_transport_context.get('mode') if ground_transport_context else None
+            
+            # Add ground transport context ONLY if mode is ground_preferred
+            if ground_transport_context and transport_mode == 'ground_preferred':
                 gt = ground_transport_context
                 
                 # 🔧 FIX: Safely extract cost information (can be dict or string)
@@ -270,7 +276,7 @@ Generate realistic, logistically accurate itineraries with ACCURATE travel times
                     operators_str = str(operators) if operators else ''
                 
                 enhanced_prompt += f"""
-🚌 ACTIVE GROUND TRANSPORT RECOMMENDATION:
+🚌 ACTIVE GROUND TRANSPORT RECOMMENDATION (Ground-Preferred Mode):
 Mode: {gt.get('primary_mode', 'bus/van')}
 Travel Time: {gt.get('travel_time', 'N/A')}
 Cost Range: {cost_range}
@@ -280,11 +286,17 @@ Cost Range: {cost_range}
 {'⭐ SCENIC ROUTE - Mention the scenic views in the itinerary!' if gt.get('scenic') else ''}
 
 CRITICAL: Include this ground transport information in Day 1 arrival details!
-- IF ground_preferred mode: "Travel from [user's origin city] to [destination] via {gt.get('primary_mode', 'bus')} ({gt.get('travel_time', 'X hours')}, ₱{cost_min}-{cost_max})"
-- IF flying to nearest airport: "Arrive at [nearest airport with code], then take {gt.get('primary_mode', 'bus')} to [destination] ({gt.get('travel_time', 'X hours')}, ₱{cost_min}-{cost_max})"
+- Travel from [user's origin city] to [destination] via {gt.get('primary_mode', 'bus')} ({gt.get('travel_time', 'X hours')}, ₱{cost_min}-{cost_max})
+- This is the PRIMARY and RECOMMENDED transport method for this route
 
 """
-                logger.info(f"✅ Added ground transport context to prompt: {gt.get('primary_mode')} ({gt.get('travel_time')})")
+                logger.info(f"✅ Added ground-preferred transport context to prompt: {gt.get('primary_mode')} ({gt.get('travel_time')})")
+            
+            elif ground_transport_context and transport_mode == 'flight_required':
+                # 🔧 FIX: For flight_required mode, don't add ground transport context to avoid confusion
+                # The itinerary will show flights based on airport mapping (e.g., Sagada → TUG)
+                # Ground transfer info will be shown separately in the UI via realFlightData metadata
+                logger.info(f"⚠️ Skipped ground transport context (flight_required mode) - will use airport mapping instead")
             
             enhanced_prompt += prompt
         

@@ -6,7 +6,7 @@ import {
   PATTERNS,
   COMPOSED_STYLES,
 } from "../constants/designSystem";
-import { calculateTotalBudget, formatCurrency } from "@/utils";
+import { calculateTotalBudget, formatCurrency, getUserBudget } from "@/utils";
 
 function TripOverviewStats({
   currentItinerary,
@@ -17,38 +17,10 @@ function TripOverviewStats({
 }) {
   // Calculate total estimated budget from trip costs
   const budgetInfo = calculateTotalBudget(trip);
-  
+
   // ✅ Get user's allocated budget (what they set during trip creation)
-  const getUserBudget = () => {
-    // Priority 1: Use budgetAmount (numeric field)
-    if (trip?.userSelection?.budgetAmount) {
-      return trip.userSelection.budgetAmount;
-    }
-    
-    // Priority 2: Parse customBudget string
-    if (trip?.userSelection?.customBudget && trip.userSelection.customBudget.trim() !== "") {
-      const amount = parseInt(trip.userSelection.customBudget);
-      return !isNaN(amount) ? amount : null;
-    }
-    
-    // Priority 3: Use grandTotal from tripData (AI-generated budget)
-    if (trip?.tripData) {
-      const tripData = typeof trip.tripData === 'string' ? JSON.parse(trip.tripData) : trip.tripData;
-      if (tripData?.grandTotal && tripData.grandTotal > 0) {
-        return tripData.grandTotal;
-      }
-    }
-    
-    // Priority 4: Use calculated trip cost
-    if (budgetInfo.total > 0) {
-      return budgetInfo.total;
-    }
-    
-    return null;
-  };
-  
-  const userBudget = getUserBudget();
-  
+  const userBudget = getUserBudget(trip);
+
   // Safe defaults for undefined/null values with comprehensive checks
   const itineraryLength =
     (Array.isArray(currentItinerary) ? currentItinerary.length : 0) ||

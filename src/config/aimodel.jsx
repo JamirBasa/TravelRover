@@ -289,11 +289,11 @@ PHILIPPINE AIRPORT REFERENCE GUIDE:
 
 ✅ NEAREST AIRPORT RECOMMENDATIONS (for destinations without direct airports):
    - **El Nido** → Puerto Princesa (PPS) + 5-6 hour van north
-   - **Baguio** → Clark (CRK) 4hrs or Manila (MNL) 6hrs + bus
+   - **Baguio** → Clark (CRK) + 4-5 hour bus [BAG airport inactive]
    - **Batanes** → Has own airport (Basco Airport - BSO) with limited flights
-   - **Sagada** → Manila (MNL) + 12-hour bus OR Tuguegarao (TUG) + 6-hour van
-   - **Vigan** → Manila (MNL) + 8-hour bus OR Laoag (LAO) + 2-hour bus
-   - **Banaue Rice Terraces** → Manila (MNL) + 9-hour bus
+   - **Sagada** → Tuguegarao (TUG) + 5-6 hour bus (most convenient route)
+   - **Banaue** → Tuguegarao (TUG) + 6-7 hour bus
+   - **Vigan** → Laoag (LAO) + 2-hour bus
    - **Camiguin** → Cagayan de Oro (CGY) + 2-hour ferry
    - **Siquijor** → Dumaguete + ferry OR Tagbilaran (TAG) + ferry
 
@@ -644,44 +644,52 @@ const rateLimiter = {
   lastRequestTime: 0,
   requestCount: 0,
   windowStart: Date.now(),
-  
+
   // Free tier limits: 10 requests per minute for gemini-2.5-flash
   MAX_REQUESTS_PER_MINUTE: 10,
   MIN_REQUEST_INTERVAL: 6000, // 6 seconds between requests (buffer)
   WINDOW_DURATION: 60000, // 1 minute window
-  
+
   async waitForRateLimit() {
     const now = Date.now();
-    
+
     // Reset counter if window expired
     if (now - this.windowStart >= this.WINDOW_DURATION) {
       this.requestCount = 0;
       this.windowStart = now;
     }
-    
+
     // If approaching limit, wait for window reset
     if (this.requestCount >= this.MAX_REQUESTS_PER_MINUTE) {
       const waitTime = this.WINDOW_DURATION - (now - this.windowStart) + 1000; // +1s buffer
-      console.warn(`⏳ Rate limit reached (${this.requestCount}/${this.MAX_REQUESTS_PER_MINUTE}). Waiting ${Math.ceil(waitTime/1000)}s...`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-      
+      console.warn(
+        `⏳ Rate limit reached (${this.requestCount}/${
+          this.MAX_REQUESTS_PER_MINUTE
+        }). Waiting ${Math.ceil(waitTime / 1000)}s...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
+
       // Reset after waiting
       this.requestCount = 0;
       this.windowStart = Date.now();
     }
-    
+
     // Enforce minimum interval between requests
     const timeSinceLastRequest = now - this.lastRequestTime;
     if (timeSinceLastRequest < this.MIN_REQUEST_INTERVAL) {
       const delay = this.MIN_REQUEST_INTERVAL - timeSinceLastRequest;
-      console.log(`⏱️ Spacing requests: waiting ${Math.ceil(delay/1000)}s...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      console.log(
+        `⏱️ Spacing requests: waiting ${Math.ceil(delay / 1000)}s...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
-    
+
     this.lastRequestTime = Date.now();
     this.requestCount++;
-    console.log(`📊 API call ${this.requestCount}/${this.MAX_REQUESTS_PER_MINUTE} in current window`);
-  }
+    console.log(
+      `📊 API call ${this.requestCount}/${this.MAX_REQUESTS_PER_MINUTE} in current window`
+    );
+  },
 };
 
 /**
@@ -695,7 +703,9 @@ export const generateItineraryWithRetry = async (userInput, maxRetries = 3) => {
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🚀 Attempt ${attempt}/${maxRetries} - Generating itinerary...`);
+      console.log(
+        `🚀 Attempt ${attempt}/${maxRetries} - Generating itinerary...`
+      );
 
       // ✅ CRITICAL: Wait for rate limit clearance before making request
       await rateLimiter.waitForRateLimit();
@@ -739,35 +749,42 @@ export const generateItineraryWithRetry = async (userInput, maxRetries = 3) => {
 
       // ✅ ENHANCED: Extract retry delay from error message if provided
       let retryDelay = 1000 * Math.pow(2, attempt); // Default exponential backoff
-      
+
       if (error.message?.includes("retry in")) {
         const match = error.message.match(/retry in (\d+(?:\.\d+)?)\s*s/i);
         if (match) {
           retryDelay = Math.ceil(parseFloat(match[1]) * 1000) + 1000; // API suggested delay + 1s buffer
-          console.log(`⏳ API suggested retry delay: ${Math.ceil(retryDelay/1000)}s`);
+          console.log(
+            `⏳ API suggested retry delay: ${Math.ceil(retryDelay / 1000)}s`
+          );
         }
       }
 
       // Check for rate limit (429) or server errors (500, 503)
-      const isRateLimit = error.message?.includes("429") || 
-                          error.message?.includes("RESOURCE_EXHAUSTED") ||
-                          error.message?.includes("quota");
-      const isServerError = error.message?.includes("500") || 
-                            error.message?.includes("503");
+      const isRateLimit =
+        error.message?.includes("429") ||
+        error.message?.includes("RESOURCE_EXHAUSTED") ||
+        error.message?.includes("quota");
+      const isServerError =
+        error.message?.includes("500") || error.message?.includes("503");
       const isRetriable = isRateLimit || isServerError;
 
       if (isRetriable && attempt < maxRetries) {
         // Cap delay at 60 seconds for rate limits
         const cappedDelay = Math.min(retryDelay, 60000);
-        console.log(`🔄 ${isRateLimit ? 'Rate limit' : 'Server error'} detected. Retrying in ${Math.ceil(cappedDelay/1000)}s...`);
+        console.log(
+          `🔄 ${
+            isRateLimit ? "Rate limit" : "Server error"
+          } detected. Retrying in ${Math.ceil(cappedDelay / 1000)}s...`
+        );
         await new Promise((resolve) => setTimeout(resolve, cappedDelay));
-        
+
         // Reset rate limiter window after long wait
         if (cappedDelay > 30000) {
           rateLimiter.requestCount = 0;
           rateLimiter.windowStart = Date.now();
         }
-        
+
         continue;
       }
 

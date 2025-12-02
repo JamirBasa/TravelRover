@@ -11,7 +11,11 @@ import {
   FaChevronDown,
   FaChevronUp,
 } from "react-icons/fa";
-import { getMinDate, getMinEndDate } from "../../constants/options";
+import {
+  getMinDate,
+  getMinEndDate,
+  getMaxEndDate,
+} from "../../constants/options";
 import {
   calculatePHTDays,
   isPastDatePHT,
@@ -34,7 +38,15 @@ import {
 import { DurationCategoryBadge } from "../../components/common/DurationCategoryBadge";
 
 // ✅ NEW: Enhanced native date input with professional styling
-function DateInputWithIcon({ value, onChange, min, disabled, name, label }) {
+function DateInputWithIcon({
+  value,
+  onChange,
+  min,
+  max,
+  disabled,
+  name,
+  label,
+}) {
   return (
     <div>
       <label className="block text-base font-medium text-gray-800 dark:text-gray-200 mb-2">
@@ -43,6 +55,7 @@ function DateInputWithIcon({ value, onChange, min, disabled, name, label }) {
       <input
         type="date"
         min={min}
+        max={max}
         value={value || ""}
         onChange={onChange}
         disabled={disabled}
@@ -182,6 +195,7 @@ function DateRangePicker({
             value={endDate}
             onChange={(e) => onEndDateChange(e.target.value)}
             min={getMinEndDate(startDate)}
+            max={getMaxEndDate(startDate)}
             name="endDate"
             label="End Date"
             disabled={!startDate}

@@ -11,7 +11,6 @@ import {
 import { getTravelersCount } from "@/utils/travelersParsers";
 import { TRAVELER_OPTIONS, VALIDATION_RULES } from "@/constants/options";
 import { useDebounce } from "@/hooks/useDebounce";
-import BudgetPreviewCard from "./BudgetPreviewCard";
 
 const TravelerSelector = React.memo(
   ({
@@ -215,9 +214,6 @@ const TravelerSelector = React.memo(
               <li>Transportation and dining arrangements</li>
             </ul>
           </div>
-
-          {/* Budget Preview Card */}
-          <BudgetPreviewCard formData={formData} flightData={flightData} />
         </div>
       </div>
     );

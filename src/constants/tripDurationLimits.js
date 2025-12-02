@@ -11,7 +11,7 @@
 export const TRIP_DURATION = {
   // Core limits
   MIN: 1,           // Minimum 1 day (day trip)
-  MAX: 30,          // Maximum 30 days (1 month)
+  MAX: 7,           // Maximum 7 days (optimized for best planning & budget)
   OPTIMAL_MIN: 3,   // Recommended minimum for full experience
   OPTIMAL_MAX: 7,   // Sweet spot for planning & budget
   
@@ -41,35 +41,11 @@ export const TRIP_DURATION = {
       emoji: '✈️',          // Airplane - universally supported
       icon: '✈',           // Fallback without variation selector
       shortLabel: 'Short'
-    },
-    STANDARD: { 
-      min: 8, 
-      max: 14, 
-      label: 'Standard Trip', 
-      emoji: '📅',         // Calendar - widely supported
-      icon: '�',
-      shortLabel: 'Standard'
-    },
-    EXTENDED: { 
-      min: 15, 
-      max: 21, 
-      label: 'Extended Trip', 
-      emoji: '🌍',         // Earth globe - widely supported
-      icon: '🌍',
-      shortLabel: 'Extended'
-    },
-    LONG: { 
-      min: 22, 
-      max: 30, 
-      label: 'Long Vacation', 
-      emoji: '🏖️',          // Beach with umbrella - widely supported
-      icon: '🏖',          // Fallback without variation selector
-      shortLabel: 'Long'
     }
   },
   
   // AI generation timeouts by duration (in seconds)
-  // Longer trips = more complex = need more time
+  // Optimized for 1-7 day trips
   GENERATION_TIMEOUT: {
     1: 60,    // 1 minute (day trip - simple)
     2: 80,    // 1.3 minutes
@@ -77,30 +53,7 @@ export const TRIP_DURATION = {
     4: 110,   // 1.8 minutes
     5: 120,   // 2 minutes
     6: 130,   // 2.2 minutes
-    7: 140,   // 2.3 minutes (sweet spot)
-    8: 160,   // 2.7 minutes
-    9: 180,   // 3 minutes
-    10: 200,  // 3.3 minutes
-    11: 220,  // 3.7 minutes
-    12: 240,  // 4 minutes
-    13: 260,  // 4.3 minutes
-    14: 280,  // 4.7 minutes
-    15: 300,  // 5 minutes
-    16: 320,  // 5.3 minutes
-    17: 340,  // 5.7 minutes
-    18: 360,  // 6 minutes
-    19: 380,  // 6.3 minutes
-    20: 400,  // 6.7 minutes
-    21: 420,  // 7 minutes
-    22: 440,  // 7.3 minutes
-    23: 460,  // 7.7 minutes
-    24: 480,  // 8 minutes
-    25: 500,  // 8.3 minutes
-    26: 520,  // 8.7 minutes
-    27: 540,  // 9 minutes
-    28: 560,  // 9.3 minutes
-    29: 580,  // 9.7 minutes
-    30: 600   // 10 minutes (maximum for 1 month)
+    7: 140    // 2.3 minutes (maximum)
   },
   
   // Budget multipliers (per day/person in PHP)

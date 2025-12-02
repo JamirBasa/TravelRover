@@ -22,6 +22,7 @@ import {
 } from "@/utils/flightNameResolver";
 import { getLimitedServiceInfo } from "@/utils/flightRecommendations";
 import { logDebug, logError } from "@/utils/productionLogger";
+import { cleanItinerary } from "@/utils/itineraryDeduplicator";
 
 // ✅ PERSISTENT GEOCODING CACHE
 const GEOCODE_CACHE_KEY = "travelrover_geocode_cache_v1";
@@ -337,11 +338,20 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
 
   // ✅ Extract all locations from itinerary WITH HOTEL NAME RESOLUTION
   const allLocations = useMemo(() => {
-    const parsedItinerary = parseItinerary(itinerary);
+    const rawItinerary = parseItinerary(itinerary);
+
+    // ✅ APPLY DEDUPLICATION BEFORE PROCESSING
+    const parsedItinerary = cleanItinerary(rawItinerary);
+
     if (!parsedItinerary || parsedItinerary.length === 0) {
       logDebug("OptimizedRouteMap", "No itinerary data available for map");
       return [];
     }
+
+    logDebug("OptimizedRouteMap", "Applied deduplication to map data", {
+      originalDays: rawItinerary?.length || 0,
+      cleanedDays: parsedItinerary?.length || 0,
+    });
 
     const locations = [];
     parsedItinerary.forEach((day, dayIndex) => {

@@ -644,7 +644,7 @@ function CreateTrip() {
           return false;
         }
 
-        // ✅ NEW: Validate trip duration limits (1-15 days) - Block navigation
+        // ✅ NEW: Validate trip duration limits (1-7 days) - Block navigation
         console.log("🔍 Duration Validation Check:", {
           duration: formData?.duration,
           type: typeof formData?.duration,
@@ -1056,7 +1056,7 @@ function CreateTrip() {
         const hotelValidation = validateHotelData(hotelData, formData); // ✅ Pass formData here!
         const activeServices = getActiveServices(flightData, hotelData);
 
-        // ✅ NEW: Validate trip duration (1-15 days)
+        // ✅ NEW: Validate trip duration (1-7 days)
         const { validateDuration } = await import(
           "../constants/tripDurationLimits"
         );
@@ -1179,6 +1179,17 @@ function CreateTrip() {
 
         flightResults = langGraphResults.flights;
         hotelResults = langGraphResults.hotels;
+
+        // 🔍 DEBUG: Log received flight data structure
+        console.log("🔍 DEBUG langGraphResults.flights structure:", {
+          exists: !!flightResults,
+          keys: flightResults ? Object.keys(flightResults) : "N/A",
+          hasFlightsArray: flightResults?.flights ? "YES" : "NO",
+          flightsArrayLength: flightResults?.flights?.length || 0,
+          success: flightResults?.success,
+          rerouted: flightResults?.rerouted,
+          fullData: flightResults,
+        });
 
         if (flightResults?.success) {
           console.log(
@@ -1887,6 +1898,75 @@ function CreateTrip() {
         throw new Error("Parsed data is not a valid object");
       }
 
+      // 🏨 NEW: EARLY HOTEL NAME VALIDATION (Catch AI hallucinations immediately)
+      console.log("🏨 Running early hotel name validation...");
+      try {
+        // ✅ CRITICAL: Always use real hotels from hotelResults, not AI's hallucinated hotels
+        // AI sometimes generates its own hotels array which may contain wrong hotel names
+        if (hotelResults?.hotels) {
+          console.log(
+            `🏨 Using ${hotelResults.hotels.length} hotel(s) from LangGraph recommendations`
+          );
+          parsedTripData.hotels = hotelResults.hotels;
+        } else {
+          console.warn(
+            "⚠️ No hotel recommendations available - skipping early validation"
+          );
+        }
+
+        const { validateAndFixHotelNames, reportEarlyValidation } =
+          await import("../utils/earlyHotelNameValidator");
+
+        const earlyValidation = validateAndFixHotelNames(parsedTripData);
+
+        if (!earlyValidation.isValid && earlyValidation.fixedData) {
+          console.warn(
+            `⚠️ Found ${earlyValidation.totalMismatches} hotel name mismatch(es) - auto-fixing...`
+          );
+          parsedTripData = earlyValidation.fixedData;
+
+          // Report fixes (console only - silent correction for users)
+          reportEarlyValidation(earlyValidation);
+
+          // ✅ Verify the fix was applied
+          const primaryHotelName =
+            parsedTripData.hotels?.[0]?.name ||
+            parsedTripData.hotels?.[0]?.hotelName;
+          if (primaryHotelName && parsedTripData.itinerary?.[0]?.plan) {
+            const day1CheckIn = parsedTripData.itinerary[0].plan.find(
+              (act) =>
+                act.placeName?.toLowerCase().includes("check") &&
+                act.placeName?.toLowerCase().includes("in")
+            );
+            if (day1CheckIn) {
+              console.log(
+                `✅ VERIFICATION: Day 1 check-in after fix: "${day1CheckIn.placeName}"`
+              );
+              console.log(
+                `✅ VERIFICATION: Primary hotel: "${primaryHotelName}"`
+              );
+              console.log(
+                `✅ VERIFICATION: Match status: ${
+                  day1CheckIn.placeName.includes(primaryHotelName)
+                    ? "CORRECT ✓"
+                    : "MISMATCH ✗"
+                }`
+              );
+            }
+          }
+
+          // ✅ Silent fix - users just want correct itinerary, not technical details
+        } else {
+          console.log("✅ All hotel names match recommendations!");
+        }
+      } catch (earlyValidationError) {
+        console.error(
+          "❌ Early hotel validation failed:",
+          earlyValidationError
+        );
+        // Non-blocking - continue without early validation if it fails
+      }
+
       // 🔧 AUTO-FIX: Ensure activity counts meet constraints before validation
       setValidationPhase("autofix"); // 🆕 Track progress
       console.log("🔧 Running auto-fix on itinerary...");
@@ -2318,12 +2398,19 @@ function CreateTrip() {
               recommendedHotel.hotel_name;
 
             if (hotelName) {
-              // Find check-in activity
-              const checkInIndex = day1.plan.findIndex((activity) =>
-                /check.?in.*hotel|hotel.*check.?in/i.test(
-                  activity.placeName || ""
-                )
-              );
+              // Find check-in activity (handles both generic and specific hotel names)
+              const checkInIndex = day1.plan.findIndex((activity) => {
+                const placeName = (activity.placeName || "").toLowerCase();
+                const placeDetails = (
+                  activity.placeDetails || ""
+                ).toLowerCase();
+                // Match any activity containing both "check" and "in" keywords
+                return (
+                  (placeName.includes("check") && placeName.includes("in")) ||
+                  placeDetails.includes("check-in") ||
+                  placeDetails.includes("check in")
+                );
+              });
 
               if (checkInIndex >= 0) {
                 // Update existing check-in to use specific hotel name
@@ -2342,20 +2429,56 @@ function CreateTrip() {
                   );
                 }
               } else {
-                // Add check-in if missing
-                console.warn(
-                  "⚠️ Day 1 missing check-in activity, adding it..."
-                );
-                day1.plan.splice(1, 0, {
-                  time: "02:00 PM",
-                  placeName: `🏨 Check-in at ${hotelName}`,
-                  placeDetails: `Check-in at ${hotelName}, settle into your room and freshen up.`,
-                  ticketPricing: "Included in accommodation",
-                  timeTravel: "At hotel",
-                  geoCoordinates: { lat: 0, lng: 0 },
-                  isHotelActivity: true,
-                });
-                console.log(`✅ Added check-in at ${hotelName} to Day 1`);
+                // Fallback: Check if first activity is likely a check-in (mentions hotel)
+                let fallbackCheckIn = -1;
+                if (day1.plan.length > 0) {
+                  const firstActivity = day1.plan[0];
+                  const firstText = `${firstActivity.placeName || ""} ${
+                    firstActivity.placeDetails || ""
+                  }`.toLowerCase();
+                  if (
+                    firstText.includes("hotel") &&
+                    !firstText.includes("departure") &&
+                    !firstText.includes("flight")
+                  ) {
+                    fallbackCheckIn = 0;
+                    console.log(
+                      `ℹ️ Using first activity as check-in fallback: "${firstActivity.placeName}"`
+                    );
+                  }
+                }
+
+                if (fallbackCheckIn >= 0) {
+                  // Update first activity to use recommended hotel name
+                  const originalName = day1.plan[fallbackCheckIn].placeName;
+                  day1.plan[
+                    fallbackCheckIn
+                  ].placeName = `🏨 Check-in at ${hotelName}`;
+                  day1.plan[fallbackCheckIn].placeDetails =
+                    `Check-in at ${hotelName}, settle into your room and freshen up. ${
+                      recommendedHotel.description || ""
+                    }`.trim();
+                  day1.plan[fallbackCheckIn].isHotelActivity = true;
+
+                  console.log(
+                    `✅ Updated fallback check-in: "${originalName}" → "Check-in at ${hotelName}"`
+                  );
+                } else {
+                  // Add check-in if still missing
+                  console.warn(
+                    "⚠️ Day 1 missing check-in activity, adding it..."
+                  );
+                  day1.plan.splice(1, 0, {
+                    time: "02:00 PM",
+                    placeName: `🏨 Check-in at ${hotelName}`,
+                    placeDetails: `Check-in at ${hotelName}, settle into your room and freshen up.`,
+                    ticketPricing: "Included in accommodation",
+                    timeTravel: "At hotel",
+                    geoCoordinates: { lat: 0, lng: 0 },
+                    isHotelActivity: true,
+                  });
+                  console.log(`✅ Added check-in at ${hotelName} to Day 1`);
+                }
               }
             }
           }

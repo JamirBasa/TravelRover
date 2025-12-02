@@ -16,6 +16,7 @@ import {
   FaMosque,
   FaClock, // Add this line
 } from "react-icons/fa";
+import { TRIP_DURATION } from "./tripDurationLimits";
 
 // ===============================
 // CENTRALIZED CONSTANTS
@@ -35,9 +36,9 @@ export const UI_CONFIG = {
 // Date Configuration
 // ✅ UPDATED: Use centralized trip duration limits from tripDurationLimits.js
 export const DATE_CONFIG = {
-  MIN_TRIP_DAYS: 1, // 1 day (import from TRIP_DURATION when needed)
-  MAX_TRIP_DAYS: 30, // 30 days (1 month - import from TRIP_DURATION when needed)
-  DEFAULT_TRIP_DAYS: 3, // 3 days
+  MIN_TRIP_DAYS: TRIP_DURATION.MIN, // 1 day minimum
+  MAX_TRIP_DAYS: TRIP_DURATION.MAX, // 7 days maximum (optimized for planning & budget)
+  DEFAULT_TRIP_DAYS: TRIP_DURATION.OPTIMAL_MIN, // 3 days default
   DATE_FORMAT: "en-US",
   DATE_OPTIONS: {
     weekday: "long",
@@ -294,6 +295,20 @@ export const getMinEndDate = (startDate) => {
   if (!startDate) return getMinDatePHT();
   const nextDay = addDaysPHT(startDate, 1);
   return formatPHTDate(nextDay);
+};
+
+/**
+ * Get maximum end date (7 days from start date in PHT)
+ * Enforces TRIP_DURATION.MAX limit in calendar UI
+ * @param {string|Date} startDate - Start date
+ * @returns {string} YYYY-MM-DD format
+ */
+export const getMaxEndDate = (startDate) => {
+  if (!startDate) return null;
+  // Add (TRIP_DURATION.MAX - 1) days because duration is inclusive
+  // Example: Start on Jan 1, max 7 days means end on Jan 7 (7 days total)
+  const maxDay = addDaysPHT(startDate, TRIP_DURATION.MAX - 1);
+  return formatPHTDate(maxDay);
 };
 
 /**

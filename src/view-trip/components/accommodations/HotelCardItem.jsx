@@ -5,6 +5,8 @@ import { GetPlaceDetails, fetchPlacePhoto } from "@/config/GlobalApi";
 // ✅ Import production logging
 import { logDebug, logError } from "@/utils/productionLogger";
 
+import { validateHotelBooking } from "../../../utils/hotelBookingDiagnostics";
+
 function HotelCardItem({ hotel, onBookHotel }) {
   const [photoUrl, setPhotoUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -215,7 +217,7 @@ function HotelCardItem({ hotel, onBookHotel }) {
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <h4 className="font-semibold text-gray-900 dark:text-gray-50 text-sm line-clamp-2 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors duration-200 leading-snug mb-0.5">
-                  {hotel?.name || hotel?.hotelName}
+                  {hotel?.ai_hotel_name || hotel?.name || hotel?.hotelName}
                 </h4>
                 {hotel?.address && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">
@@ -259,14 +261,119 @@ function HotelCardItem({ hotel, onBookHotel }) {
 
             {/* Middle Section: Badges + Amenities */}
             <div className="flex flex-col gap-2">
-              {/* Badges Row */}
+              {/* Badges Row - Enhanced with Quality Tier Status */}
               {(hotel?.badges?.isCheapest ||
                 hotel?.badges?.isTopRated ||
                 (hotel?.rating >= 4.5 &&
                   (hotel?.user_ratings_total || hotel?.reviews_count || 0) >=
                     50) ||
-                hotel?.isDefaultHotel) && (
+                hotel?.isDefaultHotel ||
+                hotel?.verified !== undefined ||
+                hotel?.qualityTier !== undefined) && (
                 <div className="flex items-center gap-2 flex-wrap">
+                  {/* ✅ NEW: Quality Tier Badge - User-Friendly Design */}
+                  {hotel?.qualityTier === 1 && (
+                    <span
+                      className="inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm hover:shadow-md transition-shadow cursor-help"
+                      title="✓ Fully Verified Hotel - This hotel has been confirmed in our database and can be directly booked on Agoda with confidence."
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <span>Verified</span>
+                    </span>
+                  )}
+                  {hotel?.qualityTier === 2 && (
+                    <span
+                      className="inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-sky-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm hover:shadow-md transition-shadow cursor-help"
+                      title={`✓ Trusted Match - ${
+                        hotel.userExplanation ||
+                        "This hotel has been verified and closely matches our database records."
+                      }`}
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <span>Trusted</span>
+                    </span>
+                  )}
+                  {hotel?.qualityTier === 3 && (
+                    <span
+                      className="inline-flex items-center gap-1.5 bg-gradient-to-r from-sky-500 to-blue-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm hover:shadow-md transition-shadow cursor-help"
+                      title={`~ Confirmed Hotel - ${
+                        hotel.userExplanation ||
+                        "This hotel has been matched with our database. We recommend verifying details on the booking site."
+                      }`}
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <span>Confirmed</span>
+                    </span>
+                  )}
+                  {/* Fallback: Old verification badge for hotels without quality tier */}
+                  {!hotel?.qualityTier &&
+                    hotel?.verified === true &&
+                    hotel?.hotel_id && (
+                      <span
+                        className="inline-flex items-center gap-1 bg-gradient-to-r from-blue-500 to-sky-600 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm"
+                        title={`Verified Hotel (${
+                          hotel.matchMethod || "Database Match"
+                        }) - Can be directly booked on Agoda`}
+                      >
+                        <span>✓</span>
+                        <span>Verified</span>
+                      </span>
+                    )}
+                  {hotel?.verified === false && !hotel?.hotel_id && (
+                    <span
+                      className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-amber-600 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm"
+                      title="Unverified - Booking will search similar hotels on Agoda"
+                    >
+                      <span>⚠️</span>
+                      <span>Search Only</span>
+                    </span>
+                  )}
+                  {hotel?.verified === true &&
+                    hotel?.matchScore &&
+                    hotel.matchScore < 0.75 && (
+                      <span
+                        className="inline-flex items-center gap-1 bg-gradient-to-r from-yellow-500 to-amber-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm"
+                        title={`Low match confidence (${(
+                          hotel.matchScore * 100
+                        ).toFixed(0)}%) - Please verify hotel details`}
+                      >
+                        <span>!</span>
+                        <span>
+                          {(hotel.matchScore * 100).toFixed(0)}% Match
+                        </span>
+                      </span>
+                    )}
+
                   {hotel?.badges?.isCheapest && (
                     <span className="inline-flex items-center gap-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm">
                       <span>💰</span>
@@ -283,20 +390,25 @@ function HotelCardItem({ hotel, onBookHotel }) {
                       <span>Top Rated</span>
                     </span>
                   )}
-                  {hotel?.isDefaultHotel &&
-                    !hotel?.badges?.isCheapest &&
-                    !hotel?.badges?.isTopRated &&
-                    !(
-                      hotel?.rating >= 4.5 &&
-                      (hotel?.user_ratings_total ||
-                        hotel?.reviews_count ||
-                        0) >= 50
-                    ) && (
-                      <span className="inline-flex items-center gap-1 bg-gradient-to-r from-teal-500 to-green-600 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm">
-                        <span>✓</span>
-                        <span>Day 1</span>
-                      </span>
-                    )}
+                  {hotel?.isDefaultHotel && (
+                    <span
+                      className="inline-flex items-center gap-1.5 bg-sky-100 dark:bg-sky-950/30 text-sky-700 dark:text-sky-400 px-2.5 py-1 rounded-md text-xs font-medium border border-sky-200 dark:border-sky-800 cursor-help"
+                      title="This is your accommodation for this trip."
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <span>Your Stay</span>
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -410,7 +522,7 @@ function HotelCardItem({ hotel, onBookHotel }) {
                   )}
               </div>
 
-              {/* Premium Book Button */}
+              {/* Premium Book Button - Enhanced with Status-Based Text */}
               {onBookHotel && (
                 <button
                   onClick={(e) => {
@@ -418,10 +530,77 @@ function HotelCardItem({ hotel, onBookHotel }) {
                     e.stopPropagation();
                     onBookHotel(hotel);
                   }}
-                  className="bg-sky-600 dark:bg-sky-500 hover:bg-sky-700 dark:hover:bg-sky-600 active:bg-sky-800 dark:active:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 cursor-pointer shadow-md hover:shadow-lg active:shadow-inner flex-shrink-0 whitespace-nowrap border border-sky-700 dark:border-sky-600"
+                  className={`${(() => {
+                    // ✅ ENHANCED: Use validateHotelBooking for accurate booking capability
+                    const validation = validateHotelBooking(hotel);
+                    return validation.canBook
+                      ? "bg-sky-600 dark:bg-sky-500 hover:bg-sky-700 dark:hover:bg-sky-600 border-sky-700 dark:border-sky-600"
+                      : "bg-orange-500 dark:bg-orange-600 hover:bg-orange-600 dark:hover:bg-orange-700 border-orange-600 dark:border-orange-700";
+                  })()} active:opacity-80 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 cursor-pointer shadow-md hover:shadow-lg active:shadow-inner flex-shrink-0 whitespace-nowrap border`}
+                  title={(() => {
+                    const validation = validateHotelBooking(hotel);
+                    const matchScore = hotel?.matchScore || 0;
+                    const qualityTier = hotel?.qualityTier || 6;
+                    const isLowConfidenceTrusted =
+                      qualityTier === 2 && matchScore < 0.95;
+
+                    if (validation.canBook) {
+                      // ✅ Google Hotels for uncertain Trusted matches
+                      if (isLowConfidenceTrusted) {
+                        return "View prices and reviews on Google Hotels (safer for uncertain matches)";
+                      }
+                      // ✅ Agoda direct booking
+                      return "Book this hotel directly on Agoda";
+                    } else {
+                      return hotel?.verified || qualityTier <= 2
+                        ? `Trusted hotel - ${validation.reason}. We'll search for similar hotels on Agoda.`
+                        : "Search similar hotels on Agoda (direct booking unavailable)";
+                    }
+                  })()}
                 >
-                  <span>Book Now</span>
-                  <span>→</span>
+                  {(() => {
+                    const validation = validateHotelBooking(hotel);
+
+                    // ✅ Determine booking platform based on smart hybrid logic
+                    const matchScore = hotel?.matchScore || 0;
+                    const qualityTier = hotel?.qualityTier || 6;
+                    const isLowConfidenceTrusted =
+                      qualityTier === 2 && matchScore < 0.95;
+
+                    if (validation.canBook) {
+                      // ✅ Google Hotels for uncertain Trusted matches
+                      if (isLowConfidenceTrusted) {
+                        return (
+                          <>
+                            <span>View on Google</span>
+                            <span>🔍</span>
+                          </>
+                        );
+                      }
+
+                      // ✅ Agoda direct booking for verified/high-confidence
+                      return (
+                        <>
+                          <span>Book Now</span>
+                          <span>→</span>
+                        </>
+                      );
+                    } else {
+                      // ✅ Show different text for Trusted (Tier 2) vs lower quality
+                      const isTrustedOrVerified =
+                        hotel?.verified || qualityTier <= 2;
+                      return (
+                        <>
+                          <span>
+                            {isTrustedOrVerified
+                              ? "Find on Agoda"
+                              : "Search Agoda"}
+                          </span>
+                          <span>🔍</span>
+                        </>
+                      );
+                    }
+                  })()}
                 </button>
               )}
             </div>

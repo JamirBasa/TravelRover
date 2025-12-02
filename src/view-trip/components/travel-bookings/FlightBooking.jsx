@@ -103,18 +103,19 @@ function FlightBooking({ trip }) {
   const [sortBy, setSortBy] = useState("price");
 
   // ✅ NEW: Client-side price validation helper
-  const validateFlightPrice = (priceStr) => {
+  const validateFlightPrice = (flight) => {
     try {
-      const numericPrice = parseFloat(
-        (priceStr || "0").toString().replace(/[₱,]/g, "")
-      );
+      // ✅ FIX: Use price_per_person if available (for group bookings), otherwise use price
+      const priceStr = flight.price_per_person || flight.price || "0";
+      const numericPrice = parseFloat(priceStr.toString().replace(/[₱,]/g, ""));
 
       // Basic validation
       if (isNaN(numericPrice) || numericPrice <= 0) {
         return { valid: false, error: "Invalid price" };
       }
 
-      // Range validation (₱500 - ₱100,000)
+      // Range validation for PER-PERSON price (₱500 - ₱100,000)
+      // Group totals can be higher, but per-person should be in this range
       if (numericPrice < 500) {
         return { valid: false, error: "Price too low" };
       }
@@ -265,6 +266,7 @@ function FlightBooking({ trip }) {
       tripLocation: trip?.userSelection?.location,
       hasFlightPreferences: !!trip?.flightPreferences,
       hasUserProfile: !!trip?.userProfile,
+      hasRerouteInfo: !!trip?.realFlightData?.reroute_info,
       options,
     });
 
@@ -274,8 +276,20 @@ function FlightBooking({ trip }) {
       trip?.userProfile?.address?.city ||
       "Manila";
 
-    const destinationCity =
+    let destinationCity =
       options.destination || trip?.userSelection?.location || "Cebu";
+
+    // ✅ NEW: If flights were rerouted, use the alternative airport instead
+    if (trip?.realFlightData?.rerouted && trip?.realFlightData?.reroute_info) {
+      const rerouteInfo = trip.realFlightData.reroute_info;
+      logDebug("FlightBooking", "Using rerouted destination", {
+        original: rerouteInfo.original_destination,
+        alternative: rerouteInfo.alternative_name,
+        alternativeCode: rerouteInfo.alternative_airport,
+      });
+      // Use the alternative airport name for URL generation
+      destinationCity = rerouteInfo.alternative_name || destinationCity;
+    }
 
     const originCode = getAirportCode(departureCity);
     const destinationCode = getAirportCode(destinationCity);
@@ -394,7 +408,10 @@ function FlightBooking({ trip }) {
       return null;
     }
 
-    const hasFlightData = trip?.hasRealFlights && trip?.realFlightData?.success;
+    const hasFlightData =
+      (trip?.hasRealFlights && trip?.realFlightData?.success) ||
+      (trip?.realFlightData?.rerouted &&
+        trip?.realFlightData?.flights?.length > 0);
     const flights = trip?.realFlightData?.flights || [];
 
     logDebug("FlightBooking", "Flight data loaded", {
@@ -415,13 +432,14 @@ function FlightBooking({ trip }) {
           return false;
         }
 
-        // Validate price
-        const priceValidation = validateFlightPrice(flight.price);
+        // ✅ FIX: Pass entire flight object to validator (not just price string)
+        const priceValidation = validateFlightPrice(flight);
 
         if (!priceValidation.valid) {
           logDebug("FlightBooking", "Invalid flight price", {
             flightName: flight.name,
             price: flight.price,
+            price_per_person: flight.price_per_person,
             error: priceValidation.error,
           });
           return false;
@@ -638,75 +656,103 @@ function FlightBooking({ trip }) {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100 mb-2">
-                    Smart Route: Flying to{" "}
-                    {trip.realFlightData.reroute_info.alternative_name}
+                    Your Destination:{" "}
+                    {trip.realFlightData.reroute_info.original_destination}
                   </h3>
-                  <p className="text-blue-800 dark:text-blue-200 text-sm mb-4 leading-relaxed">
+                  <p className="text-blue-800 dark:text-blue-200 text-sm mb-3 leading-relaxed">
+                    Since{" "}
                     <strong>
-                      {trip.realFlightData.reroute_info.original_destination}
+                      {
+                        trip.realFlightData.reroute_info.original_destination.split(
+                          ","
+                        )[0]
+                      }
                     </strong>{" "}
-                    has no airport, so we've found flights to{" "}
+                    doesn't have an airport, you'll fly to{" "}
                     <strong>
                       {trip.realFlightData.reroute_info.alternative_name}
                     </strong>{" "}
-                    instead! This is the recommended gateway.
+                    ({trip.realFlightData.reroute_info.alternative_airport}) and
+                    continue by ground transport to your destination.
                   </p>
 
                   <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
                     <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-                      🚌 Complete Journey:
+                      🛣️ Your Complete Journey:
                     </h4>
-                    <div className="space-y-2.5 text-sm">
-                      <div className="flex items-start gap-2">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center text-xs font-bold text-sky-700 dark:text-sky-300">
-                          1
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-7 h-7 rounded-full bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center text-xs font-bold text-sky-700 dark:text-sky-300">
+                          ✈️
                         </span>
-                        <span className="text-gray-700 dark:text-gray-300 flex-1">
-                          <strong>Fly</strong> to{" "}
-                          {trip.realFlightData.reroute_info.alternative_name} (
-                          {trip.realFlightData.reroute_info.alternative_airport}
-                          )
-                        </span>
+                        <div className="flex-1">
+                          <div className="font-semibold text-gray-900 dark:text-gray-100">
+                            Fly to{" "}
+                            {trip.realFlightData.reroute_info.alternative_name}
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                            Land at{" "}
+                            {
+                              trip.realFlightData.reroute_info
+                                .alternative_airport
+                            }{" "}
+                            • Flight prices shown above
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-start gap-2">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                          2
+                      <div className="flex items-center gap-2 pl-3">
+                        <div className="h-6 w-0.5 bg-gray-300 dark:bg-gray-600"></div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                          🚌
                         </span>
-                        <span className="text-gray-700 dark:text-gray-300 flex-1">
-                          <strong>
-                            Take{" "}
+                        <div className="flex-1">
+                          <div className="font-semibold text-gray-900 dark:text-gray-100">
+                            {trip.realFlightData.reroute_info.ground_transport
+                              .mode === "bus"
+                              ? "Take a bus"
+                              : trip.realFlightData.reroute_info
+                                  .ground_transport.mode === "van"
+                              ? "Take a van"
+                              : `Take ${trip.realFlightData.reroute_info.ground_transport.mode}`}{" "}
+                            to{" "}
+                            {
+                              trip.realFlightData.reroute_info.original_destination.split(
+                                ","
+                              )[0]
+                            }
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                             {
                               trip.realFlightData.reroute_info.ground_transport
-                                .mode
-                            }
-                          </strong>{" "}
-                          to{" "}
-                          {
-                            trip.realFlightData.reroute_info
-                              .original_destination
-                          }{" "}
-                          (
-                          {
-                            trip.realFlightData.reroute_info.ground_transport
-                              .travel_time
-                          }
-                          )
-                        </span>
+                                .travel_time
+                            }{" "}
+                            travel time • Book separately
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    {trip.realFlightData.reroute_info.ground_transport
-                      .recommendation && (
-                      <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
-                        <p className="text-xs text-blue-700 dark:text-blue-400">
-                          <strong>💡 Tip:</strong>{" "}
-                          {
-                            trip.realFlightData.reroute_info.ground_transport
-                              .recommendation
-                          }
-                        </p>
+                    <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm">💡</span>
+                        <div className="flex-1 text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
+                          <strong>Travel Tip:</strong> Ground transport tickets
+                          can be purchased at the airport or booked online.
+                          {trip.realFlightData.reroute_info.ground_transport
+                            .recommendation && (
+                            <>
+                              {" "}
+                              {
+                                trip.realFlightData.reroute_info
+                                  .ground_transport.recommendation
+                              }
+                            </>
+                          )}
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -738,26 +784,58 @@ function FlightBooking({ trip }) {
 
           <div className="p-4 sm:p-6 bg-gray-50 dark:bg-slate-950">
             {/* Sort Controls - Below Header */}
-            <div className="mb-5 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <div className="mb-5 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
                   Sort by:
                 </label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="text-sm border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-white cursor-pointer font-medium transition-all hover:border-sky-400"
-                >
-                  <option value="price">💰 Price (Low to High)</option>
-                  <option value="duration">⏱️ Flight Duration</option>
-                  <option value="best">⭐ Best Value</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="text-sm border border-gray-300 dark:border-slate-600 rounded-lg pl-3 pr-9 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-white cursor-pointer font-medium transition-all hover:border-sky-400 appearance-none min-w-[200px]"
+                  >
+                    <option value="price">💰 Price (Low to High)</option>
+                    <option value="duration">⏱️ Flight Duration</option>
+                    <option value="best">⭐ Best Value</option>
+                  </select>
+                  {/* Custom dropdown arrow icon */}
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <svg
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </div>
+                </div>
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+              <div className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
                 {sortedFlights.length}{" "}
                 {sortedFlights.length === 1 ? "result" : "results"}
               </div>
             </div>
+
+            {/* ✅ NEW: Price Disclaimer Banner - High Visibility */}
+            <div className="mb-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 flex items-center gap-3">
+              <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                <strong className="font-semibold">Live Pricing:</strong> Prices
+                shown are current estimates based on recent searches. Actual
+                prices may vary when you book and depend on availability,
+                demand, and booking time.
+              </p>
+            </div>
+
             {/* ✅ NEW: Data Quality Indicator */}
             {dataQualityScore !== undefined && dataQualityScore < 100 && (
               <div className="mb-6 bg-amber-50 dark:bg-amber-950/30 border-l-4 border-amber-400 dark:border-amber-600 rounded-lg p-4 sm:p-5 shadow-sm">
@@ -1080,14 +1158,14 @@ function FlightCard({ flight, onBook, trip, formatDuration }) {
             <div className="text-center sm:text-right lg:text-right flex-1 sm:flex-initial">
               {/* Price Display */}
               <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                {flight.pricing_note || "Per Person"}
+                Per Person
               </div>
               <div className="text-2xl font-bold text-green-600 dark:text-green-500 mb-0.5">
                 {flight.price_per_person || flight.price}
               </div>
-              {/* Show total for group only when multiple travelers */}
+              {/* Show total for group when multiple travelers */}
               {trip?.userSelection?.travelers > 1 && (
-                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium mb-1">
                   {flight.total_for_group ||
                     `₱${(
                       parseFloat(
@@ -1098,9 +1176,13 @@ function FlightCard({ flight, onBook, trip, formatDuration }) {
                         ).replace(/[₱,]/g, "")
                       ) * trip.userSelection.travelers
                     ).toLocaleString()}`}{" "}
-                  total for {trip.userSelection.travelers} travelers
+                  for {trip.userSelection.travelers} travelers
                 </div>
               )}
+              {/* Price volatility disclaimer */}
+              <div className="text-[10px] text-gray-400 dark:text-gray-500 italic mt-0.5">
+                *Prices may change at checkout
+              </div>
             </div>
 
             <Button

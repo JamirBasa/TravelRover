@@ -9,6 +9,7 @@ import {
   Lightbulb,
   ChevronDown,
   ChevronUp,
+  RefreshCw,
 } from "lucide-react";
 import {
   getWeatherForecast,
@@ -28,6 +29,49 @@ function WeatherForecast({ trip }) {
   const [showDetails, setShowDetails] = useState(false);
   const [showFahrenheit, setShowFahrenheit] = useState(false);
   const [showPackingTips, setShowPackingTips] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null); // ✅ Track last update time
+  const [isRefreshing, setIsRefreshing] = useState(false); // ✅ Manual refresh state
+
+  // ✅ Format time ago helper
+  const formatTimeAgo = (date) => {
+    if (!date) return "";
+    const minutes = Math.floor((new Date() - date) / 60000);
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
+
+  // ✅ Manual refresh handler
+  const handleManualRefresh = async () => {
+    const location = trip?.userSelection?.location;
+    const startDate = trip?.userSelection?.startDate;
+
+    if (!location || !startDate) return;
+
+    setIsRefreshing(true);
+    logDebug("WeatherForecast", "Manual refresh triggered");
+
+    try {
+      const data = await getWeatherForecast(location, startDate);
+      if (data.available) {
+        setWeatherData(data);
+        setLastUpdated(new Date());
+        setError(null);
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      logError("WeatherForecast", "Manual refresh error", {
+        error: err.message,
+      });
+      setError("Unable to refresh weather data");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Add component mount logging
   useEffect(() => {
@@ -81,6 +125,7 @@ function WeatherForecast({ trip }) {
             "Weather data is available, setting state"
           );
           setWeatherData(data);
+          setLastUpdated(new Date()); // ✅ Track update time
         } else {
           logDebug("WeatherForecast", "Weather data not available", {
             reason: data.reason,
@@ -100,6 +145,18 @@ function WeatherForecast({ trip }) {
     };
 
     fetchWeather();
+
+    // ✅ Auto-refresh: Update weather data every hour when component is visible
+    const refreshInterval = setInterval(() => {
+      logDebug("WeatherForecast", "Auto-refreshing weather data (hourly)");
+      fetchWeather();
+    }, 3600000); // 1 hour = 3600000ms
+
+    // Cleanup interval on unmount
+    return () => {
+      clearInterval(refreshInterval);
+      logDebug("WeatherForecast", "Cleanup: Stopped auto-refresh");
+    };
   }, [trip?.userSelection?.location, trip?.userSelection?.startDate]);
 
   // Don't render anything if loading or no data
@@ -201,23 +258,63 @@ function WeatherForecast({ trip }) {
   // Calculate trip date range
   const tripStartDate = trip?.userSelection?.startDate;
   const tripDuration = trip?.userSelection?.duration || 5;
-  
+
   // Calculate trip end date
   const tripStart = new Date(tripStartDate);
   const tripEnd = new Date(tripStart);
   tripEnd.setDate(tripEnd.getDate() + (tripDuration - 1)); // -1 because start day counts
-  
+
   // Filter forecast to only show days within the trip date range
-  const tripForecast = weatherData.forecast.filter(day => {
+  const tripForecast = weatherData.forecast.filter((day) => {
     const forecastDate = new Date(day.date);
     return forecastDate >= tripStart && forecastDate <= tripEnd;
   });
-  
+
   logDebug("WeatherForecast", "Filtered forecast for trip dates", {
     totalForecast: weatherData.forecast.length,
     tripForecast: tripForecast.length,
     tripDuration,
   });
+
+  // ✅ Handle empty forecast after filtering
+  if (tripForecast.length === 0) {
+    logDebug("WeatherForecast", "No forecast data matches trip dates", {
+      tripStart: tripStart.toISOString(),
+      tripEnd: tripEnd.toISOString(),
+      availableDates: weatherData.forecast.map((d) => d.date),
+    });
+
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-gray-700 p-8 shadow-sm">
+        <div className="text-center py-8">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
+            <Cloud className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            Weather Data Not Available
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-4">
+            Weather forecast for <strong>{weatherData.location}</strong> on your
+            trip dates (
+            {new Date(tripStart).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })}{" "}
+            -{" "}
+            {new Date(tripEnd).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })}
+            ) is currently unavailable.
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-500">
+            Weather forecasts are typically available 5-14 days in advance.
+            Check back closer to your trip date.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const recommendation = getWeatherRecommendation(tripForecast);
 
@@ -240,6 +337,14 @@ function WeatherForecast({ trip }) {
                   })
                 : "Your dates"}
             </span>
+            {lastUpdated && (
+              <>
+                <span>•</span>
+                <span className="text-xs">
+                  Updated {formatTimeAgo(lastUpdated)}
+                </span>
+              </>
+            )}
           </div>
           {recommendation && (
             <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
@@ -248,14 +353,27 @@ function WeatherForecast({ trip }) {
           )}
         </div>
 
-        {/* Temperature Unit Toggle */}
-        <button
-          onClick={() => setShowFahrenheit(!showFahrenheit)}
-          className="px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-          title="Toggle temperature unit"
-        >
-          {showFahrenheit ? "°F" : "°C"}
-        </button>
+        {/* Temperature Unit Toggle & Refresh Button */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            title="Refresh weather data"
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+          <button
+            onClick={() => setShowFahrenheit(!showFahrenheit)}
+            className="px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Toggle temperature unit"
+          >
+            {showFahrenheit ? "°F" : "°C"}
+          </button>
+        </div>
       </div>
 
       {/* Daily Forecast Cards - Hero Section */}
@@ -268,6 +386,25 @@ function WeatherForecast({ trip }) {
             ? celsiusToFahrenheit(day.tempMin)
             : day.tempMin;
 
+          // ✅ Smart relative day labeling - accurate to actual dates
+          const getDayLabel = (dateString) => {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const forecastDate = new Date(dateString);
+            forecastDate.setHours(0, 0, 0, 0);
+
+            const daysDiff = Math.round(
+              (forecastDate - today) / (1000 * 60 * 60 * 24)
+            );
+
+            if (daysDiff === 0) return "Today";
+            if (daysDiff === 1) return "Tomorrow";
+            return forecastDate.toLocaleDateString("en-US", {
+              weekday: "long",
+            });
+          };
+
           return (
             <div
               key={day.date}
@@ -277,11 +414,7 @@ function WeatherForecast({ trip }) {
               <div className="flex items-baseline justify-between mb-4">
                 <div>
                   <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                    {index === 0
-                      ? "Today"
-                      : new Date(day.date).toLocaleDateString("en-US", {
-                          weekday: "long",
-                        })}
+                    {getDayLabel(day.date)}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {new Date(day.date).toLocaleDateString("en-US", {

@@ -271,9 +271,9 @@ export const calculateEstimatedBudget = (params) => {
     transportAnalysis = null, // ✅ NEW: Transport mode analysis from backend
   } = params;
   
-  // Validate inputs
-  if (duration < 1 || duration > 30) {
-    console.warn('⚠️ Invalid duration, using default:', duration);
+  // ✅ ENFORCED: Validate inputs (1-7 days maximum) - throw error for invalid durations
+  if (duration < 1 || duration > 7) {
+    throw new Error(`Invalid trip duration: ${duration} days. Must be between 1-7 days for accurate budget estimation.`);
   }
   
   // Get cost factors with validation

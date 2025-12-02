@@ -32,6 +32,9 @@ import { toast } from "sonner";
 // ✅ Import production logging
 import { logDebug, logError } from "@/utils/productionLogger";
 
+// ✅ Import itinerary deduplication utility
+import { cleanItinerary } from "@/utils/itineraryDeduplicator";
+
 // Component imports - Clean imports using index file
 import {
   TripOverviewStats,
@@ -182,7 +185,17 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
       hasItinerary: !!trip?.tripData?.itinerary,
       type: typeof trip?.tripData?.itinerary,
     });
-    return parseDataArray(trip?.tripData?.itinerary, "itinerary");
+    const rawItinerary = parseDataArray(trip?.tripData?.itinerary, "itinerary");
+
+    // ✅ Deduplicate activities (removes duplicate "Return to hotel" and similar entries)
+    const cleanedItinerary = cleanItinerary(rawItinerary);
+
+    logDebug("PlacesToVisit", "Applied itinerary deduplication", {
+      originalDays: rawItinerary?.length || 0,
+      cleanedDays: cleanedItinerary?.length || 0,
+    });
+
+    return cleanedItinerary;
   }, [trip?.tripData?.itinerary]);
 
   // Calculate trip statistics (memoized)

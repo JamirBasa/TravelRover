@@ -67,6 +67,44 @@ GROUND_TRANSPORT_ROUTES = {
         "notes": "UNESCO heritage city, overnight bus recommended",
     },
     
+    # Mountain Province Routes (Impractical - Flight Recommended)
+    "Manila-Sagada": {
+        "distance": 400,
+        "travel_time": 12,
+        "modes": ["bus"],
+        "operators": ["Coda Lines", "GL Trans"],
+        "cost": {"min": 800, "max": 1200},
+        "frequency": "limited daily",
+        "impractical": True,  # ✅ Mark as impractical to force flight_required mode
+        "has_overnight_option": True,
+        "scenic": True,
+        "notes": "IMPRACTICAL: 12+ hours direct bus. RECOMMENDED: Fly to Tuguegarao (TUG) then 5-6 hour scenic bus to Sagada.",
+    },
+    
+    "Manila-Banaue": {
+        "distance": 380,
+        "travel_time": 10,
+        "modes": ["bus"],
+        "operators": ["Coda Lines", "Ohayami Trans"],
+        "cost": {"min": 700, "max": 1100},
+        "frequency": "limited daily",
+        "impractical": True,  # ✅ Mark as impractical to force flight_required mode
+        "has_overnight_option": True,
+        "notes": "IMPRACTICAL: 10+ hours direct bus. RECOMMENDED: Fly to Tuguegarao (TUG) then 6-7 hour bus to Banaue rice terraces.",
+    },
+    
+    "Manila-Bontoc": {
+        "distance": 390,
+        "travel_time": 11,
+        "modes": ["bus"],
+        "operators": ["Coda Lines", "GL Trans"],
+        "cost": {"min": 750, "max": 1100},
+        "frequency": "limited daily",
+        "impractical": True,  # ✅ Mark as impractical to force flight_required mode
+        "has_overnight_option": True,
+        "notes": "IMPRACTICAL: 11+ hours direct bus. RECOMMENDED: Fly to Tuguegarao (TUG) then 5-6 hour bus to Bontoc.",
+    },
+    
     "Baguio-Sagada": {
         "distance": 150,
         "travel_time": 5,

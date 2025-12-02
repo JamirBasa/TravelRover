@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { classifyActivities } from "@/utils/activityClassifier";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,7 +46,11 @@ function DayHeader({
   const dayNumber = dayItem?.day || dayIndex + 1;
   const headerId = `day-header-${dayIndex}`;
   const controlsId = `day-controls-${dayIndex}`;
+
+  // ✅ Classify activities vs logistics
+  const { activityCount, logistics } = classifyActivities(dayItem?.plan || []);
   const activitiesCount = dayItem?.plan?.length || 0;
+  const logisticsCount = logistics.length;
 
   // Event handlers with validation
   const handleToggleExpanded = onToggleExpanded || (() => {});
@@ -152,8 +157,27 @@ function DayHeader({
                     : "bg-gradient-to-r from-sky-100 to-blue-100 dark:from-sky-950/30 dark:to-blue-950/30 text-sky-700 dark:text-sky-400 text-xs px-2 py-1 font-semibold border border-sky-200 dark:border-sky-800"
                 }
               >
-                {activitiesCount}{" "}
-                {activitiesCount === 1 ? "activity" : "activities"}
+                {activityCount > 0 ? (
+                  <>
+                    <span className="font-bold">{activityCount}</span>{" "}
+                    {activityCount === 1 ? "activity" : "activities"}
+                    {logisticsCount > 0 && (
+                      <span className="opacity-75">
+                        {" "}
+                        · {logisticsCount} included
+                      </span>
+                    )}
+                  </>
+                ) : logisticsCount > 0 ? (
+                  <>
+                    <span className="font-bold">{logisticsCount}</span> included
+                  </>
+                ) : (
+                  <>
+                    <span className="font-bold">{activitiesCount}</span>{" "}
+                    {activitiesCount === 1 ? "activity" : "activities"}
+                  </>
+                )}
                 {isEditing && (
                   <span className="ml-1" aria-hidden="true">
                     <Edit className="h-3 w-3 inline-block" />
