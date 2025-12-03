@@ -74,59 +74,69 @@ function PlacesToVisitSection({ placesToVisit, trip }) {
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
-      {/* Header with Navigation */}
+      {/* Header */}
       <div className="bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-600 dark:to-teal-600 px-6 sm:px-8 py-6 relative overflow-hidden">
         {/* Subtle background accent */}
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-10 translate-x-10"></div>
 
-        <div className="relative flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 leading-tight">
-              Your Itinerary
-            </h2>
-            <p className="text-emerald-50 text-sm sm:text-base font-medium">
-              {validPlaces.length}{" "}
-              {validPlaces.length === 1 ? "place" : "places"} to explore
-            </p>
-          </div>
-
-          {/* Desktop Navigation Arrows */}
-          {validPlaces.length > 3 && (
-            <div className="hidden lg:flex items-center gap-2">
-              <button
-                onClick={() => scrollToCard("prev")}
-                disabled={!canScrollLeft}
-                className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 
-                         disabled:opacity-40 disabled:cursor-not-allowed
-                         flex items-center justify-center transition-all duration-200
-                         backdrop-blur-sm border border-white/20"
-                aria-label="Previous places"
-              >
-                <ChevronLeft className="h-5 w-5 text-white" />
-              </button>
-              <button
-                onClick={() => scrollToCard("next")}
-                disabled={!canScrollRight}
-                className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 
-                         disabled:opacity-40 disabled:cursor-not-allowed
-                         flex items-center justify-center transition-all duration-200
-                         backdrop-blur-sm border border-white/20"
-                aria-label="Next places"
-              >
-                <ChevronRight className="h-5 w-5 text-white" />
-              </button>
-            </div>
-          )}
+        <div className="relative">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 leading-tight">
+            Your Itinerary
+          </h2>
+          <p className="text-emerald-50 text-sm sm:text-base font-medium">
+            {validPlaces.length} {validPlaces.length === 1 ? "place" : "places"}{" "}
+            to explore
+          </p>
         </div>
       </div>
 
-      {/* Carousel Container */}
-      <div className="p-6 sm:p-8">
+      {/* Carousel Container with Side Arrows */}
+      <div className="p-6 sm:p-8 relative">
+        {/* Left Arrow - Floating */}
+        {validPlaces.length > 1 && (
+          <button
+            onClick={() => scrollToCard("prev")}
+            disabled={!canScrollLeft}
+            className={`absolute left-0 top-1/2 -translate-y-1/2 z-10
+                       w-12 h-12 rounded-full bg-white dark:bg-slate-800 
+                       shadow-lg hover:shadow-xl
+                       flex items-center justify-center transition-all duration-200
+                       border-2 border-gray-200 dark:border-slate-600
+                       hover:border-emerald-500 dark:hover:border-emerald-400
+                       disabled:opacity-0 disabled:pointer-events-none
+                       hidden md:flex
+                       ${canScrollLeft ? "hover:scale-110" : ""}`}
+            aria-label="Previous places"
+          >
+            <ChevronLeft className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+          </button>
+        )}
+
+        {/* Right Arrow - Floating */}
+        {validPlaces.length > 1 && (
+          <button
+            onClick={() => scrollToCard("next")}
+            disabled={!canScrollRight}
+            className={`absolute right-0 top-1/2 -translate-y-1/2 z-10
+                       w-12 h-12 rounded-full bg-white dark:bg-slate-800 
+                       shadow-lg hover:shadow-xl
+                       flex items-center justify-center transition-all duration-200
+                       border-2 border-gray-200 dark:border-slate-600
+                       hover:border-emerald-500 dark:hover:border-emerald-400
+                       disabled:opacity-0 disabled:pointer-events-none
+                       hidden md:flex
+                       ${canScrollRight ? "hover:scale-110" : ""}`}
+            aria-label="Next places"
+          >
+            <ChevronRight className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+          </button>
+        )}
+
         {/* Horizontal Scroll Container */}
         <div
           ref={scrollContainerRef}
           className="flex gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory
-                     pb-2"
+                     pb-2 px-2 md:px-14"
           style={{
             scrollbarWidth: "none",
             msOverflowStyle: "none",

@@ -308,9 +308,94 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
 
   return (
     <div className="brand-card shadow-lg border-0 overflow-hidden w-full">
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-0 w-full">
-        {/* Main Content with Enhanced Tabs */}
-        <section className="xl:col-span-3 w-full" aria-label="Trip content">
+      {/* Trip Context Bar - Compact & Always Visible */}
+      <div className="bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border-b border-sky-200 dark:border-sky-800 px-4 sm:px-6 py-3">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          {/* Left: Dates & Budget */}
+          <div className="flex items-center gap-6 flex-wrap">
+            {trip?.userSelection?.startDate && trip?.userSelection?.endDate && (
+              <div className="flex items-center gap-2">
+                <svg
+                  className="w-4 h-4 text-sky-600 dark:text-sky-400 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {new Date(trip.userSelection.startDate).toLocaleDateString(
+                    "en-US",
+                    {
+                      month: "short",
+                      day: "numeric",
+                    }
+                  )}{" "}
+                  -{" "}
+                  {new Date(trip.userSelection.endDate).toLocaleDateString(
+                    "en-US",
+                    {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    }
+                  )}
+                </span>
+              </div>
+            )}
+
+            <div className="h-4 w-px bg-gray-300 dark:bg-slate-600 hidden sm:block"></div>
+
+            <div className="flex items-center gap-2">
+              <svg
+                className="w-4 h-4 text-sky-600 dark:text-sky-400 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                {(() => {
+                  if (trip?.userSelection?.budgetAmount) {
+                    return `₱${trip.userSelection.budgetAmount.toLocaleString()}`;
+                  }
+                  if (
+                    trip?.userSelection?.customBudget &&
+                    trip.userSelection.customBudget.trim() !== ""
+                  ) {
+                    const amount = parseInt(trip.userSelection.customBudget);
+                    return !isNaN(amount)
+                      ? `₱${amount.toLocaleString()}`
+                      : "Budget not set";
+                  }
+                  if (trip?.tripData) {
+                    const calculated = calculateTotalBudget(trip);
+                    if (calculated?.total && calculated.total > 0) {
+                      return `₱${calculated.total.toLocaleString()}`;
+                    }
+                  }
+                  return "Budget not set";
+                })()}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Full-Width Content */}
+      <div className="w-full">
+        <section className="w-full" aria-label="Trip content">
           {/* Compact Tab Navigation */}
           <nav
             className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 relative"
@@ -390,263 +475,6 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
             ))}
           </div>
         </section>
-
-        {/* Responsive Sidebar */}
-        <aside
-          className="xl:col-span-1 border-l border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/50"
-          aria-label="Trip summary and actions"
-        >
-          <div className="p-4 sm:p-5 space-y-4 xl:sticky xl:top-20">
-            {/* At A Glance Card - Clean & Professional */}
-            <div className="brand-gradient rounded-xl p-5 text-white shadow-xl">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                  <span
-                    className="text-white text-lg"
-                    role="img"
-                    aria-label="Overview"
-                  >
-                    ✨
-                  </span>
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold">At A Glance</h3>
-                  <p className="text-white/80 text-xs">Your trip essentials</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                {/* Travel Dates - Prominent Display */}
-                {trip?.userSelection?.startDate &&
-                  trip?.userSelection?.endDate && (
-                    <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-base">📅</span>
-                        <span className="text-white/90 font-semibold text-sm">
-                          Travel Period
-                        </span>
-                      </div>
-                      <p className="font-bold text-white text-base leading-relaxed">
-                        {new Date(
-                          trip.userSelection.startDate
-                        ).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}{" "}
-                        -{" "}
-                        {new Date(
-                          trip.userSelection.endDate
-                        ).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </div>
-                  )}
-
-                {/* Trip Overview - 2 Key Metrics */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  {/* Duration */}
-                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center border border-white/10 hover:bg-white/15 transition-colors">
-                    <div className="text-2xl font-bold text-white mb-1.5">
-                      {trip?.userSelection?.duration || 0}
-                    </div>
-                    <div className="text-white/80 text-xs font-medium">
-                      Days
-                    </div>
-                  </div>
-
-                  {/* Travelers */}
-                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center border border-white/10 hover:bg-white/15 transition-colors">
-                    <div className="text-2xl font-bold text-white mb-1.5">
-                      {trip?.userSelection?.travelers || 1}
-                    </div>
-                    <div className="text-white/80 text-xs font-medium">
-                      {(trip?.userSelection?.travelers || 1) === 1
-                        ? "Traveler"
-                        : "Travelers"}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Your Budget */}
-                <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-base">💰</span>
-                    <span className="text-white/90 font-semibold text-sm">
-                      Your Budget
-                    </span>
-                  </div>
-                  <p className="font-bold text-white text-base leading-relaxed">
-                    {(() => {
-                      // ✅ Priority 1: Use budgetAmount (already parsed number - new trips)
-                      if (trip?.userSelection?.budgetAmount) {
-                        return `₱${trip.userSelection.budgetAmount.toLocaleString()}`;
-                      }
-
-                      // ✅ Priority 2: Parse customBudget (string to number - custom budget)
-                      if (
-                        trip?.userSelection?.customBudget &&
-                        trip.userSelection.customBudget.trim() !== ""
-                      ) {
-                        const amount = parseInt(
-                          trip.userSelection.customBudget
-                        );
-                        return !isNaN(amount)
-                          ? `₱${amount.toLocaleString()}`
-                          : "Budget not set";
-                      }
-
-                      // ✅ Priority 3: Calculate from trip data (tier-based budgets like "Moderate")
-                      if (trip?.tripData) {
-                        const calculated = calculateTotalBudget(trip);
-                        if (calculated?.total && calculated.total > 0) {
-                          return `₱${calculated.total.toLocaleString()}`;
-                        }
-                      }
-
-                      // ❌ No budget data available
-                      return "Budget not set";
-                    })()}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md dark:shadow-sky-500/5 border border-gray-100 dark:border-slate-700 p-4">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-6 h-6 bg-blue-100 dark:bg-blue-950/50 rounded flex items-center justify-center">
-                  <span
-                    className="text-blue-600 dark:text-blue-400 text-sm"
-                    role="img"
-                    aria-label="Actions"
-                  >
-                    ⚡
-                  </span>
-                </div>
-                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  Quick Actions
-                </h3>
-              </div>
-              <div className="space-y-2.5">
-                <button
-                  className="brand-button w-full py-2.5 px-3 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 focus:ring-offset-2 text-sm cursor-pointer"
-                  aria-label="Share this trip"
-                >
-                  <span className="text-sm" role="img" aria-label="Share">
-                    📤
-                  </span>
-                  <span>Share Trip</span>
-                </button>
-                <button
-                  className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 dark:from-emerald-500 dark:to-green-500 dark:hover:from-emerald-600 dark:hover:to-green-600 text-white py-2.5 px-3 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 text-sm cursor-pointer"
-                  aria-label="Download trip as PDF"
-                >
-                  <span className="text-sm" role="img" aria-label="Download">
-                    📄
-                  </span>
-                  <span>Download PDF</span>
-                </button>
-                <button
-                  className="w-full bg-gradient-to-r from-gray-600 to-slate-600 hover:from-gray-700 hover:to-slate-700 dark:from-slate-600 dark:to-slate-700 dark:hover:from-slate-500 dark:hover:to-slate-600 text-white py-2.5 px-3 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-500 dark:focus:ring-slate-500 focus:ring-offset-2 text-sm cursor-pointer"
-                  aria-label="Edit this trip"
-                >
-                  <span className="text-sm" role="img" aria-label="Edit">
-                    ✏️
-                  </span>
-                  <span>Edit Trip</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Weather Forecast */}
-            <div className="bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 rounded-lg p-4 border border-sky-200/50 dark:border-sky-800/50 shadow-sm dark:shadow-sky-500/5">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-6 h-6 bg-sky-100 dark:bg-sky-950/50 rounded flex items-center justify-center">
-                  <span
-                    className="text-sky-600 dark:text-sky-400 text-sm"
-                    role="img"
-                    aria-label="Weather"
-                  >
-                    🌤️
-                  </span>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sky-900 dark:text-sky-300 text-sm">
-                    Weather Forecast
-                  </h4>
-                  <p className="text-sky-700 dark:text-sky-400 text-sm">
-                    Stay prepared
-                  </p>
-                </div>
-              </div>
-              <p className="text-sky-800 dark:text-sky-400 text-sm mb-3 leading-relaxed">
-                Check weather for{" "}
-                <span className="font-semibold">
-                  {trip?.userSelection?.location}
-                </span>
-              </p>
-              <button
-                onClick={() => {
-                  logDebug(
-                    "TabbedTripView",
-                    "View Forecast clicked - switching to Overview tab",
-                    {
-                      location: trip?.userSelection?.location,
-                      startDate: trip?.userSelection?.startDate?.toString(),
-                      duration: trip?.userSelection?.duration,
-                      hasApiKey: !!import.meta.env.VITE_OPENWEATHER_API_KEY,
-                    }
-                  );
-
-                  setActiveTab("overview");
-                  // Scroll to weather forecast section
-                  setTimeout(() => {
-                    const weatherSection = document.getElementById(
-                      "weather-forecast-section"
-                    );
-                    logDebug(
-                      "TabbedTripView",
-                      "Weather section element lookup",
-                      {
-                        found: !!weatherSection,
-                      }
-                    );
-
-                    if (weatherSection) {
-                      logDebug(
-                        "TabbedTripView",
-                        "Scrolling to weather section"
-                      );
-                      weatherSection.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
-                      });
-
-                      // Add a subtle highlight effect
-                      weatherSection.style.transition = "transform 0.3s ease";
-                      weatherSection.style.transform = "scale(1.02)";
-                      setTimeout(() => {
-                        weatherSection.style.transform = "scale(1)";
-                      }, 300);
-                    } else {
-                      logDebug(
-                        "TabbedTripView",
-                        "Weather section not found - may not be displayed"
-                      );
-                    }
-                  }, 150);
-                }}
-                className="w-full bg-sky-600 hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600 text-white px-3 py-2.5 rounded text-sm font-medium transition-all duration-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 cursor-pointer"
-                aria-label="View detailed weather forecast"
-              >
-                View Forecast
-              </button>
-            </div>
-          </div>
-        </aside>
       </div>
     </div>
   );

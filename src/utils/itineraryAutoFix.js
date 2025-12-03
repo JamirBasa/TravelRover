@@ -1,9 +1,11 @@
 /**
  * Auto-fix itinerary validation issues
  * This ensures itineraries meet activity count constraints even if AI doesn't follow perfectly
+ * ✅ ENHANCED: Now includes duplicate removal to prevent multiple "Return to hotel" entries
  */
 
 import { classifyActivities, getActivityConstraints } from './activityClassifier';
+import { cleanItinerary } from './itineraryDeduplicator';
 
 /**
  * Auto-fix Day 1 to have maximum 2 activities
@@ -80,19 +82,25 @@ function autoFixHotelReturns(tripData) {
     const day = tripData.itinerary[i];
     if (!day?.plan || day.plan.length === 0) continue;
 
-    const lastActivity = day.plan[day.plan.length - 1];
-    const lastText = (lastActivity.placeName || '').toLowerCase();
+    // ✅ CRITICAL FIX: Check if day has ANY hotel return activity (not just last)
+    // This prevents duplicates when auto-fix runs multiple times (regular + aggressive)
+    const hasHotelReturn = day.plan.some(activity => {
+      const activityText = (activity.placeName || '').toLowerCase();
+      return activityText.includes('return to hotel') ||
+             activityText.includes('hotel return') ||
+             activityText.includes('back to hotel') ||
+             activityText.includes('rest at hotel') ||
+             activityText.includes('evening at hotel');
+    });
 
-    // Check if day already ends with hotel return
-    const hasHotelReturn =
-      lastText.includes('return to hotel') ||
-      lastText.includes('hotel return') ||
-      lastText.includes('back to hotel');
+    // ✅ CONSERVATIVE: Skip packed days (5+ activities already)
+    const activityCount = day.plan.length;
+    const isDayPacked = activityCount >= 5;
 
-    if (!hasHotelReturn) {
+    if (!hasHotelReturn && !isDayPacked) {
       // Add "Return to hotel" activity at end of day
       day.plan.push({
-        time: "20:00",
+        time: "8:00 PM", // ✅ Changed from "20:00" to match AI's 12-hour format
         placeName: "Return to hotel",
         placeDetails: "End of day - rest and prepare for tomorrow's activities",
         ticketPricing: "Free",
@@ -138,6 +146,12 @@ export function autoFixItinerary(tripData, formData) {
   const hotelReturnResult = autoFixHotelReturns(tripData);
   tripData = hotelReturnResult.tripData;
   modificationsCount += hotelReturnResult.modificationsCount;
+
+  // ✅ LAYER 2 DEFENSE: Deduplicate after all fixes to catch any duplicates
+  // This is critical because auto-fix can run multiple times (regular + aggressive)
+  console.log('🧹 Running post-auto-fix deduplication...');
+  tripData.itinerary = cleanItinerary(tripData.itinerary);
+  console.log('✅ Post-auto-fix deduplication complete');
 
   return { tripData, modificationsCount };
 }

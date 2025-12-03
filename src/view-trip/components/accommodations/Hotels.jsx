@@ -480,25 +480,70 @@ function Hotels({ trip }) {
       if (day1CheckIn) {
         const checkInText = day1CheckIn.placeName;
 
+        // Helper: Extract core hotel name (first 2-3 significant words only)
+        const getCoreHotelName = (fullName) => {
+          const parts = fullName
+            .toLowerCase()
+            .split(/\s+/)
+            .filter(
+              (p) =>
+                p.length > 2 &&
+                !["hotel", "inn", "resort", "the", "at", "and", "&"].includes(p)
+            );
+          return parts.slice(0, 3).join(" "); // Take first 3 significant words
+        };
+
         // Find which hotel from our list matches the check-in text
         actualItineraryHotel = allSorted.find((h) => {
           const hotelName = h.name || h.hotelName || h.hotel_name || "";
           const checkInLower = checkInText.toLowerCase();
           const hotelLower = hotelName.toLowerCase();
 
-          // 1. EXACT SUBSTRING MATCH (most reliable)
+          // 1. WORD BOUNDARY MATCH (exact phrase match - most reliable)
+          // Ensures "Grand Emilia" doesn't match "Boulevard Grand Hotel"
+          const hotelNameRegex = new RegExp(
+            `\\b${hotelName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+            "i"
+          );
+          if (hotelNameRegex.test(checkInText)) {
+            console.log(
+              `✅ Word boundary match: "${hotelName}" in "${checkInText}"`
+            );
+            return true;
+          }
+
+          // 2. CORE NAME MATCH (handles variations like "Grand Emilia Hotel" vs "Grand Emilia Hotel Cebu")
+          const coreHotelName = getCoreHotelName(hotelName);
+          const coreCheckInName = getCoreHotelName(checkInText);
+
+          if (
+            coreHotelName &&
+            coreCheckInName &&
+            (coreCheckInName.includes(coreHotelName) ||
+              coreHotelName.includes(coreCheckInName))
+          ) {
+            console.log(
+              `✅ Core name match: "${coreHotelName}" ↔ "${coreCheckInName}"`
+            );
+            return true;
+          }
+
+          // 3. FULL SUBSTRING MATCH (fallback for exact substring)
           if (
             checkInLower.includes(hotelLower) ||
             hotelLower.includes(checkInLower)
           ) {
+            console.log(
+              `✅ Substring match: "${hotelName}" in "${checkInText}"`
+            );
             return true;
           }
 
-          // 2. STRICT WORD MATCHING (require multiple significant words to match)
+          // 4. SMART WORD MATCHING (require multiple distinctive words to match)
           const nameParts = hotelName.toLowerCase().split(/\s+/);
           const checkInParts = checkInText.toLowerCase().split(/\s+/);
 
-          // Filter out common words and location names (to prevent false positives)
+          // Filter out only truly common words (keep distinctive terms like "grand", "emilia")
           const commonWords = [
             "hotel",
             "inn",
@@ -507,18 +552,19 @@ function Hotels({ trip }) {
             "guesthouse",
             "guest",
             "house",
-            "view",
-            "grand",
             "the",
             "at",
             "and",
             "&",
+            "check-in",
+            "check",
+            "in",
           ];
           const significantHotelParts = nameParts.filter(
-            (p) => p.length > 3 && !commonWords.includes(p)
+            (p) => p.length > 2 && !commonWords.includes(p)
           );
           const significantCheckInParts = checkInParts.filter(
-            (p) => p.length > 3 && !commonWords.includes(p)
+            (p) => p.length > 2 && !commonWords.includes(p)
           );
 
           // Count how many significant words match
@@ -531,7 +577,15 @@ function Hotels({ trip }) {
             2,
             Math.ceil(significantHotelParts.length * 0.8)
           );
-          return matchingWords.length >= matchThreshold;
+
+          if (matchingWords.length >= matchThreshold) {
+            console.log(
+              `✅ Word match: ${matchingWords.length}/${significantHotelParts.length} words matched (threshold: ${matchThreshold})`
+            );
+            return true;
+          }
+
+          return false;
         });
 
         if (actualItineraryHotel) {
@@ -659,8 +713,6 @@ function Hotels({ trip }) {
   // ========================================
   const generateGoogleHotelsURL = useCallback(
     (hotel) => {
-      // ✅ CRITICAL: Use AI-generated name for Google search (not database name)
-      // Prevents STAY Hotel → Star Hotel confusion when searching Google
       const hotelName =
         hotel?.ai_hotel_name ||
         hotel?.name ||
@@ -668,232 +720,146 @@ function Hotels({ trip }) {
         hotel?.hotel_name ||
         "";
       const cityName = trip?.userSelection?.location?.split(",")[0] || "";
-      const checkIn = trip?.userSelection?.startDate || "";
-      const checkOut = trip?.userSelection?.endDate || "";
-      const adults = trip?.userSelection?.travelers || 1;
+      const fullAddress = hotel?.location || hotel?.address || cityName;
 
-      // Google Hotels search URL with hotel name and location
-      const searchQuery = `${hotelName} ${cityName}`.trim();
+      // ✅ OPTIMIZED: Use search API format - more reliable than /place/ format
+      // Google Maps search always finds and shows the hotel with pin
+      const searchQuery = `${hotelName}, ${fullAddress}`.trim();
+      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        searchQuery
+      )}`;
 
-      const params = new URLSearchParams({
-        q: searchQuery,
-        ts: "CAEaAggA", // Google Hotels search mode
-        qs: searchQuery,
-        ap: "MAA", // Accommodation type: hotel
-        hl: "en",
+      logDebug("Hotels", "Generated Google Maps search URL", {
+        hotelName,
+        fullAddress,
+        searchQuery,
+        url: googleMapsUrl,
       });
 
-      // Add dates if available
-      if (checkIn) {
-        params.append("check_in_date", checkIn);
-      }
-      if (checkOut) {
-        params.append("check_out_date", checkOut);
-      }
-
-      // Add travelers count
-      params.append("adults", adults);
-
-      // Add Google Place ID if available for exact match
-      if (hotel?.place_id || hotel?.google_place_id) {
-        params.append("htidocid", hotel.place_id || hotel.google_place_id);
-      }
-
-      const googleUrl = `https://www.google.com/travel/hotels?${params.toString()}`;
-
-      logDebug("Hotels", "Generated Google Hotels URL", {
-        aiHotelName: hotel?.ai_hotel_name,
-        databaseHotelName: hotel?.hotel_name,
-        usedName: hotelName,
-        cityName,
-        hasPlaceId: !!(hotel?.place_id || hotel?.google_place_id),
-        url: googleUrl,
-      });
-
-      return googleUrl;
+      return googleMapsUrl;
     },
     [trip?.userSelection]
   );
 
   // ========================================
-  // GENERATE AGODA BOOKING URL
+  // HELPER: Extract city name from location
+  // ========================================
+  const extractCityFromLocation = (location) => {
+    if (!location) return "Philippines";
+    // Extract first part before comma (usually city name)
+    return location.split(",")[0].trim();
+  };
+
+  // GENERATE BOOKING URL (SMART 4-STRATEGY ROUTING)
   // ========================================
   const generateAgodaBookingURL = useCallback(
     (hotel) => {
-      // Debug: Log the entire hotel object to see all available IDs
-      logDebug("Hotels", "Full hotel object", hotel);
-      logDebug("Hotels", "Hotel ID fields", {
-        hotel_id: hotel?.hotel_id,
-        hotelId: hotel?.hotelId,
-        id: hotel?.id,
-        place_id: hotel?.place_id,
-        google_place_id: hotel?.google_place_id,
-        verified: hotel?.verified,
-        verificationResult: hotel?.verificationResult,
-        firestoreHotelId: hotel?.verificationResult?.firestoreData?.hotel_id,
-      });
-
-      // ✅ CRITICAL: Extract hotel_id and validate it's numeric (Agoda format)
-      // Priority order: hotel_id > hotelId > id (but only if numeric)
-      let hotelId = null;
-      let hotelIdSource = null;
-
-      // Check hotel_id first
-      if (hotel?.hotel_id && !String(hotel.hotel_id).startsWith("ChIJ")) {
-        hotelId = hotel.hotel_id;
-        hotelIdSource = "hotel.hotel_id";
-        logDebug("Hotels", "Using hotel.hotel_id", { hotelId });
-      }
-      // Check hotelId (camelCase)
-      else if (hotel?.hotelId && !String(hotel.hotelId).startsWith("ChIJ")) {
-        hotelId = hotel.hotelId;
-        hotelIdSource = "hotel.hotelId";
-        logDebug("Hotels", "Using hotel.hotelId", { hotelId });
-      }
-      // Check id (but verify it's not a Google Place ID)
-      else if (hotel?.id && !String(hotel.id).startsWith("ChIJ")) {
-        hotelId = hotel.id;
-        hotelIdSource = "hotel.id";
-        logDebug("Hotels", "Using hotel.id", { hotelId });
-      }
-
-      // ✅ VALIDATION: Ensure we have a valid numeric Agoda hotel ID
-      const isValidAgodaId = hotelId && /^\d+$/.test(String(hotelId));
-
-      if (!hotelId || !isValidAgodaId) {
-        logDebug("Hotels", "No valid Agoda hotel ID available", {
-          foundId: hotelId,
-          isNumeric: /^\d+$/.test(String(hotelId)),
-          verified: hotel?.verified,
-          hotelName: hotel?.ai_hotel_name || hotel?.name || hotel?.hotel_name,
-          availableKeys: Object.keys(hotel).join(", "),
-        });
-
-        // ✅ Fallback: Search by city if no hotel ID
-        const cityName =
-          hotel?.city || trip?.userSelection?.location?.split(",")[0] || "";
-        logDebug("Hotels", `Falling back to city search: ${cityName}`);
-        return generateCitySearchURL(cityName);
-      }
-
-      // ⚠️ SAFETY CHECK: Verify hotel name matches before booking
-      // Prevents wrong hotel redirect (e.g., STAY Hotel → Star Hotel)
-      const hotelName = (
+      const hotelName =
         hotel?.ai_hotel_name ||
         hotel?.name ||
-        hotel?.hotel_name ||
-        ""
-      ).toLowerCase();
+        hotel?.hotelName ||
+        hotel?.hotel_name;
+      const cityName = extractCityFromLocation(trip?.userSelection?.location);
       const matchScore = hotel?.matchScore || 0;
-
-      logDebug("Hotels", "Hotel booking details", {
-        requestedHotel:
-          hotel?.ai_hotel_name || hotel?.name || hotel?.hotel_name,
-        databaseMatch: hotel?.hotel_name,
-        hotelId: hotelId,
-        idSource: hotelIdSource,
-        matchScore: matchScore,
-        qualityTier: hotel?.qualityTier,
-        verified: hotel?.verified,
-      });
-
-      // ⚠️ CRITICAL FIX: Smart Hybrid Routing based on confidence and tier
-      // - Tier 1 (Verified, 100%): Direct Agoda booking ✅
-      // - Tier 2 (Trusted, 90-99%) with match >= 95%: Agoda with warning ✅
-      // - Tier 2 (Trusted) with match < 95%: Google Hotels (safer) 🔍
-      // - Tier 3-6 with match < 95%: Agoda city search 🔍
-
       const qualityTier = hotel?.qualityTier || 6;
-      const isPerfectMatch = matchScore === 1.0 || qualityTier === 1;
-      const isHighConfidenceTrusted = qualityTier === 2 && matchScore >= 0.95;
-      const isLowConfidenceTrusted = qualityTier === 2 && matchScore < 0.95;
 
-      // Route Tier 2 with low confidence to Google Hotels (prevents wrong hotel redirect)
-      if (isLowConfidenceTrusted) {
+      // ✅ STRATEGY 1: GOOGLE-VERIFIED HOTELS (No Agoda DB match)
+      // Route to Google Maps to show ALL booking platforms (Agoda, Booking.com, Hotels.com, etc.)
+      if (hotel?.verificationSource === "google_places") {
         logDebug(
           "Hotels",
-          "Trusted tier with match < 95% - routing to Google Hotels",
+          "🌟 Strategy 1: Google-verified → Google Maps (all platforms)",
           {
-            aiHotelName: hotel?.ai_hotel_name || hotel?.name,
-            databaseMatch: hotel?.hotel_name,
-            matchScore: matchScore,
-            qualityTier: qualityTier,
-            decision: "google_hotels",
-            reason:
-              "Safer for uncertain Trusted matches - uses exact Google Place ID",
+            hotelName,
+            rating: hotel?.rating,
+            reviews: hotel?.user_ratings_total,
+            strategy: "google_maps_multi_platform",
           }
         );
-
         return generateGoogleHotelsURL(hotel);
       }
 
-      // Route Tier 3-6 with low confidence to Agoda city search
-      if (!isPerfectMatch && !isHighConfidenceTrusted) {
-        logDebug(
-          "Hotels",
-          "Low confidence or lower tier - using Agoda city search",
-          {
-            aiHotelName: hotel?.ai_hotel_name || hotel?.name,
-            databaseMatch: hotel?.hotel_name,
-            matchScore: matchScore,
-            qualityTier: qualityTier,
-            decision: "agoda_city_search",
-          }
-        );
+      // ✅ STRATEGY 2: AGODA DATABASE MATCH (Direct booking with hotel_id)
+      // Extract and validate numeric Agoda hotel_id
+      const hotelId = hotel?.hotel_id || hotel?.hotelId || hotel?.id;
+      const isValidAgodaId =
+        hotelId &&
+        /^\d+$/.test(String(hotelId)) &&
+        !String(hotelId).startsWith("ChIJ");
 
-        const cityName = trip?.userSelection?.location?.split(",")[0] || "";
-        const searchQuery = `${
-          hotel?.ai_hotel_name || hotel?.name || hotel?.hotel_name
-        }, ${cityName}`;
+      if (isValidAgodaId) {
+        // Confidence-based routing for Agoda DB matches
+        const isPerfectMatch = matchScore === 1.0 || qualityTier === 1;
+        const isHighConfidenceTrusted = qualityTier === 2 && matchScore >= 0.95;
+        const isLowConfidenceTrusted = qualityTier === 2 && matchScore < 0.95;
 
-        return `https://www.agoda.com/search?city=${encodeURIComponent(
-          cityName
-        )}&checkIn=${trip?.userSelection?.startDate || ""}&checkOut=${
-          trip?.userSelection?.endDate || ""
-        }&rooms=1&adults=1&children=0&cid=1952350&tag=${encodeURIComponent(
-          searchQuery
-        )}`;
-      }
+        // Route low-confidence Tier 2 to Google Maps (safer - always shows correct hotel)
+        if (isLowConfidenceTrusted) {
+          logDebug(
+            "Hotels",
+            "⚠️ Strategy 2b: Low confidence Tier 2 → Google Maps",
+            {
+              hotelName,
+              matchScore,
+              qualityTier,
+              strategy: "google_maps_safe",
+            }
+          );
+          return generateGoogleHotelsURL(hotel);
+        }
 
-      const baseParams = {
-        pcs: "1",
-        cid: "1952350",
-        hl: "en-us",
-        currency: "PHP",
-        NumberofAdults: "1",
-        NumberofChildren: "0",
-        Rooms: "1",
-      };
+        // Route Tier 3-6 with low confidence to Google Maps (prioritize accuracy over platform)
+        if (!isPerfectMatch && !isHighConfidenceTrusted) {
+          logDebug("Hotels", "⚠️ Strategy 2c: Low confidence → Google Maps", {
+            hotelName,
+            matchScore,
+            qualityTier,
+            strategy: "google_maps_fallback",
+          });
+          return generateGoogleHotelsURL(hotel);
+        }
 
-      // Only compute dates if needed
-      const dateParams = trip?.userSelection?.startDate
-        ? {
+        // Direct Agoda booking for high confidence matches ONLY
+        const params = new URLSearchParams({
+          pcs: "1",
+          cid: "1952350",
+          hl: "en-us",
+          currency: "PHP",
+          hid: hotelId,
+          NumberofAdults: trip?.userSelection?.travelers || "1",
+          NumberofChildren: "0",
+          Rooms: "1",
+          ...(trip?.userSelection?.startDate && {
             checkin: new Date(trip.userSelection.startDate)
               .toISOString()
               .split("T")[0],
-            checkout: trip.userSelection.endDate
+            checkout: trip?.userSelection?.endDate
               ? new Date(trip.userSelection.endDate).toISOString().split("T")[0]
               : undefined,
-          }
-        : {};
+          }),
+        });
 
-      const params = new URLSearchParams({
-        ...baseParams,
-        hid: hotelId,
-        ...dateParams,
-      });
+        const finalUrl = `https://www.agoda.com/partners/partnersearch.aspx?${params.toString()}`;
+        logDebug(
+          "Hotels",
+          "✅ Strategy 2a: Direct Agoda booking (high confidence)",
+          { hotelId, hotelName, matchScore, qualityTier }
+        );
+        return finalUrl;
+      }
 
-      const finalUrl = `https://www.agoda.com/partners/partnersearch.aspx?${params.toString()}`;
-
-      logDebug("Hotels", "Generated Agoda URL", {
-        hotelId,
-        aiHotelName: hotel?.ai_hotel_name || hotel?.name,
-        databaseMatch: hotel?.hotel_name,
-        verified: hotel?.verified,
-        url: finalUrl,
-      });
-
-      return finalUrl;
+      // ✅ STRATEGY 3: NO AGODA ID → Google Maps/Hotels (PREFERRED for non-Agoda hotels)
+      // This handles: Google-verified hotels, boutique hotels, new hotels not in Agoda DB
+      logDebug(
+        "Hotels",
+        "🗺️ Strategy 3: No Agoda ID → Google Maps (direct hotel page)",
+        {
+          hotelName,
+          reason: "Hotel not in Agoda database or no valid hotel_id",
+          bookingOptions: "Google shows all available booking platforms",
+        }
+      );
+      return generateGoogleHotelsURL(hotel);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [trip?.userSelection]
@@ -904,33 +870,21 @@ function Hotels({ trip }) {
   // ========================================
   const generateCitySearchURL = useCallback(
     (cityName) => {
-      const baseParams = {
-        pcs: "1",
-        cid: "1952350",
-        hl: "en-us",
-        city: cityName,
-        currency: "PHP",
-        adults: "1",
-        rooms: "1",
-      };
+      const searchUrl =
+        `https://www.agoda.com/search?` +
+        `city=${encodeURIComponent(cityName)}` +
+        `&checkIn=${trip?.userSelection?.startDate || ""}` +
+        `&checkOut=${trip?.userSelection?.endDate || ""}` +
+        `&rooms=1` +
+        `&adults=${trip?.userSelection?.travelers || 2}` +
+        `&children=0` +
+        `&cid=1952350`;
 
-      const dateParams = trip?.userSelection?.startDate
-        ? {
-            checkin: new Date(trip.userSelection.startDate)
-              .toISOString()
-              .split("T")[0],
-            checkout: trip.userSelection.endDate
-              ? new Date(trip.userSelection.endDate).toISOString().split("T")[0]
-              : undefined,
-          }
-        : {};
-
-      const params = new URLSearchParams({
-        ...baseParams,
-        ...dateParams,
+      logDebug("Hotels", "🔍 City search URL generated", {
+        cityName,
+        url: searchUrl,
       });
-
-      return `https://www.agoda.com/?${params.toString()}`;
+      return searchUrl;
     },
     [trip?.userSelection]
   );
@@ -1304,63 +1258,11 @@ function Hotels({ trip }) {
 
         {/* Hotels List */}
         <div className="p-4 sm:p-6 bg-gray-50 dark:bg-slate-950">
-          {/* Quality Filter Info Banner */}
-          {hotels.qualityFilter?.message &&
-            (hotels.qualityFilter.message.type === "success" ||
-              hotels.qualityFilter.message.type === "info") && (
-              <div
-                className={`mb-6 ${
-                  hotels.qualityFilter.message.type === "success"
-                    ? "bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/20 dark:to-green-950/20 border-emerald-200 dark:border-emerald-800"
-                    : "bg-gradient-to-r from-blue-50 to-sky-50 dark:from-blue-950/20 dark:to-sky-950/20 border-blue-200 dark:border-blue-800"
-                } rounded-lg p-4 border-2`}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`w-8 h-8 ${
-                      hotels.qualityFilter.message.type === "success"
-                        ? "bg-emerald-100 dark:bg-emerald-950/50"
-                        : "bg-blue-100 dark:bg-blue-950/50"
-                    } rounded-lg flex items-center justify-center flex-shrink-0`}
-                  >
-                    <span
-                      className={`${
-                        hotels.qualityFilter.message.type === "success"
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-blue-600 dark:text-blue-400"
-                      } text-lg`}
-                    >
-                      {hotels.qualityFilter.message.icon}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4
-                      className={`font-semibold ${
-                        hotels.qualityFilter.message.type === "success"
-                          ? "text-emerald-900 dark:text-emerald-300"
-                          : "text-blue-900 dark:text-blue-300"
-                      } text-sm mb-1`}
-                    >
-                      {hotels.qualityFilter.message.title}
-                    </h4>
-                    <p
-                      className={`${
-                        hotels.qualityFilter.message.type === "success"
-                          ? "text-emerald-800 dark:text-emerald-400"
-                          : "text-blue-800 dark:text-blue-400"
-                      } text-xs leading-relaxed`}
-                    >
-                      {hotels.qualityFilter.message.message}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
           <div className="space-y-6">
             {/* Combined Hotels Display - No Separation Between Real/AI */}
             {hotels.allHotels.map((hotel, index) => {
               const isFirstHotel = index === 0;
+              const isDefaultHotel = hotel?.isDefaultHotel === true;
               const isBestValue = isFirstHotel && hotels.allHotels.length > 1;
 
               return (
@@ -1368,22 +1270,35 @@ function Hotels({ trip }) {
                   key={hotel?.hotel_id || hotel?.id || `hotel-${index}`}
                   className="group relative"
                 >
-                  {/* Best Value Badge - Only on #1 Hotel */}
-                  {isBestValue && (
+                  {/* Modern Badge - Your Selected Hotel */}
+                  {isDefaultHotel && (
                     <div className="absolute -top-3 -left-3 z-10">
-                      <div className="bg-gradient-to-br from-amber-400 to-amber-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-                        <span className="text-lg">⭐</span>
-                        <span className="font-bold text-sm">Best Value</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Check-in Badge - Only on First Hotel Overall */}
-                  {isFirstHotel && (
-                    <div className="absolute -top-3 -right-3 z-10">
-                      <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
-                        <span>✓</span>
-                        <span>Day 1 Check-in</span>
+                      <div className="bg-white dark:bg-slate-800 border-2 border-emerald-500 dark:border-emerald-600 px-4 py-2 rounded-lg shadow-lg flex items-center gap-2.5">
+                        <div className="w-6 h-6 bg-emerald-500 dark:bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
+                          <svg
+                            className="w-3.5 h-3.5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="3"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+                        <div className="flex flex-col leading-none">
+                          <span className="font-bold text-sm text-gray-900 dark:text-white">
+                            Your Hotel
+                          </span>
+                          {isBestValue && (
+                            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
+                              Best Value
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}

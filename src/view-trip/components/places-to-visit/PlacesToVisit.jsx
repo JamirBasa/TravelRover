@@ -250,7 +250,8 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
               placeName: content.split(" - ")[0] || "Activity",
               placeDetails: content,
               imageUrl: "",
-              geoCoordinates: { latitude: 0, longitude: 0 },
+              // ✅ Don't set coordinates here - let the map component geocode or use AI data
+              geoCoordinates: null,
               ticketPricing: "₱0",
               timeTravel: "Varies",
               rating: "4.0",
@@ -456,7 +457,10 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
         placesToVisit={parsedPlacesToVisit}
       />
 
-      {/* ✅ OPTIMIZED ORDER: Itinerary comes right after overview */}
+      {/* Budget Breakdown Section */}
+      <BudgetBreakdown trip={trip} className="mt-8" />
+
+      {/* ✅ OPTIMIZED ORDER: Itinerary comes after budget */}
       {/* Daily Itinerary Header */}
       <ItineraryHeader />
 
@@ -512,10 +516,7 @@ const PlacesToVisit = forwardRef(({ trip, onTripUpdate }, ref) => {
         </div>
       </div>
 
-      {/* ✅ OPTIMIZED ORDER: Budget and Places after itinerary */}
-      {/* Budget Breakdown Section */}
-      <BudgetBreakdown trip={trip} className="mt-8" />
-
+      {/* ✅ OPTIMIZED ORDER: Places after itinerary */}
       {/* Included Places Section (renamed from Must-Visit) */}
       {parsedPlacesToVisit && parsedPlacesToVisit.length > 0 && (
         <PlacesToVisitSection placesToVisit={parsedPlacesToVisit} trip={trip} />

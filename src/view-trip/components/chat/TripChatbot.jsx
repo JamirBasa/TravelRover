@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Loader2, Sparkles, Brain, Zap } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, Brain, Zap, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
+import MarkdownMessage from "./MarkdownMessage";
 import { logDebug, logError } from "@/utils/productionLogger";
 import { GeminiProxyChatSession } from "@/config/geminiProxyService";
 import { LongCatService } from "@/config/longcatService";
@@ -111,7 +112,13 @@ Which assistant would you like to chat with? 😊`,
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
+  
+  // Scroll-to-bottom button state
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const lastMessageCountRef = useRef(messages.length);
 
   // Smart AI suggestion based on input
   useEffect(() => {
@@ -134,12 +141,58 @@ Which assistant would you like to chat with? 😊`,
         block: "end",
         inline: "nearest",
       });
+      setUnreadCount(0); // Reset unread count when scrolling to bottom
+      setShowScrollButton(false);
     }, 100); // Small delay ensures React has rendered new message
   };
 
+  // Handle scroll event to show/hide scroll button
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100; // Within 100px of bottom
+    
+    setShowScrollButton(!isNearBottom);
+    
+    if (isNearBottom) {
+      setUnreadCount(0); // Clear unread count if user manually scrolls to bottom
+    }
+  };
+
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]); // Triggers whenever messages array changes
+    // Check if new messages were added
+    if (messages.length > lastMessageCountRef.current) {
+      const newMessageCount = messages.length - lastMessageCountRef.current;
+      
+      // Only proceed if there's actually a new message (not initial render)
+      if (newMessageCount > 0 && lastMessageCountRef.current > 0) {
+        // Check if user is scrolled up
+        if (messagesContainerRef.current) {
+          const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+          const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+          
+          if (!isNearBottom) {
+            // User scrolled up - show unread badge instead of auto-scrolling
+            setUnreadCount(prev => prev + newMessageCount);
+            setShowScrollButton(true);
+          } else {
+            // User at bottom - auto-scroll to new message
+            scrollToBottom();
+          }
+        } else {
+          // Container not ready yet - just scroll
+          scrollToBottom();
+        }
+      } else if (lastMessageCountRef.current === 0) {
+        // Initial load - scroll to bottom
+        scrollToBottom();
+      }
+    }
+    
+    lastMessageCountRef.current = messages.length;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]); // Only depend on messages array
 
   // Focus input on mount
   useEffect(() => {
@@ -269,38 +322,34 @@ Which assistant would you like to chat with? 😊`,
 
   // Send message using Gemini
   const sendGeminiMessage = async (userMessage, tripContext) => {
-    const isFirstUserMessage = messages.length === 1;
-
-    let fullPrompt;
-    if (isFirstUserMessage) {
-      const systemPrompt = `You are Rover, a friendly AI travel assistant for TravelRover. Help travelers with their trip to ${
-        tripContext.destination
-      }!
-
-TRIP DETAILS:
-🌍 Destination: ${tripContext.destination}
-📅 Duration: ${tripContext.duration} days (${tripContext.travelDates})
-👥 Travelers: ${tripContext.travelers}
-💰 Budget: ${tripContext.budget}
-${
-  tripContext.hasItinerary
-    ? "✅ Itinerary: Planned"
-    : "📝 Itinerary: Not created yet"
-}
-${tripContext.hasHotels ? "✅ Hotels: Arranged" : "🏨 Hotels: Not arranged"}
-${tripContext.hasFlights ? "✅ Flights: Arranged" : "✈️ Flights: Not arranged"}
-🚗 Transport: ${tripContext.transportMode}
-
-BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 paragraphs max. Use emojis naturally.`;
-
-      fullPrompt = `${systemPrompt}\n\nTraveler: ${userMessage}`;
-    } else {
-      fullPrompt = userMessage;
-    }
-
     if (!chatSessionRef.current) {
       throw new Error("Gemini chat session not initialized");
     }
+
+    // Build conversation context with recent messages (last 6 for context)
+    const recentMessages = messages
+      .slice(-6)
+      .filter(msg => msg.role !== 'system')
+      .map(msg => `${msg.role === 'user' ? 'Traveler' : 'Rover'}: ${msg.content}`)
+      .join('\n\n');
+
+    const systemPrompt = `You are Rover, a friendly AI travel assistant for TravelRover helping plan a trip to ${tripContext.destination}.
+
+TRIP CONTEXT:
+🌍 Destination: ${tripContext.destination}
+📅 Duration: ${tripContext.duration} days
+👥 Travelers: ${tripContext.travelers}
+💰 Budget: ${tripContext.budget}
+${tripContext.hasItinerary ? '✅ Itinerary planned' : '📝 No itinerary yet'}
+${tripContext.hasHotels ? '✅ Hotels arranged' : '🏨 No hotels yet'}
+
+INSTRUCTIONS: Answer naturally and conversationally. Keep responses concise (2-4 paragraphs). Use emojis appropriately. Consider the conversation history below.
+
+${recentMessages ? `RECENT CONVERSATION:\n${recentMessages}\n\n` : ''}CURRENT QUESTION: ${userMessage}
+
+YOUR RESPONSE:`;
+
+    const fullPrompt = systemPrompt;
 
     const result = await chatSessionRef.current.sendMessage(fullPrompt, {
       requestType: "simple_query",
@@ -308,8 +357,22 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
     });
 
     const response = result.response;
+    let responseText = response.text();
+    
+    // Handle backend responses with _raw_text field (when JSON parsing fails)
+    if (typeof responseText === 'string') {
+      try {
+        const parsed = JSON.parse(responseText);
+        if (parsed._raw_text && parsed._is_raw) {
+          responseText = parsed._raw_text;
+        }
+      } catch (e) {
+        // Not JSON, use as-is
+      }
+    }
+    
     return (
-      response.text() ||
+      responseText ||
       "I couldn't generate a response right now. Please try again! 😊"
     );
   };
@@ -358,7 +421,23 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
       enableThinking: useThinking,
     });
 
-    return result.content;
+    let content = result.content;
+    
+    // Handle responses with _raw_text field (when JSON parsing fails)
+    if (typeof content === 'string') {
+      try {
+        const parsed = JSON.parse(content);
+        if (parsed._raw_text && parsed._is_raw) {
+          content = parsed._raw_text;
+        }
+      } catch (e) {
+        // Not JSON, use as-is
+      }
+    } else if (typeof content === 'object' && content._raw_text && content._is_raw) {
+      content = content._raw_text;
+    }
+    
+    return content;
   };
 
   // Send message to AI chat
@@ -432,7 +511,17 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
         thinkingMode: shouldUseThinking && aiProvider === "longcat",
       };
 
-      setMessages((prev) => [...prev, assistantMsg]);
+      setMessages((prev) => {
+        // Prevent duplicate messages (check last message)
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg && lastMsg.content === assistantMessage && 
+            lastMsg.role === "assistant" && 
+            Date.now() - lastMsg.id < 1000) {
+          logDebug("TripChatbot", "Duplicate message detected, skipping");
+          return prev;
+        }
+        return [...prev, assistantMsg];
+      });
     } catch (error) {
       logError("TripChatbot", "Error sending message", {
         error: error.message,
@@ -549,134 +638,147 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
   };
 
   return (
-    <div className="flex flex-col h-full min-h-[600px] bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 shadow-lg overflow-hidden">
-      {/* Chat Header - Enhanced Premium Design with Dual AI Display */}
-      <div className="relative flex items-center gap-4 px-5 py-4 border-b border-gray-200 dark:border-slate-700 bg-gradient-to-r from-sky-50 via-blue-50/80 to-sky-50 dark:from-sky-950/50 dark:via-blue-950/40 dark:to-sky-950/50">
-        {/* Subtle background pattern */}
-        <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] dark:opacity-[0.05]"></div>
-
-        {/* Active AI Avatar - Switches based on selection */}
-        <div
-          className={`relative flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg overflow-hidden ring-2 transition-all duration-300 hover:scale-105 ${
-            aiProvider === "longcat"
-              ? "bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 ring-purple-200/50 dark:ring-purple-700/50"
-              : "bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900 dark:to-blue-900 ring-sky-200/50 dark:ring-sky-700/50"
-          }`}
-        >
-          {/* Glow effect */}
+    <div className="flex flex-col h-full min-h-[600px] max-h-[800px] bg-white dark:bg-slate-950 rounded-2xl border border-gray-200/80 dark:border-slate-800 shadow-xl overflow-hidden">
+      {/* Chat Header - Minimalist Clean Design */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm">
+        {/* Left: AI Info */}
+        <div className="flex items-center gap-3">
+          {/* Simple Avatar - No rings or gradients */}
           <div
-            className={`absolute inset-0 blur-md ${
+            className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
               aiProvider === "longcat"
-                ? "bg-gradient-to-br from-purple-400/20 to-pink-600/20"
-                : "bg-gradient-to-br from-sky-400/20 to-blue-600/20"
+                ? "bg-purple-100 dark:bg-purple-950/50"
+                : "bg-sky-100 dark:bg-sky-950/50"
             }`}
-          ></div>
-
-          {aiProvider === "longcat" ? (
-            <>
-              <img
-                src="/eva-avatar.png"
-                alt="Eva"
-                className="relative z-10 w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = "none";
-                  e.target.nextSibling.style.display = "flex";
-                }}
-              />
-              <Brain
-                className="relative z-10 h-7 w-7 text-purple-600 dark:text-purple-400"
-                style={{ display: "none" }}
-              />
-            </>
-          ) : (
-            <>
-              <img
-                src="/rover-avatar.png"
-                alt="Rover"
-                className="relative z-10 w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = "none";
-                  e.target.nextSibling.style.display = "flex";
-                }}
-              />
-              <Bot
-                className="relative z-10 h-7 w-7 text-sky-600 dark:text-sky-400"
-                style={{ display: "none" }}
-              />
-            </>
-          )}
-        </div>
-
-        {/* Header Content - Dynamic based on selected AI */}
-        <div className="flex-1 relative z-10">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-0.5">
+          >
             {aiProvider === "longcat" ? (
               <>
-                Eva
-                <Brain className="h-4 w-4 text-purple-500 animate-pulse" />
+                <img
+                  src="/eva-avatar.png"
+                  alt="Eva"
+                  className="w-full h-full object-cover rounded-full"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                    e.target.nextSibling.style.display = "flex";
+                  }}
+                />
+                <Brain
+                  className="h-5 w-5 text-purple-600 dark:text-purple-400"
+                  style={{ display: "none" }}
+                />
               </>
             ) : (
               <>
-                Rover
-                <Zap className="h-4 w-4 text-sky-500 animate-pulse" />
+                <img
+                  src="/rover-avatar.png"
+                  alt="Rover"
+                  className="w-full h-full object-cover rounded-full"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                    e.target.nextSibling.style.display = "flex";
+                  }}
+                />
+                <Zap
+                  className="h-5 w-5 text-sky-600 dark:text-sky-400"
+                  style={{ display: "none" }}
+                />
               </>
             )}
-          </h3>
-          <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-            {aiProvider === "longcat"
-              ? "AI Strategic Planner • Deep Thinking Mode"
-              : "AI Travel Buddy • Fast Response Mode"}{" "}
-            • {trip?.userSelection?.location || "Ready to help"}
-          </p>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              {aiProvider === "longcat" ? "Eva" : "Rover"}
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-500">
+              {aiProvider === "longcat" ? "Strategic Planner" : "Quick Answers"}
+            </p>
+          </div>
         </div>
 
-        {/* Status removed - kept internal for error handling only */}
+        {/* Right: Simple AI Toggle */}
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-slate-900 rounded-full">
+          <button
+            onClick={() => setAiProvider("gemini")}
+            disabled={isBackendOnline === false}
+            className={`p-1.5 rounded-full transition-all ${
+              aiProvider === "gemini"
+                ? "bg-white dark:bg-slate-800 shadow-sm"
+                : "hover:bg-gray-100 dark:hover:bg-slate-800"
+            } ${isBackendOnline === false ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}
+            title="Rover - Quick Answers"
+          >
+            <Zap className={`h-4 w-4 ${
+              aiProvider === "gemini" ? "text-sky-600 dark:text-sky-400" : "text-gray-400"
+            }`} />
+          </button>
+          <button
+            onClick={() => {
+              if (isLongCatOnline) {
+                setAiProvider("longcat");
+              } else {
+                toast.info("Eva is currently unavailable. Using Rover instead.");
+              }
+            }}
+            disabled={!isLongCatOnline}
+            className={`p-1.5 rounded-full transition-all ${
+              aiProvider === "longcat"
+                ? "bg-white dark:bg-slate-800 shadow-sm"
+                : isLongCatOnline
+                ? "hover:bg-gray-100 dark:hover:bg-slate-800 cursor-pointer"
+                : "opacity-30 cursor-not-allowed"
+            }`}
+            title={isLongCatOnline ? "Eva - Deep Analysis" : "Eva - Unavailable"}
+          >
+            <Brain className={`h-4 w-4 ${
+              aiProvider === "longcat" ? "text-purple-600 dark:text-purple-400" : "text-gray-400"
+            }`} />
+          </button>
+        </div>
       </div>
 
-      {/* Messages Container - Enhanced spacing and styling */}
-      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent bg-gradient-to-b from-gray-50/40 to-white dark:from-slate-800/30 dark:to-slate-900">
+      {/* Messages Container - Minimalist Clean Design */}
+      <div 
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-6 py-6 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent bg-white dark:bg-slate-950 relative"
+      >
         {messages.map((message, index) => (
           <div
             key={message.id}
-            className={`flex gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 ${
+            className={`flex gap-3 animate-in fade-in duration-300 ${
               message.role === "user" ? "flex-row-reverse" : "flex-row"
             }`}
-            style={{ animationDelay: `${index * 50}ms` }}
           >
-            {/* Avatar - Larger and more prominent */}
+            {/* Avatar - Minimal Design */}
             <div
-              className={`flex-shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden shadow-md transition-all duration-300 hover:scale-110 hover:shadow-lg ${
+              className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center overflow-hidden ${
                 message.role === "user"
-                  ? "ring-2 ring-sky-300/50 dark:ring-sky-600/50 bg-white dark:bg-slate-800"
+                  ? "bg-gray-100 dark:bg-slate-900"
                   : message.isError
-                  ? "bg-red-500 ring-2 ring-red-300"
+                  ? "bg-red-100 dark:bg-red-950"
                   : message.provider === "longcat"
-                  ? "bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 ring-2 ring-purple-200/30 dark:ring-purple-700/30"
-                  : "bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900 dark:to-blue-900 ring-2 ring-sky-200/30 dark:ring-sky-700/30"
+                  ? "bg-purple-100 dark:bg-purple-950/50"
+                  : "bg-sky-100 dark:bg-sky-950/50"
               }`}
             >
               {message.role === "user" ? (
-                // User's profile picture from Google OAuth
                 currentUser?.picture ? (
                   <img
                     src={currentUser.picture}
                     alt={currentUser.name || "User"}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      // Fallback to User icon if image fails to load
                       e.target.style.display = "none";
                       const fallback = e.target.nextSibling;
-                      if (fallback) {
-                        fallback.style.display = "flex";
-                      }
+                      if (fallback) fallback.style.display = "flex";
                     }}
                   />
                 ) : null
               ) : message.isError ? (
-                <Bot className="h-5 w-5 text-white" />
+                <Bot className="h-4 w-4 text-red-600 dark:text-red-400" />
               ) : (
                 <>
-                  {/* Show Eva avatar for LongCat messages, Rover for Gemini */}
                   {message.provider === "longcat" ? (
                     <>
                       <img
@@ -689,7 +791,7 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
                         }}
                       />
                       <Brain
-                        className="h-5 w-5 text-purple-600 dark:text-purple-400"
+                        className="h-4 w-4 text-purple-600 dark:text-purple-400"
                         style={{ display: "none" }}
                       />
                     </>
@@ -704,65 +806,43 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
                           e.target.nextSibling.style.display = "block";
                         }}
                       />
-                      <Bot
-                        className="h-5 w-5 text-sky-600 dark:text-sky-400"
+                      <Zap
+                        className="h-4 w-4 text-sky-600 dark:text-sky-400"
                         style={{ display: "none" }}
                       />
                     </>
                   )}
                 </>
               )}
-              {/* Fallback User icon (always rendered but hidden unless image fails) */}
               {message.role === "user" && (
                 <div
-                  className="w-full h-full bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center"
+                  className="w-full h-full bg-sky-500 dark:bg-sky-600 flex items-center justify-center"
                   style={{ display: currentUser?.picture ? "none" : "flex" }}
                 >
-                  <User className="h-5 w-5 text-white" />
+                  <User className="h-4 w-4 text-white" />
                 </div>
               )}
             </div>
 
-            {/* Message Bubble - Enhanced with better typography and spacing */}
-            <div
-              className={`flex flex-col max-w-[88%] ${
-                message.role === "user" ? "items-end" : "items-start"
-              }`}
-            >
+            {/* Message Bubble - Clean Minimal Design */}
+            <div className={`flex flex-col max-w-[75%] sm:max-w-[85%] ${message.role === "user" ? "items-end" : "items-start"}`}>
               <div
-                className={`group px-5 py-3.5 rounded-2xl shadow-sm transition-all duration-300 hover:shadow-md ${
+                className={`px-4 py-2.5 rounded-2xl ${
                   message.role === "user"
-                    ? "bg-gradient-to-br from-sky-500 via-sky-600 to-blue-600 text-white shadow-sky-200/50 dark:shadow-sky-900/50"
+                    ? "bg-sky-500 dark:bg-sky-600 text-white"
                     : message.isError
-                    ? "bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800 shadow-red-100 dark:shadow-red-900/20"
-                    : "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-200/50 dark:border-slate-700/50 shadow-gray-100 dark:shadow-slate-900/20"
+                    ? "bg-red-50 dark:bg-red-950/40 text-red-900 dark:text-red-200 border border-red-200 dark:border-red-900"
+                    : "bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-100 dark:border-slate-800"
                 }`}
               >
-                {/* AI Provider Badge for assistant messages */}
-                {message.role === "assistant" && message.provider && (
-                  <div className="flex items-center gap-1.5 mb-2 pb-2 border-b border-gray-200 dark:border-slate-700">
-                    {message.provider === "longcat" ? (
-                      <>
-                        <Brain className="h-3 w-3 text-purple-600 dark:text-purple-400" />
-                        <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">
-                          Eva {message.thinkingMode ? "Thinking" : "AI"}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="h-3 w-3 text-sky-600 dark:text-sky-400" />
-                        <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">
-                          Rover Fast
-                        </span>
-                      </>
-                    )}
-                  </div>
-                )}
-                <p className="text-[15px] leading-loose whitespace-pre-wrap font-normal">
-                  {message.content}
-                </p>
+                <div className="text-sm">
+                  <MarkdownMessage 
+                    content={message.content} 
+                    isUser={message.role === "user"}
+                  />
+                </div>
               </div>
-              <span className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 px-3 font-medium">
+              <span className="text-xs text-gray-400 dark:text-gray-600 mt-1 px-2">
                 {message.timestamp.toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
@@ -772,14 +852,14 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
           </div>
         ))}
 
-        {/* Loading Indicator - Enhanced animation */}
+        {/* Loading Indicator - Minimal */}
         {isLoading && (
-          <div className="flex gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex gap-3 animate-in fade-in duration-300">
             <div
-              className={`flex-shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden shadow-md ring-2 ${
+              className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center overflow-hidden ${
                 aiProvider === "longcat"
-                  ? "bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 ring-purple-200/30 dark:ring-purple-700/30"
-                  : "bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900 dark:to-blue-900 ring-sky-200/30 dark:ring-sky-700/30"
+                  ? "bg-purple-100 dark:bg-purple-950/50"
+                  : "bg-sky-100 dark:bg-sky-950/50"
               }`}
             >
               {aiProvider === "longcat" ? (
@@ -794,7 +874,7 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
                     }}
                   />
                   <Brain
-                    className="h-6 w-6 text-purple-600 dark:text-purple-400"
+                    className="h-4 w-4 text-purple-600 dark:text-purple-400"
                     style={{ display: "none" }}
                   />
                 </>
@@ -809,28 +889,26 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
                       e.target.nextSibling.style.display = "block";
                     }}
                   />
-                  <Bot
-                    className="h-6 w-6 text-sky-600 dark:text-sky-400"
+                  <Zap
+                    className="h-4 w-4 text-sky-600 dark:text-sky-400"
                     style={{ display: "none" }}
                   />
                 </>
               )}
             </div>
-            <div className="bg-white dark:bg-slate-800 px-5 py-3.5 rounded-2xl shadow-sm border border-gray-200/50 dark:border-slate-700/50">
-              <div className="flex items-center gap-3">
+            <div className="bg-gray-50 dark:bg-slate-900 px-4 py-2.5 rounded-2xl border border-gray-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
                 <div style={{ animation: "spin 1s linear infinite" }}>
                   <Loader2
-                    className={`h-5 w-5 ${
+                    className={`h-4 w-4 ${
                       aiProvider === "longcat"
                         ? "text-purple-500"
                         : "text-sky-500"
                     }`}
                   />
                 </div>
-                <span className="text-[15px] text-gray-600 dark:text-gray-400 font-medium">
-                  {aiProvider === "longcat"
-                    ? "Eva is thinking"
-                    : "Rover is thinking"}
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {aiProvider === "longcat" ? "Thinking" : "Thinking"}
                   <span className="inline-flex">
                     <span className="animate-pulse delay-0">.</span>
                     <span className="animate-pulse delay-100">.</span>
@@ -990,241 +1068,96 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
         )}
 
         <div ref={messagesEndRef} />
+        
+        {/* Scroll to Bottom Button - Centered at bottom */}
+        {showScrollButton && (
+          <button
+            onClick={scrollToBottom}
+            className="fixed bottom-32 left-1/2 -translate-x-1/2 w-12 h-12 bg-white dark:bg-slate-800 border-2 border-sky-500 dark:border-sky-400 rounded-full shadow-lg hover:shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 z-10 group"
+            aria-label="Scroll to bottom"
+          >
+            <ArrowDown className="h-5 w-5 text-sky-600 dark:text-sky-400 group-hover:translate-y-0.5 transition-transform" />
+            
+            {/* Unread message badge */}
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-in zoom-in duration-200">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
-      {/* Input Area - Floating design with enhanced visual hierarchy */}
-      <div className="relative px-5 py-4 border-t border-gray-200 dark:border-slate-700 bg-gradient-to-r from-gray-50 via-white to-gray-50 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800">
-        {/* Subtle top shadow */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-slate-600 to-transparent"></div>
-
-        {/* AI Provider Selector - Enhanced Professional Design */}
-        <div className="mb-4 p-3 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-slate-800 dark:to-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-sky-500" />
-              Choose Your AI Assistant
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {aiProvider === "gemini" ? "⚡ Fast" : "🧠 Thinking"}
-            </span>
-          </div>
-
-          <div className="flex gap-2">
-            {/* Rover Fast Button - Always available */}
-            <button
-              onClick={() => setAiProvider("gemini")}
-              disabled={isBackendOnline === false}
-              className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-300 ${
-                aiProvider === "gemini"
-                  ? "bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-lg shadow-sky-200 dark:shadow-sky-900/50 scale-105"
-                  : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-sky-50 dark:hover:bg-slate-600 border border-gray-200 dark:border-slate-600"
-              } ${isBackendOnline === false ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-            >
-              <div className="flex items-center gap-2">
-                <Zap
-                  className={`h-4 w-4 ${
-                    aiProvider === "gemini" ? "text-white" : "text-sky-500"
-                  }`}
-                />
-                <span className="font-bold text-sm">Rover Fast</span>
-                {isBackendOnline === true && (
-                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                )}
-              </div>
-              <span
-                className={`text-xs ${
-                  aiProvider === "gemini"
-                    ? "text-white/90"
-                    : "text-gray-500 dark:text-gray-400"
-                }`}
-              >
-                Quick answers & local tips
-              </span>
-            </button>
-
-            {/* Eva Thinking Button - Show status */}
-            <button
-              onClick={() => {
-                if (isLongCatOnline) {
-                  setAiProvider("longcat");
-                } else {
-                  toast.warning("Eva Thinking Mode isn't available right now. Rover Fast is ready to help! 🚀", {
-                    duration: 4000,
-                  });
-                }
-              }}
-              disabled={!isLongCatOnline}
-              className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-300 ${
-                aiProvider === "longcat"
-                  ? "bg-gradient-to-br from-purple-500 to-pink-600 text-white shadow-lg shadow-purple-200 dark:shadow-purple-900/50 scale-105"
-                  : isLongCatOnline
-                  ? "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-slate-600 border border-gray-200 dark:border-slate-600 cursor-pointer"
-                  : "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-600 border border-gray-300 dark:border-slate-700 cursor-not-allowed opacity-60"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Brain
-                  className={`h-4 w-4 ${
-                    aiProvider === "longcat"
-                      ? "text-white"
-                      : isLongCatOnline
-                      ? "text-purple-500"
-                      : "text-gray-400"
-                  }`}
-                />
-                <span className="font-bold text-sm">Eva Thinking</span>
-                {isLongCatOnline === true && (
-                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                )}
-                {isLongCatOnline === false && (
-                  <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                )}
-              </div>
-              <span
-                className={`text-xs ${
-                  aiProvider === "longcat"
-                    ? "text-white/90"
-                    : isLongCatOnline
-                    ? "text-gray-500 dark:text-gray-400"
-                    : "text-gray-400 dark:text-gray-600"
-                }`}
-              >
-                {isLongCatOnline === false ? "Currently unavailable" : "Deep analysis & planning"}
-              </span>
-            </button>
-          </div>
-
-          {/* Status explanation when Eva is offline */}
-          {isLongCatOnline === false && (
-            <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-              <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-2">
-                <span>ℹ️</span>
-                <span>Eva is taking a break. Rover is ready to help with all your travel questions!</span>
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Smart Suggestion Banner - Shows when AI recommendation differs from current selection */}
+      {/* Input Area - Minimalist Clean Design */}
+      <div className="px-6 py-4 border-t border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-950">
+        {/* Smart Suggestion - Minimal Design */}
         {suggestedProvider &&
           suggestedProvider !== aiProvider &&
           input.trim().length > 10 &&
-          // ✅ IMPROVED: Only show Eva suggestion if it's actually available
           (suggestedProvider !== "longcat" || isLongCatOnline) && (
-            <div
-              className={`mb-3 p-3 rounded-xl border-2 transition-all duration-300 animate-in fade-in slide-in-from-top-2 ${
-                suggestedProvider === "longcat"
-                  ? "bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-300 dark:border-purple-700"
-                  : "bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/20 dark:to-blue-950/20 border-sky-300 dark:border-sky-700"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                {suggestedProvider === "longcat" ? (
-                  <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-                ) : (
-                  <Zap className="h-5 w-5 text-sky-600 dark:text-sky-400 flex-shrink-0" />
-                )}
-
-                <div className="flex-1">
-                  <p
-                    className={`text-sm font-semibold mb-0.5 ${
-                      suggestedProvider === "longcat"
-                        ? "text-purple-900 dark:text-purple-100"
-                        : "text-sky-900 dark:text-sky-100"
-                    }`}
-                  >
-                    💡{" "}
-                    {suggestedProvider === "longcat"
-                      ? "Eva Thinking"
-                      : "Rover Fast"}{" "}
-                    recommended
-                  </p>
-                  <p
-                    className={`text-xs ${
-                      suggestedProvider === "longcat"
-                        ? "text-purple-700 dark:text-purple-300"
-                        : "text-sky-700 dark:text-sky-300"
-                    }`}
-                  >
-                    {suggestedProvider === "longcat"
-                      ? "This question needs deep analysis or comparison"
-                      : "This is a quick question - Rover can answer faster"}
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => setAiProvider(suggestedProvider)}
-                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 active:scale-95 shadow-sm ${
-                    suggestedProvider === "longcat"
-                      ? "bg-gradient-to-br from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white"
-                      : "bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white"
-                  }`}
-                >
-                  Switch →
-                </button>
-              </div>
+            <div className={`mb-3 p-3 rounded-lg border flex items-center gap-3 ${
+              suggestedProvider === "longcat"
+                ? "bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900"
+                : "bg-sky-50 dark:bg-sky-950/20 border-sky-200 dark:border-sky-900"
+            }`}>
+              {suggestedProvider === "longcat" ? (
+                <Brain className="h-4 w-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+              ) : (
+                <Zap className="h-4 w-4 text-sky-600 dark:text-sky-400 flex-shrink-0" />
+              )}
+              <p className="flex-1 text-xs text-gray-600 dark:text-gray-400">
+                Try <strong>{suggestedProvider === "longcat" ? "Eva" : "Rover"}</strong> for better results
+              </p>
+              <button
+                onClick={() => setAiProvider(suggestedProvider)}
+                className="text-xs font-medium text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
+              >
+                Switch
+              </button>
             </div>
           )}
 
-        <form onSubmit={handleSubmit} className="flex gap-3 mb-3">
-          <div className="flex-1 relative group">
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <div className="flex-1">
             <input
               ref={inputRef}
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask me anything about your trip..."
+              placeholder="Ask about your trip..."
               disabled={isLoading}
-              className="w-full px-5 py-3.5 rounded-xl border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:focus:ring-sky-500 focus:border-sky-400 dark:focus:border-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-[15px] font-normal shadow-sm transition-all duration-300 hover:shadow-md focus:shadow-lg group-hover:border-gray-400 dark:group-hover:border-slate-500"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:border-gray-300 dark:focus:border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
             />
-            {/* Typing indicator line */}
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-sky-400 to-blue-500 transform scale-x-0 group-focus-within:scale-x-100 transition-transform duration-500 rounded-full"></div>
           </div>
 
           <button
             type="submit"
             disabled={isLoading || !input.trim() || isBackendOnline === false}
-            className="px-6 py-3.5 bg-gradient-to-br from-sky-500 via-sky-600 to-blue-600 hover:from-sky-600 hover:via-sky-700 hover:to-blue-700 active:scale-95 text-white rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2.5 shadow-lg shadow-sky-200/50 dark:shadow-sky-900/50 hover:shadow-xl hover:shadow-sky-300/60 dark:hover:shadow-sky-800/60 group"
-            title={
-              isBackendOnline === false
-                ? "Can't connect right now. Please refresh the page."
-                : ""
-            }
+            className="px-5 py-3 bg-sky-500 dark:bg-sky-600 hover:bg-sky-600 dark:hover:bg-sky-700 active:scale-95 text-white rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            title={isBackendOnline === false ? "Connection unavailable" : ""}
           >
             {isLoading ? (
               <div style={{ animation: "spin 1s linear infinite" }}>
-                <Loader2 className="h-5 w-5" />
+                <Loader2 className="h-4 w-4" />
               </div>
             ) : (
-              <Send className="h-5 w-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              <Send className="h-4 w-4" />
             )}
             <span className="hidden sm:inline text-sm">Send</span>
           </button>
         </form>
 
-        {/* Helpful tip for travelers */}
-        {isBackendOnline === false ? (
-          <div className="flex items-center justify-center gap-2 text-xs">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-              <span className="text-amber-700 dark:text-amber-400 font-medium">
-                💬 Can't connect right now. Please refresh the page!
-              </span>
-              <button
-                onClick={checkBackendHealth}
-                className="ml-2 px-2 py-1 text-xs font-semibold rounded bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900 transition-colors cursor-pointer"
-              >
-                Retry
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-            <Sparkles className="h-3.5 w-3.5 text-sky-500" />
-            <p className="font-medium">
-              Ask about activities, local tips, budget advice, or anything about
-              your trip
-            </p>
+        {/* Connection Status - Minimal */}
+        {isBackendOnline === false && (
+          <div className="mt-3 flex items-center justify-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+            <span>Connection unavailable</span>
+            <button
+              onClick={checkBackendHealth}
+              className="font-medium underline cursor-pointer hover:text-amber-700 dark:hover:text-amber-300"
+            >
+              Retry
+            </button>
           </div>
         )}
       </div>

@@ -27,11 +27,11 @@ export function GeocodingLoadingOverlay({ isGeocoding, geocodingProgress }) {
         </div>
 
         {/* Loading Text */}
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
-          Loading Map Locations
+        <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+          Preparing Your Map
         </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Geocoding {geocodingProgress.current} of {geocodingProgress.total}{" "}
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Finding {geocodingProgress.current} of {geocodingProgress.total}{" "}
           locations...
         </p>
 

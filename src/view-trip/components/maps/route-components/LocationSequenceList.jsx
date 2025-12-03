@@ -15,13 +15,13 @@ export function LocationSequenceList({
 }) {
   if (filteredLocations.length === 0) {
     return (
-      <div className="text-center py-12 px-4">
-        <div className="brand-card p-8 shadow-md border-sky-100 dark:border-slate-700">
-          <MapPin className="h-16 w-16 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-          <p className="text-base font-medium text-gray-600 dark:text-gray-400">
+      <div className="text-center py-8 sm:py-12 px-4">
+        <div className="brand-card p-6 sm:p-8 shadow-md border-sky-100 dark:border-slate-700">
+          <MapPin className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+          <p className="text-sm sm:text-base font-medium text-gray-600 dark:text-gray-400">
             No locations found for selected day
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 mt-1">
             Try selecting a different day or create a new trip
           </p>
         </div>
@@ -41,18 +41,18 @@ export function LocationSequenceList({
           <div key={location.id}>
             {/* Enhanced Day Separator */}
             {showDaySeparator && (
-              <div className="flex items-center gap-3 my-6 px-1">
+              <div className="flex items-center gap-2 sm:gap-3 my-4 sm:my-6 px-1">
                 <div className="flex-1 h-0.5 bg-gradient-to-r from-transparent via-sky-300 dark:via-sky-700 to-transparent"></div>
                 <Badge
                   variant="outline"
-                  className="text-sm font-bold px-4 py-1.5 
+                  className="text-xs sm:text-sm font-bold px-2.5 py-1 sm:px-4 sm:py-1.5 
                            bg-gradient-to-r from-sky-50 to-blue-50 
                            dark:from-slate-800 dark:to-slate-900 
                            border-2 shadow-md"
                   style={{ borderColor: getMarkerColor(location.day) }}
                 >
                   <Sparkles
-                    className="h-3.5 w-3.5 mr-1.5 inline"
+                    className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 inline"
                     style={{ color: getMarkerColor(location.day) }}
                   />
                   Day {location.day}
@@ -92,7 +92,7 @@ function LocationCard({ location, index, onLocationClick, getMarkerColor }) {
 
   return (
     <div
-      className="group flex items-center gap-3 p-3 rounded-lg 
+      className="group flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg 
                  border border-gray-200 dark:border-slate-700
                  bg-white dark:bg-slate-900
                  hover:shadow-md hover:border-sky-400 dark:hover:border-sky-600 
@@ -101,8 +101,8 @@ function LocationCard({ location, index, onLocationClick, getMarkerColor }) {
     >
       {/* Compact Number Badge */}
       <div
-        className="w-9 h-9 rounded-full flex items-center justify-center 
-                   text-white font-bold text-sm flex-shrink-0 shadow-md
+        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center 
+                   text-white font-bold text-xs sm:text-sm flex-shrink-0 shadow-md
                    transition-transform duration-200 group-hover:scale-110"
         style={{ backgroundColor: getMarkerColor(location.day) }}
       >
@@ -110,33 +110,37 @@ function LocationCard({ location, index, onLocationClick, getMarkerColor }) {
       </div>
 
       {/* Inline Content: Day • Time • Activity Name */}
-      <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+      <div className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2 flex-wrap">
         {/* Day */}
         <span
-          className="text-xs font-bold"
+          className="text-[11px] sm:text-xs font-bold"
           style={{ color: getMarkerColor(location.day) }}
         >
           Day {location.day}
         </span>
 
         {/* Separator */}
-        <span className="text-gray-400 dark:text-gray-600 text-xs">•</span>
+        <span className="text-gray-400 dark:text-gray-600 text-[11px] sm:text-xs">
+          •
+        </span>
 
         {/* Time */}
         {location.time && location.time !== "All Day" && (
           <>
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3 text-sky-500 dark:text-sky-400" />
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+            <div className="flex items-center gap-0.5 sm:gap-1">
+              <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-sky-500 dark:text-sky-400" />
+              <span className="text-[11px] sm:text-xs font-medium text-gray-600 dark:text-gray-400">
                 {location.time}
               </span>
             </div>
-            <span className="text-gray-400 dark:text-gray-600 text-xs">•</span>
+            <span className="text-gray-400 dark:text-gray-600 text-[11px] sm:text-xs">
+              •
+            </span>
           </>
         )}
 
         {/* Activity Name */}
-        <h5 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+        <h5 className="font-semibold text-xs sm:text-sm text-gray-900 dark:text-gray-100 truncate">
           {location.name}
         </h5>
 
@@ -144,7 +148,7 @@ function LocationCard({ location, index, onLocationClick, getMarkerColor }) {
         {isHotelReturn && (
           <Badge
             variant="outline"
-            className="text-xs py-0 px-1.5 h-5 ml-1
+            className="text-[10px] sm:text-xs py-0 px-1 sm:px-1.5 h-4 sm:h-5 ml-0.5 sm:ml-1
                      bg-blue-50 dark:bg-blue-950/40 
                      border-blue-400 dark:border-blue-600 
                      text-blue-700 dark:text-blue-400"
@@ -176,9 +180,9 @@ function TravelTimeConnector({ travelInfo }) {
   const colorScheme = getColorScheme(transportType);
 
   return (
-    <div className="flex items-center gap-3 my-3 ml-6 pl-0.5">
+    <div className="flex items-center gap-2 sm:gap-3 my-2 sm:my-3 ml-4 sm:ml-6 pl-0.5">
       {/* Enhanced animated connector line with transport icon */}
-      <div className="flex flex-col items-center gap-1 py-3">
+      <div className="flex flex-col items-center gap-0.5 sm:gap-1 py-2 sm:py-3">
         {/* Top gradient line */}
         <div
           className="w-0.5 h-4 bg-gradient-to-b transition-all duration-300"
@@ -190,7 +194,7 @@ function TravelTimeConnector({ travelInfo }) {
         {/* Transport icon with pulse animation */}
         <div className="relative">
           <div
-            className={`text-xl leading-none transition-transform duration-200 
+            className={`text-base sm:text-xl leading-none transition-transform duration-200 
                        hover:scale-125 ${colorScheme.iconAnimation}`}
           >
             {icon}
@@ -213,30 +217,30 @@ function TravelTimeConnector({ travelInfo }) {
 
       {/* Enhanced travel info card with glassmorphism */}
       <div
-        className="flex-1 rounded-xl border-2 backdrop-blur-sm
+        className="flex-1 rounded-lg sm:rounded-xl border sm:border-2 backdrop-blur-sm
                    shadow-sm hover:shadow-md transition-all duration-200"
         style={{
           backgroundColor: colorScheme.bg,
           borderColor: colorScheme.border,
         }}
       >
-        <div className="px-4 py-3">
+        <div className="px-2.5 py-2 sm:px-4 sm:py-3">
           {/* Main travel info row */}
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <ArrowDown
-              className="h-4 w-4 flex-shrink-0"
+              className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0"
               style={{ color: colorScheme.icon }}
             />
 
             {/* Duration with enhanced styling */}
             {travelInfo.duration && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <Clock
-                  className="h-4 w-4 flex-shrink-0"
+                  className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0"
                   style={{ color: colorScheme.icon }}
                 />
                 <span
-                  className="font-semibold text-sm"
+                  className="font-semibold text-xs sm:text-sm"
                   style={{ color: colorScheme.text }}
                 >
                   {travelInfo.duration}
@@ -248,15 +252,15 @@ function TravelTimeConnector({ travelInfo }) {
             {travelInfo.transport && travelInfo.transport !== "various" && (
               <Badge
                 variant="outline"
-                className="text-xs py-0.5 px-2.5 h-6 gap-1.5 font-medium
-                         border-2 shadow-sm"
+                className="text-[10px] sm:text-xs py-0.5 px-1.5 sm:px-2.5 h-5 sm:h-6 gap-1 sm:gap-1.5 font-medium
+                         border sm:border-2 shadow-sm"
                 style={{
                   borderColor: colorScheme.badgeBorder,
                   backgroundColor: colorScheme.badgeBg,
                   color: colorScheme.badgeText,
                 }}
               >
-                <span className="text-sm">{icon}</span>
+                <span className="text-xs sm:text-sm">{icon}</span>
                 <span className="capitalize">{travelInfo.transport}</span>
               </Badge>
             )}
@@ -267,7 +271,7 @@ function TravelTimeConnector({ travelInfo }) {
             travelInfo.rawText !== travelInfo.duration &&
             travelInfo.rawText.length > travelInfo.duration?.length && (
               <div
-                className="text-xs italic mt-2 leading-relaxed"
+                className="text-[10px] sm:text-xs italic mt-1.5 sm:mt-2 leading-relaxed"
                 style={{ color: colorScheme.secondaryText }}
               >
                 {travelInfo.rawText}

@@ -37,6 +37,15 @@ INACTIVE_AIRPORTS = {
         "travel_time": "4-6 hours from Manila, 3-4 hours from Clark",
         "recommendation": "Fly to Clark or Manila, then bus to Baguio"
     },
+    "KAP": {
+        "name": "Kapangan, Benguet",
+        "status": "No airport",
+        "alternatives": ["CRK", "MNL"],
+        "alternative_names": ["Clark", "Manila"],
+        "transport": "bus",
+        "travel_time": "5-7 hours from Manila, 4-5 hours from Clark",
+        "recommendation": "Fly to Clark or Manila, then bus to Baguio and transfer to Kapangan"
+    },
     "VIG": {
         "name": "Vigan",
         "status": "No airport",
@@ -765,7 +774,11 @@ class FlightAgent(BaseAgent):
                         {'code': alt, 'name': name} 
                         for alt, name in zip(inactive_info['alternatives'], inactive_info['alternative_names'])
                     ],
-                    'recommendation': inactive_info['recommendation']
+                    'recommendation': inactive_info['recommendation'],
+                    # ✅ FIX: Include transport details for reroute info display
+                    'transport': inactive_info.get('transport', 'bus'),
+                    'travel_time': inactive_info.get('travel_time', 'Unknown'),
+                    'status': inactive_info.get('status', 'No airport')
                 }
             else:
                 return {
@@ -787,7 +800,11 @@ class FlightAgent(BaseAgent):
                         {'code': alt, 'name': name} 
                         for alt, name in zip(inactive_info['alternatives'], inactive_info['alternative_names'])
                     ],
-                    'recommendation': inactive_info['recommendation']
+                    'recommendation': inactive_info['recommendation'],
+                    # ✅ FIX: Include transport details for reroute info display
+                    'transport': inactive_info.get('transport', 'bus'),
+                    'travel_time': inactive_info.get('travel_time', 'Unknown'),
+                    'status': inactive_info.get('status', 'No airport')
                 }
             else:
                 return {

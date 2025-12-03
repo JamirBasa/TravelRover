@@ -37,6 +37,21 @@ export const QUALITY_TIERS = {
     canBook: true,
     showByDefault: true
   },
+  GOOGLE_VERIFIED: {
+    level: 2.5,
+    name: 'Google Verified',
+    userFriendlyName: 'Verified by Google',
+    minScore: 0.75,
+    maxScore: 0.85,
+    color: 'sky',
+    icon: '🌟',
+    badge: '🌟 Verified',
+    description: 'Confirmed real hotel via Google Places',
+    userExplanation: 'This hotel is verified by Google Places but not in our direct booking database. You can search for it on Agoda.',
+    canBook: false,
+    canSearch: true,
+    showByDefault: true
+  },
   GOOD: {
     level: 3,
     name: 'Confirmed',
@@ -101,6 +116,16 @@ export const QUALITY_TIERS = {
  * @returns {Object} Quality tier information
  */
 export function getHotelQualityTier(hotel) {
+  // Check if it's Google-verified (special handling)
+  if (hotel?.verificationSource === 'google_places') {
+    return {
+      ...QUALITY_TIERS.GOOGLE_VERIFIED,
+      hotel,
+      hasValidHotelId: false,
+      actualScore: hotel.matchScore || 0.80
+    };
+  }
+  
   // No hotel_id = cannot book directly
   const hasValidHotelId = hotel?.hotel_id && /^\d+$/.test(String(hotel.hotel_id));
   
@@ -146,7 +171,8 @@ export function filterHotelsByQuality(hotels, options = {}) {
   const {
     minTierLevel = 3,           // Show Tier 1-3 by default (Perfect, Excellent, Good)
     maxTierLevel = 6,           // Don't show beyond this
-    requireValidHotelId = true, // Only show bookable hotels
+    requireValidHotelId = false, // ✅ Changed: Allow Google-verified hotels without Agoda ID
+    includeGoogleVerified = true, // ✅ NEW: Include Google-verified hotels
     minHotelsThreshold = 3      // Minimum hotels before relaxing criteria
   } = options;
 
@@ -170,9 +196,15 @@ export function filterHotelsByQuality(hotels, options = {}) {
     }
 
     // Categorize by tier level
-    const tierKey = `tier${tier.level}`;
+    // ✅ Handle decimal tiers (e.g., 2.5 for Google Verified) by rounding to nearest tier
+    const tierLevel = Math.round(tier.level);
+    const tierKey = `tier${tierLevel}`;
     if (hotelsByTier[tierKey]) {
       hotelsByTier[tierKey].push({ hotel, tier });
+    } else {
+      // Fallback for unmapped tiers - add to tier 6 (unverified)
+      console.warn(`⚠️ Unknown tier level ${tier.level}, adding to tier6`);
+      hotelsByTier.tier6.push({ hotel, tier });
     }
   });
 
@@ -187,14 +219,40 @@ export function filterHotelsByQuality(hotels, options = {}) {
     selectedHotels.push(...hotelsByTier.tier2);
   }
 
-  // Step 3: Add Tier 3 if still insufficient
-  if (selectedHotels.length < minHotelsThreshold && minTierLevel >= 3) {
+  // ✅ Step 2.5: Add Google-verified hotels (always include if enabled)
+  if (includeGoogleVerified) {
+    const googleVerifiedHotels = hotels
+      .filter(h => h?.verificationSource === 'google_places')
+      .map(hotel => ({
+        hotel,
+        tier: getHotelQualityTier(hotel)
+      }));
+    
+    if (googleVerifiedHotels.length > 0) {
+      console.log(`✅ Including ${googleVerifiedHotels.length} Google-verified hotel(s)`);
+      selectedHotels.push(...googleVerifiedHotels);
+    }
+  }
+
+  // Step 3: Add Tier 3 if still insufficient OR if minTierLevel allows it
+  if (selectedHotels.length < minHotelsThreshold || minTierLevel >= 3) {
     selectedHotels.push(...hotelsByTier.tier3);
   }
 
-  // Step 4: Add Tier 4 only if explicitly allowed AND still insufficient
-  if (selectedHotels.length < minHotelsThreshold && minTierLevel >= 4) {
+  // Step 4: Add Tier 4 if still insufficient OR if minTierLevel allows it
+  if (selectedHotels.length < minHotelsThreshold || minTierLevel >= 4) {
     selectedHotels.push(...hotelsByTier.tier4);
+  }
+
+  // ✅ Step 5: Add Tier 5 if minTierLevel allows it (AI recommendations)
+  if (minTierLevel >= 5) {
+    selectedHotels.push(...hotelsByTier.tier5);
+  }
+
+  // ✅ Step 6: Add Tier 6 if minTierLevel explicitly set to 6 (show ALL hotels)
+  if (minTierLevel >= 6) {
+    selectedHotels.push(...hotelsByTier.tier6);
+    console.log(`⚠️ Including ${hotelsByTier.tier6.length} unverified hotel(s) (minTierLevel=6)`);
   }
 
   // Extract just the hotel objects with tier metadata

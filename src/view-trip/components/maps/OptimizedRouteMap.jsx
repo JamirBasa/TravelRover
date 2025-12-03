@@ -10,6 +10,7 @@ import {
   LocationInfoWindow,
   DayFilterDropdown,
   LocationSequenceList,
+  RoutePolylines,
 } from "./route-components";
 import {
   extractRecommendedHotelName,
@@ -123,6 +124,7 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
   // ✅ Initialize with persistent cache
   const [geocodeCache, setGeocodeCache] = useState(() => loadGeocodeCache());
   const [lastItineraryHash, setLastItineraryHash] = useState("");
+  const [showRoutes, setShowRoutes] = useState(true); // Toggle for route visibility
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const mapContainerRef = React.useRef(null);
@@ -373,21 +375,39 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
         let placeName =
           activity.placeName || activity.place || activity.location;
 
-        // ✅ Skip truly generic entries that should never appear on map
-        const excludePatterns = [
+        // ✅ COMPREHENSIVE LOGISTICS FILTERING - Skip all non-tourist activities
+        const logisticsPatterns = [
+          // Generic exclusions
           /^Activity$/i,
           /^Last\s*$/i,
           /^Halal (Lunch|Dinner|Breakfast)$/i,
           /^Spa & Relaxation$/i,
-          /^Shopping$/i,
+          /^(Souvenir )?Shopping$/i,
+
+          // Arrival/Departure logistics
+          /^(Departure|Depart|Leave|Exit) (from|to)/i,
+          /^Arrival (at|in|to)/i,
+          /origin point/i,
+          /(via|by) (bus|flight|ferry|boat|van|car|taxi)/i,
+          /(Bus|Ferry|Van) (from|to)/i,
+
+          // Hotel operations
+          /^(Check-in|Check in|Checkin) (at|to)/i,
+          /^(Check-out|Check out|Checkout) (from|at)/i,
+          /^Return to .+hotel/i,
+          /^Rest (at|in)/i,
+
+          // Meal logistics
+          /^(Breakfast|Lunch|Dinner|Snack) (at|in) .+hotel/i,
+          /^Meal (at|in)/i,
         ];
 
-        const shouldExclude = excludePatterns.some(
+        const shouldExclude = logisticsPatterns.some(
           (pattern) => placeName && pattern.test(placeName.trim())
         );
 
         if (shouldExclude) {
-          logDebug("OptimizedRouteMap", "Skipping excluded activity", {
+          logDebug("OptimizedRouteMap", "Filtering logistics activity", {
             placeName,
           });
           return; // Skip this activity
@@ -470,31 +490,50 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
   }, []);
 
   // ✅ Extract place name from activity description
-  const extractPlaceName = (activityName) => {
+  // Enhanced to preserve location context (e.g., "in Albay", "at Zamboanga")
+  const extractPlaceName = (activityName, recommendedHotel) => {
     if (!activityName) return null;
 
-    // Remove common activity prefixes (Breakfast at, Lunch at, Dinner at, Visit, etc.)
-    const cleaned = activityName
+    // ✅ LOGISTICS FILTERING: Skip transport and generic logistics activities
+    const logisticsPatterns = [
+      /^(arrival|departure|transfer|depart|arrive|return to|check[- ]?(in|out))/i,
+      /via (bus|flight|ferry|boat|van|car)/i,
+      /from .+ to .+/i, // "Bus from Manila to Baguio"
+      /^(rest|leisure|free time)$/i,
+    ];
+
+    if (logisticsPatterns.some((pattern) => pattern.test(activityName))) {
+      return null;
+    }
+
+    // Remove common activity prefixes but preserve location suffixes
+    // Examples:
+    // "Visit Mayon Volcano in Albay" → "Mayon Volcano in Albay" (preserves context)
+    // "Breakfast at Fort Pilar" → "Fort Pilar" (simple case)
+    let cleaned = activityName
       .replace(
-        /^(Breakfast|Lunch|Dinner|Snack|Check-in|Check out|Visit|Explore|Tour|Shopping|Relax)\s+(at|to)?\s+/i,
+        /^(Breakfast|Lunch|Dinner|Snack|Visit|Explore|Tour|Shopping|Relax)\s+(at|to|near|in)?\s+/i,
         ""
       )
-      .replace(/^(and check in|and check-in|for the day)\s*/i, "")
       .trim();
 
-    // If it's too short or still has common words, return null
+    // ✅ HOTEL RESOLUTION: Resolve generic hotel references to actual hotel name
+    // "Breakfast at STAY Hotel" → use recommendedHotelName if available
+    if (recommendedHotel && isGenericHotelReference(cleaned)) {
+      return recommendedHotel;
+    }
+
+    // If it's too short after cleaning, return null
     if (cleaned.length < 3) return null;
 
-    // Skip generic activities
-    const skipTerms = [
-      "hotel",
-      "rest",
-      "return",
-      "end of day",
-      "free time",
-      "leisure",
+    // ✅ Skip remaining generic terms
+    const skipPatterns = [
+      /^(hotel|accommodation|resort)$/i, // Only generic without name
+      /^(souvenir )?shopping$/i, // Generic shopping
+      /on .+ island$/i, // "Lunch on Sta. Cruz Island" → handled separately
     ];
-    if (skipTerms.some((term) => cleaned.toLowerCase() === term)) {
+
+    if (skipPatterns.some((pattern) => pattern.test(cleaned))) {
       return null;
     }
 
@@ -506,10 +545,10 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
   const geocodeLocation = async (locationName, signal) => {
     try {
       // ✅ Extract actual place name from activity description
-      const placeName = extractPlaceName(locationName);
+      const placeName = extractPlaceName(locationName, recommendedHotelName);
 
       if (!placeName) {
-        logDebug("OptimizedRouteMap", "Skipping generic activity", {
+        logDebug("OptimizedRouteMap", "Skipping logistics/generic activity", {
           locationName,
         });
         return null;
@@ -535,7 +574,12 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       const apiBaseUrl =
         import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
       const geocodeUrl = `${apiBaseUrl}/langgraph/geocoding/`;
-      const searchQuery = `${placeName}, Philippines`;
+
+      // ✅ CRITICAL FIX: Include destination city/province for accurate geocoding
+      // This prevents ambiguous place names from geocoding to wrong locations
+      // Example: "Fort Pilar" → "Fort Pilar, Zamboanga City, Philippines" (not Fort Pilar elsewhere)
+      const destination = trip?.userSelection?.location || "Philippines";
+      const searchQuery = `${placeName}, ${destination}`;
 
       const response = await fetch(geocodeUrl, {
         method: "POST",
@@ -566,16 +610,47 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           longitude: location.lng,
         };
 
+        // ✅ Layer 2: Validate that geocoded location is within reasonable distance
+        // This catches cases where a place name exists in multiple cities
+        const resultAddress = result.data.results[0].formatted_address || "";
+        const destinationName = trip?.userSelection?.location || "";
+
+        // Check if destination name appears in the geocoded address
+        const isRelevant = resultAddress
+          .toLowerCase()
+          .includes(destinationName.toLowerCase());
+
+        if (
+          !isRelevant &&
+          destinationName &&
+          destinationName !== "Philippines"
+        ) {
+          logDebug(
+            "OptimizedRouteMap",
+            "⚠️ Geocoded location may be incorrect",
+            {
+              locationName,
+              searchedFor: searchQuery,
+              gotAddress: resultAddress,
+              expectedDestination: destinationName,
+            }
+          );
+          // Still cache but mark as potentially inaccurate
+        }
+
         // Cache the result
         setGeocodeCache((prev) => ({
           ...prev,
           [locationName]: coords,
         }));
 
-        logDebug("OptimizedRouteMap", "Geocoded successfully", {
+        logDebug("OptimizedRouteMap", "✅ Geocoded successfully", {
           locationName,
+          searchQuery,
           lat: location.lat,
           lng: location.lng,
+          address: resultAddress,
+          validated: isRelevant,
         });
         return coords;
       } else {
@@ -674,10 +749,24 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           originalName: location.originalName,
         });
 
-        const coords = await geocodeLocation(
+        let coords = await geocodeLocation(
           location.name,
           geocodingAbortController.current.signal
         );
+
+        // ✅ CRITICAL FIX: Fallback to AI coordinates if geocoding fails
+        if (!coords && location.coordinates) {
+          logDebug("OptimizedRouteMap", "Using AI coordinates as fallback", {
+            locationName: location.name,
+            aiCoords: location.coordinates,
+          });
+          coords = {
+            latitude: location.coordinates.latitude || location.coordinates.lat,
+            longitude:
+              location.coordinates.longitude || location.coordinates.lng,
+            source: "ai-generated",
+          };
+        }
 
         if (coords) {
           const index = updatedLocations.findIndex((l) => l.id === location.id);
@@ -696,9 +785,22 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       }
 
       const successCount = updatedLocations.filter((l) => l.coordinates).length;
+      const missingCount = allLocations.length - successCount;
+
       logDebug("OptimizedRouteMap", "Geocoding complete", {
         successCount,
         totalCount: allLocations.length,
+        missingCount,
+        missingLocations:
+          missingCount > 0
+            ? updatedLocations
+                .filter((l) => !l.coordinates)
+                .map((l) => ({
+                  name: l.name,
+                  hasAICoords: !!allLocations.find((al) => al.id === l.id)
+                    ?.coordinates,
+                }))
+            : [],
       });
 
       setGeocodedLocations(updatedLocations);
@@ -1084,36 +1186,84 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
   return (
     <div className="space-y-4">
       {/* AI Disclaimer Notice */}
-      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-        <div className="flex items-start gap-3">
+      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 sm:p-4">
+        <div className="flex items-start gap-2 sm:gap-3">
           <div className="flex-shrink-0 mt-0.5">
-            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 dark:text-amber-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-amber-900 dark:text-amber-300 text-sm mb-1">
-              AI-Generated Routes & Locations
+            <h4 className="font-semibold text-amber-900 dark:text-amber-300 text-xs sm:text-sm mb-1">
+              Smart Trip Planning
             </h4>
-            <p className="text-amber-800 dark:text-amber-400 text-xs leading-relaxed">
-              These routes and locations are AI-generated suggestions. While we
-              strive for accuracy,
-              <strong className="font-semibold">
-                {" "}
-                please verify details
-              </strong>{" "}
-              like addresses, opening hours, and directions before visiting.
-              Travel times are estimates and may vary based on traffic and
-              conditions.
+            <p className="text-amber-800 dark:text-amber-400 text-[11px] sm:text-xs leading-relaxed">
+              Your personalized itinerary for{" "}
+              {trip?.userSelection?.location || "your destination"}.
+              <strong className="font-semibold"> Double-check details</strong>{" "}
+              like addresses, hours, and directions before you go. Travel times
+              may vary with traffic.
             </p>
           </div>
         </div>
       </div>
 
+      {/* Route Visualization Info */}
+      {showRoutes && filteredLocations.length >= 2 && (
+        <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-2 sm:p-3">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <svg
+              className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-emerald-600 dark:text-emerald-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+              />
+            </svg>
+            <span className="text-emerald-900 dark:text-emerald-300 text-xs sm:text-sm font-medium">
+              Your daily routes • Color-coded • Follow the arrows
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Geocoding Quality Info */}
+      {geocodedLocations.length > 0 && !isGeocoding && (
+        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-2 sm:p-3">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <svg
+              className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-blue-600 dark:text-blue-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span className="text-blue-900 dark:text-blue-300 text-xs sm:text-sm font-medium">
+              {geocodedLocations.filter((l) => l.coordinates).length} of{" "}
+              {geocodedLocations.length} locations mapped in{" "}
+              {trip?.userSelection?.location || "your area"}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* ✅ Hotel Name Display */}
       {recommendedHotelName && (
-        <div className="bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sky-600 dark:text-sky-400 text-sm">🏨</span>
-            <span className="text-sky-900 dark:text-sky-300 text-sm font-medium">
+        <div className="bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 rounded-lg p-2 sm:p-3">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className="text-sky-600 dark:text-sky-400 text-xs sm:text-sm">
+              🏨
+            </span>
+            <span className="text-sky-900 dark:text-sky-300 text-xs sm:text-sm font-medium">
               Your hotel: {recommendedHotelName}
             </span>
           </div>
@@ -1122,14 +1272,14 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
 
       {/* ✅ Flight Details Display */}
       {flightDetails && (flightDetails.outbound || flightDetails.return) ? (
-        <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3">
-          <div className="space-y-2">
+        <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-2 sm:p-3">
+          <div className="space-y-1.5 sm:space-y-2">
             {flightDetails.outbound && (
-              <div className="flex items-center gap-2">
-                <span className="text-indigo-600 dark:text-indigo-400 text-sm">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="text-indigo-600 dark:text-indigo-400 text-xs sm:text-sm">
                   ✈️
                 </span>
-                <span className="text-indigo-900 dark:text-indigo-300 text-sm">
+                <span className="text-indigo-900 dark:text-indigo-300 text-xs sm:text-sm">
                   <span className="font-medium">Outbound:</span>{" "}
                   {flightDetails.outbound.airline ||
                     flightDetails.outbound.carrier}
@@ -1163,12 +1313,12 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
         /* ✅ Show helpful message for trips with "Include Flights" but no flight data (inactive airports) */
         trip?.flightPreferences?.includeFlights &&
         isInactiveAirport && (
-          <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
-            <div className="flex items-start gap-2">
-              <span className="text-orange-600 dark:text-orange-400 text-sm mt-0.5">
+          <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg p-2 sm:p-3">
+            <div className="flex items-start gap-1.5 sm:gap-2">
+              <span className="text-orange-600 dark:text-orange-400 text-xs sm:text-sm mt-0.5">
                 ℹ️
               </span>
-              <div className="flex-1 text-sm text-orange-900 dark:text-orange-300">
+              <div className="flex-1 text-xs sm:text-sm text-orange-900 dark:text-orange-300">
                 <span className="font-medium">{isInactiveAirport.name}</span>{" "}
                 has no commercial airport. Fly to{" "}
                 {isInactiveAirport.alternatives.join(" or ")}, then travel by
@@ -1190,14 +1340,16 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           apiKey={apiKey}
           libraries={["places", "geometry", "routes"]}
         >
-          <div className="relative w-full h-[600px]">
+          <div className="relative w-full h-[400px] sm:h-[500px] md:h-[600px] lg:h-[700px]">
             {/* Updating Indicator */}
             {isUpdating && !isGeocoding && (
-              <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-sky-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="absolute top-2 sm:top-4 left-1/2 transform -translate-x-1/2 z-10 bg-sky-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg shadow-lg flex items-center gap-1.5 sm:gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
                 <div style={{ animation: "spin 1s linear infinite" }}>
-                  <RefreshCw className="h-4 w-4" />
+                  <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </div>
-                <span className="text-sm font-medium">Updating map...</span>
+                <span className="text-xs sm:text-sm font-medium">
+                  Updating map...
+                </span>
               </div>
             )}
 
@@ -1215,6 +1367,15 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
               disableDefaultUI={false}
               style={{ width: "100%", height: "100%" }}
             >
+              {/* Render route polylines connecting activities per day */}
+              {showRoutes && (
+                <RoutePolylines
+                  filteredLocations={filteredLocations}
+                  selectedDay={selectedDay}
+                  getMarkerColor={getMarkerColor}
+                />
+              )}
+
               {/* Render markers for filtered locations */}
               <MapMarkers
                 filteredLocations={filteredLocations}
@@ -1261,6 +1422,30 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Route Toggle Button */}
+              <Button
+                variant={showRoutes ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowRoutes(!showRoutes)}
+                className="gap-2 h-9 text-sm"
+                title={showRoutes ? "Hide routes" : "Show routes"}
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                  />
+                </svg>
+                {showRoutes ? "Hide Routes" : "Show Routes"}
+              </Button>
+
               {/* Manual Refresh Button */}
               <Button
                 variant="outline"
