@@ -42,8 +42,9 @@ export const AI_PROMPT_OPTIMIZED = `Generate travel itinerary JSON for {location
    • ❌ WRONG: "placesToVisit": "{...}, {...}, {...}" (comma-separated objects)
    • ✅ CORRECT: "placesToVisit": [{...}, {...}, {...}] (proper JSON array)
    • HOTELS: 3-5 options (budget, mid-range, luxury) in array format.
-   • Each itinerary item: time, placeName, placeDetails, ticketPricing, timeTravel.
-   • Each hotel: hotelName, hotelAddress, pricePerNight, description, amenities, rating, reviews_count.
+   • Each itinerary item: time, placeName, placeDetails, ticketPricing, timeTravel, geoCoordinates.
+   • geoCoordinates FORMAT: {"latitude": 6.9214, "longitude": 122.0790} - Use actual coordinates of the place.
+   • Each hotel: hotelName, hotelAddress, pricePerNight, description, amenities, rating, reviews_count, geoCoordinates.
 
 6. BUDGET ENFORCEMENT (CRITICAL) 🚨
    USER BUDGET TARGET: {budgetAmount}. Aim to stay within this, with 15% tolerance allowed for real-world pricing.
@@ -70,25 +71,39 @@ export const AI_PROMPT_OPTIMIZED = `Generate travel itinerary JSON for {location
    • Set "withinBudget": false only if grandTotal > {budgetAmount} * 1.15 (triggers regeneration)
 
 7. REQUIRED ITINERARY ELEMENTS
-   • Arrival Day Structure (choose based on transport mode):
+   • Arrival Day Structure (choose based on flight data context):
      
-     FOR DIRECT FLIGHTS:
-     - "Arrival at [Destination Airport]"
-     - "Check-in at [Hotel Name]"
-     - "Rest" or 1-2 activities if time permits
+     🏠 IF "SAME-CITY TRIP" (see FLIGHTS section):
+       - START DIRECTLY with "Check-in at [Hotel Name]"
+       - User is already in destination, no arrival/departure logistics needed
+       - DO NOT add "Departure from origin" or "Arrival in city" activities
      
-     FOR REROUTED FLIGHTS (destination has no airport):
-     - "Arrival at [Alternative Airport]" (₱0 - flight booked separately)
-     - "[Bus/Van] from [Airport] to [Destination]" (₱X-Y per person, Z hours) ← SEPARATE ACTIVITY
-     - "Arrival in [Destination]" or "Check-in at [Hotel Name]"
+     ✈️ IF FLIGHT DATA PROVIDED (actual flight recommendations):
+       FOR DIRECT FLIGHTS:
+       - "Arrival at [Destination Airport]" (₱0 - flight booked separately)
+       - "Check-in at [Hotel Name]"
+       - "Rest" or 1-2 activities if time permits
+       
+       FOR REROUTED FLIGHTS (destination has no airport):
+       - "Arrival at [Alternative Airport]" (₱0 - flight booked separately)
+       - "[Bus/Van] from [Airport] to [Destination]" (₱X-Y per person, Z hours)
+       - "Check-in at [Hotel Name]"
      
-   • Departure: "Check-out from [Hotel Name]", "Departure to [Airport Name]".
+     🚫 IF "No flight data available" (independent travel):
+       - START with "Check-in at [Hotel Name]"
+       - DO NOT add inter-city transport unless explicitly provided in transport context
+       - User may be traveling from another city, but transport is self-managed
+     
+   • Last Day: "Check-out from [Hotel Name]", then departure/airport activities ONLY if flights were provided.
    • Meals: Include breakfast, lunch, dinner with cost estimates.
-   • Ground Transport: MUST be separate activity with ticketPricing field for budget tracking.
+   • Ground Transport: Include as separate activities ONLY when specified in flight/transport data.
    
 🏨 CRITICAL: DAY 1 HOTEL CHECK-IN
-   • Day 1 check-in MUST use the name of the FIRST hotel in the 'hotels' array.
-   • Example: "Check-in at Bayfront Hotel Manila". NEVER "Check-in at Hotel".
+   • hotels[0] is the RECOMMENDED hotel (highest quality - best rating, most reviews)
+   • Day 1 check-in MUST use hotels[0].name or hotels[0].hotelName EXACTLY
+   • Example: "Check-in at Bayfront Hotel Manila". NEVER "Check-in at Hotel"
+   • All "return to hotel" activities MUST use hotels[0] name consistently
+   • Only use hotels[1], hotels[2]... if user specifically requests alternatives
 
 📊 TRIP CONTEXT
 Dates: {travelDates}
@@ -160,7 +175,31 @@ const getTravelStyleInfluence = (travelStyle) => {
  * Replaces verbose flight section (600 tokens → 100 tokens)
  * ✅ ENHANCED: Now includes arrival airport information for accurate Day 1 itinerary
  */
-export const buildFlightSummary = (flightRecommendations) => {
+export const buildFlightSummary = (
+  flightRecommendations,
+  userHomeLocation = null,
+  destination = null
+) => {
+  // ✅ SAME-CITY DETECTION: Check if user is already at destination
+  if (userHomeLocation && destination) {
+    const normalizeCity = (city) =>
+      city
+        .toLowerCase()
+        .trim()
+        .split(",")[0] // Extract "Zamboanga City" from "Zamboanga City, Philippines"
+        .replace(/\s+(city|metro|province)\b/gi, "") // Remove "City", "Metro", "Province"
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const homeLower = normalizeCity(userHomeLocation);
+    const destLower = normalizeCity(destination);
+
+    // User is already at destination - no flights needed
+    if (homeLower === destLower) {
+      return "🏠 SAME-CITY TRIP: User is already at destination. No flights or inter-city transport needed.";
+    }
+  }
+
   if (
     !flightRecommendations?.flights ||
     flightRecommendations.flights.length === 0
@@ -500,7 +539,14 @@ export const buildOptimizedPrompt = ({
       (userProfile?.culturalPreferences || []).join(", ") || "None"
     )
     .replace("{travelDates}", buildTravelDatesSummary(dateInfo))
-    .replace("{flightSummary}", buildFlightSummary(flightRecommendations))
+    .replace(
+      "{flightSummary}",
+      buildFlightSummary(
+        flightRecommendations,
+        userProfile?.homeLocation,
+        location // destination
+      )
+    )
     .replace(
       "{hotelSummary}",
       buildHotelSummary(hotelRecommendations, hotelBudgetLevel || 3)

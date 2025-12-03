@@ -175,21 +175,23 @@ function findMatchingHotel(extractedName, hotels) {
   let bestMatch = null;
   let bestScore = 0;
   
-  for (const hotel of hotels) {
+  for (let hotelIndex = 0; hotelIndex < hotels.length; hotelIndex++) {
+    const hotel = hotels[hotelIndex];
     const hotelName = hotel.name || hotel.hotelName || hotel.hotel_name || '';
     const normalizedHotel = normalizeHotelName(hotelName);
     const hotelLower = hotelName.toLowerCase();
+    const isPrimaryHotel = hotelIndex === 0; // First hotel in array is PRIMARY
     
     // 1. EXACT MATCH (score: 1.0)
     if (normalizedHotel === normalizedExtracted) {
-      console.log(`   ✅ Exact match: "${hotelName}"`);
-      return hotel;
+      console.log(`   ✅ Exact match: "${hotelName}"${isPrimaryHotel ? ' (PRIMARY ✓)' : ' (SECONDARY - will replace)'}`);
+      return { hotel, isPrimary: isPrimaryHotel, matchType: 'exact', hotelName };
     }
     
     // 2. FULL SUBSTRING MATCH (score: 0.9)
     if (normalizedExtracted.includes(normalizedHotel) || normalizedHotel.includes(normalizedExtracted)) {
-      console.log(`   ✅ Substring match: "${hotelName}"`);
-      return hotel;
+      console.log(`   ✅ Substring match: "${hotelName}"${isPrimaryHotel ? ' (PRIMARY ✓)' : ' (SECONDARY - will replace)'}`);
+      return { hotel, isPrimary: isPrimaryHotel, matchType: 'substring', hotelName };
     }
     
     // 3. LOCATION-BASED MATCHING (e.g., both have "Banaue" in name)
@@ -268,8 +270,97 @@ export function validateAndFixHotelNames(tripData) {
       return result;
     }
     
-    const primaryHotel = hotels[0];
-    const primaryHotelName = primaryHotel?.name || primaryHotel?.hotelName || primaryHotel?.hotel_name;
+    // ✅ CRITICAL: Use Day 1 check-in hotel as PRIMARY (most reliable)
+    // This matches what AI intended and what itinerary says
+    let primaryHotel = null;
+    let primaryHotelName = null;
+    
+    // Extract hotel name from Day 1 check-in activity
+    if (itinerary.length > 0 && itinerary[0].plan) {
+      const day1CheckIn = itinerary[0].plan.find((activity) => {
+        const placeName = (activity.placeName || '').toLowerCase();
+        return placeName.includes('check') && (placeName.includes('in') || placeName.includes('into'));
+      });
+      
+      if (day1CheckIn) {
+        // Extract hotel name from check-in text
+        const extractedName = extractHotelNameFromActivity(day1CheckIn.placeName);
+        
+        if (extractedName) {
+          console.log(`🏨 Day 1 check-in hotel: "${extractedName}"`);
+          
+          // Find this hotel in the hotels array
+          for (const hotel of hotels) {
+            const hotelName = hotel?.name || hotel?.hotelName || hotel?.hotel_name || '';
+            const normalizedExtracted = normalizeHotelName(extractedName);
+            const normalizedHotel = normalizeHotelName(hotelName);
+            
+            // Check if this is the hotel mentioned in check-in
+            if (normalizedExtracted.includes(normalizedHotel) || 
+                normalizedHotel.includes(normalizedExtracted) ||
+                normalizedExtracted === normalizedHotel) {
+              primaryHotel = hotel;
+              primaryHotelName = hotelName;
+              console.log(`🏨 Matched PRIMARY hotel: "${hotelName}" (from Day 1 check-in)`);
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    // FALLBACK: If can't determine from check-in, use first hotel in array
+    if (!primaryHotelName) {
+      primaryHotel = hotels[0];
+      primaryHotelName = primaryHotel?.name || primaryHotel?.hotelName || primaryHotel?.hotel_name;
+      console.log(`🏨 Using FALLBACK: First hotel in array "${primaryHotelName}"`);
+    }
+    
+    // ✅ PHASE 3: QUALITY CHECK - Upgrade to better hotel if AI selected low-quality option
+    if (primaryHotel) {
+      const rating = primaryHotel.rating || 0;
+      const reviews = primaryHotel.user_ratings_total || primaryHotel.reviews_count || 0;
+      
+      console.log(`🔍 Quality check: ${primaryHotelName} (${rating}★, ${reviews} reviews)`);
+      
+      // Quality thresholds: Rating < 3.8 OR reviews < 50 = low quality
+      if (rating < 3.8 || reviews < 50) {
+        console.warn(`⚠️ AI selected low-quality hotel "${primaryHotelName}" (${rating}★, ${reviews} reviews)`);
+        
+        // Find better alternative from hotels array
+        const betterHotel = hotels.find(h => {
+          const hRating = h.rating || 0;
+          const hReviews = h.user_ratings_total || h.reviews_count || 0;
+          const hName = h.name || h.hotelName || h.hotel_name || '';
+          
+          // Must be significantly better (rating ≥ 4.0 AND reviews ≥ 100)
+          return hName !== primaryHotelName && hRating >= 4.0 && hReviews >= 100;
+        });
+        
+        if (betterHotel) {
+          const betterName = betterHotel.name || betterHotel.hotelName || betterHotel.hotel_name;
+          const betterRating = betterHotel.rating || 0;
+          const betterReviews = betterHotel.user_ratings_total || betterHotel.reviews_count || 0;
+          
+          console.log(`🔄 UPGRADE: "${primaryHotelName}" → "${betterName}" (${betterRating}★, ${betterReviews} reviews)`);
+          
+          // Replace with better hotel
+          primaryHotel = betterHotel;
+          primaryHotelName = betterName;
+          
+          result.fixes.push({
+            type: 'QUALITY_UPGRADE',
+            reason: 'AI selected low-quality hotel',
+            from: `${primaryHotelName} (${rating}★)`,
+            to: `${betterName} (${betterRating}★)`,
+          });
+        } else {
+          console.warn(`⚠️ No better hotel alternative found - keeping "${primaryHotelName}"`);
+        }
+      } else {
+        console.log(`✅ Quality check passed: ${primaryHotelName} meets standards (${rating}★, ${reviews} reviews)`);
+      }
+    }
     
     if (!primaryHotelName) {
       console.warn('⚠️ PRIMARY hotel has no name - cannot validate hotel references');
@@ -348,16 +439,29 @@ export function validateAndFixHotelNames(tripData) {
         const extractedName = extractHotelNameFromActivity(placeName);
         
         if (extractedName) {
-          // Check if this hotel name matches any hotel in the array
-          const matchingHotel = findMatchingHotel(extractedName, hotels);
+          // Check if this hotel name matches the PRIMARY hotel
+          const normalizedExtracted = normalizeHotelName(extractedName);
+          const normalizedPrimary = normalizeHotelName(primaryHotelName);
           
-          if (!matchingHotel) {
-            // ❌ MISMATCH: Extracted name doesn't match any hotel in recommendations
-            console.warn(`⚠️ Day ${dayIndex + 1}, Activity ${actIndex + 1}: Found wrong hotel name "${extractedName}"`);
+          // Simple check: Does extracted name match PRIMARY hotel?
+          const matchResult = normalizedExtracted.includes(normalizedPrimary) ||
+                             normalizedPrimary.includes(normalizedExtracted) ||
+                             normalizedExtracted === normalizedPrimary
+            ? { hotel: primaryHotel, isPrimary: true, matchType: 'primary', hotelName: primaryHotelName }
+            : { hotel: null, isPrimary: false, matchType: 'none', hotelName: extractedName };
+          
+          // ✅ CRITICAL FIX: Replace if NO match OR matched to SECONDARY hotel
+          const needsReplacement = !matchResult || !matchResult.isPrimary;
+          
+          if (needsReplacement) {
+            const reason = !matchResult 
+              ? 'No matching hotel found in recommendations'
+              : `Matched to SECONDARY hotel "${matchResult.hotelName}" instead of PRIMARY`;
+            
+            console.warn(`🚨 Day ${dayIndex + 1}, Activity ${actIndex + 1}: Hotel reference issue`);
+            console.warn(`   Extracted name: "${extractedName}"`);
+            console.warn(`   Reason: ${reason}`);
             console.warn(`   Original text: "${placeName}"`);
-            console.warn(`   Expected one of: ${hotels.map(h => h.name || h.hotelName || h.hotel_name).join(', ')}`);
-            console.warn(`   Normalized extracted: "${normalizeHotelName(extractedName)}"`);
-            console.warn(`   Normalized primary: "${normalizeHotelName(primaryHotelName)}"`);
             console.warn(`   Replacing with PRIMARY hotel: "${primaryHotelName}"`);
             
             result.isValid = false;
@@ -367,26 +471,29 @@ export function validateAndFixHotelNames(tripData) {
             // Fix placeName
             const fixedPlaceName = replaceHotelNameInText(placeName, extractedName, primaryHotelName);
             correctedItinerary[dayIndex].plan[actIndex].placeName = fixedPlaceName;
-            console.log(`   ✅ Fixed: "${fixedPlaceName}"`);
+            console.log(`   ✅ Fixed placeName: "${fixedPlaceName}"`);
             
             // Fix placeDetails if it also contains the wrong name
             if (placeDetails && placeDetails.toLowerCase().includes(extractedName.toLowerCase())) {
               const fixedPlaceDetails = replaceHotelNameInText(placeDetails, extractedName, primaryHotelName);
               correctedItinerary[dayIndex].plan[actIndex].placeDetails = fixedPlaceDetails;
+              console.log(`   ✅ Fixed placeDetails: "${fixedPlaceDetails}"`);
             }
             
             result.fixes.push({
               day: dayIndex + 1,
               activity: actIndex + 1,
-              type: 'HOTEL_NAME_MISMATCH',
+              type: matchResult ? 'SECONDARY_HOTEL_REPLACED' : 'HOTEL_NAME_MISMATCH',
               wrongName: extractedName,
               correctName: primaryHotelName,
+              matchedHotel: matchResult?.hotelName || null,
+              matchType: matchResult?.matchType || null,
               originalPlaceName: placeName,
               fixedPlaceName: fixedPlaceName,
             });
           } else {
-            // ✅ Valid hotel name found
-            console.log(`✅ Day ${dayIndex + 1}, Activity ${actIndex + 1}: Hotel name "${extractedName}" is valid`);
+            // ✅ Correctly references PRIMARY hotel
+            console.log(`✅ Day ${dayIndex + 1}, Activity ${actIndex + 1}: Correctly references PRIMARY hotel "${primaryHotelName}"`);
           }
         }
         

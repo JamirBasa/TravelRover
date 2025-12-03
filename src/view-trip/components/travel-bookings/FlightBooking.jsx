@@ -649,110 +649,90 @@ function FlightBooking({ trip }) {
         {/* 🆕 AUTO-REROUTE BANNER: Show when flights were rerouted to alternative airport */}
         {trip?.realFlightData?.rerouted &&
           trip?.realFlightData?.reroute_info && (
-            <div className="bg-gradient-to-r from-blue-50 to-sky-50 dark:from-blue-950/30 dark:to-sky-950/30 rounded-xl shadow-lg border-2 border-blue-300 dark:border-blue-700 p-5 sm:p-6">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">✈️</span>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100 mb-2">
-                    Your Destination:{" "}
-                    {trip.realFlightData.reroute_info.original_destination}
-                  </h3>
-                  <p className="text-blue-800 dark:text-blue-200 text-sm mb-3 leading-relaxed">
-                    Since{" "}
-                    <strong>
+            <div className="brand-card border-l-4 border-sky-500 dark:border-sky-400 overflow-hidden">
+              {/* Compact Header with Context */}
+              <div className="px-6 py-4 bg-gradient-to-br from-sky-50/50 to-blue-50/50 dark:from-sky-950/20 dark:to-blue-950/20">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 brand-gradient rounded-lg flex items-center justify-center shadow-md mt-0.5">
+                    <span className="text-xl">✈️</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1.5">
+                      Multi-Step Journey Required
+                    </h3>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                       {
                         trip.realFlightData.reroute_info.original_destination.split(
                           ","
                         )[0]
-                      }
-                    </strong>{" "}
-                    doesn't have an airport, you'll fly to{" "}
-                    <strong>
-                      {trip.realFlightData.reroute_info.alternative_name}
-                    </strong>{" "}
-                    ({trip.realFlightData.reroute_info.alternative_airport}) and
-                    continue by ground transport to your destination.
-                  </p>
+                      }{" "}
+                      has no airport. Fly to{" "}
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {trip.realFlightData.reroute_info.alternative_name} (
+                        {trip.realFlightData.reroute_info.alternative_airport})
+                      </span>
+                      , then continue by ground transport.
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-                  <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-                      🛣️ Your Complete Journey:
-                    </h4>
-                    <div className="space-y-3 text-sm">
-                      <div className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-7 h-7 rounded-full bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center text-xs font-bold text-sky-700 dark:text-sky-300">
-                          ✈️
-                        </span>
-                        <div className="flex-1">
-                          <div className="font-semibold text-gray-900 dark:text-gray-100">
-                            Fly to{" "}
-                            {trip.realFlightData.reroute_info.alternative_name}
-                          </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                            Land at{" "}
-                            {
-                              trip.realFlightData.reroute_info
-                                .alternative_airport
-                            }{" "}
-                            • Flight prices shown above
-                          </div>
-                        </div>
+              {/* Journey Steps - Compact Design */}
+              <div className="px-6 py-5">
+                <div className="space-y-0 divide-y divide-gray-100 dark:divide-slate-700">
+                  {/* Step 1: Flight */}
+                  <div className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
+                    <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-sky-500 to-blue-600 text-white text-sm font-bold shadow-sm">
+                      1
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 dark:text-white text-sm mb-0.5">
+                        Fly to{" "}
+                        {trip.realFlightData.reroute_info.alternative_name}
                       </div>
-                      <div className="flex items-center gap-2 pl-3">
-                        <div className="h-6 w-0.5 bg-gray-300 dark:bg-gray-600"></div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                          🚌
-                        </span>
-                        <div className="flex-1">
-                          <div className="font-semibold text-gray-900 dark:text-gray-100">
-                            {trip.realFlightData.reroute_info.ground_transport
-                              .mode === "bus"
-                              ? "Take a bus"
-                              : trip.realFlightData.reroute_info
-                                  .ground_transport.mode === "van"
-                              ? "Take a van"
-                              : `Take ${trip.realFlightData.reroute_info.ground_transport.mode}`}{" "}
-                            to{" "}
-                            {
-                              trip.realFlightData.reroute_info.original_destination.split(
-                                ","
-                              )[0]
-                            }
-                          </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                            {
-                              trip.realFlightData.reroute_info.ground_transport
-                                .travel_time
-                            }{" "}
-                            travel time • Book separately
-                          </div>
-                        </div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        See flight options above
                       </div>
                     </div>
+                    <div className="flex-shrink-0 text-xl">✈️</div>
+                  </div>
 
-                    <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
-                      <div className="flex items-start gap-2">
-                        <span className="text-sm">💡</span>
-                        <div className="flex-1 text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
-                          <strong>Travel Tip:</strong> Ground transport tickets
-                          can be purchased at the airport or booked online.
-                          {trip.realFlightData.reroute_info.ground_transport
-                            .recommendation && (
-                            <>
-                              {" "}
-                              {
-                                trip.realFlightData.reroute_info
-                                  .ground_transport.recommendation
-                              }
-                            </>
-                          )}
-                        </div>
+                  {/* Step 2: Ground Transport */}
+                  <div className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
+                    <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 text-white text-sm font-bold shadow-sm">
+                      2
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 dark:text-white text-sm mb-0.5">
+                        {trip.realFlightData.reroute_info.ground_transport
+                          .mode === "bus"
+                          ? "Bus"
+                          : trip.realFlightData.reroute_info.ground_transport
+                              .mode === "van"
+                          ? "Van"
+                          : trip.realFlightData.reroute_info.ground_transport.mode
+                              .charAt(0)
+                              .toUpperCase() +
+                            trip.realFlightData.reroute_info.ground_transport.mode.slice(
+                              1
+                            )}{" "}
+                        to{" "}
+                        {
+                          trip.realFlightData.reroute_info.original_destination.split(
+                            ","
+                          )[0]
+                        }
+                      </div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        {
+                          trip.realFlightData.reroute_info.ground_transport
+                            .travel_time
+                        }{" "}
+                        <span className="text-gray-400">•</span> Book at airport
+                        or online
                       </div>
                     </div>
+                    <div className="flex-shrink-0 text-xl">🚌</div>
                   </div>
                 </div>
               </div>

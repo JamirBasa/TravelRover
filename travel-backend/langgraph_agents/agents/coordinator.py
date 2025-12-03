@@ -333,6 +333,7 @@ class CoordinatorAgent(BaseAgent):
             'Baguio City': 'BAG',
             'La Trinidad': 'BAG',
             'Benguet': 'BAG',
+            'Kapangan': 'KAP',  # Kapangan, Benguet → uses KAP for routing
             
             # Mountain Province cities → Tuguegarao (no local commercial airports)
             'Sagada': 'TUG',
@@ -1113,10 +1114,54 @@ class CoordinatorAgent(BaseAgent):
             # Build hotel response
             if include_hotels:
                 hotels_data = agent_results.get('hotel', {})
+                
+                # 🔍 DEBUG: Log raw hotel data structure
+                logger.info(f"🔍 Raw hotels_data type: {type(hotels_data)}")
+                if isinstance(hotels_data, dict):
+                    logger.info(f"🔍 Raw hotels_data keys: {list(hotels_data.keys())}")
+                else:
+                    logger.warning(f"⚠️ hotels_data is not a dict: {hotels_data}")
+                
+                # Unwrap nested 'data' structure if present
                 if isinstance(hotels_data, dict) and 'data' in hotels_data:
                     hotel_response = hotels_data.get('data', {})
+                    logger.info("🔧 Unwrapped hotels_data['data']")
                 else:
                     hotel_response = hotels_data
+                    logger.info("🔧 Using hotels_data directly (no 'data' key)")
+                
+                # ✅ CRITICAL FIX: Validate hotel response structure
+                if not hotel_response:
+                    logger.warning("⚠️ Hotel response is None/empty")
+                    hotel_response = None
+                elif not isinstance(hotel_response, dict):
+                    logger.error(f"❌ Hotel response is not a dict: {type(hotel_response)}")
+                    hotel_response = None
+                elif 'hotels' not in hotel_response:
+                    # Check for common nested structure issues
+                    logger.warning(f"⚠️ 'hotels' key missing. Available keys: {list(hotel_response.keys())}")
+                    
+                    # Try to unwrap one more level if needed
+                    if 'data' in hotel_response and isinstance(hotel_response['data'], dict) and 'hotels' in hotel_response['data']:
+                        logger.info("🔧 Found 'hotels' in nested 'data' - unwrapping again")
+                        hotel_response = hotel_response['data']
+                    else:
+                        logger.error(f"❌ Cannot recover hotel data. Full response structure: {hotel_response}")
+                        hotel_response = None
+                elif not isinstance(hotel_response.get('hotels'), list):
+                    logger.error(f"❌ 'hotels' value is not a list: {type(hotel_response.get('hotels'))}")
+                    hotel_response = None
+                else:
+                    hotels_count = len(hotel_response['hotels'])
+                    logger.info(f"✅ Hotel response validated: {hotels_count} hotels found")
+                    
+                    # Additional validation: log if hotels array is empty
+                    if hotels_count == 0:
+                        logger.warning("⚠️ Hotels array is empty (length 0)")
+                    else:
+                        # Log first hotel for verification
+                        first_hotel = hotel_response['hotels'][0]
+                        logger.info(f"🏨 First hotel: {first_hotel.get('name', 'Unknown')} - {first_hotel.get('address', 'No address')}")
             else:
                 # When hotels not requested, return null (not success: false)
                 hotel_response = None
@@ -1181,6 +1226,18 @@ class CoordinatorAgent(BaseAgent):
                 logger.info(f"🔍 DEBUG final_results['flights']['rerouted']: {flight_response.get('rerouted', False)}")
             else:
                 logger.info("🔍 DEBUG final_results['flights'] is None/null")
+            
+            # 🔍 DEBUG: Log hotel response structure before returning
+            if hotel_response:
+                logger.info(f"🔍 DEBUG final_results['hotels'] keys: {list(hotel_response.keys())}")
+                hotels_array = hotel_response.get('hotels', [])
+                logger.info(f"🔍 DEBUG final_results['hotels']['hotels'] length: {len(hotels_array)}")
+                if hotels_array:
+                    logger.info(f"🔍 DEBUG First hotel in final response: {hotels_array[0].get('name', 'Unknown')}")
+                else:
+                    logger.error("❌ CRITICAL: Hotels array is EMPTY in final_results!")
+            else:
+                logger.info("🔍 DEBUG final_results['hotels'] is None/null")
             
             # Step 5: (Optional) Enhance with Gemini descriptions
             # This could be added as a future enhancement

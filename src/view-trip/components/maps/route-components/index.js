@@ -5,6 +5,7 @@ export { MapMarkers } from "./MapMarkers";
 export { LocationInfoWindow } from "./LocationInfoWindow";
 export { DayFilterDropdown } from "./DayFilterDropdown";
 export { LocationSequenceList } from "./LocationSequenceList";
+export { RoutePolylines } from "./RoutePolylines";
 
 // Export validation utilities
 export {

@@ -76,7 +76,7 @@ export function LocationInfoWindow({ selectedLocation, onClose, trip }) {
       }}
       onCloseClick={onClose}
     >
-      <div className="max-w-xs bg-white dark:bg-slate-900 rounded-lg overflow-hidden">
+      <div className="max-w-[280px] sm:max-w-xs bg-white dark:bg-slate-900 rounded-lg overflow-hidden">
         {/* Place Photo with Loading State */}
         {isLoadingPhoto ? (
           <div className="relative w-full h-32 bg-gray-200 dark:bg-slate-800 rounded-t-lg overflow-hidden">

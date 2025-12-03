@@ -227,13 +227,16 @@ function PlaceCardItem({ place, trip }) {
   const rawPlaceName = place?.placeName || place?.activity || "Unknown Place";
   const placeDetails = place?.placeDetails || place?.description || "";
 
+  // ✅ Clean duplicate text (AI sometimes generates "Place Name\nPlace Name")
+  const cleanedRawName = rawPlaceName.split("\n")[0].trim();
+
   // ✅ Detect if this is a logistics item
   const isLogistics = isLogisticsItem(place);
 
   // ✅ Simplify logistics text for better UX
   const placeName = isLogistics
-    ? simplifyLogisticsText(rawPlaceName)
-    : rawPlaceName;
+    ? simplifyLogisticsText(cleanedRawName)
+    : cleanedRawName;
 
   // Generate Google Maps URL with proper place query for directions
   const generateMapsURL = () => {

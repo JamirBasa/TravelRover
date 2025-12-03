@@ -1111,6 +1111,50 @@ function CreateTrip() {
 
         const langGraphAgent = new LangGraphTravelAgent();
 
+        // ✅ PHASE 1: Sort hotels by quality BEFORE sending to AI
+        // This ensures the best hotel becomes hotels[0] and gets selected for Day 1 check-in
+        let sortedHotelData = { ...hotelData };
+        if (hotelData.hotels && Array.isArray(hotelData.hotels)) {
+          const sortedHotels = [...hotelData.hotels].sort((a, b) => {
+            // Priority: Rating > Reviews > Price (lower is better)
+            const ratingA = a.rating || 0;
+            const ratingB = b.rating || 0;
+
+            // Sort by rating (descending)
+            if (ratingB !== ratingA) return ratingB - ratingA;
+
+            // Sort by review count (descending)
+            const reviewsA = a.user_ratings_total || a.reviews_count || 0;
+            const reviewsB = b.user_ratings_total || b.reviews_count || 0;
+            if (reviewsB !== reviewsA) return reviewsB - reviewsA;
+
+            // Sort by price (ascending - cheaper is better as tiebreaker)
+            const extractPrice = (priceStr) => {
+              if (!priceStr) return 99999;
+              const match = String(priceStr).match(/₱?([\d,]+)/);
+              return match ? parseInt(match[1].replace(/,/g, "")) : 99999;
+            };
+            const priceA = extractPrice(
+              a.pricePerNight || a.priceRange || a.price_range
+            );
+            const priceB = extractPrice(
+              b.pricePerNight || b.priceRange || b.price_range
+            );
+            return priceA - priceB;
+          });
+
+          sortedHotelData.hotels = sortedHotels;
+
+          console.log("✅ Hotels sorted by quality for AI:", {
+            total: sortedHotels.length,
+            topHotel: sortedHotels[0]?.name || sortedHotels[0]?.hotelName,
+            topRating: sortedHotels[0]?.rating,
+            topReviews:
+              sortedHotels[0]?.user_ratings_total ||
+              sortedHotels[0]?.reviews_count,
+          });
+        }
+
         const tripParams = {
           destination: formData.location,
           startDate: formData.startDate,
@@ -1124,7 +1168,7 @@ function CreateTrip() {
             searchReturnDate: travelDates.flightReturnDate,
           },
           hotelData: {
-            ...hotelData,
+            ...sortedHotelData, // ✅ Use sorted hotels
             checkInDate: travelDates.hotelCheckInDate,
             checkOutDate: travelDates.hotelCheckOutDate,
           },
@@ -1978,18 +2022,15 @@ function CreateTrip() {
 
       try {
         const originalData = JSON.stringify(parsedTripData);
+        console.log("🔧 Running initial auto-fix (Pass 1)...");
         parsedTripData = autoFixItinerary(parsedTripData, formData);
         const wasModified = originalData !== JSON.stringify(parsedTripData);
 
         if (wasModified) {
-          console.log(
-            "✅ Auto-fix completed successfully - Itinerary was modified"
-          );
+          console.log("✅ Auto-fix Pass 1 completed - Itinerary was modified");
           // ✅ OPTIMIZED: Silent auto-fix - no toast needed (user expects valid itinerary)
         } else {
-          console.log(
-            "✅ Auto-fix completed successfully - No modifications needed"
-          );
+          console.log("✅ Auto-fix Pass 1 completed - No modifications needed");
         }
       } catch (autoFixError) {
         console.error("❌ Auto-fix failed:", autoFixError);
@@ -2115,7 +2156,10 @@ function CreateTrip() {
         );
 
         // 🔧 SMART RETRY: Try one more aggressive auto-fix before giving up
-        console.log("🔄 Attempting aggressive auto-fix...");
+        console.log("🔄 Attempting aggressive auto-fix (Pass 2)...");
+        console.warn(
+          "⚠️ Note: Auto-fix running TWICE - duplicate prevention is critical!"
+        );
 
         try {
           // Force-fix all day activity counts to strict limits
@@ -2134,7 +2178,7 @@ function CreateTrip() {
           );
 
           if (revalidation.isValid) {
-            console.log("✅ Aggressive auto-fix succeeded!");
+            console.log("✅ Aggressive auto-fix Pass 2 succeeded!");
             parsedTripData = aggressiveFixed.tripData || parsedTripData;
 
             toast.success("Itinerary Optimized", {
@@ -2584,6 +2628,15 @@ function CreateTrip() {
             "Unable to add flight/hotel to timeline. They're still available in booking sections.",
           duration: 4000,
         });
+      }
+
+      // ✅ LAYER 3 DEFENSE: Final deduplication before Firebase save
+      // This guarantees no duplicates make it to the database
+      console.log("🧹 Running final pre-save deduplication...");
+      const { cleanItinerary } = await import("../utils/itineraryDeduplicator");
+      if (parsedTripData?.itinerary) {
+        parsedTripData.itinerary = cleanItinerary(parsedTripData.itinerary);
+        console.log("✅ Final deduplication complete - itinerary is clean");
       }
 
       // ✅ FIX 1: Ensure budget field is always included in userSelection with multiple formats

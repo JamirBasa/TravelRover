@@ -79,6 +79,82 @@ async function fetchRealHotelData(hotelName, location = "Philippines") {
 }
 
 /**
+ * Verify hotel via Google Places API even if not in Agoda database
+ * This ensures high-quality hotels aren't excluded just because they lack Agoda hotel_id
+ * @param {Object} hotel - Hotel object to verify
+ * @returns {Promise<Object>} Verification result with enriched data
+ */
+async function verifyViaGooglePlaces(hotel) {
+  try {
+    const hotelName = hotel.name || hotel.hotelName || hotel.hotel_name;
+    const location = hotel.hotelAddress || hotel.address || 'Philippines';
+    
+    if (!hotelName) {
+      return { isReal: false, reason: 'No hotel name provided' };
+    }
+    
+    console.log(`🔍 Google verification: "${hotelName}", ${location}`);
+    
+    // Search Google Places
+    const searchQuery = hotelName.toLowerCase().includes('philippines') 
+      ? hotelName 
+      : `${hotelName}, ${location}`;
+    
+    const response = await GetPlaceDetails({ textQuery: searchQuery });
+    
+    if (!response?.data?.places || response.data.places.length === 0) {
+      console.warn(`⚠️ Google Places: No results for "${hotelName}"`);
+      return { isReal: false, reason: 'Not found in Google Places' };
+    }
+    
+    const place = response.data.places[0];
+    
+    // Verify it's actually a lodging establishment
+    const lodgingTypes = ['lodging', 'hotel', 'resort', 'guest_house', 'hostel', 'motel', 'bed_and_breakfast'];
+    const isLodging = place.types?.some(type => lodgingTypes.includes(type));
+    
+    if (!isLodging) {
+      console.warn(`⚠️ Not a lodging: "${hotelName}" (types: ${place.types?.join(', ')})`);
+      return { isReal: false, reason: 'Not a lodging establishment' };
+    }
+    
+    // Extract verification data
+    const amenities = extractAmenities(place);
+    const reviewsData = extractReviewsData(place);
+    
+    const enrichedData = {
+      google_place_id: place.id,
+      rating: reviewsData.rating || place.rating || null,
+      user_ratings_total: reviewsData.reviews_count || place.userRatingCount || 0,
+      reviews_count: reviewsData.reviews_count || place.userRatingCount || 0,
+      address: place.formattedAddress || place.shortFormattedAddress,
+      amenities: amenities,
+      photos: place.photos?.slice(0, 5) || [],
+      editorialSummary: place.editorialSummary?.text,
+      websiteUri: place.websiteUri,
+      phoneNumber: place.nationalPhoneNumber || place.internationalPhoneNumber,
+      priceLevel: place.priceLevel,
+      business_status: place.businessStatus,
+      verified_by: 'google_places_api',
+      verified_at: new Date().toISOString(),
+      types: place.types
+    };
+    
+    console.log(`✅ Google verified: "${hotelName}" (${enrichedData.rating}★, ${enrichedData.user_ratings_total} reviews)`);
+    
+    return {
+      isReal: true,
+      confidence: 0.80, // Good confidence but no direct Agoda booking
+      enrichedData
+    };
+    
+  } catch (error) {
+    console.error(`❌ Google verification failed for "${hotel.name || hotel.hotelName}":`, error.message);
+    return { isReal: false, reason: error.message };
+  }
+}
+
+/**
  * Extract amenities from Google Places data
  */
 function extractAmenities(placeData) {
@@ -235,14 +311,59 @@ export async function verifySingleHotel(hotel) {
     }
     
     // ❌ Enhanced logging for failed matches
-    console.error(`❌ No match found for hotel: "${hotelName}"`, {
+    console.error(`❌ No match found in Agoda DB: "${hotelName}"`, {
       searchedName: hotelName,
       attemptedId: hotelId || 'none',
-      suggestion: 'Hotel may not exist in database or name mismatch is too large'
+      suggestion: 'Attempting Google Places verification...'
     });
   }
   
-  // Strategy 3: Failed - provide diagnostics
+  // ✅ Strategy 3: Google Places Verification (NEW - prevents excluding quality hotels)
+  console.log(`🔍 Hotel not in Agoda DB, checking Google Places for "${hotelName}"...`);
+  
+  const googleVerification = await verifyViaGooglePlaces(hotel);
+  
+  if (googleVerification.isReal) {
+    console.log(`✅ Google verification successful: "${hotelName}" (confidence: ${googleVerification.confidence})`);
+    
+    return {
+      verified: true,
+      verificationSource: 'google_places',
+      matchScore: googleVerification.confidence,
+      tier: 'GOOGLE_VERIFIED',
+      firestoreData: {
+        ...hotel,
+        ...googleVerification.enrichedData,
+        // Preserve original names
+        name: hotel.name || hotel.hotelName || hotel.hotel_name,
+        hotelName: hotel.hotelName || hotel.name || hotel.hotel_name,
+        ai_hotel_name: hotel.name || hotel.hotelName || hotel.hotel_name,
+        // Mark verification details
+        verified: true,
+        verificationSource: 'google_places',
+        canBookDirect: false, // No Agoda hotel_id
+        bookingMethod: 'search', // User must search on Agoda
+        source: 'google_verified',
+        // Preserve original pricing if AI provided it
+        pricePerNight: hotel.pricePerNight || hotel.price,
+        priceRange: hotel.priceRange || hotel.price_range,
+        description: hotel.description || googleVerification.enrichedData.editorialSummary
+      },
+      originalData: hotel,
+      realGoogleData: googleVerification.enrichedData,
+      source: 'google_places',
+      verificationMethod: 'Google Places API Verification',
+      issues: [],
+      warnings: [
+        '🌟 Verified via Google Places but not in direct booking database',
+        'Use "Search on Agoda" button to find this property',
+        `Confidence: ${(googleVerification.confidence * 100).toFixed(0)}%`
+      ]
+    };
+  }
+  
+  // Strategy 4: Failed - provide diagnostics
+  console.warn(`⚠️ Could not verify "${hotelName}" via Agoda DB or Google Places`);
   return createFailureResult(hotel, hotelId, hotelName);
 }
 
