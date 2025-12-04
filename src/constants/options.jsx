@@ -617,8 +617,8 @@ ACTIVITY COUNT RULES:
 ✅ "Return to hotel" or transit DON'T count toward activity limit
 
 PACING BY ACTIVITY COUNT:
-- 1 activity/day: Relaxed pace, more downtime, longer at each place (elderly, families with kids)
-- 2 activities/day: Balanced pace, comfortable exploration (first-timers, balanced schedules)
+- 1 activity/day: Light pace, more downtime, longer at each place (elderly, families with kids)
+- 2 activities/day: Moderate pace, comfortable exploration (first-timers, balanced schedules)
 - 3 activities/day: Active pace, efficient use of time (experienced travelers)
 - 4 activities/day: Intensive pace, maximize experiences (short trips, energetic travelers)
 

@@ -667,11 +667,11 @@ const addTripOverview = (pdf, tripData, startY) => {
       
       // If user set custom budget, show comparison
       if (userBudgetPreference && userBudgetPreference !== actualTripCost) {
-        return `${cleanBudgetType} (${fmtPHP(userBudgetPreference)} budget) → Actual: ${fmtPHP(actualTripCost)}`;
+        return `${cleanBudgetType} Tier | Target: ${fmtPHP(userBudgetPreference)} | Actual: ${fmtPHP(actualTripCost)}`;
       }
       
       // Otherwise just show actual cost with tier label
-      return `${cleanBudgetType} Tier → ${fmtPHP(actualTripCost)}`;
+      return `${cleanBudgetType} Tier | Trip Cost: ${fmtPHP(actualTripCost)}`;
     }
     
     // ✅ Fallback: Show preference or tier only

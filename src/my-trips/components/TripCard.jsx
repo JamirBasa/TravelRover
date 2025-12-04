@@ -295,11 +295,11 @@ function TripCard({ trip, onDelete }) {
     const activityPref = trip.userSelection?.activityPreference;
     if (activityPref !== undefined && activityPref !== null) {
       const paceLabels = {
-        1: "Relaxed Pace",
-        2: "Balanced",
-        3: "Action-Packed",
+        1: "Light Pace",
+        2: "Moderate Pace",
+        3: "Active Pace",
       };
-      const paceLabel = paceLabels[activityPref] || "Balanced";
+      const paceLabel = paceLabels[activityPref] || "Moderate Pace";
 
       highlights.push({
         icon: Zap,

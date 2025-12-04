@@ -24,77 +24,7 @@ import {
 import { getLimitedServiceInfo } from "@/utils/flightRecommendations";
 import { logDebug, logError } from "@/utils/productionLogger";
 import { cleanItinerary } from "@/utils/itineraryDeduplicator";
-
-// ✅ PERSISTENT GEOCODING CACHE
-const GEOCODE_CACHE_KEY = "travelrover_geocode_cache_v1";
-const CACHE_EXPIRY_DAYS = 30;
-
-const loadGeocodeCache = () => {
-  try {
-    const cached = localStorage.getItem(GEOCODE_CACHE_KEY);
-    if (!cached) return {};
-
-    const { data, timestamp } = JSON.parse(cached);
-    const ageInDays = (Date.now() - timestamp) / (24 * 60 * 60 * 1000);
-
-    if (ageInDays > CACHE_EXPIRY_DAYS) {
-      logDebug("OptimizedRouteMap", "Geocode cache expired, clearing", {
-        ageInDays,
-      });
-      localStorage.removeItem(GEOCODE_CACHE_KEY);
-      return {};
-    }
-
-    logDebug("OptimizedRouteMap", "Loaded cached geocode entries", {
-      count: Object.keys(data).length,
-    });
-    return data;
-  } catch (error) {
-    logDebug("OptimizedRouteMap", "Failed to load geocode cache", {
-      error: error.message,
-    });
-    return {};
-  }
-};
-
-const saveGeocodeCache = (cache) => {
-  try {
-    const cacheSize = Object.keys(cache).length;
-
-    // Limit cache size to prevent localStorage overflow
-    if (cacheSize > 500) {
-      logDebug("OptimizedRouteMap", "Geocode cache too large, trimming", {
-        original: cacheSize,
-        trimmedTo: 400,
-      });
-      const entries = Object.entries(cache);
-      const trimmed = Object.fromEntries(entries.slice(-400)); // Keep newest 400
-      cache = trimmed;
-    }
-
-    localStorage.setItem(
-      GEOCODE_CACHE_KEY,
-      JSON.stringify({
-        data: cache,
-        timestamp: Date.now(),
-      })
-    );
-
-    logDebug("OptimizedRouteMap", "Saved geocode entries to cache", {
-      count: cacheSize,
-    });
-  } catch (error) {
-    logDebug("OptimizedRouteMap", "Failed to save geocode cache", {
-      error: error.message,
-    });
-    // If localStorage is full, try clearing old cache
-    try {
-      localStorage.removeItem(GEOCODE_CACHE_KEY);
-    } catch {
-      // Ignore cleanup errors
-    }
-  }
-};
+import { geocodeCache } from "@/utils/indexedDBCache";
 
 /**
  * OptimizedRouteMap Component
@@ -121,21 +51,12 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
     total: 0,
   });
   const [isUpdating, setIsUpdating] = useState(false);
-  // ✅ Initialize with persistent cache
-  const [geocodeCache, setGeocodeCache] = useState(() => loadGeocodeCache());
   const [lastItineraryHash, setLastItineraryHash] = useState("");
   const [showRoutes, setShowRoutes] = useState(true); // Toggle for route visibility
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const mapContainerRef = React.useRef(null);
   const geocodingAbortController = React.useRef(null);
-
-  // ✅ Auto-save cache to localStorage when it updates
-  useEffect(() => {
-    if (Object.keys(geocodeCache).length > 0) {
-      saveGeocodeCache(geocodeCache);
-    }
-  }, [geocodeCache]);
 
   // ✅ Extract recommended hotel name using new utility
   const recommendedHotelName = useMemo(() => {
@@ -541,7 +462,6 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
   };
 
   // Enhanced geocode with caching and place name extraction
-  // Enhanced geocode with caching and place name extraction
   const geocodeLocation = async (locationName, signal) => {
     try {
       // ✅ Extract actual place name from activity description
@@ -554,12 +474,13 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
         return null;
       }
 
-      // Check cache first (use original name as key)
-      if (geocodeCache[locationName]) {
+      // ✅ Check IndexedDB cache first (async, non-blocking)
+      const cached = await geocodeCache.get(locationName);
+      if (cached) {
         logDebug("OptimizedRouteMap", "Using cached coordinates", {
           locationName,
         });
-        return geocodeCache[locationName];
+        return cached;
       }
 
       // ✅ Validate place name before geocoding
@@ -638,11 +559,8 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           // Still cache but mark as potentially inaccurate
         }
 
-        // Cache the result
-        setGeocodeCache((prev) => ({
-          ...prev,
-          [locationName]: coords,
-        }));
+        // ✅ Cache in IndexedDB (async, no localStorage limits)
+        await geocodeCache.set(locationName, coords, 30 * 24 * 60 * 60 * 1000); // 30 days
 
         logDebug("OptimizedRouteMap", "✅ Geocoded successfully", {
           locationName,
@@ -704,9 +622,16 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       }
       geocodingAbortController.current = new AbortController();
 
-      // ✅ Filter locations that need geocoding (not in cache and no coordinates)
-      const locationsToGeocode = allLocations.filter(
-        (loc) => !loc.coordinates && !geocodeCache[loc.name]
+      // ✅ Filter locations that need geocoding (check IndexedDB cache)
+      const cacheCheckPromises = allLocations.map(async (loc) => {
+        if (loc.coordinates) return { ...loc, needsGeocoding: false };
+        const cached = await geocodeCache.get(loc.name);
+        return { ...loc, coordinates: cached, needsGeocoding: !cached };
+      });
+
+      const locationsWithCache = await Promise.all(cacheCheckPromises);
+      const locationsToGeocode = locationsWithCache.filter(
+        (loc) => loc.needsGeocoding
       );
 
       if (locationsToGeocode.length === 0) {
@@ -715,13 +640,7 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
           "All locations cached or have coordinates"
         );
 
-        // Apply cached coordinates
-        const updatedLocations = allLocations.map((loc) => {
-          if (!loc.coordinates && geocodeCache[loc.name]) {
-            return { ...loc, coordinates: geocodeCache[loc.name] };
-          }
-          return loc;
-        });
+        setGeocodedLocations(locationsWithCache);
 
         setGeocodedLocations(updatedLocations);
         setIsUpdating(false);
@@ -1184,154 +1103,296 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
   }
 
   return (
-    <div className="space-y-4">
-      {/* AI Disclaimer Notice */}
-      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 sm:p-4">
-        <div className="flex items-start gap-2 sm:gap-3">
-          <div className="flex-shrink-0 mt-0.5">
-            <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 dark:text-amber-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-amber-900 dark:text-amber-300 text-xs sm:text-sm mb-1">
-              Smart Trip Planning
-            </h4>
-            <p className="text-amber-800 dark:text-amber-400 text-[11px] sm:text-xs leading-relaxed">
-              Your personalized itinerary for{" "}
-              {trip?.userSelection?.location || "your destination"}.
-              <strong className="font-semibold"> Double-check details</strong>{" "}
-              like addresses, hours, and directions before you go. Travel times
-              may vary with traffic.
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-6">
+      {/* Hero Section - Trip Overview */}
+      <Card className="overflow-hidden border-2 border-sky-200 dark:border-sky-800 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <CardContent className="p-6">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-4 mb-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2.5 bg-white dark:bg-slate-800 rounded-xl shadow-md">
+                  <MapPin className="h-6 w-6 text-sky-600 dark:text-sky-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    Your Trip to{" "}
+                    {trip?.userSelection?.location || "destination"}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                    AI-powered personalized itinerary •{" "}
+                    {geocodedLocations.filter((l) => l.coordinates).length}{" "}
+                    locations mapped
+                  </p>
+                </div>
+              </div>
+            </div>
 
-      {/* Route Visualization Info */}
-      {showRoutes && filteredLocations.length >= 2 && (
-        <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-2 sm:p-3">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <svg
-              className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-emerald-600 dark:text-emerald-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-              />
-            </svg>
-            <span className="text-emerald-900 dark:text-emerald-300 text-xs sm:text-sm font-medium">
-              Your daily routes • Color-coded • Follow the arrows
-            </span>
+            {/* Map Controls - Desktop Only */}
+            <div className="hidden sm:flex items-center gap-2">
+              <Button
+                variant={showRoutes ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowRoutes(!showRoutes)}
+                className="gap-2"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                  />
+                </svg>
+                Routes
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleManualRefresh}
+                disabled={isGeocoding}
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${isGeocoding ? "animate-spin" : ""}`}
+                />
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* Geocoding Quality Info */}
-      {geocodedLocations.length > 0 && !isGeocoding && (
-        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-2 sm:p-3">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <svg
-              className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-blue-600 dark:text-blue-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span className="text-blue-900 dark:text-blue-300 text-xs sm:text-sm font-medium">
-              {geocodedLocations.filter((l) => l.coordinates).length} of{" "}
-              {geocodedLocations.length} locations mapped in{" "}
-              {trip?.userSelection?.location || "your area"}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* ✅ Hotel Name Display */}
-      {recommendedHotelName && (
-        <div className="bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 rounded-lg p-2 sm:p-3">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <span className="text-sky-600 dark:text-sky-400 text-xs sm:text-sm">
-              🏨
-            </span>
-            <span className="text-sky-900 dark:text-sky-300 text-xs sm:text-sm font-medium">
-              Your hotel: {recommendedHotelName}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* ✅ Flight Details Display */}
-      {flightDetails && (flightDetails.outbound || flightDetails.return) ? (
-        <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-2 sm:p-3">
-          <div className="space-y-1.5 sm:space-y-2">
-            {flightDetails.outbound && (
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="text-indigo-600 dark:text-indigo-400 text-xs sm:text-sm">
-                  ✈️
-                </span>
-                <span className="text-indigo-900 dark:text-indigo-300 text-xs sm:text-sm">
-                  <span className="font-medium">Outbound:</span>{" "}
-                  {flightDetails.outbound.airline ||
-                    flightDetails.outbound.carrier}
-                  {flightDetails.outbound.flightNumber &&
-                    ` (${flightDetails.outbound.flightNumber})`}
-                  {flightDetails.outbound.departure &&
-                    flightDetails.outbound.arrival &&
-                    ` ${flightDetails.outbound.departure} → ${flightDetails.outbound.arrival}`}
-                </span>
+          {/* Key Trip Details Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Hotel Card */}
+            {recommendedHotelName && (
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-slate-700">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-sky-100 dark:bg-sky-900/30 rounded-lg">
+                    <svg
+                      className="h-5 w-5 text-sky-600 dark:text-sky-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                      />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                      Accommodation
+                    </p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
+                      {recommendedHotelName}
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
-            {flightDetails.return && (
-              <div className="flex items-center gap-2">
-                <span className="text-indigo-600 dark:text-indigo-400 text-sm">
-                  🛬
-                </span>
-                <span className="text-indigo-900 dark:text-indigo-300 text-sm">
-                  <span className="font-medium">Return:</span>{" "}
-                  {flightDetails.return.airline || flightDetails.return.carrier}
-                  {flightDetails.return.flightNumber &&
-                    ` (${flightDetails.return.flightNumber})`}
-                  {flightDetails.return.departure &&
-                    flightDetails.return.arrival &&
-                    ` ${flightDetails.return.departure} → ${flightDetails.return.arrival}`}
-                </span>
+
+            {/* Flight Outbound Card */}
+            {flightDetails?.outbound && (
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-slate-700">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                    <svg
+                      className="h-5 w-5 text-indigo-600 dark:text-indigo-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                      />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                      Outbound Flight
+                    </p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {flightDetails.outbound.departure &&
+                      flightDetails.outbound.arrival
+                        ? `${flightDetails.outbound.departure} → ${flightDetails.outbound.arrival}`
+                        : flightDetails.outbound.airline ||
+                          flightDetails.outbound.carrier}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Flight Return Card */}
+            {flightDetails?.return && (
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-slate-700">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                    <svg
+                      className="h-5 w-5 text-purple-600 dark:text-purple-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M17 8l4 4m0 0l-4 4m4-4H3"
+                      />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                      Return Flight
+                    </p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {flightDetails.return.departure &&
+                      flightDetails.return.arrival
+                        ? `${flightDetails.return.departure} → ${flightDetails.return.arrival}`
+                        : flightDetails.return.airline ||
+                          flightDetails.return.carrier}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Route Status Card */}
+            {showRoutes && filteredLocations.length >= 2 && (
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-slate-700">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                    <svg
+                      className="h-5 w-5 text-emerald-600 dark:text-emerald-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                      />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                      Route Display
+                    </p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      Color-coded daily routes
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
           </div>
-        </div>
-      ) : (
-        /* ✅ Show helpful message for trips with "Include Flights" but no flight data (inactive airports) */
-        trip?.flightPreferences?.includeFlights &&
-        isInactiveAirport && (
-          <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg p-2 sm:p-3">
-            <div className="flex items-start gap-1.5 sm:gap-2">
-              <span className="text-orange-600 dark:text-orange-400 text-xs sm:text-sm mt-0.5">
-                ℹ️
-              </span>
-              <div className="flex-1 text-xs sm:text-sm text-orange-900 dark:text-orange-300">
-                <span className="font-medium">{isInactiveAirport.name}</span>{" "}
-                has no commercial airport. Fly to{" "}
-                {isInactiveAirport.alternatives.join(" or ")}, then travel by
-                bus (3-4 hours).
-                <span className="block mt-1 text-xs text-orange-700 dark:text-orange-400">
-                  💡 Check the{" "}
-                  <span className="font-semibold">Flights tab</span> for booking
-                  alternatives.
-                </span>
+
+          {/* Important Notice */}
+          <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-amber-900 dark:text-amber-300 font-medium">
+                  <strong>Important:</strong> Please verify addresses, opening
+                  hours, and directions before visiting. Travel times are
+                  estimates and may vary with traffic conditions.
+                </p>
               </div>
             </div>
           </div>
-        )
+        </CardContent>
+      </Card>
+
+      {/* Mobile Controls */}
+      <div className="sm:hidden flex items-center gap-2">
+        <Button
+          variant={showRoutes ? "default" : "outline"}
+          size="sm"
+          onClick={() => setShowRoutes(!showRoutes)}
+          className="flex-1 gap-2"
+        >
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+            />
+          </svg>
+          {showRoutes ? "Hide Routes" : "Show Routes"}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleManualRefresh}
+          disabled={isGeocoding}
+          className="gap-2"
+        >
+          <RefreshCw
+            className={`h-4 w-4 ${isGeocoding ? "animate-spin" : ""}`}
+          />
+          Refresh
+        </Button>
+      </div>
+
+      {/* Inactive Airport Warning */}
+      {trip?.flightPreferences?.includeFlights && isInactiveAirport && (
+        <Card className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
+                <AlertCircle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-bold text-orange-900 dark:text-orange-300 text-base mb-2">
+                  Travel Advisory: {isInactiveAirport.name}
+                </h4>
+                <p className="text-sm text-orange-800 dark:text-orange-300 mb-3">
+                  This destination has no commercial airport. We recommend
+                  flying to{" "}
+                  <strong>{isInactiveAirport.alternatives.join(" or ")}</strong>
+                  , then continuing by bus (approximately 3-4 hours).
+                </p>
+                <div className="flex items-center gap-2 text-xs text-orange-700 dark:text-orange-400">
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span>
+                    Check the <strong>Flights tab</strong> for detailed booking
+                    alternatives
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Map Container */}
@@ -1395,77 +1456,38 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
       </Card>
 
       {/* Location List with Travel Times */}
-      <Card>
-        <CardContent className="p-4">
-          {/* Header with Filter and Refresh */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              <MapPin className="h-5 w-5 text-sky-600 dark:text-sky-500" />
-              <h4 className="font-bold text-gray-900 dark:text-gray-100">
-                Location Sequence
-              </h4>
-              <Badge variant="secondary" className="ml-1">
-                {filteredLocations.length}{" "}
-                {filteredLocations.length === 1 ? "stop" : "stops"}
-              </Badge>
-              {isUpdating && (
-                <Badge
-                  variant="outline"
-                  className="ml-2 gap-1.5 text-sky-600 dark:text-sky-400 border-sky-300 dark:border-sky-700"
-                >
-                  <div style={{ animation: "spin 1s linear infinite" }}>
-                    <RefreshCw className="h-3 w-3" />
-                  </div>
-                  Updating
-                </Badge>
-              )}
+      <Card className="border-2 border-gray-200 dark:border-slate-700">
+        <CardContent className="p-6">
+          {/* Enhanced Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-sky-100 dark:bg-sky-900/30 rounded-xl">
+                <MapPin className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-gray-100 text-lg">
+                  Your Itinerary
+                </h4>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="secondary" className="text-xs">
+                    {filteredLocations.length}{" "}
+                    {filteredLocations.length === 1 ? "stop" : "stops"}
+                  </Badge>
+                  {isUpdating && (
+                    <Badge
+                      variant="outline"
+                      className="gap-1.5 text-xs text-sky-600 dark:text-sky-400 border-sky-300 dark:border-sky-700"
+                    >
+                      <RefreshCw className="h-3 w-3 animate-spin" />
+                      Updating
+                    </Badge>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* Route Toggle Button */}
-              <Button
-                variant={showRoutes ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShowRoutes(!showRoutes)}
-                className="gap-2 h-9 text-sm"
-                title={showRoutes ? "Hide routes" : "Show routes"}
-              >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-                  />
-                </svg>
-                {showRoutes ? "Hide Routes" : "Show Routes"}
-              </Button>
-
-              {/* Manual Refresh Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleManualRefresh}
-                disabled={isGeocoding}
-                className="gap-2 h-9 text-sm"
-                title="Refresh map locations"
-              >
-                <div
-                  style={
-                    isGeocoding ? { animation: "spin 1s linear infinite" } : {}
-                  }
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </div>
-                Refresh
-              </Button>
-
-              {/* Day Filter Dropdown */}
+            {/* Day Filter - Desktop */}
+            <div className="hidden sm:block">
               <DayFilterDropdown
                 selectedDay={selectedDay}
                 uniqueDays={uniqueDays}
@@ -1473,6 +1495,16 @@ function OptimizedRouteMap({ itinerary, destination, trip }) {
                 getDayTheme={getDayTheme}
               />
             </div>
+          </div>
+
+          {/* Day Filter - Mobile */}
+          <div className="sm:hidden mb-4">
+            <DayFilterDropdown
+              selectedDay={selectedDay}
+              uniqueDays={uniqueDays}
+              onDayChange={setSelectedDay}
+              getDayTheme={getDayTheme}
+            />
           </div>
 
           {isGeocoding ? (

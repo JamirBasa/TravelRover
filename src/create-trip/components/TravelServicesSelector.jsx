@@ -48,6 +48,26 @@ const TravelServicesSelector = ({
   const [transportAnalysis, setTransportAnalysis] = React.useState(null);
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
 
+  // ✅ NEW: Auto-populate flight data if flights are enabled but data is missing
+  React.useEffect(() => {
+    if (
+      flightData.includeFlights &&
+      !flightData.departureCity &&
+      UserProfileService.hasCompleteLocationData(userProfile)
+    ) {
+      console.log(
+        "✈️ Auto-populating flight data for previously enabled flights"
+      );
+      const autoPopulated = UserProfileService.autoPopulateFlightData(
+        userProfile,
+        flightData
+      );
+      if (autoPopulated !== flightData) {
+        onFlightDataChange(autoPopulated);
+      }
+    }
+  }, []); // Run once on mount
+
   // ✅ NEW: Detect same-city scenario for special handling
   const isSameCity = useMemo(() => {
     if (!formData?.location || !flightData.departureCity) return false;

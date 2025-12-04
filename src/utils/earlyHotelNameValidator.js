@@ -15,57 +15,72 @@
  */
 
 /**
- * Extract hotel name from common hotel-related activity patterns
- * ENHANCED: Catches more variations to prevent partial fixes
+ * Check if activity is a meal/dining activity
+ * @param {string} text - Activity text
+ * @returns {boolean} - True if it's a meal activity
+ */
+function isMealActivity(text) {
+  if (!text) return false;
+  const lowerText = text.toLowerCase();
+  
+  // Check for meal-related keywords
+  const mealKeywords = [
+    'breakfast', 'lunch', 'dinner', 'meal', 'snack', 
+    'brunch', 'eating', 'food', 'dine', 'dining',
+    'merienda', 'supper', 'eat at', 'dine at'
+  ];
+  
+  return mealKeywords.some(keyword => lowerText.includes(keyword));
+}
+
+/**
+ * Extract hotel name from HOTEL OPERATION patterns ONLY
+ * CRITICAL: Only validates actual hotel operations, NOT meals/restaurants
  * @param {string} text - Activity text (placeName or placeDetails)
  * @returns {string|null} - Extracted hotel name or null
  */
 function extractHotelNameFromActivity(text) {
   if (!text) return null;
   
-  const patterns = [
+  // ✅ CRITICAL FIX: Skip meal activities entirely
+  // Meals at restaurants should NOT be validated as hotel operations
+  if (isMealActivity(text)) {
+    return null;
+  }
+  
+  // ONLY validate these EXPLICIT hotel operation patterns:
+  const hotelOperationPatterns = [
     // Check-in patterns (HIGHEST PRIORITY)
     /check-in\s+at\s+(.+?)(?:\s*\(|\s*-|$)/i,
     /check\s+in\s+at\s+(.+?)(?:\s*\(|\s*-|$)/i,
     /check-in\s+to\s+(.+?)(?:\s*\(|\s*-|$)/i,
     /check\s+in\s+to\s+(.+?)(?:\s*\(|\s*-|$)/i,
     
-    // Meals at hotel
-    /breakfast\s+at\s+(.+?)(?:\s*\(|\s*-|$)/i,
-    /dinner\s+at\s+(.+?)(?:\s*\(|\s*-|$)/i,
-    /lunch\s+at\s+(.+?)(?:\s*\(|\s*-|$)/i,
+    // Check-out patterns
+    /check-out\s+from\s+(.+?)(?:\s*\(|\s*-|$)/i,
+    /checkout\s+from\s+(.+?)(?:\s*\(|\s*-|$)/i,
+    /check\s+out\s+from\s+(.+?)(?:\s*\(|\s*-|$)/i,
     
-    // Return to hotel
-    /return\s+to\s+(.+?)(?:\s*\(|\s*-|$)/i,
-    /back\s+to\s+(.+?)(?:\s*\(|\s*-|$)/i,
+    // Return to hotel patterns
+    /return\s+to\s+(.+?)(?:\s+hotel|$)/i,
+    /back\s+to\s+(.+?)(?:\s+hotel|$)/i,
+    /return\s+to\s+hotel/i,
+    /back\s+to\s+hotel/i,
     
-    // Rest at hotel
-    /rest\s+at\s+(.+?)(?:\s*\(|\s*-|$)/i,
-    /relax\s+at\s+(.+?)(?:\s*\(|\s*-|$)/i,
+    // Rest at hotel patterns (but NOT generic rest)
+    /rest\s+at\s+(.+?)\s+(?:hotel|inn|resort)/i,
+    /relax\s+at\s+(.+?)\s+(?:hotel|inn|resort)/i,
     
     // Stay patterns
     /stay\s+at\s+(.+?)(?:\s*\(|\s*-|$)/i,
     /staying\s+at\s+(.+?)(?:\s*\(|\s*-|$)/i,
     
-    // Visit patterns
-    /visit\s+(.+?)\s+(?:hotel|inn|resort|lodge)/i,
-    
-    // "at the [Hotel]" pattern
-    /at\s+the\s+(.+?)(?:\s*\(|\s*-|$)/i,
-    
-    // Standalone hotel names with business suffix (captures full name)
-    /\b([A-Z][a-zA-Z\s&'-]+?)\s+(?:Hotel|Inn|Resort|Lodge|Guesthouse|Guest House|Homestay|View|Hostel)(?:\s|$)/,
-    
-    // ✅ NEW: Aggressive pattern for check-in with ANY capitalized words (catches "Banaue Grand View Hotel")
+    // Aggressive pattern for check-in with ANY capitalized words
     /check-in\s+at\s+([A-Z][a-zA-Z\s&'-]+?)(?:\s*\(|\s*-|$)/,
     /check\s+in\s+at\s+([A-Z][a-zA-Z\s&'-]+?)(?:\s*\(|\s*-|$)/,
-    
-    // Check-out patterns
-    /check-out\s+from\s+(.+?)(?:\s*\(|\s*-|$)/i,
-    /checkout\s+from\s+(.+?)(?:\s*\(|\s*-|$)/i,
   ];
   
-  for (const pattern of patterns) {
+  for (const pattern of hotelOperationPatterns) {
     const match = text.match(pattern);
     if (match && match[1]) {
       return match[1].trim();
@@ -498,45 +513,48 @@ export function validateAndFixHotelNames(tripData) {
         }
         
         // SECONDARY SCAN: Check for ANY hotel reference keywords that weren't caught
-        const hotelKeywords = ['hotel', 'inn', 'resort', 'lodge', 'guesthouse', 'guest house', 'hostel', 'bnb', 'bed and breakfast', 'motel', 'villa', 'suite'];
-        const textToCheck = `${placeName} ${placeDetails}`.toLowerCase();
-        
-        const hasHotelKeyword = hotelKeywords.some(keyword => textToCheck.includes(keyword));
-        
-        if (hasHotelKeyword && !extractedName) {
-          // Found hotel keyword but pattern didn't extract it - possible new format
-          console.warn(`🔍 Day ${dayIndex + 1}, Activity ${actIndex + 1}: Found hotel keyword but no pattern match`);
-          console.warn(`   Text: "${placeName}"`);
-          console.warn(`   This might be a new hotel mention format - checking for mismatches...`);
+        // ✅ SKIP meal activities - they're allowed to reference restaurants
+        if (!isMealActivity(placeName)) {
+          const hotelKeywords = ['hotel', 'inn', 'resort', 'lodge', 'guesthouse', 'guest house', 'hostel', 'bnb', 'bed and breakfast', 'motel', 'villa', 'suite'];
+          const textToCheck = `${placeName} ${placeDetails}`.toLowerCase();
           
-          // Check if this text contains any hotel name from recommendations
-          const containsValidHotel = hotels.some(hotel => {
-            const hotelName = hotel.name || hotel.hotelName || hotel.hotel_name || '';
-            const normalized = normalizeHotelName(hotelName);
-            return textToCheck.includes(normalized.toLowerCase());
-          });
+          const hasHotelKeyword = hotelKeywords.some(keyword => textToCheck.includes(keyword));
           
-          if (!containsValidHotel) {
-            // Contains hotel keyword but NOT any valid hotel name - likely hallucination
-            console.warn(`   ⚠️ SECONDARY SCAN CAUGHT: Hotel keyword found but no valid hotel name!`);
-            console.warn(`   Replacing entire text with: "Activity at ${primaryHotelName}"`);
+          if (hasHotelKeyword && !extractedName) {
+            // Found hotel keyword but pattern didn't extract it - possible new format
+            console.warn(`🔍 Day ${dayIndex + 1}, Activity ${actIndex + 1}: Found hotel keyword but no pattern match`);
+            console.warn(`   Text: "${placeName}"`);
+            console.warn(`   This might be a new hotel mention format - checking for mismatches...`);
             
-            result.isValid = false;
-            hasChanges = true;
-            result.totalMismatches++;
-            
-            // Conservative fix: Replace with generic activity at correct hotel
-            correctedItinerary[dayIndex].plan[actIndex].placeName = `Activity at ${primaryHotelName}`;
-            
-            result.fixes.push({
-              day: dayIndex + 1,
-              activity: actIndex + 1,
-              type: 'HOTEL_KEYWORD_MISMATCH',
-              wrongName: 'Unknown hotel reference',
-              correctName: primaryHotelName,
-              originalPlaceName: placeName,
-              fixedPlaceName: `Activity at ${primaryHotelName}`,
+            // Check if this text contains any hotel name from recommendations
+            const containsValidHotel = hotels.some(hotel => {
+              const hotelName = hotel.name || hotel.hotelName || hotel.hotel_name || '';
+              const normalized = normalizeHotelName(hotelName);
+              return textToCheck.includes(normalized.toLowerCase());
             });
+            
+            if (!containsValidHotel) {
+              // Contains hotel keyword but NOT any valid hotel name - likely hallucination
+              console.warn(`   ⚠️ SECONDARY SCAN CAUGHT: Hotel keyword found but no valid hotel name!`);
+              console.warn(`   Replacing entire text with: "Activity at ${primaryHotelName}"`);
+              
+              result.isValid = false;
+              hasChanges = true;
+              result.totalMismatches++;
+              
+              // Conservative fix: Replace with generic activity at correct hotel
+              correctedItinerary[dayIndex].plan[actIndex].placeName = `Activity at ${primaryHotelName}`;
+              
+              result.fixes.push({
+                day: dayIndex + 1,
+                activity: actIndex + 1,
+                type: 'HOTEL_KEYWORD_MISMATCH',
+                wrongName: 'Unknown hotel reference',
+                correctName: primaryHotelName,
+                originalPlaceName: placeName,
+                fixedPlaceName: `Activity at ${primaryHotelName}`,
+              });
+            }
           }
         }
       });

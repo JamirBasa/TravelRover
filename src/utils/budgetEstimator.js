@@ -106,6 +106,30 @@ const BASE_DAILY_COSTS = {
 };
 
 /**
+ * ✨ NEW: Display-optimized baseline multipliers
+ * These represent REALISTIC budget expectations for travelers shown in the UI.
+ * 
+ * All tiers use ~0.60 multiplier because:
+ * 1. Removes regional/seasonal premiums (applied later during AI generation)
+ * 2. Represents achievable baseline costs without peak season markup
+ * 3. Accounts for economies of scale and smart booking
+ * 4. Shows realistic "starting from" prices to set proper expectations
+ * 
+ * The ACTUAL tier differentiation comes from the BASE_DAILY_COSTS themselves:
+ * - Budget-Friendly: ₱1,922/day → ₱1,153/day (60%)
+ * - Moderate: ₱6,550/day → ₱3,940/day (60%)
+ * - Luxury: ₱19,450/day → ₱11,680/day (60%)
+ * 
+ * These are used ONLY for UI display estimates.
+ * AI generation still uses full regional/destination multipliers for accuracy.
+ */
+const DISPLAY_MODE_MULTIPLIERS = {
+  'budget-friendly': 0.60,  // 60% of base costs
+  'moderate': 0.60,         // 60% of base costs (not 100%!)
+  'luxury': 0.60,           // 60% of base costs (not 300%!)
+};
+
+/**
  * Get region code from location string
  * Maps cities/provinces to their Philippine regions
  */
@@ -258,6 +282,10 @@ export const estimateFlightCost = (departureLocation, destination, startDate = n
 /**
  * ENHANCED: Calculate estimated budget with accuracy improvements
  * Returns detailed breakdown and total with validation
+ * 
+ * @param {Object} params - Budget calculation parameters
+ * @param {string} params.calculationMode - 'display' (user-facing UI with baseline costs) or 'generation' (AI trip creation with regional adjustments)
+ * @param {boolean} params.includeAccommodation - Whether to include accommodation costs (default: true)
  */
 export const calculateEstimatedBudget = (params) => {
   const {
@@ -269,6 +297,8 @@ export const calculateEstimatedBudget = (params) => {
     includeFlights = false,
     startDate = null, // NEW: For timing-based flight pricing
     transportAnalysis = null, // ✅ NEW: Transport mode analysis from backend
+    calculationMode = 'generation', // ✨ NEW: 'display' for UI estimates, 'generation' for AI trip creation
+    includeAccommodation = true, // ✨ NEW: Whether to include accommodation costs in budget
   } = params;
   
   // ✅ ENFORCED: Validate inputs (1-7 days maximum) - throw error for invalid durations
@@ -276,35 +306,71 @@ export const calculateEstimatedBudget = (params) => {
     throw new Error(`Invalid trip duration: ${duration} days. Must be between 1-7 days for accurate budget estimation.`);
   }
   
+  // ✨ NEW: Determine if we should apply regional/destination adjustments
+  const isDisplayMode = calculationMode === 'display';
+  
   // Get cost factors with validation
   const regionCode = getRegionCode(destination);
   const costIndex = REGIONAL_COST_INDEX[regionCode] || 100;
   const destMultiplier = getDestinationMultiplier(destination);
   
-  // Cap multipliers to prevent extreme values
-  const cappedCostIndex = Math.min(Math.max(costIndex, 60), 140);
-  const cappedDestMultiplier = Math.min(Math.max(destMultiplier, 0.7), 1.8);
+  // Get budget level normalized
+  const budgetLevelLower = String(budgetLevel).toLowerCase();
   
-  console.log('💰 Budget Factors:', {
-    destination,
-    regionCode,
-    costIndex: cappedCostIndex,
-    destMultiplier: cappedDestMultiplier,
-    budgetLevel,
-    transportAnalysis: transportAnalysis ? {
-      isGroundPreferred: transportAnalysis.groundTransport?.preferred,
-      hasGroundRoute: !!transportAnalysis.groundTransport,
-      includeFlights
-    } : 'not provided'
-  });
+  // ✨ NEW: Apply display mode multiplier OR regional/destination adjustments
+  let effectiveCostIndex, effectiveDestMultiplier;
+  
+  if (isDisplayMode) {
+    // Display mode: Use baseline multipliers for accurate user-facing estimates
+    const displayMultiplier = DISPLAY_MODE_MULTIPLIERS[budgetLevelLower] || 1.0;
+    effectiveCostIndex = 100 * displayMultiplier; // Convert to percentage (60, 100, 300)
+    effectiveDestMultiplier = 1.0; // No destination premium in display mode
+    
+    console.log('💰 Budget Factors (DISPLAY MODE):', {
+      destination,
+      budgetLevel: budgetLevelLower,
+      displayMultiplier,
+      effectiveCostIndex,
+      mode: 'display',
+      note: 'Using baseline costs without regional adjustments'
+    });
+  } else {
+    // Generation mode: Use full regional/destination adjustments for AI
+    const cappedCostIndex = Math.min(Math.max(costIndex, 60), 140);
+    const cappedDestMultiplier = Math.min(Math.max(destMultiplier, 0.7), 1.8);
+    
+    effectiveCostIndex = cappedCostIndex;
+    effectiveDestMultiplier = cappedDestMultiplier;
+    
+    console.log('💰 Budget Factors (GENERATION MODE):', {
+      destination,
+      regionCode,
+      costIndex: cappedCostIndex,
+      destMultiplier: cappedDestMultiplier,
+      budgetLevel: budgetLevelLower,
+      mode: 'generation',
+      transportAnalysis: transportAnalysis ? {
+        isGroundPreferred: transportAnalysis.groundTransport?.preferred,
+        hasGroundRoute: !!transportAnalysis.groundTransport,
+        includeFlights
+      } : 'not provided'
+    });
+  }
   
   // Get base daily costs for budget level
-  const budgetLevelLower = String(budgetLevel).toLowerCase();
   const dailyCosts = BASE_DAILY_COSTS[budgetLevelLower] || BASE_DAILY_COSTS.moderate;
   
-  // Calculate daily cost per person with regional adjustments
-  let dailyCostPerPerson = Object.values(dailyCosts).reduce((sum, cost) => sum + cost, 0);
-  dailyCostPerPerson = dailyCostPerPerson * (cappedCostIndex / 100) * cappedDestMultiplier;
+  // ✨ NEW: Conditionally exclude accommodation costs if not needed
+  const accommodationCost = includeAccommodation ? dailyCosts.accommodation : 0;
+  
+  // Calculate daily cost per person with adjustments
+  const dailyCostsWithoutAccommodation = {
+    ...dailyCosts,
+    accommodation: accommodationCost
+  };
+  
+  let dailyCostPerPerson = Object.values(dailyCostsWithoutAccommodation).reduce((sum, cost) => sum + cost, 0);
+  dailyCostPerPerson = dailyCostPerPerson * (effectiveCostIndex / 100) * effectiveDestMultiplier;
   
   // Parse travelers count
   let travelerCount = typeof travelers === 'number' ? travelers : parseInt(travelers, 10) || 1;
@@ -375,13 +441,13 @@ export const calculateEstimatedBudget = (params) => {
   
   // Calculate detailed breakdown
   const breakdown = {
-    accommodation: Math.round((dailyCosts.accommodation * (cappedCostIndex / 100) * cappedDestMultiplier * duration * travelerCount) / 100) * 100,
-    food: Math.round((dailyCosts.food * (cappedCostIndex / 100) * cappedDestMultiplier * duration * travelerCount) / 100) * 100,
-    activities: Math.round((dailyCosts.activities * (cappedCostIndex / 100) * cappedDestMultiplier * duration * travelerCount) / 100) * 100,
-    transport: Math.round((dailyCosts.transport * (cappedCostIndex / 100) * cappedDestMultiplier * duration * travelerCount) / 100) * 100,
+    accommodation: includeAccommodation ? Math.round((dailyCosts.accommodation * (effectiveCostIndex / 100) * effectiveDestMultiplier * duration * travelerCount) / 100) * 100 : 0,
+    food: Math.round((dailyCosts.food * (effectiveCostIndex / 100) * effectiveDestMultiplier * duration * travelerCount) / 100) * 100,
+    activities: Math.round((dailyCosts.activities * (effectiveCostIndex / 100) * effectiveDestMultiplier * duration * travelerCount) / 100) * 100,
+    transport: Math.round((dailyCosts.transport * (effectiveCostIndex / 100) * effectiveDestMultiplier * duration * travelerCount) / 100) * 100,
     flights: flightCost, // ✅ Will be 0 if ground transport preferred
     groundTransport: groundTransportCost, // ✅ NEW: Ground transport costs (₱200-700)
-    miscellaneous: Math.round((dailyCosts.miscellaneous * (cappedCostIndex / 100) * cappedDestMultiplier * duration * travelerCount) / 100) * 100,
+    miscellaneous: Math.round((dailyCosts.miscellaneous * (effectiveCostIndex / 100) * effectiveDestMultiplier * duration * travelerCount) / 100) * 100,
   };
   
   // Validate breakdown sums to total (within rounding tolerance)
@@ -397,12 +463,14 @@ export const calculateEstimatedBudget = (params) => {
     perDay: Math.round(totalCost / duration),
     factors: {
       destination,
-      costIndex: cappedCostIndex,
-      destMultiplier: cappedDestMultiplier,
+      costIndex: effectiveCostIndex,
+      destMultiplier: effectiveDestMultiplier,
       regionCode,
       budgetLevel: budgetLevelLower,
       includeFlights,
+      includeAccommodation, // ✨ NEW: Track if accommodation included
       flightTimingApplied: includeFlights && startDate,
+      calculationMode, // ✨ NEW: Track which mode was used
     },
   };
 };
@@ -410,11 +478,23 @@ export const calculateEstimatedBudget = (params) => {
 /**
  * Get budget recommendations for all three levels (Budget-Friendly, Moderate, Luxury)
  * Returns formatted estimates with descriptions
+ * 
+ * @param {Object} params - Budget parameters
+ * @param {string} params.calculationMode - 'display' (UI estimates) or 'generation' (AI trip creation) - defaults to 'display' for UI
+ * @param {boolean} params.includeAccommodation - Whether to include accommodation costs (inferred from includeHotels if not provided)
  */
 export const getBudgetRecommendations = (params) => {
-  const budgetFriendly = calculateEstimatedBudget({ ...params, budgetLevel: 'budget-friendly' });
-  const moderate = calculateEstimatedBudget({ ...params, budgetLevel: 'moderate' });
-  const luxury = calculateEstimatedBudget({ ...params, budgetLevel: 'luxury' });
+  // ✨ Default to 'display' mode for user-facing UI estimates
+  const mode = params.calculationMode || 'display';
+  
+  // ✨ NEW: Infer includeAccommodation from includeHotels if not explicitly provided
+  const includeAccommodation = params.includeAccommodation !== undefined 
+    ? params.includeAccommodation 
+    : (params.includeHotels !== undefined ? params.includeHotels : true);
+  
+  const budgetFriendly = calculateEstimatedBudget({ ...params, budgetLevel: 'budget-friendly', calculationMode: mode, includeAccommodation });
+  const moderate = calculateEstimatedBudget({ ...params, budgetLevel: 'moderate', calculationMode: mode, includeAccommodation });
+  const luxury = calculateEstimatedBudget({ ...params, budgetLevel: 'luxury', calculationMode: mode, includeAccommodation });
   
   // Parse travelers count for per-person calculation
   let travelerCount = 1;

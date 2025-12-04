@@ -92,11 +92,36 @@ export const calculateActivitiesCost = (itinerary) => {
 };
 
 /**
+ * Get recommended hotel price tier based on user's total budget and trip duration
+ * @param {number} totalBudget - User's total budget
+ * @param {number} numNights - Number of nights
+ * @returns {Object} - { maxPerNight, tier, tierLabel }
+ */
+export const getHotelBudgetTier = (totalBudget, numNights = 1) => {
+  // Allocate 40-60% of budget to accommodation (typical for Philippine trips)
+  const accommodationBudget = totalBudget * 0.5;
+  const maxPerNight = Math.floor(accommodationBudget / numNights);
+  
+  // Determine tier based on per-night budget
+  if (maxPerNight >= 5000) {
+    return { maxPerNight, tier: 'LUXURY', tierLabel: 'Luxury (5-star)' };
+  } else if (maxPerNight >= 3000) {
+    return { maxPerNight, tier: 'UPSCALE', tierLabel: 'Upscale (4-star)' };
+  } else if (maxPerNight >= 1500) {
+    return { maxPerNight, tier: 'MODERATE', tierLabel: 'Moderate (3-star)' };
+  } else {
+    return { maxPerNight, tier: 'BUDGET', tierLabel: 'Budget-Friendly' };
+  }
+};
+
+/**
  * Calculate total cost from hotels
  * Note: Hotels array typically contains OPTIONS, not all selected hotels
  * We use the first/recommended hotel or calculate average for estimation
+ * 
+ * 🆕 ENHANCED: Now validates hotel selection against user's budget tier
  */
-export const calculateHotelsCost = (hotels, numNights = 1) => {
+export const calculateHotelsCost = (hotels, numNights = 1, userBudget = null) => {
   if (!Array.isArray(hotels) || hotels.length === 0) {
     return 0;
   }
@@ -121,6 +146,17 @@ export const calculateHotelsCost = (hotels, numNights = 1) => {
                            selectedHotel?.is_per_room === true ||
                            !selectedHotel?.pricing_type; // Default assumption
   
+  // 🆕 BUDGET VALIDATION: Check if hotel exceeds user's budget tier
+  let budgetWarning = null;
+  if (userBudget && pricePerNight > 0) {
+    const budgetTier = getHotelBudgetTier(userBudget, numNights);
+    
+    if (pricePerNight > budgetTier.maxPerNight * 1.2) { // 20% tolerance
+      budgetWarning = `⚠️ Selected hotel (₱${pricePerNight.toLocaleString()}/night) exceeds recommended budget tier (${budgetTier.tierLabel}: ₱${budgetTier.maxPerNight.toLocaleString()}/night). Consider budget-friendly options to stay within budget.`;
+      console.warn(budgetWarning);
+    }
+  }
+  
   logDebug('BudgetCalculator', 'Hotel cost calculation', {
     totalHotelsInArray: hotels.length,
     usingHotel: selectedHotel?.hotelName || selectedHotel?.name || 'Unknown',
@@ -132,7 +168,9 @@ export const calculateHotelsCost = (hotels, numNights = 1) => {
     pricingType: selectedHotel?.pricing_type || 'assumed per-room',
     availableFields: Object.keys(selectedHotel || {}),
     note: 'Using first hotel from array (recommended/selected)',
-    warning: !isPricingPerRoom ? 'Price may be per-person - verify calculation' : undefined
+    warning: !isPricingPerRoom ? 'Price may be per-person - verify calculation' : undefined,
+    budgetTier: userBudget ? getHotelBudgetTier(userBudget, numNights) : 'not validated',
+    budgetWarning: budgetWarning || 'within budget'
   });
   
   // Warn if pricing seems ambiguous
@@ -175,38 +213,21 @@ export const calculateFlightsCost = (flights, travelers = 1, priceIsPerPerson = 
     // 🆕 PRIORITY 1: Check if backend provided numeric total_for_group (MOST ACCURATE)
     if (flight.total_for_group_numeric !== undefined && flight.total_for_group_numeric !== null) {
       flightTotal = flight.total_for_group_numeric;
-      calculationMethod = 'total_for_group_numeric (trusted)';
+      calculationMethod = 'total_for_group_numeric (backend calculated)';
       perPersonEstimate = flightTotal / (flight.travelers || travelersNum);
       
-      // 🔍 DOUBLE-CHECK: Detect if backend still double-multiplied (>₱60k per person for domestic)
-      if (perPersonEstimate > 60000) {
-        // Backend bug: multiplied an already-total price
-        flightTotal = flightTotal / (flight.travelers || travelersNum);
-        perPersonEstimate = flightTotal / (flight.travelers || travelersNum);
-        calculationMethod = 'total_for_group_numeric (corrected for double-multiplication)';
-        
-        console.error('🔧 CORRECTED BACKEND DOUBLE-MULTIPLICATION:', {
-          flightIndex: index,
-          airline: flight?.name || 'Unknown',
-          route: `${flight?.departure_airport?.id || '?'} → ${flight?.arrival_airport?.id || '?'}`,
-          originalTotal: flight.total_for_group_numeric,
-          correctedTotal: flightTotal,
-          originalPerPerson: Math.round(flight.total_for_group_numeric / (flight.travelers || travelersNum)),
-          correctedPerPerson: Math.round(perPersonEstimate),
-          correction: `Divided by ${flight.travelers || travelersNum} to remove double-multiplication`
-        });
-      } else {
-        logDebug('BudgetCalculator', '✅ Using backend-calculated group total', {
-          flightIndex: index,
-          airline: flight?.name || 'Unknown',
-          route: `${flight?.departure_airport?.id || '?'} → ${flight?.arrival_airport?.id || '?'}`,
-          total: flightTotal,
-          travelers: flight.travelers || travelersNum,
-          perPerson: Math.round(perPersonEstimate),
-          source: 'total_for_group_numeric',
-          method: calculationMethod
-        });
-      }
+      // ✅ TRUST BACKEND: Backend now correctly multiplies per-person × travelers
+      // No double-multiplication correction needed since backend fix applied
+      logDebug('BudgetCalculator', '✅ Using backend-calculated group total', {
+        flightIndex: index,
+        airline: flight?.name || 'Unknown',
+        route: `${flight?.departure_airport?.id || '?'} → ${flight?.arrival_airport?.id || '?'}`,
+        total: flightTotal,
+        travelers: flight.travelers || travelersNum,
+        perPerson: Math.round(perPersonEstimate),
+        source: 'total_for_group_numeric',
+        method: calculationMethod
+      });
     }
     // PRIORITY 2: Fallback to string parsing if numeric not available
     else if (flight.total_for_group !== undefined && flight.total_for_group !== null) {
@@ -214,30 +235,16 @@ export const calculateFlightsCost = (flights, travelers = 1, priceIsPerPerson = 
       calculationMethod = 'total_for_group (parsed string)';
       perPersonEstimate = flightTotal / (flight.travelers || travelersNum);
       
-      // 🔍 DOUBLE-CHECK: Detect double-multiplication
-      if (perPersonEstimate > 60000) {
-        flightTotal = flightTotal / (flight.travelers || travelersNum);
-        perPersonEstimate = flightTotal / (flight.travelers || travelersNum);
-        calculationMethod = 'total_for_group (corrected for double-multiplication)';
-        
-        console.error('🔧 CORRECTED BACKEND DOUBLE-MULTIPLICATION:', {
-          flightIndex: index,
-          airline: flight?.name || 'Unknown',
-          originalTotal: parsePrice(flight.total_for_group),
-          correctedTotal: flightTotal,
-          correction: 'Divided by travelers to remove double-multiplication'
-        });
-      } else {
-        logDebug('BudgetCalculator', '✅ Using parsed group total', {
-          flightIndex: index,
-          airline: flight?.name || 'Unknown',
-          total: flightTotal,
-          travelers: flight.travelers || travelersNum,
-          perPerson: Math.round(perPersonEstimate),
-          source: 'total_for_group',
-          method: calculationMethod
-        });
-      }
+      // ✅ TRUST BACKEND: Backend now correctly multiplies per-person × travelers
+      logDebug('BudgetCalculator', '✅ Using parsed group total', {
+        flightIndex: index,
+        airline: flight?.name || 'Unknown',
+        total: flightTotal,
+        travelers: flight.travelers || travelersNum,
+        perPerson: Math.round(perPersonEstimate),
+        source: 'total_for_group',
+        method: calculationMethod
+      });
     }
     // PRIORITY 3: Check if backend provided per-person price metadata
     // This is per-person, so multiply by number of travelers
@@ -486,46 +493,63 @@ export const calculateTotalBudget = (trip) => {
   
   // Calculate hotels cost
   // 🆕 FIXED: Prioritize real hotel data over AI-generated estimates
-  let hotels = [];
-  
-  // Check for real hotel data first (from LangGraph/Google Places API)
-  if (trip?.realHotelData?.hotels && Array.isArray(trip.realHotelData.hotels)) {
-    hotels = trip.realHotelData.hotels;
-    logDebug('BudgetCalculator', 'Using real hotel data', { 
-      count: hotels.length,
-      source: 'trip.realHotelData.hotels'
-    });
-  } 
-  // Fallback to AI-generated hotels (estimates)
-  else if (tripData?.hotels) {
-    hotels = tripData.hotels;
-    logDebug('BudgetCalculator', 'Using AI-generated hotels (fallback)', { 
-      source: 'tripData.hotels'
-    });
-    
-    // Parse if hotels is a string
-    if (typeof hotels === 'string') {
-      logDebug('BudgetCalculator', 'Parsing hotels string with robust parser');
-      hotels = parseDataArray(hotels, 'hotels');
-      logDebug('BudgetCalculator', 'Successfully parsed hotels', { length: hotels?.length });
-    }
-  } else {
-    logDebug('BudgetCalculator', 'No hotel data found', {
-      hasRealHotels: !!trip?.realHotelData,
-      hasTripDataHotels: !!tripData?.hotels
-    });
-  }
-  
+  // ✅ NEW: Respect hotelSearchRequested flag - exclude hotels if user opted out
+  const hotelSearchRequested = trip?.hotelSearchRequested !== false; // Default to true for backward compatibility
   const duration = trip?.userSelection?.duration || trip?.userSelection?.noOfDays || 1;
   const numNights = Math.max(1, duration - 1); // Usually nights = days - 1
-  logDebug('BudgetCalculator', 'Hotels data', {
-    count: hotels?.length,
-    isArray: Array.isArray(hotels),
-    numNights,
-    duration
-  });
-  breakdown.hotels = calculateHotelsCost(hotels, numNights);
-  logDebug('BudgetCalculator', 'Calculated hotels cost', { cost: breakdown.hotels });
+  let hotels = [];
+  
+  if (!hotelSearchRequested) {
+    logDebug('BudgetCalculator', 'Hotels excluded by user preference', {
+      hotelSearchRequested: false,
+      reason: 'User opted out of hotel search (staying with friends/family)'
+    });
+    breakdown.hotels = 0;
+  } else {
+    // Check for real hotel data first (from LangGraph/Google Places API)
+    if (trip?.realHotelData?.hotels && Array.isArray(trip.realHotelData.hotels)) {
+      hotels = trip.realHotelData.hotels;
+      logDebug('BudgetCalculator', 'Using real hotel data', { 
+        count: hotels.length,
+        source: 'trip.realHotelData.hotels'
+      });
+    } 
+    // Fallback to AI-generated hotels (estimates)
+    else if (tripData?.hotels) {
+      hotels = tripData.hotels;
+      logDebug('BudgetCalculator', 'Using AI-generated hotels (fallback)', { 
+        source: 'tripData.hotels'
+      });
+      
+      // Parse if hotels is a string
+      if (typeof hotels === 'string') {
+        logDebug('BudgetCalculator', 'Parsing hotels string with robust parser');
+        hotels = parseDataArray(hotels, 'hotels');
+        logDebug('BudgetCalculator', 'Successfully parsed hotels', { length: hotels?.length });
+      }
+    } else {
+      logDebug('BudgetCalculator', 'No hotel data found', {
+        hasRealHotels: !!trip?.realHotelData,
+        hasTripDataHotels: !!tripData?.hotels
+      });
+    }
+    
+    logDebug('BudgetCalculator', 'Hotels data', {
+      count: hotels?.length,
+      isArray: Array.isArray(hotels),
+      numNights,
+      duration
+    });
+    
+    // Pass user budget for tier validation
+    const userBudget = getUserBudget(trip);
+    breakdown.hotels = calculateHotelsCost(hotels, numNights, userBudget);
+    logDebug('BudgetCalculator', 'Calculated hotels cost', { 
+      cost: breakdown.hotels,
+      userBudget,
+      budgetTier: userBudget ? getHotelBudgetTier(userBudget, numNights) : null
+    });
+  }
   
   // Calculate flights cost
   // 🆕 FIXED: Prioritize real flight data over AI-generated estimates

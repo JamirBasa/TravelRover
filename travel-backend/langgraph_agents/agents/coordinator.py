@@ -1061,31 +1061,20 @@ class CoordinatorAgent(BaseAgent):
                                 # If price > ₱25k, it's likely already a GROUP TOTAL (2+ passengers)
                                 per_person_numeric = flight.get('price_per_person_numeric', price_numeric)
                                 
-                                # Heuristic detection for already-multiplied prices
-                                # Domestic round-trip: ₱3k-20k per person is normal
-                                # If price > ₱25k for 2+ travelers, likely already includes all passengers
-                                is_likely_group_total = (price_numeric > 25000 and travelers_num > 1)
+                                # 🔧 FIXED: SerpAPI ALWAYS returns per-person prices for flights
+                                # The heuristic for detecting group totals was incorrectly triggering
+                                # Domestic round-trip: ₱3k-30k per person is normal (₱30k+ for peak season/premium routes)
+                                # We should ALWAYS multiply by travelers since SerpAPI gives per-person pricing
                                 
-                                if is_likely_group_total:
-                                    # Price appears to be for entire group already - DON'T multiply again
-                                    logger.warning(f"⚠️ {flight.get('name')}: Price ₱{price_numeric:,} appears to be group total (>₱25k for {travelers_num} travelers) - NOT multiplying")
-                                    flight['total_for_group_numeric'] = price_numeric  # Use as-is
-                                    flight['total_for_group'] = f"₱{price_numeric:,}"
-                                    flight['price_per_person_numeric'] = price_numeric / travelers_num
-                                    flight['price_per_person'] = f"₱{int(price_numeric / travelers_num):,}"
-                                    flight['is_group_total'] = True
-                                    flight['pricing_note'] = 'group total (auto-detected, not multiplied)'
-                                    logger.info(f"✈️ {flight.get('name')}: Using ₱{price_numeric:,} as group total → ₱{int(price_numeric / travelers_num):,} per person")
-                                else:
-                                    # Normal per-person price - multiply by travelers
-                                    flight['total_for_group_numeric'] = price_numeric * travelers_num
-                                    flight['total_for_group'] = f"₱{price_numeric * travelers_num:,}"
-                                    flight['price_per_person_numeric'] = price_numeric
-                                    flight['price_per_person'] = flight['price']
-                                    flight['is_group_total'] = True
-                                    
-                                    trip_type = flight.get('trip_type', 'round-trip')
-                                    logger.debug(f"✈️ {flight.get('name')}: ₱{price_numeric:,} per person ({trip_type}) × {travelers_num} travelers = ₱{price_numeric * travelers_num:,}")
+                                # Normal per-person price - ALWAYS multiply by travelers for SerpAPI
+                                flight['total_for_group_numeric'] = price_numeric * travelers_num
+                                flight['total_for_group'] = f"₱{price_numeric * travelers_num:,}"
+                                flight['price_per_person_numeric'] = price_numeric
+                                flight['price_per_person'] = flight['price']
+                                flight['is_group_total'] = False  # ✅ FIXED: This is per-person, not group total
+                                
+                                trip_type = flight.get('trip_type', 'round-trip')
+                                logger.debug(f"✈️ {flight.get('name')}: ₱{price_numeric:,} per person ({trip_type}) × {travelers_num} travelers = ₱{price_numeric * travelers_num:,}")
                                 
                                 flight['travelers'] = travelers_num
                                 # Keep existing pricing_note from views.py (includes trip type)

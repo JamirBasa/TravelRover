@@ -133,29 +133,29 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-50 dark:from-slate-950 dark:to-slate-900">
-      {/* Header */}
+      {/* Header - Responsive */}
       <div className="bg-white dark:bg-slate-900 shadow-sm border-b border-sky-100 dark:border-slate-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <Button
                 variant="outline"
                 onClick={() => navigate("/")}
-                className="flex items-center gap-2 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/50 hover:border-sky-300 dark:hover:border-sky-600 cursor-pointer"
+                className="flex items-center justify-center sm:justify-start gap-2 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/50 hover:border-sky-300 dark:hover:border-sky-600 cursor-pointer w-full sm:w-auto"
               >
                 <FaArrowLeft />
-                Back to Home
+                <span>Back to Home</span>
               </Button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <div className="text-center sm:text-left">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
                   Settings
                 </h1>
-                <p className="text-blue-600 dark:text-blue-400">
+                <p className="text-sm text-blue-600 dark:text-blue-400">
                   Manage your travel preferences
                 </p>
               </div>
             </div>
-            <div className="text-sm text-blue-600 dark:text-blue-400">
+            <div className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 text-center sm:text-right">
               Last updated:{" "}
               {profileData?.updatedAt
                 ? new Date(profileData.updatedAt).toLocaleDateString()
@@ -165,10 +165,35 @@ const Settings = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
-          {/* Sidebar Navigation */}
-          <div className="w-72 flex-shrink-0">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
+          {/* Mobile Tab Navigation (Horizontal Scroll) */}
+          <div className="lg:hidden">
+            <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-blue-100 dark:border-slate-700 p-2">
+              <div className="flex gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent pb-2">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-lg transition-colors whitespace-nowrap ${
+                        activeTab === tab.id
+                          ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
+                          : "text-gray-600 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-700 dark:hover:text-blue-400"
+                      }`}
+                    >
+                      <Icon className="text-base" />
+                      <span className="text-sm font-medium">{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Sidebar Navigation */}
+          <div className="hidden lg:block lg:w-64 xl:w-72 flex-shrink-0">
             <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-blue-100 dark:border-slate-700 p-4 sticky top-8">
               <nav className="space-y-2">
                 {tabs.map((tab) => {
@@ -179,12 +204,12 @@ const Settings = () => {
                       onClick={() => setActiveTab(tab.id)}
                       className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all ${
                         activeTab === tab.id
-                          ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md transform scale-105"
+                          ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
                           : "text-gray-600 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-700 dark:hover:text-blue-400"
                       }`}
                     >
                       <Icon className="text-lg" />
-                      {tab.label}
+                      <span className="font-medium">{tab.label}</span>
                     </button>
                   );
                 })}
@@ -192,11 +217,11 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* Main Content */}
+          {/* Main Content - Responsive */}
           <div className="flex-1 min-w-0">
-            <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-blue-100 dark:border-slate-700 p-8">
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold brand-gradient-text">
+            <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-blue-100 dark:border-slate-700 p-4 sm:p-6 lg:p-8">
+              <div className="mb-6 sm:mb-8">
+                <h2 className="text-xl sm:text-2xl font-bold brand-gradient-text">
                   {tabs.find((tab) => tab.id === activeTab)?.label}
                 </h2>
               </div>

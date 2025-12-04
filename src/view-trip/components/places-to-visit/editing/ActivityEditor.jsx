@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import InlineEditableText from "./InlineEditableText";
+import TravelTimeEditor from "./TravelTimeEditor";
 import { COLORS, ANIMATIONS, PATTERNS } from "../constants/designSystem";
 import {
   Clock,
@@ -43,7 +44,7 @@ import {
   Undo2,
   CheckCircle2,
 } from "lucide-react";
-import { validateDaySchedule } from "../utils/timeValidator";
+// import { validateDaySchedule } from "../utils/timeValidator"; // Disabled: Trust AI schedule
 
 function ActivityEditor({
   activities = [],
@@ -63,14 +64,15 @@ function ActivityEditor({
   const statusId = `day-${dayIndex}-status`;
 
   // Validate schedule whenever activities change
-  useEffect(() => {
-    if (isEditing && localActivities.length > 0) {
-      const result = validateDaySchedule(localActivities);
-      setValidationResult(result);
-    } else {
-      setValidationResult(null);
-    }
-  }, [localActivities, isEditing]);
+  // useEffect(() => {
+  //   if (isEditing && localActivities.length > 0) {
+  //     const result = validateDaySchedule(localActivities);
+  //     setValidationResult(result);
+  //   } else {
+  //     setValidationResult(null);
+  //   }
+  // }, [localActivities, isEditing]);
+  // Disabled: Trust AI-generated schedule without validation warnings
 
   // New activity template
   const createNewActivity = () => ({
@@ -364,10 +366,10 @@ function ActivityEditor({
         </div>
       )}
 
-      {/* Enhanced Time Validation Warnings */}
-      {validationResult && validationResult.warnings.length > 0 && (
+      {/* Enhanced Time Validation Warnings - Disabled: Trust AI schedule */}
+      {/* {validationResult && validationResult.warnings.length > 0 && (
         <div className="space-y-4 mb-6" role="alert" aria-live="assertive">
-          {/* Overall schedule summary with modern card */}
+          Overall schedule summary with modern card
           {validationResult.totalTime > 0 && (
             <div className="relative overflow-hidden p-6 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 dark:from-sky-950/40 dark:via-blue-950/40 dark:to-indigo-950/40 border-2 border-sky-300 dark:border-sky-700 rounded-2xl shadow-lg backdrop-blur-sm">
               <div
@@ -432,7 +434,7 @@ function ActivityEditor({
             </div>
           )}
 
-          {/* Individual warnings with enhanced styling */}
+          Individual warnings with enhanced styling
           {validationResult.warnings
             .filter((w) => w.severity === "critical" || w.severity === "high")
             .slice(0, 5)
@@ -501,7 +503,7 @@ function ActivityEditor({
             </p>
           )}
         </div>
-      )}
+      )} */}
 
       {/* Enhanced Activities list */}
       {localActivities.length > 0 ? (
@@ -683,6 +685,22 @@ function ActivityEditor({
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Travel Time Editor - shown between activities */}
+                {index < localActivities.length - 1 && (
+                  <TravelTimeEditor
+                    timeTravel={localActivities[index + 1]?.timeTravel}
+                    fromActivity={activity}
+                    toActivity={localActivities[index + 1]}
+                    onSave={(newTimeTravel) => {
+                      handleUpdateActivity(
+                        index + 1,
+                        "timeTravel",
+                        newTimeTravel
+                      );
+                    }}
+                  />
+                )}
               </li>
             );
           })}
