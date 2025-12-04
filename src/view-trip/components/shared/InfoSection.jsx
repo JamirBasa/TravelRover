@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { GetPlaceDetails, fetchPlacePhoto } from "@/config/GlobalApi";
+import { fetchPlacePhoto } from "@/config/GlobalApi";
+import { usePlaceSearch } from "@/hooks/usePlaces";
 import { Badge } from "@/components/ui/badge";
 import {
   MapPin,
@@ -20,54 +21,59 @@ import { logDebug, logError } from "@/utils/productionLogger";
  */
 function InfoSection({ trip }) {
   const [photoUrl, setPhotoUrl] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [photoError, setPhotoError] = useState(false); // ✅ NEW: Track photo errors
+  const [photoError, setPhotoError] = useState(false);
+
+  // React Query hook for place search
+  const searchQuery = trip?.userSelection?.location
+    ? `${trip.userSelection.location}, Philippines`
+    : "";
+
+  const {
+    data: placeData,
+    isLoading: isSearching,
+    error,
+  } = usePlaceSearch(searchQuery, {
+    enabled: !!searchQuery,
+  });
+
+  // ✅ Extract stable value from placeData for dependency tracking
+  const placePhotoRef = React.useMemo(() => {
+    const places = placeData?.data?.places || placeData?.places;
+    return places?.[0]?.photos?.[0]?.name || null;
+  }, [placeData]);
 
   useEffect(() => {
+    let isMounted = true;
     let currentPhotoUrl = null;
-    let isMounted = true; // ✅ NEW: Prevent state updates after unmount
 
-    const GetPlacePhoto = async () => {
-      if (!trip?.userSelection?.location) {
-        logDebug("InfoSection", "No location provided for photo search");
+    const processPlacePhoto = async () => {
+      if (!placeData || !isMounted) {
+        console.log("InfoSection: Skipping photo processing", {
+          hasPlaceData: !!placeData,
+          isMounted,
+        });
         return;
       }
 
-      setIsLoading(true);
-      setPhotoError(false); // ✅ Reset error state
+      console.log("InfoSection: Starting photo processing", {
+        placeData: placeData ? Object.keys(placeData) : [],
+        location: trip?.userSelection?.location,
+      });
 
       try {
-        const searchQuery = `${trip.userSelection.location}, Philippines`;
-        logDebug("InfoSection", "Starting photo fetch", {
-          location: trip.userSelection.location,
-          searchQuery,
+        logDebug("InfoSection", "Place search response received", {
+          hasData: !!placeData?.data,
+          placeDataStructure: placeData ? Object.keys(placeData) : [],
         });
 
-        const data = { textQuery: searchQuery };
-        const response = await GetPlaceDetails(data);
-
-        if (!isMounted) return; // ✅ Component unmounted, stop processing
-
-        logDebug("InfoSection", "GetPlaceDetails response received", {
-          responseType: typeof response,
-          hasData: !!response?.data,
-          dataType: typeof response?.data,
-        });
-
-        // ✅ FIXED: Handle both transformed and untransformed responses
-        // Backend returns: { success: true, data: { places: [...] } }
-        // Axios wraps it: response.data = { success: true, data: { places: [...] } }
-        // GlobalApi should transform to: { data: { places: [...] } }
-        // But if cached or axios response, access via: response.data.data.places OR response.data.places
-        const places = response.data?.data?.places || response.data?.places;
-        logDebug("InfoSection", "Parsed places from response", {
-          placesCount: places?.length || 0,
-          hasFirstPlace: !!places?.[0],
-        });
+        // ✅ Handle both response formats (cached vs fresh)
+        const places = placeData?.data?.places || placeData?.places;
 
         if (!places || places.length === 0) {
           logDebug("InfoSection", "No places found in response", {
-            responseStructure: Object.keys(response || {}),
+            placeData: placeData
+              ? JSON.stringify(placeData).substring(0, 200)
+              : null,
           });
           if (isMounted) {
             setPhotoError(true);
@@ -78,7 +84,7 @@ function InfoSection({ trip }) {
 
         const place = places[0];
         logDebug("InfoSection", "Place data retrieved", {
-          displayName: place.displayName,
+          displayName: place.displayName?.text || place.displayName,
           hasPhotos: !!place.photos,
           photosLength: place.photos?.length || 0,
         });
@@ -219,7 +225,7 @@ function InfoSection({ trip }) {
           }
         }
       } catch (error) {
-        logError("InfoSection", "Error in GetPlacePhoto function", {
+        logError("InfoSection", "Error in processPlacePhoto function", {
           error: error.message,
           errorName: error.name,
           location: trip?.userSelection?.location,
@@ -229,24 +235,23 @@ function InfoSection({ trip }) {
           setPhotoUrl("");
         }
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        // Cleanup handled by React Query
       }
     };
 
     if (trip?.userSelection?.location) {
-      GetPlacePhoto();
+      processPlacePhoto();
     }
 
     // ✅ Cleanup function
     return () => {
       isMounted = false;
       if (currentPhotoUrl) {
+        console.log("InfoSection: Cleaning up photo blob URL");
         URL.revokeObjectURL(currentPhotoUrl);
       }
     };
-  }, [trip?.userSelection?.location]);
+  }, [trip?.userSelection?.location, placePhotoRef]); // ✅ Use stable photo reference instead of full placeData object
 
   return (
     <div className="space-y-6">
@@ -254,7 +259,7 @@ function InfoSection({ trip }) {
       <div className="relative overflow-hidden rounded-2xl shadow-2xl">
         {/* Background Image */}
         <div className="relative h-[400px] md:h-[480px]">
-          {isLoading ? (
+          {isSearching ? (
             <div className="absolute inset-0 bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-950 dark:to-blue-950 flex items-center justify-center">
               <div className="text-center space-y-4">
                 <div className="relative flex items-center justify-center">
@@ -275,22 +280,48 @@ function InfoSection({ trip }) {
             </div>
           ) : (
             <>
-              <img
-                src={photoUrl || "/placeholder.png"}
-                alt={`${trip?.userSelection?.location || "Destination"}`}
-                className="absolute inset-0 w-full h-full object-cover"
-                onError={(e) => {
-                  logError("InfoSection", "Image failed to load", {
-                    attemptedSrc: e.target.src,
-                    photoUrl: photoUrl,
-                    hasPhotoError: photoError,
-                    location: trip?.userSelection?.location,
-                  });
-                  e.target.src = "/placeholder.png";
-                }}
-              />
-              {/* Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+              {/* ✅ Only render img when photoUrl exists AND is not empty */}
+              {photoUrl && photoUrl !== "" ? (
+                <img
+                  src={photoUrl}
+                  alt={`${trip?.userSelection?.location || "Destination"}`}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onError={(e) => {
+                    logError("InfoSection", "Image failed to load", {
+                      attemptedSrc: e.target.src,
+                      photoUrl: photoUrl,
+                      hasPhotoError: photoError,
+                      location: trip?.userSelection?.location,
+                    });
+                    // Set error state to trigger fallback
+                    setPhotoError(true);
+                    setPhotoUrl("");
+                  }}
+                />
+              ) : (
+                // ✅ Fallback gradient background
+                <div className="absolute inset-0 bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600">
+                  {/* Pattern overlay */}
+                  <div
+                    className="absolute inset-0 opacity-10"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                    }}
+                  ></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center text-white">
+                      <MapPin className="h-16 w-16 mx-auto mb-3 opacity-90" />
+                      <p className="text-xl font-semibold opacity-90">
+                        {trip?.userSelection?.location}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* Gradient Overlay - only show with actual photo */}
+              {photoUrl && photoUrl !== "" && (
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+              )}
             </>
           )}
 

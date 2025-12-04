@@ -65,6 +65,7 @@ const BudgetSelector = ({
       duration: formData.duration,
       travelers: travelerCount,
       includeFlights: flightData.includeFlights || false, // ✅ Reactive to flight changes
+      includeHotels: hotelData.includeHotels || false, // ✨ NEW: Controls accommodation costs
       startDate: formData.startDate, // Pass startDate for timing-based pricing
     });
   }, [
@@ -74,6 +75,7 @@ const BudgetSelector = ({
     formData.startDate,
     flightData.departureCity,
     flightData.includeFlights, // ✅ NEW: Trigger recalculation when flights toggled
+    hotelData.includeHotels, // ✨ NEW: Trigger recalculation when hotels toggled
   ]);
 
   // Calculate minimum required budget based on estimates
@@ -429,6 +431,17 @@ const BudgetSelector = ({
                                       estimate.perDay.max) /
                                       2
                                   ).toLocaleString()}`}
+                            </p>
+                          </div>
+                        )}
+                        {/* ✨ NEW: Show indicator when accommodation is excluded */}
+                        {!hotelData.includeHotels && (
+                          <div className="mt-2 pt-2 border-t border-sky-200 dark:border-sky-800">
+                            <Badge className="bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300 text-xs">
+                              🎯 Activities & Essentials Only
+                            </Badge>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              Excludes accommodation costs
                             </p>
                           </div>
                         )}

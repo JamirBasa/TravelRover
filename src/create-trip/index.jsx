@@ -890,13 +890,11 @@ function CreateTrip() {
                         ? ` (including ${services.join(" and ")})`
                         : "";
 
-                    toast.error("Budget insufficient for trip requirements", {
-                      description: `Your budget (₱${customBudgetAmount.toLocaleString()}) is below the minimum viable amount (₱${absoluteMinimum.toLocaleString()}) for this ${
+                    toast.error("Budget too low", {
+                      description: `Need at least ₱${absoluteMinimum.toLocaleString()} for your ${
                         formData.duration
-                      }-day trip to ${
-                        formData.location
-                      }${serviceText}. Please increase your budget or adjust trip details.`,
-                      duration: 7000,
+                      }-day trip${serviceText}. You have ₱${customBudgetAmount.toLocaleString()}.`,
+                      duration: 6000,
                     });
                     return false;
                   }
@@ -1583,32 +1581,36 @@ function CreateTrip() {
               allPricingIssues.push(...pricingCheck.issues);
             }
 
-            // ✅ Show single consolidated toast only if there are CRITICAL issues
-            // Filter out routine "estimated prices" messages (users expect estimates)
+            // ✅ Smart filtering: Separate critical issues from informational notes
             const criticalPricingIssues = allPricingIssues.filter(
               (issue) =>
                 typeof issue === "string" &&
                 !issue.toLowerCase().includes("estimated") &&
                 !issue.toLowerCase().includes("typical") &&
-                !issue.toLowerCase().includes("based on")
+                !issue.toLowerCase().includes("based on") &&
+                issue.startsWith("⚠️") // Only show warnings, not info (ℹ️)
+            );
+
+            const infoNotes = allPricingIssues.filter(
+              (issue) => typeof issue === "string" && issue.startsWith("ℹ️")
             );
 
             if (criticalPricingIssues.length > 0) {
-              // Show only if genuinely concerning (e.g., unrealistic prices)
-              toast.warning("Price Verification Notice", {
-                description: `We detected ${
-                  criticalPricingIssues.length
-                } pricing ${
-                  criticalPricingIssues.length === 1 ? "anomaly" : "anomalies"
-                } in your itinerary. Your trip total is accurate based on ${
+              // Show user-friendly message that explains what to do
+              toast.info("💡 Quick Price Check", {
+                description: `We found ${criticalPricingIssues.length} ${
+                  criticalPricingIssues.length === 1 ? "item" : "items"
+                } to review in your itinerary. Your trip total is accurate for ${
                   formData.location
-                } market rates.`,
-                duration: 5000,
+                }. Check the details if you'd like to adjust pricing.`,
+                duration: 6000,
               });
-              console.log("💰 Critical pricing issues:", criticalPricingIssues);
-            } else if (allPricingIssues.length > 0) {
-              // Just log routine estimates (no toast needed)
-              console.log("💰 Pricing details (routine):", allPricingIssues);
+              console.log("💰 Pricing items to review:", criticalPricingIssues);
+            }
+
+            // Log informational notes (don't show toast - not urgent)
+            if (infoNotes.length > 0) {
+              console.log("ℹ️ Pricing info notes:", infoNotes);
             }
 
             console.log("✅ Budget compliance validated:", {
@@ -2337,15 +2339,22 @@ function CreateTrip() {
           itineraryValidation.warnings
         );
 
-        const warningMessages = itineraryValidation.warnings
-          .slice(0, 3)
-          .map((warn) => warn.message)
-          .join("\n");
+        // Only show critical warnings (not minor suggestions)
+        const criticalWarnings = itineraryValidation.warnings.filter(
+          (warn) => warn.severity === "high" || warn.severity === "critical"
+        );
 
-        toast.warning("Itinerary Review Recommended", {
-          description: `Please review these items:\n${warningMessages}`,
-          duration: 7000,
-        });
+        if (criticalWarnings.length > 0) {
+          const warningMessages = criticalWarnings
+            .slice(0, 3)
+            .map((warn) => warn.message)
+            .join("\n");
+
+          toast.info("📋 Itinerary Checklist", {
+            description: `We noticed a few things you might want to review:\n${warningMessages}`,
+            duration: 7000,
+          });
+        }
       } else {
         console.log("✅ Itinerary structure validated successfully");
       }

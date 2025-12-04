@@ -14,6 +14,44 @@ const BudgetBreakdown = ({ tripData }) => {
   const missingPrices = tripData?.missingPrices || [];
   const pricingNotes = tripData?.pricingNotes;
 
+  // Calculate hotel breakdown for transparency
+  const hotelBreakdown = React.useMemo(() => {
+    const hotels = tripData?.hotels || [];
+    const numNights = Math.max(
+      1,
+      (tripData?.userSelection?.duration ||
+        tripData?.userSelection?.noOfDays ||
+        1) - 1
+    );
+
+    if (!Array.isArray(hotels) || hotels.length === 0) return null;
+
+    const selectedHotel = hotels[0];
+    const priceField =
+      selectedHotel?.pricePerNight ||
+      selectedHotel?.priceRange ||
+      selectedHotel?.price_range ||
+      selectedHotel?.priceNumeric;
+    const parsePrice = (price) => {
+      if (!price) return 0;
+      if (typeof price === "number") return price;
+      const numericString = String(price)
+        .replace(/[₱$,\s]/g, "")
+        .trim();
+      const parsed = parseFloat(numericString);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+    const pricePerNight = parsePrice(priceField);
+
+    return {
+      hotelName:
+        selectedHotel?.hotelName || selectedHotel?.name || "Selected Hotel",
+      pricePerNight,
+      numNights,
+      total: pricePerNight * numNights,
+    };
+  }, [tripData]);
+
   // 🔍 DIAGNOSTIC: Log trip-level budget data
   React.useEffect(() => {
     if (budgetCompliance || dailyCosts.length > 0) {
@@ -134,9 +172,227 @@ const BudgetBreakdown = ({ tripData }) => {
             >
               ₱{Math.abs(remaining)?.toLocaleString()}
             </p>
+            {!withinBudget && remaining < 0 && (
+              <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                ({((Math.abs(remaining) / userBudget) * 100).toFixed(0)}% over)
+              </p>
+            )}
           </div>
         </div>
       )}
+
+      {/* Budget Exceeded Recommendations */}
+      {budgetCompliance && !withinBudget && remaining < 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-400 dark:border-amber-700 p-5 rounded-lg">
+          <div className="flex items-start gap-3">
+            <FaExclamationTriangle className="text-amber-600 dark:text-amber-400 mt-1 text-xl flex-shrink-0" />
+            <div className="flex-1">
+              <h5 className="font-bold text-amber-900 dark:text-amber-300 mb-2 text-lg">
+                💡 Ways to Reduce Costs
+              </h5>
+              <ul className="space-y-2 text-sm text-amber-800 dark:text-amber-400">
+                {hotelBreakdown && hotelBreakdown.total > userBudget * 0.5 && (
+                  <li className="flex items-start gap-2">
+                    <span className="font-bold">🏨</span>
+                    <span>
+                      <strong>
+                        Accommodation is{" "}
+                        {((hotelBreakdown.total / totalCost) * 100).toFixed(0)}%
+                        of your budget.
+                      </strong>{" "}
+                      Consider budget-friendly options (₱1,500-2,500/night)
+                      instead of ₱
+                      {hotelBreakdown.pricePerNight.toLocaleString()}/night.{" "}
+                      Savings: ₱
+                      {Math.max(
+                        0,
+                        (hotelBreakdown.pricePerNight - 2000) *
+                          hotelBreakdown.numNights
+                      ).toLocaleString()}
+                    </span>
+                  </li>
+                )}
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">📅</span>
+                  <span>
+                    <strong>Shorten your trip</strong> by 1-2 days to reduce
+                    accommodation and activity costs
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">🎯</span>
+                  <span>
+                    <strong>Select free or low-cost activities</strong> like
+                    beaches, parks, and hiking trails
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">💰</span>
+                  <span>
+                    <strong>Increase your budget</strong> to ₱
+                    {totalCost.toLocaleString()} to match estimated costs
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hotel Cost Transparency */}
+      {hotelBreakdown && hotelBreakdown.total > 0 && (
+        <div className="bg-blue-50 dark:bg-slate-800 border border-blue-300 dark:border-blue-700 p-4 rounded-lg">
+          <h5 className="font-semibold text-blue-900 dark:text-blue-300 mb-3 flex items-center gap-2">
+            🏨 Accommodation Cost Breakdown
+          </h5>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-700 dark:text-gray-300">
+                Selected Hotel:
+              </span>
+              <span className="font-bold text-gray-900 dark:text-white">
+                {hotelBreakdown.hotelName}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-700 dark:text-gray-300">
+                Price per Night:
+              </span>
+              <span className="font-bold text-sky-600 dark:text-sky-400">
+                ₱{hotelBreakdown.pricePerNight.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-700 dark:text-gray-300">
+                Number of Nights:
+              </span>
+              <span className="font-bold text-gray-900 dark:text-white">
+                {hotelBreakdown.numNights}
+              </span>
+            </div>
+            <div className="border-t-2 border-blue-300 dark:border-blue-600 pt-2 mt-2 flex justify-between items-center">
+              <span className="font-semibold text-gray-800 dark:text-gray-200">
+                Total Accommodation:
+              </span>
+              <span className="font-bold text-lg text-blue-700 dark:text-blue-400">
+                ₱{hotelBreakdown.pricePerNight.toLocaleString()} ×{" "}
+                {hotelBreakdown.numNights} = ₱
+                {hotelBreakdown.total.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Flight Cost Transparency */}
+      {tripData?.realFlightData?.flights &&
+        tripData.realFlightData.flights.length > 0 && (
+          <div className="bg-sky-50 dark:bg-slate-800 border border-sky-300 dark:border-sky-700 p-4 rounded-lg">
+            <h5 className="font-semibold text-sky-900 dark:text-sky-300 mb-3 flex items-center gap-2">
+              ✈️ Flight Cost Breakdown
+            </h5>
+            <div className="space-y-3">
+              {tripData.realFlightData.flights.map((flight, index) => {
+                const parsePrice = (price) => {
+                  if (!price) return 0;
+                  if (typeof price === "number") return price;
+                  const numericString = String(price)
+                    .replace(/[₱$,\s]/g, "")
+                    .trim();
+                  const parsed = parseFloat(numericString);
+                  return isNaN(parsed) ? 0 : parsed;
+                };
+
+                const travelers =
+                  flight.travelers || tripData?.userSelection?.travelers || 1;
+                const totalCost =
+                  flight.total_for_group_numeric ||
+                  parsePrice(flight.total_for_group) ||
+                  flight.numeric_price * travelers ||
+                  0;
+                const perPerson = totalCost / travelers;
+
+                return (
+                  <div
+                    key={index}
+                    className="bg-white dark:bg-slate-900 p-3 rounded border border-sky-200 dark:border-sky-800"
+                  >
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700 dark:text-gray-300 font-medium">
+                          {flight.departure_airport?.id || "?"} →{" "}
+                          {flight.arrival_airport?.id || "?"}
+                        </span>
+                        <span className="text-xs px-2 py-1 rounded bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300">
+                          {flight.name || "Unknown Airline"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Price per Person:
+                        </span>
+                        <span className="font-bold text-sky-600 dark:text-sky-400">
+                          ₱{perPerson.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Travelers:
+                        </span>
+                        <span className="font-bold text-gray-900 dark:text-white">
+                          {travelers}
+                        </span>
+                      </div>
+                      <div className="border-t border-sky-200 dark:border-sky-800 pt-2 flex justify-between items-center">
+                        <span className="font-semibold text-gray-800 dark:text-gray-200">
+                          Flight Total:
+                        </span>
+                        <span className="font-bold text-sky-700 dark:text-sky-400">
+                          ₱{perPerson.toLocaleString()} × {travelers} = ₱
+                          {totalCost.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {tripData.realFlightData.flights.length > 1 && (
+                <div className="border-t-2 border-sky-300 dark:border-sky-600 pt-2 mt-2 flex justify-between items-center">
+                  <span className="font-semibold text-gray-800 dark:text-gray-200">
+                    Total Flights:
+                  </span>
+                  <span className="font-bold text-lg text-sky-700 dark:text-sky-400">
+                    ₱
+                    {tripData.realFlightData.flights
+                      .reduce((sum, f) => {
+                        const travelers =
+                          f.travelers ||
+                          tripData?.userSelection?.travelers ||
+                          1;
+                        const parsePrice = (price) => {
+                          if (!price) return 0;
+                          if (typeof price === "number") return price;
+                          const numericString = String(price)
+                            .replace(/[₱$,\s]/g, "")
+                            .trim();
+                          const parsed = parseFloat(numericString);
+                          return isNaN(parsed) ? 0 : parsed;
+                        };
+                        return (
+                          sum +
+                          (f.total_for_group_numeric ||
+                            parsePrice(f.total_for_group) ||
+                            f.numeric_price * travelers ||
+                            0)
+                        );
+                      }, 0)
+                      .toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
       {/* Daily Cost Breakdown */}
       {dailyCosts.length > 0 && (

@@ -1,17 +1,9 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import {
-  query,
-  collection,
-  where,
-  getDocs,
-  doc,
-  deleteDoc,
-} from "firebase/firestore";
-import { db } from "@/config/firebaseConfig";
 import { Button } from "@/components/ui/button";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { toast } from "sonner";
+import { useUserTrips, useDeleteTrip } from "@/hooks/useTrips";
 
 // Component imports
 import TripCard from "./components/TripCard";
@@ -23,12 +15,21 @@ import Pagination from "./components/Pagination";
 
 function MyTrips() {
   usePageTitle("My Trips");
-  const [userTrips, setUserTrips] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+
+  // Get current user
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  // React Query hooks - replaces manual Firestore calls
+  const {
+    data: userTrips = [],
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useUserTrips(user?.email);
+  const deleteTrip = useDeleteTrip();
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [tripToDelete, setTripToDelete] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -47,16 +48,15 @@ function MyTrips() {
     return page > 0 ? page : 1;
   });
 
-  useEffect(() => {
-    GetUserTrips();
-  }, []);
-
   // Update URL when pagination changes
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
     params.set("page", currentPage.toString());
     setSearchParams(params, { replace: true });
   }, [currentPage, searchParams, setSearchParams]);
+
+  // Convert query error to string for display
+  const error = queryError?.message || null;
 
   // Reset to page 1 when filters or search changes
   useEffect(() => {
@@ -76,45 +76,6 @@ function MyTrips() {
     },
     [scrollToTop]
   );
-
-  const GetUserTrips = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const userString = localStorage.getItem("user");
-      if (!userString) {
-        throw new Error("Please log in to view your trips");
-      }
-
-      const user = JSON.parse(userString);
-      if (!user?.email) {
-        throw new Error("Invalid user session");
-      }
-
-      const q = query(
-        collection(db, "AITrips"),
-        where("userEmail", "==", user.email)
-      );
-
-      const querySnapshot = await getDocs(q);
-      const trips = [];
-
-      querySnapshot.forEach((doc) => {
-        trips.push({
-          id: doc.id,
-          ...doc.data(),
-        });
-      });
-
-      setUserTrips(trips);
-    } catch (err) {
-      console.error("Error fetching trips:", err);
-      setError(err.message || "Failed to load trips. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Enhanced delete trip function with better validation
   const handleDeleteTrip = async (trip) => {
@@ -151,70 +112,54 @@ function MyTrips() {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = () => {
     if (!tripToDelete) return;
 
-    setIsDeleting(true);
-    try {
-      console.log(`🗑️ Deleting trip: ${tripToDelete.id}`);
+    console.log(`🗑️ Deleting trip: ${tripToDelete.id}`);
 
-      // Verify trip exists before attempting delete
-      const docRef = doc(db, "AITrips", tripToDelete.id);
-
-      // Delete from Firebase
-      await deleteDoc(docRef);
-
-      // Update local state immediately for better UX
-      setUserTrips((prev) => {
-        const updatedTrips = prev.filter((trip) => trip.id !== tripToDelete.id);
-        console.log(
-          `✅ Local state updated: ${prev.length} → ${updatedTrips.length} trips`
+    deleteTrip.mutate(tripToDelete.id, {
+      onSuccess: () => {
+        toast.success(
+          `🎯 Trip to ${
+            tripToDelete.userSelection?.location || "destination"
+          } deleted successfully`,
+          {
+            description:
+              "Your trip has been permanently removed from your collection.",
+            duration: 3000,
+          }
         );
-        return updatedTrips;
-      });
+        console.log("✅ Trip deleted successfully:", tripToDelete.id);
 
-      // Show success message
-      toast.success(
-        `🎯 Trip to ${
-          tripToDelete.userSelection?.location || "destination"
-        } deleted successfully`,
-        {
-          description:
-            "Your trip has been permanently removed from your collection.",
-          duration: 3000,
+        // Close dialog
+        setDeleteDialogOpen(false);
+        setTripToDelete(null);
+      },
+      onError: (error) => {
+        console.error("❌ Error deleting trip:", {
+          tripId: tripToDelete.id,
+          error: error.message,
+          code: error.code,
+        });
+
+        // Handle specific Firebase errors
+        if (error.code === "permission-denied") {
+          toast.error("Permission denied. You can only delete your own trips.");
+        } else if (error.code === "not-found") {
+          toast.error("Trip not found. It may have been already deleted.");
+        } else if (error.code === "unavailable") {
+          toast.error("Database unavailable. Please try again later.");
+        } else {
+          toast.error(
+            "Failed to delete trip: " + (error.message || "Unknown error")
+          );
         }
-      );
 
-      console.log("✅ Trip deleted successfully:", tripToDelete.id);
-    } catch (error) {
-      console.error("❌ Error deleting trip:", {
-        tripId: tripToDelete.id,
-        error: error.message,
-        code: error.code,
-      });
-
-      // Handle specific Firebase errors
-      if (error.code === "permission-denied") {
-        toast.error("Permission denied. You can only delete your own trips.");
-      } else if (error.code === "not-found") {
-        toast.error("Trip not found. It may have been already deleted.");
-        // Remove from local state anyway since it doesn't exist
-        setUserTrips((prev) =>
-          prev.filter((trip) => trip.id !== tripToDelete.id)
-        );
-      } else if (error.code === "unavailable") {
-        toast.error("Database unavailable. Please try again later.");
-      } else {
-        toast.error(
-          "Failed to delete trip: " + (error.message || "Unknown error")
-        );
-      }
-    } finally {
-      // Always cleanup dialog state
-      setIsDeleting(false);
-      setDeleteDialogOpen(false);
-      setTripToDelete(null);
-    }
+        // Close dialog even on error
+        setDeleteDialogOpen(false);
+        setTripToDelete(null);
+      },
+    });
   };
 
   // Enhanced filtering and sorting with travel date
@@ -493,7 +438,7 @@ function MyTrips() {
               variant="outline"
               size="sm"
               className="mt-2 cursor-pointer"
-              onClick={GetUserTrips}
+              onClick={() => refetch()}
             >
               Try Again
             </Button>
@@ -531,7 +476,7 @@ function MyTrips() {
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
           onConfirm={handleDeleteConfirm}
-          isDeleting={isDeleting}
+          isDeleting={deleteTrip.isLoading}
           tripName={tripToDelete?.userSelection?.location || "this trip"}
         />
       </div>

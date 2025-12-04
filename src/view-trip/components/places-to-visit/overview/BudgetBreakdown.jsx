@@ -5,7 +5,12 @@
  */
 
 import React, { useState } from "react";
-import { calculateTotalBudget, formatCurrency, getUserBudget, parsePrice } from "@/utils";
+import {
+  calculateTotalBudget,
+  formatCurrency,
+  getUserBudget,
+  parsePrice,
+} from "@/utils";
 import {
   DollarSign,
   MapPin,
@@ -101,9 +106,16 @@ function BudgetBreakdown({ trip, className = "" }) {
             <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
           </div>
           <div className="text-left flex-1">
-            <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-0.5">
-              Cost Breakdown
-            </h3>
+            <div className="flex items-center gap-2 mb-0.5">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
+                Cost Breakdown
+              </h3>
+              {!hasHotels && trip?.hotelSearchRequested === false && (
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700">
+                  Activities Only
+                </span>
+              )}
+            </div>
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium">
               Estimated Total:{" "}
               <span className="font-bold brand-gradient-text">
@@ -330,62 +342,72 @@ function BudgetBreakdown({ trip, className = "" }) {
                   {/* Flight Diagnostics Info */}
                   {trip?.realFlightData?.flights?.map((flight, index) => {
                     // ✅ FIX: Use numeric fields to avoid NaN from string division
-                    const totalGroupNumeric = flight.total_for_group_numeric || 
-                                             parsePrice(flight.total_for_group) || 
-                                             0;
-                    const perPersonNumeric = flight.price_per_person_numeric || 
-                                            parsePrice(flight.price_per_person) || 
-                                            flight.numeric_price || 
-                                            0;
-                    
-                    const travelers = flight.travelers || trip?.userSelection?.travelers || 1;
-                    const perPerson = totalGroupNumeric > 0 
-                      ? totalGroupNumeric / travelers 
-                      : perPersonNumeric;
-                    
+                    const totalGroupNumeric =
+                      flight.total_for_group_numeric ||
+                      parsePrice(flight.total_for_group) ||
+                      0;
+                    const perPersonNumeric =
+                      flight.price_per_person_numeric ||
+                      parsePrice(flight.price_per_person) ||
+                      flight.numeric_price ||
+                      0;
+
+                    const travelers =
+                      flight.travelers || trip?.userSelection?.travelers || 1;
+                    const perPerson =
+                      totalGroupNumeric > 0
+                        ? totalGroupNumeric / travelers
+                        : perPersonNumeric;
+
                     const isHighCost = perPerson > 20000;
                     const isInternational = perPerson >= 30000;
-                    
+
                     return (
-                      <div 
-                        key={index} 
+                      <div
+                        key={index}
                         className={`p-4 rounded-lg border-2 ${
-                          isInternational 
-                            ? 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800' 
-                            : isHighCost 
-                            ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800'
-                            : 'bg-white dark:bg-slate-900/50 border-gray-200 dark:border-slate-700'
+                          isInternational
+                            ? "bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800"
+                            : isHighCost
+                            ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800"
+                            : "bg-white dark:bg-slate-900/50 border-gray-200 dark:border-slate-700"
                         }`}
                       >
                         {/* Flight Header */}
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <Plane className={`h-4 w-4 ${
-                                isInternational 
-                                  ? 'text-purple-600 dark:text-purple-400'
-                                  : isHighCost 
-                                  ? 'text-amber-600 dark:text-amber-400'
-                                  : 'text-gray-600 dark:text-gray-400'
-                              }`} />
+                              <Plane
+                                className={`h-4 w-4 ${
+                                  isInternational
+                                    ? "text-purple-600 dark:text-purple-400"
+                                    : isHighCost
+                                    ? "text-amber-600 dark:text-amber-400"
+                                    : "text-gray-600 dark:text-gray-400"
+                                }`}
+                              />
                               <h5 className="font-bold text-sm text-gray-900 dark:text-gray-100">
                                 {flight.name || `Flight ${index + 1}`}
                               </h5>
                             </div>
-                            {flight.departure_airport?.id && flight.arrival_airport?.id && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {flight.departure_airport.id} → {flight.arrival_airport.id}
-                              </p>
-                            )}
+                            {flight.departure_airport?.id &&
+                              flight.arrival_airport?.id && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {flight.departure_airport.id} →{" "}
+                                  {flight.arrival_airport.id}
+                                </p>
+                              )}
                           </div>
                           {(isHighCost || isInternational) && (
-                            <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${
-                              isInternational
-                                ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'
-                                : 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
-                            }`}>
+                            <div
+                              className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${
+                                isInternational
+                                  ? "bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300"
+                                  : "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300"
+                              }`}
+                            >
                               <AlertTriangle className="h-3 w-3" />
-                              {isInternational ? 'International?' : 'High Cost'}
+                              {isInternational ? "International?" : "High Cost"}
                             </div>
                           )}
                         </div>
@@ -394,35 +416,59 @@ function BudgetBreakdown({ trip, className = "" }) {
                         <div className="space-y-2 text-xs">
                           <div className="grid grid-cols-2 gap-2">
                             <div>
-                              <span className="text-gray-500 dark:text-gray-400">Method:</span>
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Method:
+                              </span>
                               <p className="font-mono text-gray-900 dark:text-gray-100 font-semibold">
-                                {flight.total_for_group_numeric ? 'total_for_group_numeric' :
-                                 flight.total_for_group ? 'total_for_group' : 
-                                 flight.price_per_person ? 'price_per_person' :
-                                 flight.numeric_price ? 'numeric_price' : 'legacy'}
+                                {flight.total_for_group_numeric
+                                  ? "total_for_group_numeric"
+                                  : flight.total_for_group
+                                  ? "total_for_group"
+                                  : flight.price_per_person
+                                  ? "price_per_person"
+                                  : flight.numeric_price
+                                  ? "numeric_price"
+                                  : "legacy"}
                               </p>
                             </div>
                             <div>
-                              <span className="text-gray-500 dark:text-gray-400">Travelers:</span>
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Travelers:
+                              </span>
                               <p className="font-mono text-gray-900 dark:text-gray-100 font-semibold">
-                                {flight.travelers || trip?.userSelection?.travelers || 1}
+                                {flight.travelers ||
+                                  trip?.userSelection?.travelers ||
+                                  1}
                               </p>
                             </div>
                             <div>
-                              <span className="text-gray-500 dark:text-gray-400">Per Person:</span>
-                              <p className={`font-mono font-semibold ${
-                                perPerson > 60000 ? 'text-red-600 dark:text-red-400' : 
-                                perPerson > 20000 ? 'text-amber-600 dark:text-amber-400' : 
-                                'text-gray-900 dark:text-gray-100'
-                              }`}>
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Per Person:
+                              </span>
+                              <p
+                                className={`font-mono font-semibold ${
+                                  perPerson > 60000
+                                    ? "text-red-600 dark:text-red-400"
+                                    : perPerson > 20000
+                                    ? "text-amber-600 dark:text-amber-400"
+                                    : "text-gray-900 dark:text-gray-100"
+                                }`}
+                              >
                                 ₱{Math.round(perPerson).toLocaleString()}
-                                {perPerson > 60000 && <span className="text-xs ml-1">(⚠️ Too High!)</span>}
+                                {perPerson > 60000 && (
+                                  <span className="text-xs ml-1">
+                                    (⚠️ Too High!)
+                                  </span>
+                                )}
                               </p>
                             </div>
                             <div>
-                              <span className="text-gray-500 dark:text-gray-400">Group Total:</span>
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Group Total:
+                              </span>
                               <p className="font-mono text-gray-900 dark:text-gray-100 font-semibold">
-                                ₱{Math.round(totalGroupNumeric).toLocaleString()}
+                                ₱
+                                {Math.round(totalGroupNumeric).toLocaleString()}
                               </p>
                             </div>
                           </div>
@@ -432,7 +478,9 @@ function BudgetBreakdown({ trip, className = "" }) {
                             <div className="grid grid-cols-2 gap-2 text-xs">
                               {flight.price && (
                                 <div>
-                                  <span className="text-gray-500 dark:text-gray-400">price:</span>
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    price:
+                                  </span>
                                   <p className="font-mono text-gray-600 dark:text-gray-300">
                                     {JSON.stringify(flight.price)}
                                   </p>
@@ -440,7 +488,9 @@ function BudgetBreakdown({ trip, className = "" }) {
                               )}
                               {flight.price_numeric !== undefined && (
                                 <div>
-                                  <span className="text-gray-500 dark:text-gray-400">price_numeric:</span>
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    price_numeric:
+                                  </span>
                                   <p className="font-mono text-gray-600 dark:text-gray-300">
                                     {flight.price_numeric}
                                   </p>
@@ -448,15 +498,20 @@ function BudgetBreakdown({ trip, className = "" }) {
                               )}
                               {flight.total_for_group_numeric !== undefined && (
                                 <div>
-                                  <span className="text-gray-500 dark:text-gray-400">total_for_group_numeric:</span>
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    total_for_group_numeric:
+                                  </span>
                                   <p className="font-mono text-gray-600 dark:text-gray-300">
                                     {flight.total_for_group_numeric}
                                   </p>
                                 </div>
                               )}
-                              {flight.price_per_person_numeric !== undefined && (
+                              {flight.price_per_person_numeric !==
+                                undefined && (
                                 <div>
-                                  <span className="text-gray-500 dark:text-gray-400">price_per_person_numeric:</span>
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    price_per_person_numeric:
+                                  </span>
                                   <p className="font-mono text-gray-600 dark:text-gray-300">
                                     {flight.price_per_person_numeric}
                                   </p>
@@ -465,7 +520,9 @@ function BudgetBreakdown({ trip, className = "" }) {
                             </div>
                             {flight.pricing_note && (
                               <div className="text-xs">
-                                <span className="text-gray-500 dark:text-gray-400">Note:</span>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  Note:
+                                </span>
                                 <p className="font-mono text-gray-600 dark:text-gray-300">
                                   {flight.pricing_note}
                                 </p>
@@ -481,25 +538,37 @@ function BudgetBreakdown({ trip, className = "" }) {
                   <div className="p-4 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 rounded-lg border-2 border-sky-200 dark:border-sky-800">
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <span className="text-gray-600 dark:text-gray-400">Total Flights:</span>
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Total Flights:
+                        </span>
                         <p className="font-bold text-gray-900 dark:text-gray-100">
                           {trip?.realFlightData?.flights?.length || 0}
                         </p>
                       </div>
                       <div>
-                        <span className="text-gray-600 dark:text-gray-400">Total Cost:</span>
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Total Cost:
+                        </span>
                         <p className="font-bold brand-gradient-text">
                           {formatCurrency(breakdown.flights)}
                         </p>
                       </div>
                       <div>
-                        <span className="text-gray-600 dark:text-gray-400">Cost/Person:</span>
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Cost/Person:
+                        </span>
                         <p className="font-bold text-gray-900 dark:text-gray-100">
-                          ₱{Math.round(breakdown.flights / (trip?.userSelection?.travelers || 1)).toLocaleString()}
+                          ₱
+                          {Math.round(
+                            breakdown.flights /
+                              (trip?.userSelection?.travelers || 1)
+                          ).toLocaleString()}
                         </p>
                       </div>
                       <div>
-                        <span className="text-gray-600 dark:text-gray-400">Travelers:</span>
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Travelers:
+                        </span>
                         <p className="font-bold text-gray-900 dark:text-gray-100">
                           {trip?.userSelection?.travelers || 1}
                         </p>
@@ -514,7 +583,9 @@ function BudgetBreakdown({ trip, className = "" }) {
                         flights: trip?.realFlightData?.flights?.map((f, i) => ({
                           index: i,
                           name: f.name,
-                          route: `${f.departure_airport?.id || '?'} → ${f.arrival_airport?.id || '?'}`,
+                          route: `${f.departure_airport?.id || "?"} → ${
+                            f.arrival_airport?.id || "?"
+                          }`,
                           price: f.price,
                           numeric_price: f.numeric_price,
                           total_for_group: f.total_for_group,
@@ -523,13 +594,19 @@ function BudgetBreakdown({ trip, className = "" }) {
                           pricing_note: f.pricing_note,
                         })),
                         summary: {
-                          totalFlights: trip?.realFlightData?.flights?.length || 0,
+                          totalFlights:
+                            trip?.realFlightData?.flights?.length || 0,
                           totalCost: breakdown.flights,
                           travelers: trip?.userSelection?.travelers || 1,
-                          costPerPerson: Math.round(breakdown.flights / (trip?.userSelection?.travelers || 1)),
+                          costPerPerson: Math.round(
+                            breakdown.flights /
+                              (trip?.userSelection?.travelers || 1)
+                          ),
                         },
                       };
-                      navigator.clipboard.writeText(JSON.stringify(diagnosticData, null, 2));
+                      navigator.clipboard.writeText(
+                        JSON.stringify(diagnosticData, null, 2)
+                      );
                       setCopiedDiagnostics(true);
                       setTimeout(() => setCopiedDiagnostics(false), 2000);
                     }}

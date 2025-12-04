@@ -1,199 +1,56 @@
 import React from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Heart,
-  Mail,
-  Github,
-  Twitter,
-  MapPin,
-  Plane,
-  Star,
-} from "lucide-react";
+import { Plane } from "lucide-react";
 
 function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-gradient-to-r from-slate-900 via-sky-900 to-blue-900 text-white">
-      {/* Main Footer Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Brand Section */}
-          <div className="lg:col-span-2">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 brand-gradient rounded-xl flex items-center justify-center">
-                <Plane className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold">TravelRover</h3>
-                <p className="text-blue-200 text-sm">
-                  AI-Powered Travel Planning
-                </p>
-              </div>
+    <footer className="bg-gradient-to-br from-slate-50 via-blue-50 to-sky-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 border-t border-gray-200 dark:border-gray-800">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Single Row Layout - Stacks on Mobile */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-8">
+          {/* Brand - Left */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 brand-gradient rounded-lg flex items-center justify-center shadow-sm">
+              <Plane className="h-4 w-4 text-white" />
             </div>
-            <p className="text-blue-100 text-sm mb-6 max-w-md leading-relaxed">
-              Discover amazing destinations with personalized itineraries
-              powered by AI. From flight bookings to hotel recommendations, we
-              make travel planning effortless and exciting.
-            </p>
-
-            {/* Feature Highlights */}
-            <div className="flex flex-wrap gap-2 mb-6">
-              <Badge
-                variant="secondary"
-                className="bg-blue-100/10 text-blue-200 border-blue-400/20"
-              >
-                <MapPin className="h-3 w-3 mr-1" />
-                Smart Routing
-              </Badge>
-              <Badge
-                variant="secondary"
-                className="bg-emerald-100/10 text-emerald-200 border-emerald-400/20"
-              >
-                <Star className="h-3 w-3 mr-1" />
-                AI Recommendations
-              </Badge>
-              <Badge
-                variant="secondary"
-                className="bg-sky-100/10 text-sky-200 border-sky-400/20"
-              >
-                <Plane className="h-3 w-3 mr-1" />
-                Live Flight Data
-              </Badge>
-            </div>
-
-            {/* Social Links */}
-            <div className="flex gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-blue-200 hover:text-white hover:bg-white/10 cursor-pointer"
-              >
-                <Github className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-blue-200 hover:text-white hover:bg-white/10 cursor-pointer"
-              >
-                <Twitter className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-blue-200 hover:text-white hover:bg-white/10 cursor-pointer"
-              >
-                <Mail className="h-4 w-4" />
-              </Button>
-            </div>
+            <span className="text-lg font-semibold bg-gradient-to-r from-sky-600 to-blue-600 dark:from-sky-400 dark:to-blue-400 bg-clip-text text-transparent">
+              TravelRover
+            </span>
           </div>
 
-          {/* Quick Links */}
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
-            <ul className="space-y-3">
-              <li>
-                <a
-                  href="/create-trip"
-                  className="text-blue-200 hover:text-white transition-colors duration-200 text-sm"
-                >
-                  Create Trip
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/my-trips"
-                  className="text-blue-200 hover:text-white transition-colors duration-200 text-sm"
-                >
-                  My Trips
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/set-profile"
-                  className="text-blue-200 hover:text-white transition-colors duration-200 text-sm"
-                >
-                  Profile Settings
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/settings"
-                  className="text-blue-200 hover:text-white transition-colors duration-200 text-sm"
-                >
-                  Preferences
-                </a>
-              </li>
-            </ul>
-          </div>
+          {/* Navigation Links - Center */}
+          <nav className="flex flex-wrap items-center justify-center gap-6 text-sm">
+            <a
+              href="/my-trips"
+              className="text-gray-600 dark:text-gray-400 hover:text-sky-600 dark:hover:text-sky-400 transition-colors duration-200 font-medium"
+            >
+              My Trips
+            </a>
+            <a
+              href="/create-trip"
+              className="text-gray-600 dark:text-gray-400 hover:text-sky-600 dark:hover:text-sky-400 transition-colors duration-200 font-medium"
+            >
+              Create Trip
+            </a>
+            <a
+              href="/set-profile"
+              className="text-gray-600 dark:text-gray-400 hover:text-sky-600 dark:hover:text-sky-400 transition-colors duration-200 font-medium"
+            >
+              Profile
+            </a>
+            <span className="text-gray-300 dark:text-gray-700">•</span>
+            <a
+              href="/legal"
+              className="text-gray-500 dark:text-gray-500 hover:text-sky-600 dark:hover:text-sky-400 transition-colors duration-200 text-xs"
+            >
+              Privacy & Terms
+            </a>
+          </nav>
 
-          {/* Support */}
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Support</h4>
-            <ul className="space-y-3">
-              <li>
-                <a
-                  href="#"
-                  className="text-blue-200 hover:text-white transition-colors duration-200 text-sm"
-                >
-                  Help Center
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="text-blue-200 hover:text-white transition-colors duration-200 text-sm"
-                >
-                  Travel Guidelines
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="text-blue-200 hover:text-white transition-colors duration-200 text-sm"
-                >
-                  Privacy Policy
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="text-blue-200 hover:text-white transition-colors duration-200 text-sm"
-                >
-                  Terms of Service
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Bar */}
-      <div className="border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-sm text-blue-200">
-              <span>
-                &copy; {currentYear} TravelRover. All rights reserved.
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 text-sm text-blue-200">
-              <span>Made with</span>
-              <Heart className="h-4 w-4 text-red-400" />
-              <span>for travelers worldwide</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Badge
-                variant="secondary"
-                className="bg-emerald-600/20 text-emerald-200 border-emerald-400/30"
-              >
-                <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2 animate-pulse"></span>
-                All Systems Operational
-              </Badge>
-            </div>
+          {/* Copyright - Right */}
+          <div className="text-sm text-gray-500 dark:text-gray-500 font-medium">
+            © {currentYear} TravelRover
           </div>
         </div>
       </div>

@@ -1,15 +1,15 @@
-import React from 'react';
+import React from "react";
 
 /**
  * MarkdownMessage Component
  * Renders chat messages with proper markdown formatting
  * Supports: **bold**, bullet lists, emojis, line breaks
- * 
+ *
  * Design: Clean, minimal styling that matches TripChatbot aesthetic
  */
 function MarkdownMessage({ content }) {
   // Split content into lines for processing
-  const lines = content.split('\n');
+  const lines = content.split("\n");
   const elements = [];
   let currentParagraph = [];
   let inList = false;
@@ -17,9 +17,9 @@ function MarkdownMessage({ content }) {
   const flushParagraph = () => {
     if (currentParagraph.length > 0) {
       elements.push({
-        type: 'paragraph',
-        content: currentParagraph.join('\n'),
-        key: `p-${elements.length}`
+        type: "paragraph",
+        content: currentParagraph.join("\n"),
+        key: `p-${elements.length}`,
       });
       currentParagraph = [];
     }
@@ -33,7 +33,7 @@ function MarkdownMessage({ content }) {
 
   lines.forEach((line) => {
     const trimmedLine = line.trim();
-    
+
     // Empty line - flush current paragraph
     if (!trimmedLine) {
       flushParagraph();
@@ -48,9 +48,9 @@ function MarkdownMessage({ content }) {
       flushParagraph();
       inList = true;
       elements.push({
-        type: 'list-item',
-        content: trimmedLine.replace(/^[•\-*]\s+/, ''),
-        key: `li-${elements.length}`
+        type: "list-item",
+        content: trimmedLine.replace(/^[•\-*]\s+/, ""),
+        key: `li-${elements.length}`,
       });
       return;
     }
@@ -60,9 +60,9 @@ function MarkdownMessage({ content }) {
       flushParagraph();
       inList = false;
       elements.push({
-        type: 'header',
+        type: "header",
         content: trimmedLine,
-        key: `h-${elements.length}`
+        key: `h-${elements.length}`,
       });
       return;
     }
@@ -109,9 +109,7 @@ function MarkdownMessage({ content }) {
     // Add remaining text
     if (lastIndex < text.length) {
       parts.push(
-        <span key={`text-${lastIndex}`}>
-          {text.substring(lastIndex)}
-        </span>
+        <span key={`text-${lastIndex}`}>{text.substring(lastIndex)}</span>
       );
     }
 
@@ -122,28 +120,35 @@ function MarkdownMessage({ content }) {
     <div className="space-y-3">
       {elements.map((element) => {
         switch (element.type) {
-          case 'header':
+          case "header":
             return (
-              <div key={element.key} className="font-semibold text-base leading-relaxed">
+              <div
+                key={element.key}
+                className="font-semibold text-base leading-relaxed"
+              >
                 {formatInlineMarkdown(element.content)}
               </div>
             );
-          
-          case 'list-item':
+
+          case "list-item":
             return (
               <div key={element.key} className="flex gap-2 leading-relaxed">
-                <span className="text-sky-600 dark:text-sky-400 flex-shrink-0 mt-0.5">•</span>
-                <span className="flex-1">{formatInlineMarkdown(element.content)}</span>
+                <span className="text-sky-600 dark:text-sky-400 flex-shrink-0 mt-0.5">
+                  •
+                </span>
+                <span className="flex-1">
+                  {formatInlineMarkdown(element.content)}
+                </span>
               </div>
             );
-          
-          case 'paragraph':
+
+          case "paragraph":
             return (
               <p key={element.key} className="leading-relaxed">
                 {formatInlineMarkdown(element.content)}
               </p>
             );
-          
+
           default:
             return null;
         }

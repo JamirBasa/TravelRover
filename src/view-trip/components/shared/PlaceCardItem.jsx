@@ -11,6 +11,51 @@ import { buildGooglePlacesQuery } from "@/utils/googlePlacesQueryBuilder";
 // ✅ Import activity classifier for logistics detection
 import { isLogisticsItem } from "@/utils/activityClassifier";
 
+// ✅ Import travel time parser
+import {
+  parseTravelTime,
+  getTransportModeConfig,
+} from "@/utils/travelTimeParser";
+
+/**
+ * Format travel time into compact, user-friendly display
+ * Example: "🚌 Bus • 2 hrs • ₱20"
+ */
+function formatTravelDisplay(timeTravel) {
+  if (!timeTravel || typeof timeTravel !== "string") {
+    return null;
+  }
+
+  const parsed = parseTravelTime(timeTravel);
+  const modeConfig = getTransportModeConfig(parsed.mode);
+
+  if (!parsed.duration || !modeConfig) {
+    return timeTravel; // Fallback to original
+  }
+
+  // Build compact parts
+  const parts = [];
+
+  // Transport mode with icon
+  parts.push(`${modeConfig.icon} ${modeConfig.label}`);
+
+  // Duration
+  const timeStr =
+    parsed.unit === "hours"
+      ? `${parsed.duration} ${parsed.duration === 1 ? "hr" : "hrs"}`
+      : `${parsed.duration} min`;
+  parts.push(timeStr);
+
+  // Cost (if not free)
+  if (parsed.cost > 0) {
+    parts.push(`₱${parsed.cost}`);
+  } else if (parsed.mode === "walking") {
+    parts.push("Free");
+  }
+
+  return parts.join(" • ");
+}
+
 /**
  * Simplify logistics activity text for better user experience
  * Reduces redundancy and makes hotel-related activities clearer
@@ -335,9 +380,10 @@ function PlaceCardItem({ place, trip }) {
             )}
 
             {place?.timeTravel && !isLogistics && (
-              <span className="inline-flex items-center gap-1.5 bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-md text-xs font-semibold border border-orange-200 dark:border-orange-800">
-                <span>⏰</span>
-                <span>{place.timeTravel}</span>
+              <span className="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 px-2.5 py-1 rounded-md text-xs font-semibold border border-blue-200 dark:border-blue-800">
+                <span>
+                  {formatTravelDisplay(place.timeTravel) || place.timeTravel}
+                </span>
               </span>
             )}
 

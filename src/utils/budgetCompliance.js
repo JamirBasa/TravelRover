@@ -486,12 +486,22 @@ export const detectUnrealisticPricing = (tripData) => {
   const issues = [];
   const priceOccurrences = {};
   const destination = tripData?.destination || tripData?.userSelection?.location || "Manila";
+  
+  // Track issue severity for smarter filtering
+  const severityMarkers = {
+    critical: "🚨",
+    warning: "⚠️",
+    info: "ℹ️"
+  };
 
   if (!tripData.itinerary || !Array.isArray(tripData.itinerary)) {
     return { hasIssues: false, issues: [] };
   }
 
-  // Check for repeated generic prices
+  // ✅ Philippine Context: Common transport fares (₱13-25 jeepney, ₱20-50 tricycle)
+  const legitimateCommonPrices = [13, 15, 19, 20, 25, 35, 40, 50];
+  
+  // Check for repeated generic prices (exclude legitimate transport fares)
   tripData.itinerary.forEach((day) => {
     if (!day.plan || !Array.isArray(day.plan)) return;
 
@@ -503,26 +513,30 @@ export const detectUnrealisticPricing = (tripData) => {
     });
   });
 
-  // Flag if same price appears 5+ times (likely generic)
+  // Flag if same price appears 7+ times (raised from 5, more lenient)
+  // Skip legitimate transport fares
   Object.entries(priceOccurrences).forEach(([price, count]) => {
-    if (count >= 5) {
+    const priceNum = parseInt(price);
+    if (count >= 7 && !legitimateCommonPrices.includes(priceNum)) {
       issues.push(
-        `⚠️ Price ₱${parseInt(price).toLocaleString()} appears ${count} times - may be generic placeholder`
+        `ℹ️ Price ₱${priceNum.toLocaleString()} appears ${count} times - verify if accurate`
       );
     }
   });
 
-  // Check for suspiciously round numbers used repeatedly
-  const suspiciousRoundPrices = [100, 200, 500, 1000];
+  // Check for suspiciously round numbers ONLY if used excessively
+  // ₱100-500 are common in Philippines (meals, entrance fees)
+  const suspiciousRoundPrices = [1000, 2000, 5000]; // Only large round numbers
   suspiciousRoundPrices.forEach((roundPrice) => {
-    if ((priceOccurrences[roundPrice] || 0) >= 3) {
+    if ((priceOccurrences[roundPrice] || 0) >= 4) {
       issues.push(
-        `⚠️ Generic round price ₱${roundPrice} used ${priceOccurrences[roundPrice]} times - likely not actual pricing`
+        `⚠️ Large round price ₱${roundPrice.toLocaleString()} used ${priceOccurrences[roundPrice]} times - double-check pricing`
       );
     }
   });
 
   // Check hotel prices against destination-adjusted ranges
+  // ✅ Provincial destinations have lower costs - adjust expectations
   if (tripData.hotels && Array.isArray(tripData.hotels)) {
     tripData.hotels.forEach((hotel, index) => {
       const hotelPrice = extractNumericPrice(hotel.pricePerNight);
@@ -531,15 +545,17 @@ export const detectUnrealisticPricing = (tripData) => {
       const budgetRange = getExpectedPriceRange("Budget-Friendly", destination);
       const luxuryRange = getExpectedPriceRange("Luxury", destination);
       
-      if (hotelPrice > 0 && hotelPrice < budgetRange.min * 0.6) {
+      // Only flag if CRITICALLY low (₱400 = suspicious, ₱800 = normal budget)
+      if (hotelPrice > 0 && hotelPrice < budgetRange.min * 0.4) {
         issues.push(
-          `⚠️ Hotel ${index + 1}: ₱${hotelPrice}/night too low for ${destination} (expected ≥₱${Math.round(budgetRange.min)})`
+          `⚠️ Hotel ${index + 1}: ₱${hotelPrice}/night seems very low - verify availability at this rate`
         );
       }
       
-      if (hotelPrice > luxuryRange.max * 1.5) {
+      // High prices are fine (luxury exists), only flag if extreme
+      if (hotelPrice > luxuryRange.max * 2) {
         issues.push(
-          `⚠️ Hotel ${index + 1}: ₱${hotelPrice}/night unusually high for ${destination} (verify ultra-luxury pricing)`
+          `ℹ️ Hotel ${index + 1}: ₱${hotelPrice.toLocaleString()}/night is premium pricing - confirm if budget allows`
         );
       }
     });
@@ -552,26 +568,22 @@ export const detectUnrealisticPricing = (tripData) => {
     tripData.dailyCosts.forEach((dayCost, index) => {
       const { accommodation, meals, activities, transport } = dayCost.breakdown || {};
 
-      // Hotels shouldn't be under minimum for destination
-      if (accommodation > 0 && accommodation < budgetMin * 0.6) {
+      // Only flag CRITICALLY low accommodation (₱400 = suspicious)
+      if (accommodation > 0 && accommodation < budgetMin * 0.4) {
         issues.push(
-          `⚠️ Day ${index + 1}: Accommodation ₱${accommodation} below market minimum for ${destination} (expected ≥₱${Math.round(budgetMin)})`
+          `⚠️ Day ${index + 1}: Accommodation ₱${accommodation} seems very low - verify if accurate`
         );
       }
 
-      // Meals for full day shouldn't be under ₱100
-      if (meals > 0 && meals < 100) {
+      // ✅ Philippine context: Street food exists! Only flag if suspiciously low
+      if (meals > 0 && meals < 50) {
         issues.push(
-          `⚠️ Day ${index + 1}: Total meals ₱${meals} too low (3 meals expected ₱150-1,500)`
+          `ℹ️ Day ${index + 1}: Meals budget ₱${meals} is very minimal - consider increasing for comfort`
         );
       }
 
-      // Check for zero transport on non-arrival/departure days
-      if (transport === 0 && activities > 0) {
-        issues.push(
-          `⚠️ Day ${index + 1}: ₱0 transport cost with activities (jeepney/bus fares missing?)`
-        );
-      }
+      // ✅ ₱0 transport is NORMAL for walking distance between nearby attractions
+      // Only flag if it's a problem (removed this check - it's not an issue)
     });
   }
 

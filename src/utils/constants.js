@@ -88,6 +88,60 @@ export const SYSTEM_LIMITS = {
 };
 
 // ==========================================
+// Cache Configuration - Modern Strategy (2025)
+// ==========================================
+export const CACHE_CONFIG = {
+  // React Query Settings
+  QUERY_STALE_TIME: 5 * 60 * 1000, // 5 minutes - how long data is "fresh"
+  QUERY_CACHE_TIME: 30 * 60 * 1000, // 30 minutes - how long unused data stays in memory
+  
+  // IndexedDB TTL Settings
+  GEOCODE_TTL: 30 * 24 * 60 * 60 * 1000, // 30 days (coordinates rarely change)
+  IMAGE_TTL: 30 * 24 * 60 * 60 * 1000, // 30 days (photos don't change)
+  TRIP_TTL: 5 * 60 * 1000, // 5 minutes (trips change frequently)
+  API_RESPONSE_TTL: 24 * 60 * 60 * 1000, // 24 hours (general API responses)
+  
+  // Cache Version
+  VERSION: '2025-12-v1', // Increment to force cache refresh
+  
+  // Performance Limits
+  MAX_GEOCODE_CACHE_SIZE: 500, // Maximum geocode entries
+  MAX_IMAGE_CACHE_SIZE: 200, // Maximum image entries
+  BATCH_SIZE: 10, // Concurrent geocoding requests
+};
+
+// ==========================================
+// Cache Strategy Documentation
+// ==========================================
+/**
+ * Modern Caching Architecture (Dec 2025):
+ * 
+ * 1. **React Query** - Server-state management (API responses)
+ *    - Automatic background refetching
+ *    - Request deduplication
+ *    - Optimistic updates
+ *    - In-memory cache with smart invalidation
+ * 
+ * 2. **IndexedDB** - Persistent local storage (large datasets)
+ *    - Geocoding results (500+ locations)
+ *    - Google Places images (binary data)
+ *    - Trip itineraries (large JSON)
+ *    - No 5-10MB localStorage limit
+ *    - Async operations (non-blocking)
+ * 
+ * 3. **Cache Versioning** - Automatic migration
+ *    - Increment CACHE_CONFIG.VERSION to clear old caches
+ *    - Prevents stale data bugs after updates
+ *    - Auto-cleanup of legacy localStorage
+ * 
+ * Migration from legacy system:
+ * - Deprecated: cacheManager.js, requestCache.js
+ * - Deprecated: localStorage for large datasets
+ * - New: React Query hooks (useTrips, usePlaces)
+ * - New: IndexedDB utilities (geocodeCache, imageCache)
+ */
+
+// ==========================================
 // Feature Flags
 // ==========================================
 export const FEATURES = {
@@ -210,7 +264,7 @@ export const TOAST_CONFIG = {
       description: "text-[13px] text-gray-600 mt-1.5 leading-relaxed break-words",
       actionButton: "bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105",
       cancelButton: "bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2.5 rounded-xl transition-all duration-200",
-      closeButton: "hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-lg p-1.5 transition-all duration-200 hover:rotate-90 ml-auto flex-shrink-0",
+      closeButton: "hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-lg p-1.5 transition-all duration-200 ml-auto flex-shrink-0",
       success: "bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-300 shadow-emerald-100/50",
       error: "bg-gradient-to-br from-red-50 to-rose-50 border-red-300 shadow-red-100/50",
       warning: "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300 shadow-amber-100/50",

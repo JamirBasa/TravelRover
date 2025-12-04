@@ -1,10 +1,9 @@
 // src/view-trip/[tripId]/index.jsx
-import React, { useEffect, useState, useRef } from "react";
+import React, { useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { db } from "@/config/firebaseConfig";
-import { doc, getDoc } from "firebase/firestore";
 import { toast } from "sonner";
 import { usePageTitle } from "../../hooks/usePageTitle";
+import { useTrip } from "@/hooks/useTrips";
 
 // Import enhanced styles
 import "../styles/ViewTrip.css";
@@ -29,29 +28,69 @@ function ViewTrip() {
   const { tripId } = useParams();
   const navigate = useNavigate();
 
-  const [trip, setTrip] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isDownloading, setIsDownloading] = useState(false); // ✅ NEW: Track PDF download state
+  // React Query hook - replaces manual Firestore calls
+  const {
+    data: trip,
+    isLoading: loading,
+    error: queryError,
+    refetch,
+  } = useTrip(tripId, {
+    enabled: !!tripId,
+    retry: 2,
+    onError: (err) => {
+      // User-friendly error messages
+      let userMessage = "Failed to load trip data";
+      let description = "Please try again in a moment.";
 
-  // ✅ NEW: Ref to control TabbedTripView from parent
+      if (!navigator.onLine) {
+        userMessage = "No Internet Connection";
+        description = "Please check your network connection and try again.";
+      } else if (
+        err.message?.includes("not found") ||
+        err.message?.includes("not-found")
+      ) {
+        userMessage = "Trip Not Found";
+        description =
+          "This trip may have been deleted or you don't have access to it.";
+      } else if (err.message?.includes("permission-denied")) {
+        userMessage = "Access Denied";
+        description = "You don't have permission to view this trip.";
+      }
+
+      toast.error(userMessage, { description, duration: 6000 });
+      logError("ViewTrip", "Failed to fetch trip data", {
+        error: err.message,
+        tripId,
+      });
+    },
+  });
+
+  const [isDownloading, setIsDownloading] = React.useState(false);
   const tabbedViewRef = useRef(null);
 
-  // Set dynamic page title based on trip data
+  // Run data audit in development
+  React.useEffect(() => {
+    if (trip && import.meta.env.DEV) {
+      auditTripData(trip);
+
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+      if (trip.userEmail && currentUser.email !== trip.userEmail) {
+        logDebug("ViewTrip", "User viewing trip owned by different account", {
+          currentEmail: currentUser.email,
+          tripOwner: trip.userEmail,
+        });
+      }
+    }
+  }, [trip]);
+
+  // Set dynamic page title
   const tripTitle = trip
     ? trip.destination || trip.tripData?.destination || "Trip Details"
     : "Loading Trip...";
   usePageTitle(loading ? "Loading Trip..." : tripTitle);
 
-  useEffect(() => {
-    if (tripId) {
-      GetTripData();
-    } else {
-      setError("No trip ID provided");
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tripId]);
+  // Convert query error to string
+  const error = !tripId ? "No trip ID provided" : queryError?.message || null;
 
   const GetTripData = async () => {
     try {
@@ -150,26 +189,21 @@ function ViewTrip() {
     }
   };
 
-  // Silent refresh function for updates (doesn't show loading screen)
+  // Silent refresh function - uses React Query refetch
   const refreshTripData = async () => {
     try {
-      const docRef = doc(db, "AITrips", tripId);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const tripData = docSnap.data();
+      const result = await refetch();
+      if (result.data) {
         logDebug("ViewTrip", "Silent refresh completed", {
-          destination: tripData?.userSelection?.location,
+          destination: result.data?.userSelection?.location,
         });
-        setTrip(tripData);
-        return tripData;
+        return result.data;
       }
     } catch (err) {
       logError("ViewTrip", "Silent refresh failed", {
         error: err.message,
         tripId,
       });
-      // Don't show error toast for silent refresh
     }
   };
 
@@ -210,14 +244,15 @@ function ViewTrip() {
     navigator.clipboard
       .writeText(text)
       .then(() => {
-        toast.success("Link copied to clipboard!", {
-          description: "Share this link with friends and family",
+        toast.success("Trip link copied!", {
+          description: "Paste and share this link with friends and family",
           duration: 3000,
         });
       })
       .catch(() => {
         toast.error("Failed to copy link", {
-          description: "Please copy the URL manually from your browser",
+          description:
+            "Please copy the URL manually from your browser address bar",
         });
       });
   };
@@ -247,8 +282,8 @@ function ViewTrip() {
       toast.dismiss(loadingToast);
 
       if (result.success) {
-        toast.success("PDF Downloaded!", {
-          description: `Saved as ${result.filename}`,
+        toast.success("PDF saved successfully!", {
+          description: `File saved: ${result.filename}`,
           duration: 4000,
         });
       } else {
@@ -301,8 +336,8 @@ function ViewTrip() {
     }
 
     // Notify user about switching to Itinerary tab
-    toast.info("Switching to Itinerary tab for editing...", {
-      duration: 2000,
+    toast.info("Opening your itinerary...", {
+      duration: 1500,
     });
 
     // Use ref to switch to Itinerary tab
@@ -311,7 +346,7 @@ function ViewTrip() {
   };
 
   const handleRetry = () => {
-    GetTripData();
+    refetch();
   };
 
   const handleCreateNew = () => {
@@ -361,6 +396,7 @@ function ViewTrip() {
           <TabbedTripView
             ref={tabbedViewRef}
             trip={trip}
+            tripId={tripId}
             onTripUpdate={refreshTripData}
           />
         </TripViewErrorBoundary>

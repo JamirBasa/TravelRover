@@ -1,9 +1,5 @@
 import { initializeApp } from "firebase/app";
-import {
-  getFirestore,
-  enableIndexedDbPersistence,
-  CACHE_SIZE_UNLIMITED,
-} from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -18,25 +14,12 @@ const firebaseConfig = {
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with settings
+// Initialize Firestore
+// Note: Offline persistence is enabled by default in modern Firebase SDK
 export const db = getFirestore(app);
 
-// ✅ Enable offline persistence for better reliability
-// This allows the app to work offline and sync when connection is restored
-enableIndexedDbPersistence(db, {
-  cacheSizeBytes: CACHE_SIZE_UNLIMITED,
-}).catch((err) => {
-  if (err.code === "failed-precondition") {
-    // Multiple tabs open, persistence can only be enabled in one tab at a time
-    console.warn(
-      "⚠️ Firebase persistence failed: Multiple tabs open. Only one tab can have persistence enabled."
-    );
-  } else if (err.code === "unimplemented") {
-    // The current browser doesn't support persistence
-    console.warn("⚠️ Firebase persistence not supported in this browser.");
-  } else {
-    console.error("❌ Firebase persistence error:", err);
-  }
-});
-
-console.log("✅ Firebase initialized with offline persistence");
+// Verify configuration
+if (import.meta.env.DEV) {
+  console.log("✅ Firebase initialized");
+  console.log("📋 Project ID:", firebaseConfig.projectId);
+}

@@ -26,15 +26,29 @@ import { RouteOptimizationStatus } from "../optimization";
 import { OptimizedRouteMap } from "../maps";
 import { TripChatbot } from "../chat";
 import WeatherForecast from "../weather/WeatherForecast";
+import TravelTips from "../tips/TravelTips";
 
-function TabbedTripView({ trip, onTripUpdate }, ref) {
+function TabbedTripView({ trip, tripId, onTripUpdate }, ref) {
   const [activeTab, setActiveTab] = useState("overview");
+  // ✅ Track live itinerary for instant map updates
+  const [liveItinerary, setLiveItinerary] = useState(null);
 
   // ✅ Create ref for PlacesToVisit component
   const placesToVisitRef = React.useRef(null);
 
   // ✅ Create deduplicated itinerary for map component
+  // Priority: liveItinerary (optimistic) > Firebase data (source of truth)
   const cleanedItinerary = React.useMemo(() => {
+    // If we have live updates, use them for instant map refresh
+    if (liveItinerary && Array.isArray(liveItinerary)) {
+      const cleaned = cleanItinerary(liveItinerary);
+      logDebug("TabbedTripView", "Using live itinerary for map (optimistic)", {
+        days: cleaned.length,
+      });
+      return cleaned;
+    }
+
+    // Otherwise, use Firebase data
     if (!trip?.tripData?.itinerary) return [];
     let parsed = trip.tripData.itinerary;
     if (typeof parsed === "string") {
@@ -46,11 +60,19 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
       }
     }
     const cleaned = cleanItinerary(Array.isArray(parsed) ? parsed : []);
-    logDebug("TabbedTripView", "Cleaned itinerary for map", {
+    logDebug("TabbedTripView", "Cleaned itinerary for map (from Firebase)", {
       originalDays: Array.isArray(parsed) ? parsed.length : 0,
       cleanedDays: cleaned.length,
     });
     return cleaned;
+  }, [liveItinerary, trip?.tripData?.itinerary]);
+
+  // ✅ Reset live itinerary when Firebase data changes (after save completes)
+  React.useEffect(() => {
+    if (trip?.tripData?.itinerary) {
+      setLiveItinerary(null); // Clear optimistic state, Firebase is now source of truth
+      logDebug("TabbedTripView", "Reset live itinerary after Firebase update");
+    }
   }, [trip?.tripData?.itinerary]);
 
   // ✅ Debug: Log when component mounts
@@ -197,6 +219,7 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
           ref={placesToVisitRef}
           trip={trip}
           onTripUpdate={onTripUpdate}
+          onLiveItineraryChange={setLiveItinerary}
         />
       ),
     },
@@ -224,85 +247,7 @@ function TabbedTripView({ trip, onTripUpdate }, ref) {
       id: "tips",
       label: "Travel Tips",
       icon: <Lightbulb className="h-5 w-5" />,
-      component: (
-        <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border border-orange-200 dark:border-orange-800 rounded-lg p-4 sm:p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 bg-orange-100 dark:bg-orange-950/50 rounded-lg flex items-center justify-center">
-              <span className="text-orange-600 dark:text-orange-400 text-sm">
-                💡
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                Travel Tips & Information
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 break-words">
-                Essential information for your trip to{" "}
-                {trip?.userSelection?.location}
-              </p>
-            </div>
-          </div>
-
-          {/* Travel Tips Content */}
-          <div className="grid md:grid-cols-2 gap-4">
-            {/* Safety & Health */}
-            <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-orange-100 dark:border-orange-900/50">
-              <h3 className="font-semibold text-orange-900 dark:text-orange-400 mb-3 flex items-center gap-2 text-sm">
-                <span>🛡️</span>
-                Safety & Health
-              </h3>
-              <ul className="text-orange-800 dark:text-orange-400/90 text-xs space-y-1.5">
-                <li>• Keep copies of important documents</li>
-                <li>• Research local emergency numbers</li>
-                <li>• Pack a basic first-aid kit</li>
-                <li>• Stay hydrated and eat safely</li>
-              </ul>
-            </div>
-
-            {/* Cultural Tips */}
-            <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-orange-100 dark:border-orange-900/50">
-              <h3 className="font-semibold text-orange-900 dark:text-orange-400 mb-3 flex items-center gap-2 text-sm">
-                <span>🌏</span>
-                Cultural Etiquette
-              </h3>
-              <ul className="text-orange-800 dark:text-orange-400/90 text-xs space-y-1.5">
-                <li>• Learn basic local phrases</li>
-                <li>• Respect local customs and dress codes</li>
-                <li>• Tip appropriately for the region</li>
-                <li>• Be mindful of photography restrictions</li>
-              </ul>
-            </div>
-
-            {/* Money & Communication */}
-            <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-orange-100 dark:border-orange-900/50">
-              <h3 className="font-semibold text-orange-900 dark:text-orange-400 mb-3 flex items-center gap-2 text-sm">
-                <span>💳</span>
-                Money & Communication
-              </h3>
-              <ul className="text-orange-800 dark:text-orange-400/90 text-xs space-y-1.5">
-                <li>• Notify banks of travel plans</li>
-                <li>• Have multiple payment methods</li>
-                <li>• Download offline maps and translation apps</li>
-                <li>• Keep emergency cash in local currency</li>
-              </ul>
-            </div>
-
-            {/* Packing Essentials */}
-            <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-orange-100 dark:border-orange-900/50">
-              <h3 className="font-semibold text-orange-900 dark:text-orange-400 mb-3 flex items-center gap-2 text-sm">
-                <span>🎒</span>
-                Packing Essentials
-              </h3>
-              <ul className="text-orange-800 dark:text-orange-400/90 text-xs space-y-1.5">
-                <li>• Check weather forecasts and pack accordingly</li>
-                <li>• Bring universal power adapters</li>
-                <li>• Pack light but bring versatile clothing</li>
-                <li>• Don't forget chargers and power banks</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      ),
+      component: <TravelTips trip={trip} tripId={tripId} />,
     },
   ];
 

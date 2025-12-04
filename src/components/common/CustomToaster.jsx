@@ -61,6 +61,7 @@ const CustomToaster = () => {
       duration={TOAST_CONFIG.duration}
       gap={TOAST_CONFIG.gap}
       visibleToasts={TOAST_CONFIG.visibleToasts}
+      closeButton={true}
       toastOptions={TOAST_CONFIG.toastOptions}
       icons={icons}
     />

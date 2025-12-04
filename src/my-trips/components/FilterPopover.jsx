@@ -1,12 +1,15 @@
+import React, { useState } from "react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Filter, Calendar, Users, DollarSign } from "lucide-react";
+import { Filter, Calendar, Users, DollarSign, X } from "lucide-react";
 
 function FilterPopover({ filters, setFilters, clearFilters, userTrips }) {
+  const [isOpen, setIsOpen] = useState(false);
+
   const handleFilterClick = (filterType, value) => {
     setFilters((prev) => ({
       ...prev,
@@ -19,10 +22,16 @@ function FilterPopover({ filters, setFilters, clearFilters, userTrips }) {
       switch (filterType) {
         case "budget": {
           const tripBudget = trip.userSelection?.budget;
+          if (!tripBudget) return false;
 
           // Handle custom budgets
           if (value === "Custom") {
-            return tripBudget?.startsWith("Custom:");
+            return tripBudget.startsWith("Custom:");
+          }
+
+          // ✅ FIX: Match both "Budget" and "Budget-Friendly"
+          if (value === "Budget") {
+            return tripBudget === "Budget-Friendly" || tripBudget === "Budget";
           }
 
           // Handle standard budgets (exact match)
@@ -51,21 +60,39 @@ function FilterPopover({ filters, setFilters, clearFilters, userTrips }) {
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
   const hasActiveFilters = activeFilterCount > 0;
 
+  // Check if any filters have results
+  const hasAnyResults = () => {
+    const budgets = ["Budget", "Moderate", "Luxury", "Custom"];
+    const durations = ["short", "medium"];
+    const travelers = [
+      ...new Set(
+        userTrips.map((trip) => trip.userSelection?.travelers).filter(Boolean)
+      ),
+    ];
+
+    return (
+      budgets.some((b) => getFilterCount("budget", b) > 0) ||
+      durations.some((d) => getFilterCount("duration", d) > 0) ||
+      travelers.length > 0
+    );
+  };
+
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className={`flex items-center gap-2 cursor-pointer ${
+          className={`flex items-center gap-2 h-11 px-4 cursor-pointer transition-colors ${
             hasActiveFilters
-              ? "bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400"
-              : "border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+              ? "bg-sky-50 dark:bg-sky-950/30 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-400"
+              : "border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800"
           }`}
+          aria-label="Filter trips"
         >
           <Filter className="h-4 w-4" />
           <span className="hidden sm:inline">Filter</span>
           {activeFilterCount > 0 && (
-            <span className="bg-blue-500 dark:bg-sky-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center">
+            <span className="bg-sky-500 text-white text-xs font-medium rounded-full px-2 py-0.5 min-w-[18px] text-center">
               {activeFilterCount}
             </span>
           )}
@@ -73,36 +100,35 @@ function FilterPopover({ filters, setFilters, clearFilters, userTrips }) {
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-[calc(100vw-2rem)] sm:w-80 p-0 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 z-[100]"
+        className="w-[280px] p-0 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 shadow-lg rounded-lg overflow-hidden"
         align="end"
         sideOffset={8}
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        {/* Sticky Header */}
-        <div className="sticky top-0 bg-white dark:bg-slate-900 z-10 flex items-center justify-between p-3 sm:p-4 pb-3 border-b border-gray-200 dark:border-slate-700">
-          <h3 className="font-semibold text-base sm:text-lg text-gray-900 dark:text-gray-100">
-            Filter Trips
+        {/* Minimalist Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-slate-700">
+          <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+            Filters
           </h3>
           {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearFilters}
-              className="text-blue-600 dark:text-sky-400 hover:text-blue-700 dark:hover:text-sky-300 text-xs cursor-pointer"
+            <button
+              onClick={() => {
+                clearFilters();
+              }}
+              className="text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 text-xs font-medium cursor-pointer"
             >
-              Clear All
-            </Button>
+              Clear all
+            </button>
           )}
         </div>
 
-        {/* Scrollable Content - Compact Version */}
-        <div className="p-3 sm:p-4 space-y-4 max-h-[60vh] sm:max-h-[400px] overflow-y-auto">
+        {/* Scrollable Content */}
+        <div className="p-4 space-y-4 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
           {/* Budget Filter */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 mb-2">
-              <DollarSign className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Budget
-              </span>
+            <div className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              <DollarSign className="h-3.5 w-3.5" />
+              <span>Budget</span>
             </div>
 
             <div className="space-y-1.5">
@@ -119,26 +145,28 @@ function FilterPopover({ filters, setFilters, clearFilters, userTrips }) {
                 if (count === 0) return null;
 
                 return (
-                  <div
+                  <button
                     key={value}
                     onClick={() => handleFilterClick("budget", value)}
-                    className={`flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-all ${
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md border cursor-pointer transition-colors ${
                       isActive
-                        ? "bg-sky-500 dark:bg-sky-500 text-white border-sky-500"
-                        : "bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-gray-100"
+                        ? "bg-sky-50 dark:bg-sky-950/30 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-400"
+                        : "bg-white dark:bg-slate-800/50 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800"
                     }`}
+                    aria-label={`Filter by ${label}`}
+                    aria-pressed={isActive}
                   >
-                    <span className="font-medium text-sm">{label}</span>
+                    <span className="text-sm font-medium">{label}</span>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full ${
                         isActive
-                          ? "bg-sky-400 text-white"
-                          : "bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300"
+                          ? "bg-sky-200 dark:bg-sky-900 text-sky-700 dark:text-sky-300"
+                          : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
                       }`}
                     >
                       {count}
                     </span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -146,54 +174,43 @@ function FilterPopover({ filters, setFilters, clearFilters, userTrips }) {
 
           {/* Duration Filter */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Duration
-              </span>
+            <div className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              <Calendar className="h-3.5 w-3.5" />
+              <span>Duration</span>
             </div>
 
             <div className="space-y-1.5">
               {[
-                { value: "short", label: "Short", desc: "1-3 days" },
-                { value: "medium", label: "Medium", desc: "4-7 days" },
-              ].map(({ value, label, desc }) => {
+                { value: "short", label: "1-3 days" },
+                { value: "medium", label: "4-7 days" },
+              ].map(({ value, label }) => {
                 const count = getFilterCount("duration", value);
                 const isActive = filters.duration === value;
                 if (count === 0) return null;
 
                 return (
-                  <div
+                  <button
                     key={value}
                     onClick={() => handleFilterClick("duration", value)}
-                    className={`flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-all ${
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md border cursor-pointer transition-colors ${
                       isActive
-                        ? "bg-sky-500 dark:bg-sky-500 text-white border-sky-500"
-                        : "bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-gray-100"
+                        ? "bg-sky-50 dark:bg-sky-950/30 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-400"
+                        : "bg-white dark:bg-slate-800/50 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800"
                     }`}
+                    aria-label={`Filter by ${label} trip`}
+                    aria-pressed={isActive}
                   >
-                    <div>
-                      <div className="font-medium text-sm">{label}</div>
-                      <div
-                        className={`text-xs ${
-                          isActive
-                            ? "text-sky-100"
-                            : "text-gray-500 dark:text-gray-400"
-                        }`}
-                      >
-                        {desc}
-                      </div>
-                    </div>
+                    <span className="text-sm font-medium">{label}</span>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full ${
                         isActive
-                          ? "bg-sky-400 text-white"
-                          : "bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300"
+                          ? "bg-sky-200 dark:bg-sky-900 text-sky-700 dark:text-sky-300"
+                          : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
                       }`}
                     >
                       {count}
                     </span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -201,11 +218,9 @@ function FilterPopover({ filters, setFilters, clearFilters, userTrips }) {
 
           {/* Travelers Filter */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Travel Group
-              </span>
+            <div className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              <Users className="h-3.5 w-3.5" />
+              <span>Travelers</span>
             </div>
 
             <div className="space-y-1.5">
@@ -215,35 +230,58 @@ function FilterPopover({ filters, setFilters, clearFilters, userTrips }) {
                     .map((trip) => trip.userSelection?.travelers)
                     .filter(Boolean)
                 ),
-              ].map((traveler) => {
-                const count = getFilterCount("travelers", traveler);
-                const isActive = filters.travelers === traveler;
+              ]
+                .sort((a, b) => {
+                  const order = [
+                    "Solo",
+                    "Couple",
+                    "Family",
+                    "Friends",
+                    "Group",
+                  ];
+                  return order.indexOf(a) - order.indexOf(b);
+                })
+                .map((traveler) => {
+                  const count = getFilterCount("travelers", traveler);
+                  const isActive = filters.travelers === traveler;
 
-                return (
-                  <div
-                    key={traveler}
-                    onClick={() => handleFilterClick("travelers", traveler)}
-                    className={`flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-all ${
-                      isActive
-                        ? "bg-sky-500 dark:bg-sky-500 text-white border-sky-500"
-                        : "bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-gray-100"
-                    }`}
-                  >
-                    <span className="font-medium text-sm">{traveler}</span>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${
+                  return (
+                    <button
+                      key={traveler}
+                      onClick={() => handleFilterClick("travelers", traveler)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-md border cursor-pointer transition-colors ${
                         isActive
-                          ? "bg-sky-400 text-white"
-                          : "bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300"
+                          ? "bg-sky-50 dark:bg-sky-950/30 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-400"
+                          : "bg-white dark:bg-slate-800/50 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800"
                       }`}
+                      aria-label={`Filter by ${traveler}`}
+                      aria-pressed={isActive}
                     >
-                      {count}
-                    </span>
-                  </div>
-                );
-              })}
+                      <span className="text-sm font-medium">{traveler}</span>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${
+                          isActive
+                            ? "bg-sky-200 dark:bg-sky-900 text-sky-700 dark:text-sky-300"
+                            : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
             </div>
           </div>
+
+          {/* Empty State */}
+          {!hasAnyResults() && (
+            <div className="py-6 text-center">
+              <Filter className="h-10 w-10 text-gray-300 dark:text-gray-700 mx-auto mb-2" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No trips to filter
+              </p>
+            </div>
+          )}
         </div>
       </PopoverContent>
     </Popover>

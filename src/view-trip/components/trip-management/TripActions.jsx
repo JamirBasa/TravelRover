@@ -10,15 +10,17 @@ import {
 function TripActions({ onShare, onDownload, onEdit, isDownloading }) {
   return (
     <div className="flex items-center gap-2">
-      {/* Primary Action - Share */}
+      {/* Primary Action - Share Link */}
       <Button
         onClick={onShare}
         size="sm"
         className="brand-button px-3 py-2 text-sm font-medium"
-        aria-label="Share this trip with others"
+        aria-label="Share this trip link with others"
+        title="Copy trip link to share with friends and family"
       >
         <Share2 className="h-4 w-4 mr-2" />
-        <span className="hidden sm:inline">Share</span>
+        <span className="hidden sm:inline">Share Link</span>
+        <span className="sm:hidden">Share</span>
       </Button>
 
       {/* Mobile: More actions in popover, Desktop: Individual buttons */}
@@ -30,7 +32,14 @@ function TripActions({ onShare, onDownload, onEdit, isDownloading }) {
           disabled={isDownloading}
           className="px-3 py-2 text-sm font-medium"
           aria-label={
-            isDownloading ? "Generating PDF..." : "Download trip as PDF"
+            isDownloading
+              ? "Generating PDF..."
+              : "Download trip itinerary as PDF file"
+          }
+          title={
+            isDownloading
+              ? "Creating your PDF file..."
+              : "Save trip as PDF document"
           }
         >
           {isDownloading ? (
@@ -44,12 +53,12 @@ function TripActions({ onShare, onDownload, onEdit, isDownloading }) {
               >
                 <Loader2 className="h-4 w-4" />
               </div>
-              Generating...
+              Creating...
             </>
           ) : (
             <>
               <Download className="h-4 w-4 mr-1" />
-              PDF
+              Download PDF
             </>
           )}
         </Button>
@@ -59,10 +68,11 @@ function TripActions({ onShare, onDownload, onEdit, isDownloading }) {
           size="sm"
           onClick={onEdit}
           className="px-3 py-2 text-sm font-medium"
-          aria-label="Edit this trip"
+          aria-label="View detailed itinerary"
+          title="Go to itinerary tab to see day-by-day activities"
         >
           <Edit className="h-4 w-4 mr-1" />
-          Edit
+          Itinerary
         </Button>
       </div>
 
@@ -87,6 +97,9 @@ function TripActions({ onShare, onDownload, onEdit, isDownloading }) {
                 onClick={onDownload}
                 disabled={isDownloading}
                 className="w-full justify-start text-left"
+                title={
+                  isDownloading ? "Creating your PDF..." : "Save trip as PDF"
+                }
               >
                 {isDownloading ? (
                   <>
@@ -99,7 +112,7 @@ function TripActions({ onShare, onDownload, onEdit, isDownloading }) {
                     >
                       <Loader2 className="h-4 w-4" />
                     </div>
-                    Generating...
+                    Creating PDF...
                   </>
                 ) : (
                   <>
@@ -113,9 +126,10 @@ function TripActions({ onShare, onDownload, onEdit, isDownloading }) {
                 size="sm"
                 onClick={onEdit}
                 className="w-full justify-start text-left"
+                title="Go to itinerary tab"
               >
                 <Edit className="h-4 w-4 mr-2" />
-                Edit Trip
+                View Itinerary
               </Button>
             </div>
           </PopoverContent>

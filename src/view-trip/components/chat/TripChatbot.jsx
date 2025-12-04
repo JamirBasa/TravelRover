@@ -1,5 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Loader2, Sparkles, Brain, Zap, ArrowDown } from "lucide-react";
+import {
+  Send,
+  Bot,
+  User,
+  Loader2,
+  Sparkles,
+  Brain,
+  Zap,
+  ArrowDown,
+} from "lucide-react";
 import { toast } from "sonner";
 import MarkdownMessage from "./MarkdownMessage";
 import { logDebug, logError } from "@/utils/productionLogger";
@@ -46,6 +55,8 @@ function TripChatbot({ trip }) {
   // Backend status tracking (null = checking, true = online, false = offline)
   const [isBackendOnline, setIsBackendOnline] = useState(null);
   const [isLongCatOnline, setIsLongCatOnline] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const retryTimeoutRef = useRef(null);
 
   // AI Provider selection ('gemini' or 'longcat')
   const [aiProvider, setAiProvider] = useState("gemini");
@@ -114,7 +125,7 @@ Which assistant would you like to chat with? 😊`,
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
-  
+
   // Scroll-to-bottom button state
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -149,12 +160,13 @@ Which assistant would you like to chat with? 😊`,
   // Handle scroll event to show/hide scroll button
   const handleScroll = () => {
     if (!messagesContainerRef.current) return;
-    
-    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+
+    const { scrollTop, scrollHeight, clientHeight } =
+      messagesContainerRef.current;
     const isNearBottom = scrollHeight - scrollTop - clientHeight < 100; // Within 100px of bottom
-    
+
     setShowScrollButton(!isNearBottom);
-    
+
     if (isNearBottom) {
       setUnreadCount(0); // Clear unread count if user manually scrolls to bottom
     }
@@ -164,17 +176,18 @@ Which assistant would you like to chat with? 😊`,
     // Check if new messages were added
     if (messages.length > lastMessageCountRef.current) {
       const newMessageCount = messages.length - lastMessageCountRef.current;
-      
+
       // Only proceed if there's actually a new message (not initial render)
       if (newMessageCount > 0 && lastMessageCountRef.current > 0) {
         // Check if user is scrolled up
         if (messagesContainerRef.current) {
-          const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+          const { scrollTop, scrollHeight, clientHeight } =
+            messagesContainerRef.current;
           const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-          
+
           if (!isNearBottom) {
             // User scrolled up - show unread badge instead of auto-scrolling
-            setUnreadCount(prev => prev + newMessageCount);
+            setUnreadCount((prev) => prev + newMessageCount);
             setShowScrollButton(true);
           } else {
             // User at bottom - auto-scroll to new message
@@ -189,7 +202,7 @@ Which assistant would you like to chat with? 😊`,
         scrollToBottom();
       }
     }
-    
+
     lastMessageCountRef.current = messages.length;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]); // Only depend on messages array
@@ -199,11 +212,44 @@ Which assistant would you like to chat with? 😊`,
     inputRef.current?.focus();
   }, []);
 
-  // Check backend health status on mount
+  // Check backend health status on mount with automatic retry
   useEffect(() => {
-    checkBackendHealth();
-    checkLongCatHealth();
+    checkBackendHealthWithRetry();
+    checkLongCatHealthWithRetry();
+
+    // Cleanup retry timeout on unmount
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
   }, []);
+
+  // Health check with automatic retry logic
+  const checkBackendHealthWithRetry = async (attempt = 0) => {
+    const maxRetries = 5;
+    const baseDelay = 2000; // Start with 2 seconds
+
+    try {
+      await checkBackendHealth();
+      setRetryCount(0); // Reset on success
+    } catch (error) {
+      if (attempt < maxRetries) {
+        const delay = Math.min(baseDelay * Math.pow(1.5, attempt), 30000); // Max 30s
+        logDebug("TripChatbot", `Retrying backend health check in ${delay}ms`, {
+          attempt: attempt + 1,
+          maxRetries,
+        });
+
+        retryTimeoutRef.current = setTimeout(() => {
+          setRetryCount(attempt + 1);
+          checkBackendHealthWithRetry(attempt + 1);
+        }, delay);
+      } else {
+        logError("TripChatbot", "Max retries reached for backend health check");
+      }
+    }
+  };
 
   // Health check function for Gemini
   const checkBackendHealth = async () => {
@@ -266,14 +312,34 @@ Which assistant would you like to chat with? 😊`,
     }
   };
 
+  // Health check with automatic retry for LongCat
+  const checkLongCatHealthWithRetry = async (attempt = 0) => {
+    const maxRetries = 3;
+    const baseDelay = 3000;
+
+    try {
+      await checkLongCatHealth();
+    } catch (error) {
+      if (attempt < maxRetries) {
+        const delay = Math.min(baseDelay * Math.pow(1.5, attempt), 15000);
+        retryTimeoutRef.current = setTimeout(() => {
+          checkLongCatHealthWithRetry(attempt + 1);
+        }, delay);
+      }
+    }
+  };
+
   // Health check function for LongCat
   const checkLongCatHealth = async () => {
     try {
       console.log("🔍 TripChatbot: Starting LongCat health check...");
-      console.log("🔍 TripChatbot: longcatServiceRef.current exists?", !!longcatServiceRef.current);
+      console.log(
+        "🔍 TripChatbot: longcatServiceRef.current exists?",
+        !!longcatServiceRef.current
+      );
 
       const health = await longcatServiceRef.current?.checkHealth();
-      
+
       console.log("📦 TripChatbot: Received health data:", health);
       console.log("📦 TripChatbot: health.configured =", health?.configured);
       console.log("📦 TripChatbot: health.valid =", health?.valid);
@@ -288,7 +354,7 @@ Which assistant would you like to chat with? 😊`,
         console.log("⚠️ TripChatbot: Reason:", {
           healthExists: !!health,
           configured: health?.configured,
-          valid: health?.valid
+          valid: health?.valid,
         });
         logDebug("TripChatbot", "LongCat not available", health);
       }
@@ -329,23 +395,29 @@ Which assistant would you like to chat with? 😊`,
     // Build conversation context with recent messages (last 6 for context)
     const recentMessages = messages
       .slice(-6)
-      .filter(msg => msg.role !== 'system')
-      .map(msg => `${msg.role === 'user' ? 'Traveler' : 'Rover'}: ${msg.content}`)
-      .join('\n\n');
+      .filter((msg) => msg.role !== "system")
+      .map(
+        (msg) => `${msg.role === "user" ? "Traveler" : "Rover"}: ${msg.content}`
+      )
+      .join("\n\n");
 
-    const systemPrompt = `You are Rover, a friendly AI travel assistant for TravelRover helping plan a trip to ${tripContext.destination}.
+    const systemPrompt = `You are Rover, a friendly AI travel assistant for TravelRover helping plan a trip to ${
+      tripContext.destination
+    }.
 
 TRIP CONTEXT:
 🌍 Destination: ${tripContext.destination}
 📅 Duration: ${tripContext.duration} days
 👥 Travelers: ${tripContext.travelers}
 💰 Budget: ${tripContext.budget}
-${tripContext.hasItinerary ? '✅ Itinerary planned' : '📝 No itinerary yet'}
-${tripContext.hasHotels ? '✅ Hotels arranged' : '🏨 No hotels yet'}
+${tripContext.hasItinerary ? "✅ Itinerary planned" : "📝 No itinerary yet"}
+${tripContext.hasHotels ? "✅ Hotels arranged" : "🏨 No hotels yet"}
 
 INSTRUCTIONS: Answer naturally and conversationally. Keep responses concise (2-4 paragraphs). Use emojis appropriately. Consider the conversation history below.
 
-${recentMessages ? `RECENT CONVERSATION:\n${recentMessages}\n\n` : ''}CURRENT QUESTION: ${userMessage}
+${
+  recentMessages ? `RECENT CONVERSATION:\n${recentMessages}\n\n` : ""
+}CURRENT QUESTION: ${userMessage}
 
 YOUR RESPONSE:`;
 
@@ -358,9 +430,9 @@ YOUR RESPONSE:`;
 
     const response = result.response;
     let responseText = response.text();
-    
+
     // Handle backend responses with _raw_text field (when JSON parsing fails)
-    if (typeof responseText === 'string') {
+    if (typeof responseText === "string") {
       try {
         const parsed = JSON.parse(responseText);
         if (parsed._raw_text && parsed._is_raw) {
@@ -370,7 +442,7 @@ YOUR RESPONSE:`;
         // Not JSON, use as-is
       }
     }
-    
+
     return (
       responseText ||
       "I couldn't generate a response right now. Please try again! 😊"
@@ -422,9 +494,9 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
     });
 
     let content = result.content;
-    
+
     // Handle responses with _raw_text field (when JSON parsing fails)
-    if (typeof content === 'string') {
+    if (typeof content === "string") {
       try {
         const parsed = JSON.parse(content);
         if (parsed._raw_text && parsed._is_raw) {
@@ -433,10 +505,14 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
       } catch (e) {
         // Not JSON, use as-is
       }
-    } else if (typeof content === 'object' && content._raw_text && content._is_raw) {
+    } else if (
+      typeof content === "object" &&
+      content._raw_text &&
+      content._is_raw
+    ) {
       content = content._raw_text;
     }
-    
+
     return content;
   };
 
@@ -492,12 +568,15 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
       } else {
         // ✅ IMPROVED: Notify user if Eva was selected but unavailable
         if (aiProvider === "longcat" && !isLongCatOnline) {
-          toast.info("Eva Thinking Mode is currently unavailable. Rover is helping you instead! 🚀", {
-            duration: 4000,
-          });
+          toast.info(
+            "Eva Thinking Mode is currently unavailable. Rover is helping you instead! 🚀",
+            {
+              duration: 4000,
+            }
+          );
           logDebug("TripChatbot", "Fallback to Gemini: LongCat offline");
         }
-        
+
         // Use Gemini (default)
         assistantMessage = await sendGeminiMessage(userMessage, tripContext);
       }
@@ -514,9 +593,12 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
       setMessages((prev) => {
         // Prevent duplicate messages (check last message)
         const lastMsg = prev[prev.length - 1];
-        if (lastMsg && lastMsg.content === assistantMessage && 
-            lastMsg.role === "assistant" && 
-            Date.now() - lastMsg.id < 1000) {
+        if (
+          lastMsg &&
+          lastMsg.content === assistantMessage &&
+          lastMsg.role === "assistant" &&
+          Date.now() - lastMsg.id < 1000
+        ) {
           logDebug("TripChatbot", "Duplicate message detected, skipping");
           return prev;
         }
@@ -594,7 +676,7 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
         duration: 5000,
       });
 
-      // Re-check connection status after network errors
+      // Re-check connection status after network errors with retry logic
       if (
         error.message?.includes("Backend server not running") ||
         error.message?.includes("ERR_CONNECTION_REFUSED") ||
@@ -602,7 +684,11 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
         error.message?.includes("Chat session not initialized") ||
         error.code === "ERR_NETWORK"
       ) {
-        setTimeout(() => checkBackendHealth(), 1000);
+        setRetryCount(0);
+        if (retryTimeoutRef.current) {
+          clearTimeout(retryTimeoutRef.current);
+        }
+        checkBackendHealthWithRetry(0);
 
         // Reinitialize chat session if it was lost
         if (error.message?.includes("Chat session not initialized")) {
@@ -705,19 +791,29 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
               aiProvider === "gemini"
                 ? "bg-white dark:bg-slate-800 shadow-sm"
                 : "hover:bg-gray-100 dark:hover:bg-slate-800"
-            } ${isBackendOnline === false ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}
+            } ${
+              isBackendOnline === false
+                ? "opacity-30 cursor-not-allowed"
+                : "cursor-pointer"
+            }`}
             title="Rover - Quick Answers"
           >
-            <Zap className={`h-4 w-4 ${
-              aiProvider === "gemini" ? "text-sky-600 dark:text-sky-400" : "text-gray-400"
-            }`} />
+            <Zap
+              className={`h-4 w-4 ${
+                aiProvider === "gemini"
+                  ? "text-sky-600 dark:text-sky-400"
+                  : "text-gray-400"
+              }`}
+            />
           </button>
           <button
             onClick={() => {
               if (isLongCatOnline) {
                 setAiProvider("longcat");
               } else {
-                toast.info("Eva is currently unavailable. Using Rover instead.");
+                toast.info(
+                  "Eva is currently unavailable. Using Rover instead."
+                );
               }
             }}
             disabled={!isLongCatOnline}
@@ -728,17 +824,23 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
                 ? "hover:bg-gray-100 dark:hover:bg-slate-800 cursor-pointer"
                 : "opacity-30 cursor-not-allowed"
             }`}
-            title={isLongCatOnline ? "Eva - Deep Analysis" : "Eva - Unavailable"}
+            title={
+              isLongCatOnline ? "Eva - Deep Analysis" : "Eva - Unavailable"
+            }
           >
-            <Brain className={`h-4 w-4 ${
-              aiProvider === "longcat" ? "text-purple-600 dark:text-purple-400" : "text-gray-400"
-            }`} />
+            <Brain
+              className={`h-4 w-4 ${
+                aiProvider === "longcat"
+                  ? "text-purple-600 dark:text-purple-400"
+                  : "text-gray-400"
+              }`}
+            />
           </button>
         </div>
       </div>
 
       {/* Messages Container - Minimalist Clean Design */}
-      <div 
+      <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto px-6 py-6 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent bg-white dark:bg-slate-950 relative"
@@ -825,7 +927,11 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
             </div>
 
             {/* Message Bubble - Clean Minimal Design */}
-            <div className={`flex flex-col max-w-[75%] sm:max-w-[85%] ${message.role === "user" ? "items-end" : "items-start"}`}>
+            <div
+              className={`flex flex-col max-w-[75%] sm:max-w-[85%] ${
+                message.role === "user" ? "items-end" : "items-start"
+              }`}
+            >
               <div
                 className={`px-4 py-2.5 rounded-2xl ${
                   message.role === "user"
@@ -836,8 +942,8 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
                 }`}
               >
                 <div className="text-sm">
-                  <MarkdownMessage 
-                    content={message.content} 
+                  <MarkdownMessage
+                    content={message.content}
                     isUser={message.role === "user"}
                   />
                 </div>
@@ -980,19 +1086,25 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
                   <Zap className="h-4 w-4 text-sky-600 dark:text-sky-400 flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className={`text-xs font-semibold mb-0.5 ${
-                    isLongCatOnline
-                      ? "text-purple-900 dark:text-purple-100"
-                      : "text-sky-900 dark:text-sky-100"
-                  }`}>
+                  <p
+                    className={`text-xs font-semibold mb-0.5 ${
+                      isLongCatOnline
+                        ? "text-purple-900 dark:text-purple-100"
+                        : "text-sky-900 dark:text-sky-100"
+                    }`}
+                  >
                     Compare hotels {!isLongCatOnline && "(via Rover)"}
                   </p>
-                  <p className={`text-xs line-clamp-2 ${
-                    isLongCatOnline
-                      ? "text-purple-700 dark:text-purple-300"
-                      : "text-sky-700 dark:text-sky-300"
-                  }`}>
-                    {isLongCatOnline ? "Deep analysis & recommendations" : "Analysis & recommendations"}
+                  <p
+                    className={`text-xs line-clamp-2 ${
+                      isLongCatOnline
+                        ? "text-purple-700 dark:text-purple-300"
+                        : "text-sky-700 dark:text-sky-300"
+                    }`}
+                  >
+                    {isLongCatOnline
+                      ? "Deep analysis & recommendations"
+                      : "Analysis & recommendations"}
                   </p>
                 </div>
               </button>
@@ -1047,19 +1159,25 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
                   <Zap className="h-4 w-4 text-sky-600 dark:text-sky-400 flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className={`text-xs font-semibold mb-0.5 ${
-                    isLongCatOnline
-                      ? "text-purple-900 dark:text-purple-100"
-                      : "text-sky-900 dark:text-sky-100"
-                  }`}>
+                  <p
+                    className={`text-xs font-semibold mb-0.5 ${
+                      isLongCatOnline
+                        ? "text-purple-900 dark:text-purple-100"
+                        : "text-sky-900 dark:text-sky-100"
+                    }`}
+                  >
                     Optimize budget {!isLongCatOnline && "(via Rover)"}
                   </p>
-                  <p className={`text-xs line-clamp-2 ${
-                    isLongCatOnline
-                      ? "text-purple-700 dark:text-purple-300"
-                      : "text-sky-700 dark:text-sky-300"
-                  }`}>
-                    {isLongCatOnline ? "Strategic planning & allocation" : "Planning & allocation"}
+                  <p
+                    className={`text-xs line-clamp-2 ${
+                      isLongCatOnline
+                        ? "text-purple-700 dark:text-purple-300"
+                        : "text-sky-700 dark:text-sky-300"
+                    }`}
+                  >
+                    {isLongCatOnline
+                      ? "Strategic planning & allocation"
+                      : "Planning & allocation"}
                   </p>
                 </div>
               </button>
@@ -1068,7 +1186,7 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
         )}
 
         <div ref={messagesEndRef} />
-        
+
         {/* Scroll to Bottom Button - Centered at bottom */}
         {showScrollButton && (
           <button
@@ -1077,11 +1195,11 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
             aria-label="Scroll to bottom"
           >
             <ArrowDown className="h-5 w-5 text-sky-600 dark:text-sky-400 group-hover:translate-y-0.5 transition-transform" />
-            
+
             {/* Unread message badge */}
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-in zoom-in duration-200">
-                {unreadCount > 9 ? '9+' : unreadCount}
+                {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </button>
@@ -1095,18 +1213,24 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
           suggestedProvider !== aiProvider &&
           input.trim().length > 10 &&
           (suggestedProvider !== "longcat" || isLongCatOnline) && (
-            <div className={`mb-3 p-3 rounded-lg border flex items-center gap-3 ${
-              suggestedProvider === "longcat"
-                ? "bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900"
-                : "bg-sky-50 dark:bg-sky-950/20 border-sky-200 dark:border-sky-900"
-            }`}>
+            <div
+              className={`mb-3 p-3 rounded-lg border flex items-center gap-3 ${
+                suggestedProvider === "longcat"
+                  ? "bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900"
+                  : "bg-sky-50 dark:bg-sky-950/20 border-sky-200 dark:border-sky-900"
+              }`}
+            >
               {suggestedProvider === "longcat" ? (
                 <Brain className="h-4 w-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
               ) : (
                 <Zap className="h-4 w-4 text-sky-600 dark:text-sky-400 flex-shrink-0" />
               )}
               <p className="flex-1 text-xs text-gray-600 dark:text-gray-400">
-                Try <strong>{suggestedProvider === "longcat" ? "Eva" : "Rover"}</strong> for better results
+                Try{" "}
+                <strong>
+                  {suggestedProvider === "longcat" ? "Eva" : "Rover"}
+                </strong>{" "}
+                for better results
               </p>
               <button
                 onClick={() => setAiProvider(suggestedProvider)}
@@ -1151,12 +1275,22 @@ BE: Conversational, friendly, helpful - like a travel buddy! Keep responses 2-4 
         {/* Connection Status - Minimal */}
         {isBackendOnline === false && (
           <div className="mt-3 flex items-center justify-center gap-2 text-xs text-amber-600 dark:text-amber-400">
-            <span>Connection unavailable</span>
+            <span>
+              {retryCount > 0
+                ? `Reconnecting... (${retryCount}/5)`
+                : "Connection unavailable"}
+            </span>
             <button
-              onClick={checkBackendHealth}
+              onClick={() => {
+                setRetryCount(0);
+                if (retryTimeoutRef.current) {
+                  clearTimeout(retryTimeoutRef.current);
+                }
+                checkBackendHealthWithRetry(0);
+              }}
               className="font-medium underline cursor-pointer hover:text-amber-700 dark:hover:text-amber-300"
             >
-              Retry
+              Retry Now
             </button>
           </div>
         )}

@@ -165,9 +165,9 @@ function HotelCardItem({ hotel, onBookHotel }) {
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 shadow-sm hover:shadow-xl border border-gray-100 dark:border-slate-800 group">
-      <div className="flex gap-0 min-h-[180px] items-stretch">
-        {/* Hotel Image - Left Sidebar */}
-        <div className="w-36 sm:w-44 self-stretch flex-shrink-0 relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-800">
+      <div className="flex flex-col sm:flex-row gap-0 min-h-0 sm:min-h-[180px] items-stretch">
+        {/* Hotel Image - Top on mobile, Left on desktop */}
+        <div className="w-full h-48 sm:w-36 md:w-44 sm:h-auto sm:self-stretch flex-shrink-0 relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-800">
           {isLoading ? (
             <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center">
               <div className="w-5 h-5 border-3 border-sky-300 dark:border-sky-700 border-t-sky-600 dark:border-t-sky-400 rounded-full animate-spin"></div>
@@ -197,14 +197,14 @@ function HotelCardItem({ hotel, onBookHotel }) {
         </div>
 
         {/* Hotel Info - Modern Layout */}
-        <div className="flex-1 flex flex-col p-5 min-w-0">
+        <div className="flex-1 flex flex-col p-4 sm:p-5 min-w-0">
           {/* Hotel Name with Inline Rating */}
-          <div className="flex items-start gap-3 mb-2">
+          <div className="flex items-start gap-2 sm:gap-3 mb-2">
             <div className="flex-1 min-w-0">
+              <h4 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg leading-tight mb-1.5">
+                {hotel?.ai_hotel_name || hotel?.name || hotel?.hotelName}
+              </h4>
               <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <h4 className="font-bold text-gray-900 dark:text-white text-base leading-tight">
-                  {hotel?.ai_hotel_name || hotel?.name || hotel?.hotelName}
-                </h4>
                 {hotel?.rating && (
                   <div className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 rounded-md">
                     <span className="text-amber-500 text-sm">⭐</span>
@@ -236,7 +236,7 @@ function HotelCardItem({ hotel, onBookHotel }) {
           </div>
 
           {/* Minimal Badges - Only Verified & Best Price */}
-          <div className="flex items-center gap-2 flex-wrap mb-4">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-3 sm:mb-4">
             {hotel?.qualityTier === 1 && (
               <span
                 className="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2.5 py-1 rounded-md text-xs font-semibold border border-emerald-200 dark:border-emerald-800"
@@ -256,7 +256,7 @@ function HotelCardItem({ hotel, onBookHotel }) {
           </div>
 
           {/* Price + Button - Cleaner Layout */}
-          <div className="flex items-center justify-between gap-4 mt-auto pt-4 border-t border-gray-100 dark:border-slate-800">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mt-auto pt-3 sm:pt-4 border-t border-gray-100 dark:border-slate-800">
             {/* Simplified Price */}
             <div className="flex flex-col">
               {hotel?.priceDisplay ||
@@ -266,7 +266,7 @@ function HotelCardItem({ hotel, onBookHotel }) {
               hotel?.price_range ? (
                 <>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <span className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                       {hotel?.priceDisplay ||
                         hotel?.pricePerNight ||
                         (hotel?.priceNumeric
@@ -315,7 +315,7 @@ function HotelCardItem({ hotel, onBookHotel }) {
                     return "bg-sky-600 hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600";
                   }
                   return "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600";
-                })()} text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 shadow-sm hover:shadow-md cursor-pointer`}
+                })()} text-white px-4 sm:px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md cursor-pointer w-full sm:w-auto min-w-[140px]`}
                 title={(() => {
                   const hasAgodaId =
                     hotel?.hotel_id && /^\d+$/.test(String(hotel.hotel_id));
