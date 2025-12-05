@@ -189,7 +189,8 @@ CORS_ALLOW_CREDENTIALS = True
 
 # Security settings for production
 if not DEBUG:
-    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
+    # Railway proxy handles HTTPS - disable Django's SSL redirect to prevent loops
+    SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
