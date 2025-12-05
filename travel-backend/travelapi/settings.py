@@ -86,11 +86,12 @@ WSGI_APPLICATION = 'travelapi.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 # Use PostgreSQL in production (Railway), SQLite in development
-if config('DATABASE_URL', default=''):
+DATABASE_URL = config('DATABASE_URL', default='')
+if DATABASE_URL:
     # Production: PostgreSQL from Railway
     DATABASES = {
         'default': dj_database_url.config(
-            default=config('DATABASE_URL'),
+            default=DATABASE_URL,
             conn_max_age=600,
             conn_health_checks=True,
         )
