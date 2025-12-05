@@ -133,7 +133,7 @@ export const fetchPlacePhoto = async (photoReference) => {
   try {
     // Use backend proxy to bypass CORS restrictions
     // ✅ OPTIMIZED: Reduced to 400x400 for faster loading
-    const proxyUrl = `http://localhost:8000/api/langgraph/photo-proxy/?photo_ref=${encodeURIComponent(
+    const proxyUrl = `${BACKEND_BASE_URL}/photo-proxy/?photo_ref=${encodeURIComponent(
       photoReference
     )}&maxHeightPx=400&maxWidthPx=400`;
 

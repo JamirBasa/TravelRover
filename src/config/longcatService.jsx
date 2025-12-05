@@ -15,7 +15,8 @@
 
 import { logDebug, logError } from "@/utils/productionLogger";
 
-const BASE_URL = "http://localhost:8000/api/langgraph/longcat";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+const BASE_URL = `${API_BASE}/langgraph/longcat`;
 
 export class LongCatService {
   /**

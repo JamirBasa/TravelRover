@@ -8,7 +8,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { imageCache, apiCache } from '../utils/indexedDBCache';
 
-const BACKEND_BASE_URL = 'http://localhost:8000/api/langgraph';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const BACKEND_BASE_URL = `${API_BASE}/langgraph`;
 const PLACES_SEARCH_URL = `${BACKEND_BASE_URL}/places-search/`;
 
 // ==========================================
