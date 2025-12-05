@@ -165,12 +165,8 @@ class ProductionLogger {
       console.error('Context:', structuredError.context);
       console.error('Stack:', structuredError.stack);
       console.groupEnd();
-    } else if (IS_PRODUCTION) {
-      // In production, log minimal info to console
-      console.error(
-        `[${structuredError.severity}] ${structuredError.category}: ${structuredError.message}`
-      );
     }
+    // ✅ PRODUCTION: No console logging - keeps deployed site clean
 
     // Send to error tracking service in production
     if (IS_PRODUCTION) {
@@ -290,14 +286,9 @@ class ProductionLogger {
     //   // Fail silently to prevent infinite error loops
     // });
 
-    // Placeholder: Log to console in production for now
-    if (IS_PRODUCTION) {
-      console.log('📊 Error tracked:', {
-        message: payload.message,
-        category: payload.category,
-        severity: payload.severity,
-      });
-    }
+    // ✅ PRODUCTION: Silent error tracking
+    // Errors are stored in memory and can be sent to external service
+    // No console output in production to keep deployed site clean
   }
 
   /**
