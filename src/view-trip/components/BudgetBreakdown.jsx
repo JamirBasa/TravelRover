@@ -52,7 +52,7 @@ const BudgetBreakdown = ({ tripData }) => {
     };
   }, [tripData]);
 
-  // 🔍 DIAGNOSTIC: Log trip-level budget data
+  // 🔍 DIAGNOSTIC: Log trip-level budget data + check for flight double-counting
   React.useEffect(() => {
     if (budgetCompliance || dailyCosts.length > 0) {
       console.group("🔍 Trip-Level Budget Breakdown Data");
@@ -61,6 +61,43 @@ const BudgetBreakdown = ({ tripData }) => {
       console.log("Grand Total:", grandTotal);
       console.log("Missing Prices:", missingPrices);
       console.log("Pricing Notes:", pricingNotes);
+
+      // 🚨 CHECK: Are flight costs being added to dailyCosts when they shouldn't be?
+      if (dailyCosts.length > 0 && dailyCosts[0]?.breakdown) {
+        const day1 = dailyCosts[0];
+        console.warn(
+          "🚨 Day 1 Breakdown Analysis (checking for flight double-counting):"
+        );
+        console.log("Day 1 activities:", day1.breakdown);
+
+        // Check if any activity mentions "flight", "airport", "arrival"
+        const suspiciousActivities = Object.entries(day1.breakdown).filter(
+          ([key, value]) => {
+            const keyLower = key.toLowerCase();
+            return (
+              keyLower.includes("flight") ||
+              keyLower.includes("airport") ||
+              keyLower.includes("arrival") ||
+              keyLower.includes("departure")
+            );
+          }
+        );
+
+        if (suspiciousActivities.length > 0) {
+          console.error(
+            "❌ POTENTIAL ISSUE: Flight-related costs found in dailyCosts!"
+          );
+          console.error(
+            "These should be ₱0 since flights are booked separately:"
+          );
+          suspiciousActivities.forEach(([key, value]) => {
+            console.error(`  - ${key}: ₱${value}`);
+          });
+        } else {
+          console.log("✅ No flight costs in dailyCosts (correct)");
+        }
+      }
+
       console.groupEnd();
     }
   }, [budgetCompliance, dailyCosts, grandTotal, missingPrices, pricingNotes]);
@@ -305,12 +342,40 @@ const BudgetBreakdown = ({ tripData }) => {
 
                 const travelers =
                   flight.travelers || tripData?.userSelection?.travelers || 1;
+
+                // 🔍 DEBUG: Log flight pricing data to diagnose high costs
+                console.group(`🔍 Flight ${index + 1} Pricing Breakdown`);
+                console.log("Flight data received:", {
+                  name: flight.name,
+                  total_for_group_numeric: flight.total_for_group_numeric,
+                  total_for_group: flight.total_for_group,
+                  numeric_price: flight.numeric_price,
+                  price_per_person_numeric: flight.price_per_person_numeric,
+                  price: flight.price,
+                  travelers: flight.travelers,
+                  userSelection_travelers: tripData?.userSelection?.travelers,
+                });
+
                 const totalCost =
                   flight.total_for_group_numeric ||
                   parsePrice(flight.total_for_group) ||
                   flight.numeric_price * travelers ||
                   0;
                 const perPerson = totalCost / travelers;
+
+                console.log("Calculated values:", {
+                  travelers,
+                  totalCost,
+                  perPerson,
+                  usedField: flight.total_for_group_numeric
+                    ? "total_for_group_numeric"
+                    : flight.total_for_group
+                    ? "total_for_group"
+                    : flight.numeric_price
+                    ? "numeric_price * travelers"
+                    : "fallback",
+                });
+                console.groupEnd();
 
                 return (
                   <div

@@ -41,5 +41,21 @@
         }
       ]
     }
-  ]
+  ],
+  "env": {
+    "VITE_GOOGLE_PLACES_API_KEY": "@vite_google_places_api_key",
+    "VITE_GOOGLE_MAPS_API_KEY": "@vite_google_maps_api_key",
+    "VITE_FIREBASE_API_KEY": "@vite_firebase_api_key",
+    "VITE_FIREBASE_AUTH_DOMAIN": "@vite_firebase_auth_domain",
+    "VITE_FIREBASE_PROJECT_ID": "@vite_firebase_project_id",
+    "VITE_FIREBASE_STORAGE_BUCKET": "@vite_firebase_storage_bucket",
+    "VITE_FIREBASE_MESSAGING_SENDER_ID": "@vite_firebase_messaging_sender_id",
+    "VITE_FIREBASE_APP_ID": "@vite_firebase_app_id",
+    "VITE_FIREBASE_MEASUREMENT_ID": "@vite_firebase_measurement_id",
+    "VITE_GOOGLE_AUTH_CLIENT_ID": "@vite_google_auth_client_id",
+    "VITE_API_BASE_URL": "@vite_api_base_url",
+    "VITE_USE_GEMINI_PROXY": "true",
+    "VITE_OPENWEATHER_API_KEY": "@vite_openweather_api_key",
+    "VITE_UNSPLASH_ACCESS_KEY": "@vite_unsplash_access_key"
+  }
 }
