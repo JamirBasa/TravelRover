@@ -19,22 +19,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { initializeCacheVersion } from "./utils/cacheVersionManager.js";
 
-// ✅ PRODUCTION: Disable all console logs to keep deployed site clean
-if (import.meta.env.PROD) {
-  const noop = () => {};
-  console.log = noop;
-  console.debug = noop;
-  console.info = noop;
-  console.warn = noop;
-  // Keep critical errors only
-  const originalError = console.error;
-  console.error = (...args) => {
-    // Only show critical errors in production
-    if (args[0]?.toString().includes('Critical') || args[0]?.toString().includes('Fatal')) {
-      originalError.apply(console, args);
-    }
-  };
-}
+// ✅ Console logs are disabled in production via index.html (runs before all scripts)
 
 // ==========================================
 // React Query Configuration - Modern Cache Strategy

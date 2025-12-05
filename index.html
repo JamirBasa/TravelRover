@@ -5,6 +5,27 @@
     <link rel="icon" type="image/svg+xml" href="/logo-light.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Travel Rover</title>
+    <!-- ✅ PRODUCTION: Disable console logs BEFORE any scripts load -->
+    <script>
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        // Production environment - disable all console logs
+        const noop = function() {};
+        window.console = {
+          ...window.console,
+          log: noop,
+          debug: noop,
+          info: noop,
+          warn: noop,
+          // Keep error for critical issues only
+          error: function(...args) {
+            // Only show if message contains "Critical" or "Fatal"
+            if (args[0]?.toString().includes('Critical') || args[0]?.toString().includes('Fatal')) {
+              console.error.apply(console, args);
+            }
+          }
+        };
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
