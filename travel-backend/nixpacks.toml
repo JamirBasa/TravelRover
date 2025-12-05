@@ -3,10 +3,16 @@
 nixPkgs = ["python311", "gcc", "postgresql"]
 
 [phases.install]
-cmds = ["pip install --upgrade pip", "pip install -r requirements.txt"]
+cmds = [
+  "pip install --upgrade pip",
+  "pip install -r requirements.txt"
+]
 
 [phases.build]
-cmds = ["python manage.py collectstatic --noinput"]
+cmds = [
+  "mkdir -p logs",
+  "python manage.py collectstatic --noinput --clear"
+]
 
 [start]
-cmd = "gunicorn travelapi.wsgi:application --bind 0.0.0.0:$PORT --workers 3"
+cmd = "python manage.py migrate --noinput && gunicorn travelapi.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 180 --log-level info --access-logfile - --error-logfile -"
