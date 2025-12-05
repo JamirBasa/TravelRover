@@ -1,4 +1,4 @@
-# Nixpacks configuration for Railway
+# Nixpacks configuration for Railway - Updated for deployment fix
 [phases.setup]
 nixPkgs = ["python311", "python311Packages.pip", "gcc", "postgresql"]
 
