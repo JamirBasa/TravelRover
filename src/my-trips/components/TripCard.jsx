@@ -176,7 +176,8 @@ function TripCard({ trip, onDelete }) {
             if (photoReference) {
               // ✅ Use backend proxy for photos
               try {
-                const backendPhotoUrl = `http://localhost:8000/api/langgraph/photo-proxy/?photo_ref=${encodeURIComponent(
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+                const backendPhotoUrl = `${apiBaseUrl}/langgraph/photo-proxy/?photo_ref=${encodeURIComponent(
                   photoReference
                 )}&maxHeightPx=800&maxWidthPx=800`;
 

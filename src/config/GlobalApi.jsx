@@ -1,7 +1,9 @@
 import axios from "axios";
 
 // ✅ Use Django backend proxy instead of direct API calls
-const BACKEND_BASE_URL = "http://localhost:8000/api/langgraph";
+// Use environment variable for production deployment (Railway/Vercel)
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+const BACKEND_BASE_URL = `${API_BASE}/langgraph`;
 const PLACES_SEARCH_URL = `${BACKEND_BASE_URL}/places-search/`;
 
 // ✅ Add caching to prevent duplicate requests

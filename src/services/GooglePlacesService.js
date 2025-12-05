@@ -125,7 +125,8 @@ class GooglePlacesService {
       const searchQuery = location ? `${query} in ${location}` : query;
       
       // ✅ Use backend proxy instead of direct API call
-      const backendUrl = 'http://localhost:8000/api/langgraph/places-search/';
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+      const backendUrl = `${apiBaseUrl}/langgraph/places-search/`;
       
       const response = await fetch(backendUrl, {
         method: 'POST',
