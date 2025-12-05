@@ -2,7 +2,8 @@ import axios from "axios";
 
 // ✅ Use Django backend proxy instead of direct API calls
 // Use environment variable for production deployment (Railway/Vercel)
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 const BACKEND_BASE_URL = `${API_BASE}/langgraph`;
 const PLACES_SEARCH_URL = `${BACKEND_BASE_URL}/places-search/`;
 
@@ -63,13 +64,16 @@ export const GetPlaceDetails = async (data) => {
     const transformedResponse = {
       data: response.data?.data || response.data, // Handle both formats
     };
-    
+
     // ✅ NOTE: Components should access places via: response.data.places (transformed structure)
 
     console.log("🔍 GlobalApi - Raw backend response:", response.data);
     console.log("🔍 GlobalApi - Backend success:", response.data?.success);
     console.log("🔍 GlobalApi - Transformed response:", transformedResponse);
-    console.log("🔍 GlobalApi - Places count:", transformedResponse.data?.places?.length || 0);
+    console.log(
+      "🔍 GlobalApi - Places count:",
+      transformedResponse.data?.places?.length || 0
+    );
 
     // ✅ DEBUG: Log what we got back
     const place = transformedResponse?.data?.places?.[0];
@@ -133,7 +137,10 @@ export const fetchPlacePhoto = async (photoReference) => {
       photoReference
     )}&maxHeightPx=400&maxWidthPx=400`;
 
-    console.log("📸 Fetching photo from proxy:", proxyUrl.substring(0, 100) + "...");
+    console.log(
+      "📸 Fetching photo from proxy:",
+      proxyUrl.substring(0, 100) + "..."
+    );
 
     // ✅ INCREASED: 30 second timeout to match backend timeout (30s)
     // Backend now handles large photos (87KB-100KB) with SSL retries
@@ -158,10 +165,13 @@ export const fetchPlacePhoto = async (photoReference) => {
     const blob = await response.blob();
     const blobUrl = URL.createObjectURL(blob);
 
-    console.log("✅ Photo blob created successfully:", blobUrl.substring(0, 50) + "...");
+    console.log(
+      "✅ Photo blob created successfully:",
+      blobUrl.substring(0, 50) + "..."
+    );
     return blobUrl;
   } catch (error) {
-    if (error.name === 'AbortError') {
+    if (error.name === "AbortError") {
       console.error("❌ Photo fetch timeout after 30 seconds");
       throw new Error("Photo fetch timeout");
     }

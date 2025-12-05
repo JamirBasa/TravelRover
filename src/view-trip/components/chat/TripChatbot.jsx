@@ -261,7 +261,9 @@ Which assistant would you like to chat with? 😊`,
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout (health endpoint validates API key)
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'}/langgraph/gemini/health/`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api"
+        }/langgraph/gemini/health/`,
         {
           method: "GET",
           signal: controller.signal,
