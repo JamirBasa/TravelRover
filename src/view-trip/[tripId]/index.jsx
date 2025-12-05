@@ -277,7 +277,17 @@ function ViewTrip() {
     const loadingToast = toast.loading("Generating your PDF itinerary...");
 
     try {
-      const result = await generateTripPDF(trip);
+      // ✅ Use setTimeout to defer PDF generation and allow toast to render
+      const result = await new Promise((resolve) => {
+        setTimeout(() => {
+          try {
+            const pdfResult = generateTripPDF(trip);
+            resolve(pdfResult);
+          } catch (err) {
+            resolve({ success: false, error: err.message });
+          }
+        }, 100); // Small delay to let UI update
+      });
 
       toast.dismiss(loadingToast);
 
