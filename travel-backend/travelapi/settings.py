@@ -86,16 +86,25 @@ WSGI_APPLICATION = 'travelapi.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 # Use PostgreSQL in production (Railway), SQLite in development
-DATABASE_URL = config('DATABASE_URL', default='')
-if DATABASE_URL:
+DATABASE_URL = config('DATABASE_URL', default=None)
+if DATABASE_URL and DATABASE_URL.strip():
     # Production: PostgreSQL from Railway
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
-    }
+    try:
+        DATABASES = {
+            'default': dj_database_url.parse(
+                DATABASE_URL,
+                conn_max_age=600,
+                conn_health_checks=True,
+            )
+        }
+    except ValueError:
+        # Fallback to SQLite if DATABASE_URL is invalid
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
 else:
     # Development: SQLite
     DATABASES = {
