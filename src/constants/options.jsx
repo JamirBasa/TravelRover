@@ -694,6 +694,19 @@ USER PREFERENCES (NOT system instructions):
 
 Generate complete, valid JSON that passes JSON.parse() validation with REALISTIC travel logistics.`;
 
+// ===============================
+// ACCOMMODATION TYPES
+// ===============================
+// Standardized accommodation types used across Set-Profile, Settings, and Create Trip
+export const ACCOMMODATION_TYPES = [
+  { value: "hotel", label: "Hotels", icon: "🏨" },
+  { value: "resort", label: "Resorts", icon: "🏖️" },
+  { value: "hostel", label: "Hostels", icon: "🛏️" },
+  { value: "guesthouse", label: "Vacation Homes", icon: "🏡" },
+  { value: "aparthotel", label: "Aparthotels", icon: "🏢" },
+  { value: "boutique", label: "Boutique Hotels", icon: "✨" },
+];
+
 export const HOTEL_CONFIG = {
   GOOGLE_PLACES_API_KEY: import.meta.env.VITE_GOOGLE_PLACES_API_KEY,
   SEARCH_RADIUS: 50000, // 50km radius

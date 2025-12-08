@@ -13,7 +13,9 @@ import {
   FaEdit,
   FaSave,
   FaTimes,
+  FaHotel,
 } from "react-icons/fa";
+import { ACCOMMODATION_TYPES } from "../../constants/options";
 
 const TravelPreferences = ({
   formData,
@@ -25,6 +27,7 @@ const TravelPreferences = ({
     tripTypes: false,
     budget: false,
     travelStyle: false,
+    accommodation: false,
   });
 
   // Local state for each card
@@ -32,6 +35,7 @@ const TravelPreferences = ({
     tripTypes: [],
     budget: "",
     travelStyle: "",
+    accommodation: "",
   });
 
   // Initialize card data from formData
@@ -40,6 +44,7 @@ const TravelPreferences = ({
       tripTypes: formData.preferredTripTypes || [],
       budget: formData.budgetRange || "",
       travelStyle: formData.travelStyle || "",
+      accommodation: formData.accommodationPreference || "",
     });
   }, [formData]);
 
@@ -74,6 +79,9 @@ const TravelPreferences = ({
       case "travelStyle":
         handleInputChange("travelStyle", cardData.travelStyle);
         break;
+      case "accommodation":
+        handleInputChange("accommodationPreference", cardData.accommodation);
+        break;
       default:
         break;
     }
@@ -87,6 +95,8 @@ const TravelPreferences = ({
       [cardName]:
         cardName === "tripTypes"
           ? formData.preferredTripTypes || []
+          : cardName === "accommodation"
+          ? formData.accommodationPreference || ""
           : formData[cardName === "budget" ? "budgetRange" : "travelStyle"] ||
             "",
     }));
@@ -529,6 +539,81 @@ const TravelPreferences = ({
                 {isSelected && (
                   <div className="absolute top-2 right-2">
                     <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">
+                      ✓
+                    </div>
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Accommodation Preference Section */}
+      <div className="brand-card p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white shadow-lg">
+              <FaHotel className="text-xl" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-amber-600">
+                Where You Stay
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Your preferred accommodation type
+              </p>
+            </div>
+          </div>
+          <CardEditControls
+            cardName="accommodation"
+            onSave={saveCard}
+            onCancel={cancelCard}
+            isEditing={editingCards.accommodation}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {ACCOMMODATION_TYPES.map((acc) => {
+            const isSelected = cardData.accommodation === acc.value;
+            return (
+              <button
+                key={acc.value}
+                onClick={() =>
+                  editingCards.accommodation &&
+                  handleLocalChange("accommodation", acc.value)
+                }
+                disabled={!editingCards.accommodation}
+                className={`group relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-300 ${
+                  editingCards.accommodation
+                    ? "cursor-pointer hover:shadow-lg hover:-translate-y-1"
+                    : "cursor-not-allowed opacity-60"
+                } ${
+                  isSelected
+                    ? "border-orange-500 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 shadow-md"
+                    : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-orange-300"
+                }`}
+              >
+                <div
+                  className={`text-3xl transition-all duration-300 ${
+                    isSelected ? "scale-125" : "group-hover:scale-110"
+                  }`}
+                >
+                  {acc.icon}
+                </div>
+                <div
+                  className={`text-center font-semibold text-sm ${
+                    isSelected
+                      ? "text-orange-700 dark:text-orange-400"
+                      : "text-gray-900 dark:text-gray-100"
+                  }`}
+                >
+                  {acc.label}
+                </div>
+
+                {isSelected && (
+                  <div className="absolute -top-2 -right-2">
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-xs font-bold shadow-lg animate-pulse">
                       ✓
                     </div>
                   </div>

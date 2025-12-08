@@ -266,14 +266,7 @@ const TravelStyleStep = ({
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {[
-                { value: "hotel", label: "Hotel", icon: "🏨" },
-                { value: "resort", label: "Resort", icon: "🏖️" },
-                { value: "hostel", label: "Hostel", icon: "🛏️" },
-                { value: "vacation-rental", label: "Vacation Rental", icon: "🏠" },
-                { value: "boutique", label: "Boutique", icon: "✨" },
-                { value: "no-preference", label: "No Preference", icon: "🔄" },
-              ].map((acc) => {
+              {ACCOMMODATION_TYPES.map((acc) => {
                 const isSelected = profileData.accommodationPreference === acc.value;
                 return (
                   <div

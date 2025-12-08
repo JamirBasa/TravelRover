@@ -159,6 +159,15 @@ export class UserProfileService {
       return currentHotelData;
     }
 
+    // Map legacy values to new standardized values
+    const accommodationMapping = {
+      'vacation-rental': 'guesthouse',
+      'no-preference': null, // null = no auto-populate, let user choose
+    };
+
+    const mappedAccommodation = accommodationMapping[userProfile.accommodationPreference] 
+      ?? userProfile.accommodationPreference;
+
     const budgetMapping = {
       'budget': 1,
       'budget-friendly': 1,
@@ -172,8 +181,8 @@ export class UserProfileService {
 
     return {
       ...currentHotelData,
-      ...(userProfile.accommodationPreference && {
-        preferredType: userProfile.accommodationPreference,
+      ...(mappedAccommodation && {
+        preferredType: mappedAccommodation,
       }),
       ...(userProfile.budgetRange && {
         budgetLevel: budgetMapping[userProfile.budgetRange?.toLowerCase()] || 2,

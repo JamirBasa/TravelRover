@@ -12,6 +12,7 @@ import {
   FaInfoCircle,
   FaExclamationTriangle,
 } from "react-icons/fa";
+import { ACCOMMODATION_TYPES } from "../../constants/options";
 import { Input } from "../../components/ui/input";
 import Select from "../../components/ui/select";
 import { UserProfileService } from "../../services/userProfileService";
@@ -184,16 +185,7 @@ const TravelServicesSelector = ({
     return getAirportStatus(airportInfo.origin.code);
   }, [airportInfo?.origin?.code]);
 
-  // Hotel options
-  const accommodationOptions = [
-    { value: "hotel", label: "Hotels", icon: "🏨" },
-    { value: "resort", label: "Resorts", icon: "🏖️" },
-    { value: "hostel", label: "Hostels", icon: "🛏️" },
-    { value: "aparthotel", label: "Aparthotels", icon: "🏢" },
-    { value: "guesthouse", label: "Guesthouses", icon: "🏡" },
-    { value: "boutique", label: "Boutique", icon: "✨" },
-  ];
-
+  // Hotel options - using standardized constant
   const priceRangeOptions = [
     { value: 1, label: "Budget", icon: "💰", desc: "₱500-1.5k/night" },
     { value: 2, label: "Economy", icon: "🏷️", desc: "₱1.5-3.5k/night" },
@@ -1105,10 +1097,10 @@ const TravelServicesSelector = ({
               {/* Accommodation Type - Compact Grid */}
               <div className="animate-fade-in-scale stagger-2">
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Accommodation Type
+                  Where You'd Like to Stay
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {accommodationOptions.map((option) => (
+                  {ACCOMMODATION_TYPES.map((option) => (
                     <button
                       key={option.value}
                       onClick={() =>
