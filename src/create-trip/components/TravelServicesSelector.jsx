@@ -48,25 +48,9 @@ const TravelServicesSelector = ({
   const [transportAnalysis, setTransportAnalysis] = React.useState(null);
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
 
-  // ✅ NEW: Auto-populate flight data if flights are enabled but data is missing
-  React.useEffect(() => {
-    if (
-      flightData.includeFlights &&
-      !flightData.departureCity &&
-      UserProfileService.hasCompleteLocationData(userProfile)
-    ) {
-      console.log(
-        "✈️ Auto-populating flight data for previously enabled flights"
-      );
-      const autoPopulated = UserProfileService.autoPopulateFlightData(
-        userProfile,
-        flightData
-      );
-      if (autoPopulated !== flightData) {
-        onFlightDataChange(autoPopulated);
-      }
-    }
-  }, []); // Run once on mount
+  // ✅ REMOVED: Redundant mount-time auto-populate - parent component (create-trip/index.jsx)
+  // already handles initial auto-populate in checkUserProfile(). Toggle handler below
+  // handles auto-populate when user manually enables flights.
 
   // ✅ NEW: Detect same-city scenario for special handling
   const isSameCity = useMemo(() => {
@@ -561,7 +545,7 @@ const TravelServicesSelector = ({
             onClick={() => {
               if (isSameCity) return; // Prevent toggling for same-city
               const isEnabled = !flightData.includeFlights;
-              onFlightDataChange({
+              const updatedData = {
                 ...flightData,
                 includeFlights: isEnabled,
                 transportAnalysis: transportAnalysis, // ✅ Pass current analysis
@@ -571,7 +555,17 @@ const TravelServicesSelector = ({
                       includeFlights: isEnabled,
                     })
                   : {}),
-              });
+              };
+              
+              // ✅ Log auto-populate action
+              if (isEnabled && updatedData.departureCity) {
+                console.log("✈️ Flight toggle - auto-populated from profile:", {
+                  city: updatedData.departureCity,
+                  region: updatedData.departureRegion,
+                });
+              }
+              
+              onFlightDataChange(updatedData);
             }}
             className={`flex items-center justify-between mb-4 ${
               !isSameCity ? "cursor-pointer group" : ""

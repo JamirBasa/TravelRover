@@ -124,8 +124,8 @@ export class UserProfileService {
    * @returns {Object} Updated flight data
    */
   static autoPopulateFlightData(userProfile, currentFlightData) {
-    // Don't override existing data
-    if (currentFlightData.departureCity || currentFlightData.departureRegionCode) {
+    // Don't override existing meaningful data (check for non-empty strings)
+    if (currentFlightData.departureCity?.trim() || currentFlightData.departureRegionCode?.trim()) {
       return currentFlightData;
     }
 

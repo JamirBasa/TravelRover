@@ -512,7 +512,11 @@ function CreateTrip() {
 
       if (autoPopulatedFlightData !== flightData) {
         setFlightData(autoPopulatedFlightData);
-        console.log("🏠 Auto-populated flight departure from profile");
+        console.log("🏠 Auto-populated flight departure from profile:", {
+          city: autoPopulatedFlightData.departureCity,
+          region: autoPopulatedFlightData.departureRegion,
+          regionCode: autoPopulatedFlightData.departureRegionCode,
+        });
       }
 
       const autoPopulatedHotelData = UserProfileService.autoPopulateHotelData(
