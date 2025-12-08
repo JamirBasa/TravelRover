@@ -1445,7 +1445,11 @@ function CreateTrip() {
             const result = await chatSession.sendMessage(enhancedPrompt, {
               tripDuration: formData.duration,
               ground_transport_context:
-                langGraphResults?.transport_mode?.ground_transport || null,
+                langGraphResults?.transport_mode?.ground_transport ? {
+                  ...langGraphResults.transport_mode.ground_transport,
+                  departure_city: flightData.departureCity || 'Manila',  // ✅ Add departure city
+                  mode: langGraphResults.transport_mode.mode
+                } : null,
             });
             console.log(`✅ [DEBUG] chatSession.sendMessage completed, extracting text...`);
             

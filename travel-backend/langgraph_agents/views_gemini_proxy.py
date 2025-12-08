@@ -198,6 +198,9 @@ Example: "15 minutes by jeepney (₱15)"
      ...
    }
    ❌ NEVER use generic "Check-in at Hotel" - always use EXACT hotel name from hotels[0]
+   ❌ FORBIDDEN: Do NOT mention ANY other hotels in the itinerary for meals/activities
+   ❌ FORBIDDEN: Do NOT create "Hotel Hotel" duplicates (e.g., "RedDoorz Hotel Hotel")
+   ✅ USE: Only the FIRST hotel from your hotels array for ALL hotel-related activities
    
 ✅ Day 2-N (Middle): Morning → Lunch → Afternoon → Dinner → **Return to hotel (8:00 PM)**
 ✅ Last Day: Breakfast → Activity → Hotel Check-out (11:00 AM) → Departure
@@ -286,7 +289,7 @@ Cost Range: {cost_range}
 {'⭐ SCENIC ROUTE - Mention the scenic views in the itinerary!' if gt.get('scenic') else ''}
 
 CRITICAL: Include this ground transport information in Day 1 arrival details!
-- Travel from [user's origin city] to [destination] via {gt.get('primary_mode', 'bus')} ({gt.get('travel_time', 'X hours')}, ₱{cost_min}-{cost_max})
+- Travel from {gt.get('departure_city', 'Manila')} to [destination] via {gt.get('primary_mode', 'bus')} ({gt.get('travel_time', 'X hours')}, ₱{cost_min}-{cost_max})
 - This is the PRIMARY and RECOMMENDED transport method for this route
 
 """

@@ -220,6 +220,8 @@ class FlightSearchView(APIView):
                 'is_complete_price': is_round_trip,    # ✅ NEW: True if price includes all legs
                 'departure': departure_time,
                 'arrival': arrival_time,
+                'departure_airport': departure_airport,  # ✅ FIX: Include full airport object
+                'arrival_airport': arrival_airport,      # ✅ FIX: Include full airport object
                 'duration': duration,
                 'stops': stops,
                 'is_best': is_best,
