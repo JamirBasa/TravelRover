@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Input } from "../../components/ui/input";
 import {
   FaSeedling,
@@ -12,7 +13,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 
-const SafetyEmergency = ({ formData, handleInputChange }) => {
+const SafetyEmergency = ({ formData, handleInputChange, onSave }) => {
   // Card-level edit states (independent of global isEditing)
   const [editingCards, setEditingCards] = useState({
     emergency: false,
@@ -48,7 +49,7 @@ const SafetyEmergency = ({ formData, handleInputChange }) => {
   };
 
   // Save changes for a specific card
-  const saveCard = (cardName) => {
+  const saveCard = async (cardName) => {
     // Update parent formData based on card
     switch (cardName) {
       case "emergency":
@@ -64,6 +65,21 @@ const SafetyEmergency = ({ formData, handleInputChange }) => {
         handleInputChange("bucketListDestinations", cardData.dreams);
         break;
     }
+
+    // Save to Firebase
+    if (onSave) {
+      const success = await onSave();
+      if (success) {
+        const labels = {
+          emergency: "Emergency contact",
+          experience: "Travel experience",
+          mobility: "Mobility needs",
+          dreams: "Bucket list destinations",
+        };
+        toast.success(`${labels[cardName] || "Information"} saved successfully!`);
+      }
+    }
+
     toggleCardEdit(cardName);
   };
 

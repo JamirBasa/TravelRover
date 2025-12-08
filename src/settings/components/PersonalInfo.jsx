@@ -1,5 +1,6 @@
 import { Input } from "../../components/ui/input";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   getRegionsByCountry,
   getCitiesByRegion,
@@ -22,7 +23,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 
-const PersonalInfo = ({ formData, handleInputChange }) => {
+const PersonalInfo = ({ formData, handleInputChange, onSave }) => {
   // Card-level edit state
   const [editingCards, setEditingCards] = useState({
     basic: false,
@@ -84,7 +85,7 @@ const PersonalInfo = ({ formData, handleInputChange }) => {
   };
 
   // Save card changes
-  const saveCard = (cardName) => {
+  const saveCard = async (cardName) => {
     switch (cardName) {
       case "basic": {
         // Sync all basic fields
@@ -135,6 +136,20 @@ const PersonalInfo = ({ formData, handleInputChange }) => {
         break;
       }
     }
+
+    // Save to Firebase
+    if (onSave) {
+      const success = await onSave();
+      if (success) {
+        const labels = {
+          basic: "Personal information",
+          contact: "Contact information",
+          location: "Location information",
+        };
+        toast.success(`${labels[cardName] || "Information"} saved successfully!`);
+      }
+    }
+
     toggleCardEdit(cardName);
   };
 

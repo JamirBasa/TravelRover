@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../config/firebaseConfig";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
@@ -122,6 +122,37 @@ const Settings = () => {
     }));
   };
 
+  const saveToFirebase = async () => {
+    try {
+      const userString = localStorage.getItem("user");
+      if (!userString) {
+        toast.error("Please login first");
+        return false;
+      }
+
+      const user = JSON.parse(userString);
+      if (!user?.email) {
+        toast.error("Invalid user data");
+        return false;
+      }
+
+      const profileDocument = {
+        ...formData,
+        userEmail: user.email,
+        updatedAt: new Date().toISOString(),
+        isProfileComplete: true,
+      };
+
+      await setDoc(doc(db, "UserProfiles", user.email), profileDocument);
+      setProfileData(profileDocument);
+      return true;
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast.error("Failed to save changes: " + error.message);
+      return false;
+    }
+  };
+
   if (loading) {
     return (
       <LoadingSpinner
@@ -232,24 +263,28 @@ const Settings = () => {
                     formData={formData}
                     handleInputChange={handleInputChange}
                     handleMultiSelect={handleMultiSelect}
+                    onSave={saveToFirebase}
                   />
                 )}
                 {activeTab === "food" && (
                   <FoodCulture
                     formData={formData}
                     handleMultiSelect={handleMultiSelect}
+                    onSave={saveToFirebase}
                   />
                 )}
                 {activeTab === "personal" && (
                   <PersonalInfo
                     formData={formData}
                     handleInputChange={handleInputChange}
+                    onSave={saveToFirebase}
                   />
                 )}
                 {activeTab === "safety" && (
                   <SafetyEmergency
                     formData={formData}
                     handleInputChange={handleInputChange}
+                    onSave={saveToFirebase}
                   />
                 )}
               </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   FaMountain,
   FaUmbrellaBeach,
@@ -21,6 +22,7 @@ const TravelPreferences = ({
   formData,
   handleInputChange,
   handleMultiSelect,
+  onSave,
 }) => {
   // Card-level edit states
   const [editingCards, setEditingCards] = useState({
@@ -57,7 +59,7 @@ const TravelPreferences = ({
   };
 
   // Save changes for a specific card
-  const saveCard = (cardName) => {
+  const saveCard = async (cardName) => {
     switch (cardName) {
       case "tripTypes": {
         const currentTypes = formData.preferredTripTypes || [];
@@ -85,6 +87,21 @@ const TravelPreferences = ({
       default:
         break;
     }
+
+    // Save to Firebase
+    if (onSave) {
+      const success = await onSave();
+      if (success) {
+        const labels = {
+          tripTypes: "Trip preferences",
+          budget: "Budget preferences",
+          travelStyle: "Travel style",
+          accommodation: "Accommodation preferences",
+        };
+        toast.success(`${labels[cardName] || "Settings"} saved successfully!`);
+      }
+    }
+
     toggleCardEdit(cardName);
   };
 

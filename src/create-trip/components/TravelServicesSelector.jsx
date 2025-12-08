@@ -1011,12 +1011,29 @@ const TravelServicesSelector = ({
         {/* HOTEL CARD */}
         <div className="brand-card p-5 border-2 border-gray-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-600 transition-all">
           <div
-            onClick={() =>
-              onHotelDataChange({
+            onClick={() => {
+              const isEnabled = !hotelData.includeHotels;
+              const updatedData = {
                 ...hotelData,
-                includeHotels: !hotelData.includeHotels,
-              })
-            }
+                includeHotels: isEnabled,
+                ...(isEnabled
+                  ? UserProfileService.autoPopulateHotelData(userProfile, {
+                      ...hotelData,
+                      includeHotels: isEnabled,
+                    })
+                  : {}),
+              };
+              
+              // ✅ Log auto-populate action
+              if (isEnabled && updatedData.preferredType) {
+                console.log("🏨 Hotel toggle - auto-populated from profile:", {
+                  type: updatedData.preferredType,
+                  budgetLevel: updatedData.budgetLevel,
+                });
+              }
+              
+              onHotelDataChange(updatedData);
+            }}
             className="flex items-center justify-between mb-4 cursor-pointer group"
           >
             <div className="flex items-center gap-3">

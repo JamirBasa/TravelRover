@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   FaUtensils,
   FaHeart,
@@ -8,7 +9,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 
-const FoodCulture = ({ formData, handleMultiSelect }) => {
+const FoodCulture = ({ formData, handleMultiSelect, onSave }) => {
   // Card-level edit states
   const [editingCards, setEditingCards] = useState({
     dietary: false,
@@ -41,7 +42,7 @@ const FoodCulture = ({ formData, handleMultiSelect }) => {
   };
 
   // Save changes for a specific card
-  const saveCard = (cardName) => {
+  const saveCard = async (cardName) => {
     switch (cardName) {
       case "dietary": {
         const currentDietary = formData.dietaryRestrictions || [];
@@ -88,6 +89,20 @@ const FoodCulture = ({ formData, handleMultiSelect }) => {
       default:
         break;
     }
+
+    // Save to Firebase
+    if (onSave) {
+      const success = await onSave();
+      if (success) {
+        const labels = {
+          dietary: "Dietary preferences",
+          cultural: "Cultural preferences",
+          languages: "Language preferences",
+        };
+        toast.success(`${labels[cardName] || "Preferences"} saved successfully!`);
+      }
+    }
+
     toggleCardEdit(cardName);
   };
 
