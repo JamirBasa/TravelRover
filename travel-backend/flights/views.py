@@ -70,7 +70,13 @@ class FlightSearchView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def search_flights_serpapi(self, from_airport, to_airport, departure_date, return_date, adults, trip_type):
-        """Search flights using SerpAPI Google Flights"""
+        """Search flights using SerpAPI Google Flights
+        
+        ⚠️ IMPORTANT: SerpAPI Pricing Behavior
+        - When adults=1: Returns price PER PERSON
+        - When adults>1: Returns TOTAL PRICE for all travelers combined
+        - DO NOT multiply the returned price by number of travelers in downstream code!
+        """
         
         # Prepare search parameters
         params = {
@@ -79,7 +85,7 @@ class FlightSearchView(APIView):
             "arrival_id": to_airport,
             "outbound_date": departure_date,
             "currency": "PHP",
-            "adults": adults,
+            "adults": adults,  # ⚠️ CRITICAL: This affects whether price is per-person or group total
             "api_key": settings.SERPAPI_KEY
         }
         
@@ -154,7 +160,8 @@ class FlightSearchView(APIView):
                 'to': to_airport,
                 'departure': departure_date,
                 'return': return_date,
-                'type': trip_type
+                'type': trip_type,
+                'adults': adults  # ✅ Critical for coordinator pricing logic
             },
             'source': 'serpapi',
             'total_results': len(flights)
