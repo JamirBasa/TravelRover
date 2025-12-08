@@ -87,57 +87,53 @@ class GooglePlacesSearchProxyView(View):
             
             logger.info(f"🔍 Proxying Places search: {text_query}")
             
-            # Make request to Google Places API with SSL verification
-            # Try multiple SSL strategies to handle Windows SSL issues
+            # Make request to Google Places API
+            # For development, disable SSL verification to avoid Windows certificate issues
             response = None
-            ssl_errors = []
             
-            # Strategy 1: Try with certifi (best practice)
-            try:
-                import certifi
-                verify_ssl = certifi.where()
-                logger.info(f"🔐 Trying SSL with certifi")
-                response = requests.post(
-                    self.GOOGLE_PLACES_SEARCH_URL,
-                    headers=headers,
-                    json=request_body,
-                    timeout=10,
-                    verify=verify_ssl
-                )
-                if response.status_code == 200:
-                    logger.info("✅ SSL with certifi succeeded")
-            except Exception as e:
-                ssl_errors.append(f"certifi: {str(e)[:100]}")
-                logger.warning(f"⚠️ SSL with certifi failed: {str(e)[:150]}")
-                response = None
-            
-            # Strategy 2: Last resort - disable SSL verification (dev only)
-            if not response and settings.DEBUG:
+            if settings.DEBUG:
+                # Development mode: Skip SSL verification
                 try:
-                    logger.warning("🔓 Falling back to unverified SSL (development only)")
+                    logger.info("🔓 Development mode: Using unverified SSL")
                     import urllib3
                     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
                     response = requests.post(
                         self.GOOGLE_PLACES_SEARCH_URL,
                         headers=headers,
                         json=request_body,
-                        timeout=10,
+                        timeout=15,
                         verify=False
                     )
-                    if response.status_code == 200:
-                        logger.info("✅ Unverified SSL succeeded (development mode)")
                 except Exception as e:
-                    ssl_errors.append(f"no-verify: {str(e)[:100]}")
-                    logger.error(f"❌ All SSL strategies failed: {ssl_errors}")
+                    logger.error(f"❌ Request failed: {str(e)}")
                     return JsonResponse({
                         'success': False,
-                        'error': f'SSL connection failed: {"; ".join(ssl_errors)}'
+                        'error': f'Connection failed: {str(e)}'
+                    }, status=500)
+            else:
+                # Production mode: Use certifi for SSL
+                try:
+                    import certifi
+                    verify_ssl = certifi.where()
+                    logger.info(f"🔐 Production mode: Using certifi SSL")
+                    response = requests.post(
+                        self.GOOGLE_PLACES_SEARCH_URL,
+                        headers=headers,
+                        json=request_body,
+                        timeout=15,
+                        verify=verify_ssl
+                    )
+                except Exception as e:
+                    logger.error(f"❌ Request failed: {str(e)}")
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'SSL connection failed: {str(e)}'
                     }, status=500)
             
             if not response:
                 return JsonResponse({
                     'success': False,
-                    'error': f'Failed to connect to Places API. SSL errors: {"; ".join(ssl_errors)}'
+                    'error': 'Failed to connect to Places API'
                 }, status=500)
             
             if response.status_code == 200:

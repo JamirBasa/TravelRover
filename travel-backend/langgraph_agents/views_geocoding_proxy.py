@@ -81,57 +81,51 @@ class GoogleGeocodingProxyView(View):
             
             logger.info(f"🔍 Proxying geocoding request: {address}")
             
-            # Make request to Google Geocoding API with SSL verification
-            # Try multiple SSL strategies to handle Windows SSL issues
+            # Make request to Google Geocoding API
+            # For development, disable SSL verification to avoid Windows certificate issues
             response = None
-            ssl_errors = []
             
-            # Strategy 1: Try with certifi (best practice)
-            try:
-                import certifi
-                verify_ssl = certifi.where()
-                logger.info(f"🔐 Trying SSL with certifi: {verify_ssl}")
-                response = requests.get(
-                    self.GOOGLE_GEOCODING_URL,
-                    params=params,
-                    timeout=10,
-                    verify=verify_ssl
-                )
-                if response.status_code == 200:
-                    logger.info("✅ SSL with certifi succeeded")
-            except Exception as e:
-                ssl_errors.append(f"certifi: {str(e)[:100]}")
-                logger.warning(f"⚠️ SSL with certifi failed: {str(e)[:150]}")
-                response = None
-            
-            # Strategy 2: Skip (same as Strategy 1 on most systems)
-            
-            # Strategy 3: Last resort - disable SSL verification (dev only)
-            if not response and settings.DEBUG:
+            if settings.DEBUG:
+                # Development mode: Skip SSL verification
                 try:
-                    logger.warning("🔓 Falling back to unverified SSL (development only)")
+                    logger.info("🔓 Development mode: Using unverified SSL")
                     import urllib3
                     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
                     response = requests.get(
                         self.GOOGLE_GEOCODING_URL,
                         params=params,
-                        timeout=10,
+                        timeout=15,
                         verify=False
                     )
-                    if response.status_code == 200:
-                        logger.info("✅ Unverified SSL succeeded (development mode)")
                 except Exception as e:
-                    ssl_errors.append(f"no-verify: {str(e)[:100]}")
-                    logger.error(f"❌ All SSL strategies failed: {ssl_errors}")
+                    logger.error(f"❌ Request failed: {str(e)}")
                     return JsonResponse({
                         'success': False,
-                        'error': f'SSL connection failed: {"; ".join(ssl_errors)}'
+                        'error': f'Connection failed: {str(e)}'
+                    }, status=500)
+            else:
+                # Production mode: Use certifi for SSL
+                try:
+                    import certifi
+                    verify_ssl = certifi.where()
+                    logger.info(f"🔐 Production mode: Using certifi SSL")
+                    response = requests.get(
+                        self.GOOGLE_GEOCODING_URL,
+                        params=params,
+                        timeout=15,
+                        verify=verify_ssl
+                    )
+                except Exception as e:
+                    logger.error(f"❌ Request failed: {str(e)}")
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'SSL connection failed: {str(e)}'
                     }, status=500)
             
             if not response:
                 return JsonResponse({
                     'success': False,
-                    'error': f'Failed to connect to geocoding API. SSL errors: {"; ".join(ssl_errors)}. Try setting DEBUG=True in Django settings.'
+                    'error': 'Failed to connect to geocoding API'
                 }, status=500)
             
             if response.status_code == 200:
