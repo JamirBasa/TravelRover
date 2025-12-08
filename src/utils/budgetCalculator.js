@@ -588,11 +588,35 @@ export const calculateTotalBudget = (trip) => {
   const travelersNum = typeof travelers === 'number' ? travelers : 
                        typeof travelers === 'string' ? parseInt(travelers) || 1 : 1;
   
+  // 🚨 CRITICAL FIX: If multiple flight options exist, only use the CHEAPEST one for budget calculation
+  // The flights array contains ALL options (different airlines/routes), not selected flights
+  if (Array.isArray(flights) && flights.length > 0) {
+    // Sort by price and take cheapest
+    const sortedFlights = [...flights].sort((a, b) => {
+      const priceA = a.total_for_group_numeric || a.price_numeric || parsePrice(a.price);
+      const priceB = b.total_for_group_numeric || b.price_numeric || parsePrice(b.price);
+      return priceA - priceB;
+    });
+    
+    const cheapestFlight = sortedFlights[0];
+    flights = [cheapestFlight]; // Only use cheapest for budget calculation
+    
+    logDebug('BudgetCalculator', '✅ Selected cheapest flight from options', { 
+      originalCount: sortedFlights.length,
+      selectedFlight: cheapestFlight?.name || 'Unknown',
+      price: cheapestFlight?.total_for_group_numeric || cheapestFlight?.price_numeric || parsePrice(cheapestFlight?.price),
+      allOptions: sortedFlights.map(f => ({ 
+        name: f.name, 
+        price: f.total_for_group_numeric || f.price_numeric || parsePrice(f.price)
+      }))
+    });
+  }
+  
   logDebug('BudgetCalculator', 'Flights data', { 
     count: flights?.length,
     isArray: Array.isArray(flights),
     travelers: travelersNum,
-    note: 'Prices will be multiplied by travelers count'
+    note: 'Using cheapest flight option for budget calculation'
   });
   
   // Pass travelers count to flight cost calculator
