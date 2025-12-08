@@ -1447,27 +1447,37 @@ function CreateTrip() {
               ground_transport_context:
                 langGraphResults?.transport_mode?.ground_transport || null,
             });
+            console.log(`✅ [DEBUG] chatSession.sendMessage completed, extracting text...`);
+            
             const rawResponse = result?.response.text();
+            console.log(`✅ [DEBUG] Extracted raw response (${rawResponse?.length || 0} chars)`);
 
             console.log(
               `🎉 AI Raw Response (Attempt ${attempt}):`,
               rawResponse?.substring(0, 200) + "..."
             );
 
+            console.log(`🔄 [DEBUG] Starting sanitizeJSONString...`);
             const cleanedResponse = sanitizeJSONString(rawResponse);
+            console.log(`✅ [DEBUG] sanitizeJSONString completed (${cleanedResponse?.length || 0} chars)`);
 
             if (!cleanedResponse) {
               throw new Error("Failed to extract valid JSON from AI response");
             }
 
+            console.log(`🔄 [DEBUG] Starting safeJsonParse...`);
             const testParse = safeJsonParse(cleanedResponse);
+            console.log(`✅ [DEBUG] safeJsonParse completed, validating...`);
+            
             const validationError = validateAIResponse(testParse);
+            console.log(`✅ [DEBUG] validateAIResponse completed, error:`, validationError || 'none');
 
             if (validationError) {
               throw new Error(validationError);
             }
 
             // ✅ NEW: Check if itinerary has activities
+            console.log(`🔄 [DEBUG] Checking for activities in itinerary...`);
             const hasActivities = testParse?.itinerary?.some((day) =>
               day?.plan?.some(
                 (activity) =>
@@ -1480,6 +1490,7 @@ function CreateTrip() {
                   !activity.placeName.toLowerCase().includes("flight")
               )
             );
+            console.log(`✅ [DEBUG] hasActivities:`, hasActivities);
 
             if (!hasActivities) {
               console.warn(
@@ -1492,6 +1503,7 @@ function CreateTrip() {
               throw new Error("Generated itinerary contains no activities");
             }
 
+            console.log(`🔄 [DEBUG] Validating budget compliance...`);
             //  AUTO-FIX: Correct grand total if it doesn't match calculated sum
             if (testParse.dailyCosts && Array.isArray(testParse.dailyCosts)) {
               const calculatedGrandTotal = testParse.dailyCosts.reduce(
@@ -1545,8 +1557,15 @@ function CreateTrip() {
               }
             }
 
+            console.log(`🔄 [DEBUG] Running validateBudgetCompliance...`);
             // �💰 Validate budget compliance (after auto-correction)
             const budgetValidation = validateBudgetCompliance(testParse);
+            console.log(`✅ [DEBUG] Budget validation result:`, {
+              isValid: budgetValidation.isValid,
+              errors: budgetValidation.errors?.length || 0,
+              warnings: budgetValidation.warnings?.length || 0
+            });
+            
             if (!budgetValidation.isValid) {
               console.error(
                 "❌ Budget validation failed:",
@@ -1715,6 +1734,14 @@ function CreateTrip() {
           console.log("✅ All pre-save validation checks passed!");
         }
 
+        console.log(`🚀 [DEBUG] Calling SaveAiTrip with:`, {
+          aiResponseLength: aiResponseText?.length || 0,
+          hasFlightResults: !!flightResults,
+          hasHotelResults: !!hotelResults,
+          hasLangGraphResults: !!langGraphResults,
+          budgetAmount
+        });
+        
         SaveAiTrip(
           aiResponseText,
           flightResults,
@@ -1724,6 +1751,7 @@ function CreateTrip() {
         );
       } catch (error) {
         console.error("❌ Trip generation error:", error);
+        console.error("❌ Error stack:", error.stack);
 
         // ✅ Immediately stop all loading states and reset transport analysis
         setLoading(false);
@@ -1878,13 +1906,19 @@ function CreateTrip() {
     langGraphResults = null,
     budgetAmountParam = null
   ) => {
+    console.log(`🚀 [DEBUG] SaveAiTrip called`);
     setLoading(true);
 
     try {
+      console.log(`🔄 [DEBUG] Getting user from localStorage...`);
       const user = JSON.parse(localStorage.getItem("user"));
+      console.log(`✅ [DEBUG] User retrieved:`, !!user);
+      
       const docId = Date.now().toString();
+      console.log(`✅ [DEBUG] Generated docId:`, docId);
 
       const activeServices = getActiveServices(flightData, hotelData);
+      console.log(`✅ [DEBUG] Active services:`, activeServices);
 
       const cleanLangGraphResults = langGraphResults
         ? {
@@ -1916,10 +1950,19 @@ function CreateTrip() {
         : null;
 
       setValidationPhase("parsing"); // 🆕 Track progress for user
+      console.log(`🔄 [DEBUG] Parsing TripData JSON...`);
       let parsedTripData;
       try {
         parsedTripData = JSON.parse(TripData);
+        console.log(`✅ [DEBUG] JSON parse successful:`, {
+          hasTripName: !!parsedTripData.tripName,
+          hasItinerary: !!parsedTripData.itinerary,
+          itineraryDays: parsedTripData.itinerary?.length || 0,
+          hasHotels: !!parsedTripData.hotels,
+          hotelCount: parsedTripData.hotels?.length || 0
+        });
       } catch (e) {
+        console.error("❌ [DEBUG] Initial parse failed:", e.message);
         console.error("Initial parse failed, attempting to clean JSON:", e);
 
         // JSON cleanup and fallback logic here...
