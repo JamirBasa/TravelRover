@@ -254,6 +254,65 @@ const TravelStyleStep = ({
               })}
             </div>
           </div>
+
+          {/* Accommodation Preference - Compact */}
+          <div>
+            <div className="mb-3">
+              <h3 className="text-base font-bold brand-gradient-text mb-1">
+                Accommodation Preference
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Your preferred type of lodging
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { value: "hotel", label: "Hotel", icon: "🏨" },
+                { value: "resort", label: "Resort", icon: "🏖️" },
+                { value: "hostel", label: "Hostel", icon: "🛏️" },
+                { value: "vacation-rental", label: "Vacation Rental", icon: "🏠" },
+                { value: "boutique", label: "Boutique", icon: "✨" },
+                { value: "no-preference", label: "No Preference", icon: "🔄" },
+              ].map((acc) => {
+                const isSelected = profileData.accommodationPreference === acc.value;
+                return (
+                  <div
+                    key={acc.value}
+                    className={`flex items-center p-2.5 rounded-lg border-2 cursor-pointer transition-all ${
+                      isSelected
+                        ? "border-sky-500 brand-gradient text-white shadow-md"
+                        : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-sky-400 dark:hover:border-sky-500"
+                    }`}
+                    onClick={() =>
+                      handleInputChange("accommodationPreference", acc.value)
+                    }
+                  >
+                    <div
+                      className={`${
+                        isSelected
+                          ? "bg-white/20"
+                          : "bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900/30 dark:to-blue-900/30"
+                      } p-1.5 rounded-lg mr-2 text-base`}
+                    >
+                      {acc.icon}
+                    </div>
+                    <span
+                      className={`font-medium text-xs flex-1 ${
+                        isSelected ? "text-white" : "text-gray-800 dark:text-gray-200"
+                      }`}
+                    >
+                      {acc.label}
+                    </span>
+                    {isSelected && (
+                      <span className="text-white bg-white/20 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                        ✓
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>

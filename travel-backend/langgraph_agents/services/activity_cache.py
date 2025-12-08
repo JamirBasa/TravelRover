@@ -16,21 +16,31 @@ class ActivityCache:
     """
     Cache activity pool data to reduce Google Places API calls
     and speed up GA-First workflow for repeat destinations
+    
+    ⚠️ CACHE SAFETY:
+    - Cache keys include user-specific context (budget, travelers, preferences)
+    - Shorter TTL prevents stale data
+    - Version-based invalidation for global cache busts
     """
     
     CACHE_PREFIX = "ga_activity_pool"
-    DEFAULT_TIMEOUT = 3600  # 1 hour (activities don't change frequently)
+    CACHE_VERSION = "v2"  # ✅ NEW: Increment to invalidate all old cache entries
+    DEFAULT_TIMEOUT = 1800  # ✅ REDUCED: 30 minutes (was 1 hour) - activities can change
+    MAX_TIMEOUT = 3600  # 1 hour maximum
     
     @staticmethod
     def _generate_cache_key(destination: str, radius: int, max_activities: int, preferences: Dict = None) -> str:
         """
         Generate unique cache key based on search parameters
         
+        ⚠️ CRITICAL: Cache key MUST include user-specific context to avoid returning
+        identical activities to users with different budgets/dates/requirements
+        
         Args:
             destination: Destination name
             radius: Search radius in meters
             max_activities: Maximum number of activities
-            preferences: User preferences (optional)
+            preferences: User preferences (MUST include budget, dates, travelers)
             
         Returns:
             Cache key string
@@ -45,11 +55,26 @@ class ActivityCache:
             'max_activities': max_activities
         }
         
-        # Include relevant preferences if provided
+        # ✅ FIX: Include ALL user-specific context in cache key
         if preferences:
+            # Extract budget tier to differentiate cache entries
+            budget_tier = 'unknown'
+            if preferences.get('budget'):
+                budget_str = str(preferences['budget']).lower()
+                if any(x in budget_str for x in ['budget', 'cheap', '2000', '3000', '4000', '5000']):
+                    budget_tier = 'budget'
+                elif any(x in budget_str for x in ['moderate', '8000', '10000', '12000', '15000']):
+                    budget_tier = 'moderate'
+                elif any(x in budget_str for x in ['luxury', '20000', '30000', '40000', '50000']):
+                    budget_tier = 'luxury'
+            
             relevant_prefs = {
-                'preferred_trip_types': preferences.get('preferredTripTypes', []),
+                'preferred_trip_types': sorted(preferences.get('preferredTripTypes', [])),  # Sort for consistency
                 'travel_style': preferences.get('travelStyle', ''),
+                'budget_tier': budget_tier,  # ✅ NEW: Include budget context
+                'travelers': preferences.get('travelers', 1),  # ✅ NEW: Group size affects activities
+                # Note: Dates NOT included - activities don't change by date,
+                # but budget/group size DO affect what's appropriate
             }
             params['preferences'] = relevant_prefs
         
@@ -57,7 +82,8 @@ class ActivityCache:
         param_string = json.dumps(params, sort_keys=True)
         param_hash = hashlib.md5(param_string.encode()).hexdigest()[:8]
         
-        return f"{ActivityCache.CACHE_PREFIX}_{normalized_dest}_{param_hash}"
+        # ✅ Include cache version in key for easy global invalidation
+        return f"{ActivityCache.CACHE_PREFIX}_{ActivityCache.CACHE_VERSION}_{normalized_dest}_{param_hash}"
     
     @classmethod
     def get_cached_activities(
@@ -70,14 +96,16 @@ class ActivityCache:
         """
         Retrieve cached activities for a destination
         
+        ⚠️ CACHE VALIDATION: Ensures cached data matches request context
+        
         Args:
             destination: Destination name
             radius: Search radius in meters
             max_activities: Maximum number of activities
-            preferences: User preferences
+            preferences: User preferences (must include budget, travelers)
             
         Returns:
-            Cached activities list or None if not found
+            Cached activities list or None if not found/invalid
         """
         cache_key = cls._generate_cache_key(destination, radius, max_activities, preferences)
         
@@ -85,14 +113,25 @@ class ActivityCache:
             cached_data = cache.get(cache_key)
             
             if cached_data:
-                logger.info(f"✅ Cache HIT for {destination} - {len(cached_data)} activities")
+                # ✅ VALIDATION: Ensure cached data is a list and not empty
+                if not isinstance(cached_data, list) or len(cached_data) == 0:
+                    logger.warning(f"⚠️  Invalid cached data for {destination} - clearing")
+                    cache.delete(cache_key)
+                    return None
+                
+                logger.info(f"✅ Cache HIT for {destination} - {len(cached_data)} activities (TTL: {cls.DEFAULT_TIMEOUT}s)")
                 return cached_data
             else:
-                logger.info(f"⚠️  Cache MISS for {destination}")
+                logger.info(f"⚠️  Cache MISS for {destination} (key: {cache_key[:50]}...)")
                 return None
                 
         except Exception as e:
             logger.error(f"❌ Cache retrieval failed: {e}")
+            # Clear corrupted cache entry
+            try:
+                cache.delete(cache_key)
+            except:
+                pass
             return None
     
     @classmethod
@@ -103,27 +142,40 @@ class ActivityCache:
         radius: int = 15000,
         max_activities: int = 50,
         preferences: Dict = None,
-        timeout: int = DEFAULT_TIMEOUT
+        timeout: int = None  # ✅ Changed default to None to use class default
     ) -> bool:
         """
         Cache activities for a destination
+        
+        ⚠️ VALIDATION: Only caches valid, non-empty activity lists
         
         Args:
             destination: Destination name
             activities: Activities list to cache
             radius: Search radius in meters
             max_activities: Maximum number of activities
-            preferences: User preferences
-            timeout: Cache timeout in seconds
+            preferences: User preferences (must match retrieval context)
+            timeout: Cache timeout in seconds (defaults to DEFAULT_TIMEOUT)
             
         Returns:
             True if cached successfully, False otherwise
         """
+        # ✅ VALIDATION: Don't cache empty or invalid data
+        if not activities or not isinstance(activities, list):
+            logger.warning(f"⚠️  Skipping cache for {destination} - invalid data")
+            return False
+        
+        if timeout is None:
+            timeout = cls.DEFAULT_TIMEOUT
+        
+        # ✅ SAFETY: Enforce maximum timeout
+        timeout = min(timeout, cls.MAX_TIMEOUT)
+        
         cache_key = cls._generate_cache_key(destination, radius, max_activities, preferences)
         
         try:
             cache.set(cache_key, activities, timeout)
-            logger.info(f"✅ Cached {len(activities)} activities for {destination} (TTL: {timeout}s)")
+            logger.info(f"✅ Cached {len(activities)} activities for {destination} (TTL: {timeout}s, ver: {cls.CACHE_VERSION})")
             return True
             
         except Exception as e:

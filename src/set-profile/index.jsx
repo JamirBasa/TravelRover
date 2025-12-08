@@ -189,9 +189,10 @@ const UserProfile = () => {
         if (
           profileData.preferredTripTypes.length === 0 ||
           !profileData.budgetRange ||
-          !profileData.travelStyle
+          !profileData.travelStyle ||
+          !profileData.accommodationPreference
         ) {
-          toast.error("Please select your travel preferences");
+          toast.error("Please complete all travel preferences");
           return false;
         }
         break;

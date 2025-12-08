@@ -26,8 +26,10 @@ export class GeminiProxyService {
   };
 
   // ✅ NEW: Request caching for duplicate prompts
+  // ⚠️ SAFETY: Chat mode disables caching, trip generation uses full context
   static requestCache = new Map();
-  static CACHE_TTL = 300000; // 5 minutes
+  static CACHE_TTL = 180000; // ✅ REDUCED: 3 minutes (was 5) - fresher data
+  static CACHE_VERSION = "v2"; // ✅ Increment to invalidate old cache
   static MAX_CACHE_SIZE = 50;
 
   /**
@@ -171,6 +173,10 @@ export class GeminiProxyService {
 
   /**
    * Generate content with smart timeout, caching, and progress feedback
+   * 
+   * ⚠️ CACHE SAFETY:
+   * - Chat mode: NO caching (users expect fresh responses)
+   * - Trip generation: Cache key includes travelers, dates, preferences
    */
   static async generateContent(prompt, options = {}) {
     const {
@@ -180,15 +186,26 @@ export class GeminiProxyService {
       requestType,
       onProgress,
       tripDuration, // ✅ NEW: Accept trip duration for accurate timeout
+      chat_mode = false, // ✅ NEW: Disable cache for chat
+      tripParams = {}, // ✅ NEW: Full trip context for cache key
     } = options;
 
-    // ✅ NEW: Check cache first
-    const cacheKey = this.generateCacheKey(prompt, schema);
-    const cached = this.requestCache.get(cacheKey);
+    // ✅ CRITICAL: NO caching for chat mode (users expect unique responses)
+    const useCache = !chat_mode && !options.skipCache;
+    
+    if (!useCache) {
+      console.log("🔄 Cache disabled (chat mode or skipCache=true)");
+    }
 
-    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-      console.log("✅ Using cached response (saved ~90s)");
-      return cached.data;
+    // ✅ Check cache only for trip generation (not chat)
+    if (useCache) {
+      const cacheKey = this.generateCacheKey(prompt, tripParams);
+      const cached = this.requestCache.get(cacheKey);
+
+      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+        console.log("✅ Using cached response (saved ~90s)");
+        return cached.data;
+      }
     }
 
     // Use enhanced timeout calculation with trip duration
@@ -287,8 +304,11 @@ export class GeminiProxyService {
           },
         };
 
-        // ✅ NEW: Cache successful results
-        this.cacheResult(cacheKey, result);
+        // ✅ Cache successful results (skip for chat mode)
+        if (useCache) {
+          const cacheKey = this.generateCacheKey(prompt, tripParams);
+          this.cacheResult(cacheKey, result, true);
+        }
 
         return result;
       } else {
@@ -509,38 +529,86 @@ export class GeminiProxyService {
   }
 
   /**
-   * ✅ NEW: Generate cache key for request
+   * ✅ IMPROVED: Generate cache key with complete user context
+   * 
+   * ⚠️ CRITICAL: Must include ALL parameters that affect trip uniqueness:
+   * - Location, duration, budget (base params)
+   * - Travelers count (affects recommendations)
+   * - Travel dates (affects availability/seasonality)
+   * - User preferences (trip types, style, dietary)
+   * - Hotel/flight preferences
    */
-  static generateCacheKey(prompt) {
-    // Extract core parameters that define uniqueness
+  static generateCacheKey(prompt, tripParams = {}) {
+    // Extract from prompt (fallback if tripParams empty)
     const locationMatch = prompt.match(/location[:\s]+([^,\n]+)/i);
     const durationMatch = prompt.match(/duration[:\s]+(\d+)/i);
     const budgetMatch = prompt.match(/budget[:\s]+₱?([\d,]+)/i);
+    const travelersMatch = prompt.match(/travelers[:\s]+([\d]+|[A-Za-z\s]+)/i);
 
-    const cacheableParams = [
-      locationMatch?.[1] || "",
-      durationMatch?.[1] || "",
-      budgetMatch?.[1] || "",
-    ].join("_");
+    // Build comprehensive cache key from tripParams (preferred) or prompt
+    const cacheComponents = [
+      // Core trip params
+      tripParams.destination || locationMatch?.[1] || 'unknown',
+      tripParams.duration || durationMatch?.[1] || '0',
+      tripParams.budget || budgetMatch?.[1] || '0',
+      
+      // ✅ NEW: User-specific context
+      tripParams.travelers || travelersMatch?.[1] || '1',
+      tripParams.startDate?.slice(0, 10) || '', // Date without time
+      
+      // ✅ NEW: Preferences affect recommendations
+      (tripParams.userProfile?.preferredTripTypes || []).sort().join('-') || 'none',
+      tripParams.userProfile?.travelStyle || 'none',
+      tripParams.userProfile?.budgetRange || 'none',
+      
+      // ✅ NEW: Service preferences
+      tripParams.flightData?.includeFlights ? 'f' : '',
+      tripParams.hotelData?.includeHotels ? 'h' : '',
+      tripParams.hotelData?.budgetLevel || '0',
+    ];
 
-    return `trip_${cacheableParams}`;
+    // Create readable but unique cache key
+    const keyString = cacheComponents
+      .filter(c => c !== '')
+      .join('_')
+      .replace(/[^a-zA-Z0-9_-]/g, '') // Remove special chars
+      .toLowerCase()
+      .slice(0, 120); // Limit length
+
+    return `trip_v2_${keyString}`; // v2 = new cache version
   }
 
   /**
-   * ✅ NEW: Cache successful result
+   * ✅ IMPROVED: Cache successful result with validation
+   * 
+   * @param {string} cacheKey - Cache key
+   * @param {Object} result - Result to cache
+   * @param {boolean} shouldCache - Whether to actually cache (false for chat)
    */
-  static cacheResult(cacheKey, result) {
+  static cacheResult(cacheKey, result, shouldCache = true) {
+    if (!shouldCache) {
+      return; // Don't cache chat responses
+    }
+    
+    // ✅ VALIDATION: Only cache successful results with data
+    if (!result.success || !result.data) {
+      console.log("⚠️ Skipping cache - invalid result");
+      return;
+    }
+
     this.requestCache.set(cacheKey, {
       data: result,
       timestamp: Date.now(),
     });
 
-    // Limit cache size
+    // Limit cache size (LRU eviction)
     if (this.requestCache.size > this.MAX_CACHE_SIZE) {
       const firstKey = this.requestCache.keys().next().value;
       this.requestCache.delete(firstKey);
       console.log(`🗑️ Cache size limit reached, removed oldest entry`);
     }
+    
+    console.log(`✅ Cached result (key: ${cacheKey.slice(0, 50)}..., TTL: ${this.CACHE_TTL/1000}s)`);
   }
 
   /**

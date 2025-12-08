@@ -96,18 +96,41 @@ class LongCatService:
         try:
             logger.info(f"LongCat API request: model={model}, thinking={enable_thinking}")
             
-            response = requests.post(
-                url,
-                headers=headers,
-                json=payload,
-                timeout=60,  # 60s timeout for thinking mode
-            )
-            response.raise_for_status()
+            # Retry logic for connection issues
+            max_retries = 2
+            retry_delay = 2  # seconds
             
-            result = response.json()
-            logger.info(f"LongCat API success: {result.get('usage', {})}")
-            return result
+            for attempt in range(max_retries):
+                try:
+                    response = requests.post(
+                        url,
+                        headers=headers,
+                        json=payload,
+                        timeout=90,  # Increased to 90s for better reliability
+                    )
+                    response.raise_for_status()
+                    
+                    result = response.json()
+                    logger.info(f"LongCat API success: {result.get('usage', {})}")
+                    return result
+                    
+                except (requests.exceptions.ConnectionError, 
+                        requests.exceptions.Timeout) as retry_error:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"LongCat API connection issue (attempt {attempt + 1}/{max_retries}): {str(retry_error)}. Retrying in {retry_delay}s...")
+                        import time
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                        continue
+                    else:
+                        raise  # Re-raise on final attempt
 
+        except requests.exceptions.Timeout as e:
+            logger.error(f"LongCat API timeout after 90s: {str(e)}")
+            raise ValueError("LongCat API request timed out. The service may be experiencing high load.")
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"LongCat API connection error: {str(e)}")
+            raise ValueError("Cannot connect to LongCat API. The service may be temporarily unavailable.")
         except requests.exceptions.RequestException as e:
             logger.error(f"LongCat API error: {str(e)}")
             if hasattr(e, 'response') and e.response is not None:

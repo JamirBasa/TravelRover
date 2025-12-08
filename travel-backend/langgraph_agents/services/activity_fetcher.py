@@ -63,7 +63,15 @@ class ActivityPoolFetcher:
         
         logger.info(f"🔍 Fetching activity pool for {destination}")
         
-        # 🚀 NEW: Try to get from cache first
+        # ✅ Log cache key parameters for debugging
+        if user_preferences:
+            logger.debug(f"📊 User context: budget={user_preferences.get('budget')}, "
+                        f"travelers={user_preferences.get('travelers')}, "
+                        f"trip_types={user_preferences.get('preferredTripTypes', [])}")
+        
+        # 🚀 Try to get from cache first
+        # ⚠️ IMPORTANT: Cache key includes budget, travelers, and preferences
+        # so different users/budgets get different cached activity pools
         cached_activities = ActivityCache.get_cached_activities(
             destination=destination,
             radius=radius,
@@ -110,14 +118,15 @@ class ActivityPoolFetcher:
             
             final_activities = sorted_activities[:max_activities]
             
-            # 🚀 NEW: Cache the results for future requests
+            # 🚀 Cache the results for future requests
+            # ✅ UPDATED: Use default timeout (30 min) instead of hardcoded 1 hour
             ActivityCache.cache_activities(
                 destination=destination,
                 activities=final_activities,
                 radius=radius,
                 max_activities=max_activities,
-                preferences=user_preferences,
-                timeout=3600  # 1 hour cache
+                preferences=user_preferences  # ✅ Includes budget, travelers, preferences
+                # timeout defaults to ActivityCache.DEFAULT_TIMEOUT (30 min)
             )
             
             logger.info(f"✅ Fetched {len(final_activities)} activities (cached for next request)")

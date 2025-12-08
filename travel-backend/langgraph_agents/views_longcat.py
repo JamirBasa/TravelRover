@@ -89,11 +89,22 @@ def longcat_chat(request):
             }
         })
         
+    except ValueError as e:
+        # User-friendly errors (timeout, connection, config issues)
+        logger.warning(f"LongCat chat user error: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e),
+            'error_type': 'service_unavailable'
+        }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     except Exception as e:
+        # Unexpected errors
         logger.error(f"LongCat chat error: {str(e)}")
         return Response({
             'success': False,
-            'error': str(e)
+            'error': 'An unexpected error occurred. Please try again later.',
+            'error_type': 'internal_error',
+            'details': str(e) if logger.level <= logging.DEBUG else None
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

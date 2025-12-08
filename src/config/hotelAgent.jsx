@@ -81,24 +81,34 @@ export class HotelAgent {
       const data = await response.json();
 
       if (data.results) {
-        return data.results.slice(0, HOTEL_CONFIG.MAX_RESULTS).map((hotel) => ({
-          id: hotel.place_id,
-          name: hotel.name,
-          rating: hotel.rating || 4.0,
-          price_level: hotel.price_level || 2,
-          price_range: HOTEL_CONFIG.PRICE_LEVELS[hotel.price_level || 2],
-          address: hotel.vicinity,
-          photo:
-            hotel.photos && hotel.photos[0]
-              ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${hotel.photos[0].photo_reference}&key=${HOTEL_CONFIG.GOOGLE_PLACES_API_KEY}`
-              : null,
-          amenities: this.generateAmenities(hotel.price_level),
-          distance: this.calculateDistance(coordinates, {
-            lat: hotel.geometry.location.lat,
-            lng: hotel.geometry.location.lng,
-          }),
-          is_recommended: hotel.rating >= 4.0 && hotel.price_level <= 3,
-        }));
+        let hotels = data.results.slice(0, HOTEL_CONFIG.MAX_RESULTS * 2) // Get more results for filtering
+          .map((hotel) => ({
+            id: hotel.place_id,
+            name: hotel.name,
+            rating: hotel.rating || 4.0,
+            price_level: hotel.price_level || 2,
+            price_range: HOTEL_CONFIG.PRICE_LEVELS[hotel.price_level || 2],
+            address: hotel.vicinity,
+            photo:
+              hotel.photos && hotel.photos[0]
+                ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${hotel.photos[0].photo_reference}&key=${HOTEL_CONFIG.GOOGLE_PLACES_API_KEY}`
+                : null,
+            amenities: this.generateAmenities(hotel.price_level),
+            distance: this.calculateDistance(coordinates, {
+              lat: hotel.geometry.location.lat,
+              lng: hotel.geometry.location.lng,
+            }),
+            is_recommended: hotel.rating >= 4.0 && hotel.price_level <= 3,
+            types: hotel.types || [], // Store hotel types for filtering
+          }));
+
+        // Apply accommodation preference filter if provided
+        if (params.accommodationPreference && params.accommodationPreference !== 'no-preference') {
+          hotels = this.filterByAccommodationType(hotels, params.accommodationPreference);
+        }
+
+        // Return top results after filtering
+        return hotels.slice(0, HOTEL_CONFIG.MAX_RESULTS);
       }
 
       return [];
@@ -106,6 +116,45 @@ export class HotelAgent {
       console.error("❌ Hotel search API failed:", error);
       return [];
     }
+  }
+
+  /**
+   * Filter hotels by accommodation type preference
+   * @param {Array} hotels - Array of hotel objects
+   * @param {string} preference - Accommodation preference (hotel, resort, hostel, vacation-rental, boutique)
+   * @returns {Array} Filtered hotels
+   */
+  static filterByAccommodationType(hotels, preference) {
+    if (!preference || preference === 'no-preference') {
+      return hotels;
+    }
+
+    // Define type keywords for each accommodation preference
+    const typeKeywords = {
+      'hotel': ['hotel', 'inn', 'suites'],
+      'resort': ['resort', 'beach', 'spa_resort'],
+      'hostel': ['hostel', 'backpackers', 'dormitory'],
+      'vacation-rental': ['apartment', 'condo', 'vacation_rental', 'serviced_apartment'],
+      'boutique': ['boutique', 'luxury', 'heritage', 'villa'],
+    };
+
+    const keywords = typeKeywords[preference] || [];
+    
+    // Filter hotels that match the preference keywords
+    const filtered = hotels.filter(hotel => {
+      const hotelName = hotel.name.toLowerCase();
+      const hotelTypes = (hotel.types || []).map(t => t.toLowerCase());
+      
+      // Check if any keyword matches the hotel name or types
+      return keywords.some(keyword => 
+        hotelName.includes(keyword) || 
+        hotelTypes.some(type => type.includes(keyword))
+      );
+    });
+
+    // If filtering results in too few hotels (less than 3), return original list
+    // to ensure users have options even if exact preference isn't available
+    return filtered.length >= 3 ? filtered : hotels;
   }
 
   static generateMockHotels(params) {

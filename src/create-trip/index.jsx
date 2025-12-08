@@ -1736,7 +1736,7 @@ function CreateTrip() {
         // ✨ IMPROVED: Handle budget compliance errors with actionable guidance
         if (error.message?.includes("Budget compliance check failed")) {
           toast.error("Trip Exceeds Budget", {
-            description: `Your selected options exceed the ₱${budgetAmount?.toLocaleString()} budget. Try:\n• Choose Budget or Moderate hotel tier\n• Reduce daily activities\n• Extend trip duration (more days = lower daily costs)\n• Use local transport instead of flights`,
+            description: `Your selected options exceed the budget. Try:\n• Choose Budget or Moderate hotel tier\n• Reduce daily activities\n• Extend trip duration (more days = lower daily costs)\n• Use local transport instead of flights`,
             duration: 8000,
           });
           return;
@@ -2648,6 +2648,42 @@ function CreateTrip() {
         console.log("✅ Final deduplication complete - itinerary is clean");
       }
 
+      // ✅ NEW: Validate dietary restrictions in meals
+      console.log("🍽️ Validating dietary restrictions in meal activities...");
+      const { validateWithSuggestions } = await import("../utils/dietaryValidator");
+      if (parsedTripData?.itinerary && userProfile?.dietaryRestrictions?.length > 0) {
+        const dietaryValidation = validateWithSuggestions(
+          parsedTripData.itinerary,
+          userProfile,
+          formData.location
+        );
+
+        if (!dietaryValidation.validation.isValid) {
+          console.warn(
+            `⚠️ Dietary validation found ${dietaryValidation.validation.violationCount} potential issues`,
+            dietaryValidation.validation.violations
+          );
+          
+          // Show warning toast with details
+          toast.warning(dietaryValidation.warningMessage, {
+            description: "Review meal activities in your itinerary and modify if needed.",
+            duration: 6000,
+          });
+
+          // Store dietary warnings in trip document for display in view-trip
+          parsedTripData.dietaryWarnings = {
+            hasViolations: true,
+            violationCount: dietaryValidation.validation.violationCount,
+            violations: dietaryValidation.validation.violations,
+            suggestions: dietaryValidation.suggestions,
+            warningMessage: dietaryValidation.warningMessage
+          };
+        } else {
+          console.log("✅ All meal activities comply with dietary restrictions");
+          parsedTripData.dietaryWarnings = { hasViolations: false };
+        }
+      }
+
       // ✅ FIX 1: Ensure budget field is always included in userSelection with multiple formats
       setValidationPhase("saving"); // 🆕 Track final phase
       console.log("💾 Preparing trip document for Firebase...");
@@ -3030,7 +3066,7 @@ function CreateTrip() {
                 return (
                   <div
                     key={step.id}
-                    className="flex items-center flex-shrink-0"
+                    className="flex items-center shrink-0"
                   >
                     <div
                       className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full border-2 transition-all ${
