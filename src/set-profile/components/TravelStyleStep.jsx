@@ -8,6 +8,7 @@ import {
   FaUtensils,
   FaHeart,
 } from "react-icons/fa";
+import { ACCOMMODATION_TYPES } from "../../constants/options";
 
 const TravelStyleStep = ({
   profileData,
