@@ -4,6 +4,7 @@ import {
   MapPin,
   Hotel,
   Plane,
+  Bus,
   Info,
   Lightbulb,
   Map,
@@ -146,13 +147,7 @@ function TabbedTripView({ trip, tripId, onTripUpdate }, ref) {
                       : "Air travel is the most efficient option for your route"}
                     {" • "}
                     <button
-                      onClick={() =>
-                        setActiveTab(
-                          trip?.flightPreferences?.includeFlights
-                            ? "air-travel"
-                            : "itinerary"
-                        )
-                      }
+                      onClick={() => setActiveTab("air-travel")}
                       className="text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 font-medium"
                     >
                       View Details →
@@ -183,16 +178,18 @@ function TabbedTripView({ trip, tripId, onTripUpdate }, ref) {
       icon: <Hotel className="h-5 w-5" />,
       component: <Hotels trip={trip} />,
     },
-    // ✅ Show Air Travel tab if user ENABLED flights (even if no data for inactive airports)
+    // ✅ Show Transport tab if user ENABLED flights OR ground transport is recommended
     ...(trip?.flightPreferences?.includeFlights ||
     trip?.hasRealFlights ||
     trip?.realFlightData?.success ||
-    trip?.flightResults?.success
+    trip?.flightResults?.success ||
+    trip?.transportMode?.mode === "ground_preferred"
       ? [
           {
             id: "air-travel",
-            label: "Air Travel",
-            icon: <Plane className="h-5 w-5" />,
+            // Dynamic label based on transport mode
+            label: trip?.transportMode?.mode === "ground_preferred" ? "Ground Travel" : "Air Travel",
+            icon: trip?.transportMode?.mode === "ground_preferred" ? <Bus className="h-5 w-5" /> : <Plane className="h-5 w-5" />,
             component: (
               <div className="space-y-4">
                 {/* Show ground transport info if ground_preferred */}

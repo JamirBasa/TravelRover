@@ -5,6 +5,7 @@ import {
   FaUtensils,
   FaShieldAlt,
 } from "react-icons/fa";
+import { getAccommodationDisplay } from "../../utils/accommodationHelpers";
 
 const ReviewStep = ({ profileData }) => {
   return (
@@ -82,7 +83,9 @@ const ReviewStep = ({ profileData }) => {
             </div>
             <div>
               <span className="font-medium text-gray-800 dark:text-gray-200">Accommodation:</span>{" "}
-              {profileData.accommodationPreference || "No preference"}
+              {profileData.accommodationPreference 
+                ? getAccommodationDisplay(profileData.accommodationPreference)
+                : "No preference"}
             </div>
           </div>
         </div>

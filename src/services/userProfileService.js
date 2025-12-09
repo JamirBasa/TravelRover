@@ -150,11 +150,6 @@ export class UserProfileService {
    * @returns {Object} Updated hotel data
    */
   static autoPopulateHotelData(userProfile, currentHotelData) {
-    // Don't override existing preferences
-    if (currentHotelData.preferredType || currentHotelData.budgetLevel) {
-      return currentHotelData;
-    }
-
     if (!userProfile?.isProfileComplete) {
       return currentHotelData;
     }
@@ -179,12 +174,16 @@ export class UserProfileService {
       'flexible': 2, // Map flexible to moderate (level 2)
     };
 
+    // ✅ IMPROVED: Only auto-populate fields that are empty
+    // Don't override user's manual selections
     return {
       ...currentHotelData,
-      ...(mappedAccommodation && {
+      // Only set preferredType if not already set
+      ...(mappedAccommodation && !currentHotelData.preferredType && {
         preferredType: mappedAccommodation,
       }),
-      ...(userProfile.budgetRange && {
+      // Only set budgetLevel if not already set
+      ...(userProfile.budgetRange && !currentHotelData.budgetLevel && {
         budgetLevel: budgetMapping[userProfile.budgetRange?.toLowerCase()] || 2,
       }),
     };

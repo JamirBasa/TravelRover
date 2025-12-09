@@ -250,7 +250,8 @@ def validate_hotel_preferences(prefs: Dict[str, Any]) -> Dict[str, Any]:
     validated = prefs.copy()
     
     # Validate accommodation type
-    valid_types = ['hotel', 'resort', 'hostel', 'apartment', 'any']
+    # ✅ UPDATED: Match frontend ACCOMMODATION_TYPES exactly (hotel, resort, hostel, guesthouse, aparthotel, boutique)
+    valid_types = ['hotel', 'resort', 'hostel', 'guesthouse', 'aparthotel', 'boutique']
     if 'preferredType' in prefs:
         if prefs['preferredType'] not in valid_types:
             raise DataValidationError(f"Accommodation type must be one of {valid_types}")

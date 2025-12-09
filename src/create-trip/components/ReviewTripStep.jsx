@@ -20,6 +20,7 @@ import {
 } from "../../constants/options";
 import { formatTravelersDisplay } from "../../utils/travelersParsers";
 import { determineTransportModeAsync } from "../../utils/transportModeDetector";
+import { getAccommodationDisplay } from "../../utils/accommodationHelpers";
 import { useState, useEffect } from "react";
 
 const ReviewTripStep = ({
@@ -451,14 +452,7 @@ const ReviewTripStep = ({
                           Type:
                         </span>
                         <span className="font-medium text-gray-900 dark:text-gray-100">
-                          {hotelData.preferredType ? (
-                            hotelData.preferredType.charAt(0).toUpperCase() +
-                            hotelData.preferredType.slice(1)
-                          ) : (
-                            <span className="text-gray-500">
-                              Standard Hotels (default)
-                            </span>
-                          )}
+                          {getAccommodationDisplay(hotelData.preferredType)}
                         </span>
                       </div>
                       <div className="flex items-start gap-2">

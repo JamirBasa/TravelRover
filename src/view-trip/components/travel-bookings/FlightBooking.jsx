@@ -403,10 +403,8 @@ function FlightBooking({ trip }) {
       throw new Error("No trip data available");
     }
 
-    // ✅ NEW: Don't render if ground transport is preferred
-    if (trip?.transportMode?.mode === "ground_preferred") {
-      return null;
-    }
+    // Note: TabbedTripView handles ground_preferred routing - shows GroundTransportBanner instead
+    // No need for early return here as this component is only rendered for flight scenarios
 
     const hasFlightData =
       (trip?.hasRealFlights && trip?.realFlightData?.success) ||
@@ -612,22 +610,63 @@ function FlightBooking({ trip }) {
     // Sort flights
     const sortedFlights = [...validFlights].sort((a, b) => {
       switch (sortBy) {
-        case "price":
+        case "price": {
+          // ✅ FIX: Use price_per_person for accurate sorting with group bookings
           const priceA = parseFloat(
-            (a.price || "0").toString().replace(/[₱,]/g, "")
+            (a.price_per_person || a.price || "0").toString().replace(/[₱,]/g, "")
           );
           const priceB = parseFloat(
-            (b.price || "0").toString().replace(/[₱,]/g, "")
+            (b.price_per_person || b.price || "0").toString().replace(/[₱,]/g, "")
           );
           return priceA - priceB;
-        case "duration":
-          const durationA = (a.duration || "").toString();
-          const durationB = (b.duration || "").toString();
-          return durationA.localeCompare(durationB);
-        case "departure":
-          const departureA = (a.departure || "").toString();
-          const departureB = (b.departure || "").toString();
-          return departureA.localeCompare(departureB);
+        }
+        
+        case "duration": {
+          // ✅ FIX: Convert duration strings to minutes for numeric comparison
+          const parseDuration = (dur) => {
+            const str = (dur || "").toString().trim();
+            const match = str.match(/(\d+)h?\s*(\d+)?m?/i);
+            if (!match) return 0;
+            const hours = parseInt(match[1]) || 0;
+            const minutes = parseInt(match[2]) || 0;
+            return hours * 60 + minutes;
+          };
+          return parseDuration(a.duration) - parseDuration(b.duration);
+        }
+        
+        case "departure": {
+          // ✅ FIX: Parse time strings properly (handle AM/PM)
+          const parseTime = (timeStr) => {
+            const str = (timeStr || "").toString().trim();
+            const match = str.match(/(\d+):(\d+)\s*(AM|PM)/i);
+            if (!match) return 0;
+            let hours = parseInt(match[1]);
+            const minutes = parseInt(match[2]);
+            const period = match[3].toUpperCase();
+            
+            // Convert to 24-hour format
+            if (period === "PM" && hours !== 12) hours += 12;
+            if (period === "AM" && hours === 12) hours = 0;
+            
+            return hours * 60 + minutes;
+          };
+          return parseTime(a.departure) - parseTime(b.departure);
+        }
+        
+        case "best": {
+          // ✅ NEW: Sort by best value (marked flights first, then by price)
+          if (a.is_best && !b.is_best) return -1;
+          if (!a.is_best && b.is_best) return 1;
+          // If both/neither are marked "best", sort by price
+          const bestPriceA = parseFloat(
+            (a.price_per_person || a.price || "0").toString().replace(/[₱,]/g, "")
+          );
+          const bestPriceB = parseFloat(
+            (b.price_per_person || b.price || "0").toString().replace(/[₱,]/g, "")
+          );
+          return bestPriceA - bestPriceB;
+        }
+        
         default:
           return 0;
       }

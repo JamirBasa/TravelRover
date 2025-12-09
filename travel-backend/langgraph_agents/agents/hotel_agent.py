@@ -2,6 +2,7 @@
 from typing import Dict, Any
 import asyncio
 import requests
+import math
 from django.conf import settings
 from .base_agent import BaseAgent
 import logging
@@ -93,10 +94,19 @@ class HotelAgent(BaseAgent):
             data = response.json()
             
             if data.get('results'):
-                location = data['results'][0]['geometry']['location']
+                result = data['results'][0]
+                location = result['geometry']['location']
+                
+                # ✅ Extract city/municipality for validation
+                city_info = self._extract_city_from_geocode(result)
+                
                 return {
                     'lat': location['lat'],
-                    'lng': location['lng']
+                    'lng': location['lng'],
+                    'city': city_info['city'],
+                    'municipality': city_info['municipality'],
+                    'province': city_info['province'],
+                    'formatted_address': result.get('formatted_address', '')
                 }
             
             return None
@@ -104,6 +114,39 @@ class HotelAgent(BaseAgent):
         except Exception as e:
             logger.error(f"Geocoding failed: {e}")
             return None
+    
+    def _extract_city_from_geocode(self, geocode_result: Dict[str, Any]) -> Dict[str, str]:
+        """Extract city/municipality information from geocoded address components"""
+        city = None
+        municipality = None
+        province = None
+        
+        for component in geocode_result.get('address_components', []):
+            types = component.get('types', [])
+            
+            # Locality = City
+            if 'locality' in types:
+                city = component.get('long_name', '').strip()
+            
+            # Administrative Area Level 2 = Municipality or City
+            elif 'administrative_area_level_2' in types:
+                municipality = component.get('long_name', '').strip()
+            
+            # Administrative Area Level 1 = Province/State
+            elif 'administrative_area_level_1' in types:
+                province = component.get('long_name', '').strip()
+        
+        # Use municipality if city not found (common in Philippines)
+        if not city and municipality:
+            city = municipality
+        
+        logger.info(f"📍 Geocoded location: City={city}, Municipality={municipality}, Province={province}")
+        
+        return {
+            'city': city,
+            'municipality': municipality,
+            'province': province
+        }
     
     async def _search_nearby_hotels(self, coordinates: Dict[str, float], params: Dict[str, Any]) -> list:
         """Search for hotels using Google Places Nearby Search API"""
@@ -119,9 +162,11 @@ class HotelAgent(BaseAgent):
             preferred_type = params.get('preferred_type', '')
             search_keyword = self._get_search_keyword_for_type(preferred_type)
             
+            # ✅ REDUCED RADIUS: 25km instead of 50km to prevent cross-city contamination
+            # Philippine cities are close together, 50km catches neighboring cities
             search_params = {
                 'location': f"{coordinates['lat']},{coordinates['lng']}",
-                'radius': 50000,  # 50km radius
+                'radius': 25000,  # 25km radius (reduced from 50km)
                 'type': 'lodging',
                 'key': api_key
             }
@@ -135,13 +180,27 @@ class HotelAgent(BaseAgent):
             data = response.json()
             
             hotels = []
+            target_city = coordinates.get('city', '').lower()
+            target_municipality = coordinates.get('municipality', '').lower()
+            
             if data.get('results'):
+                total_results = len(data['results'])
+                filtered_count = 0
+                
                 for hotel_data in data['results'][:20]:  # Limit to 20 results
                     hotel = self._parse_hotel_data(hotel_data, coordinates, api_key)
                     if hotel:
-                        # ✅ Add accommodation type classification
-                        hotel['accommodation_type'] = self._classify_accommodation_type(hotel_data, preferred_type)
-                        hotels.append(hotel)
+                        # ✅ CRITICAL: Validate hotel is in the target city/municipality
+                        if self._validate_hotel_location(hotel, target_city, target_municipality, coordinates):
+                            # ✅ Add accommodation type classification
+                            hotel['accommodation_type'] = self._classify_accommodation_type(hotel_data, preferred_type)
+                            hotels.append(hotel)
+                        else:
+                            filtered_count += 1
+                            logger.debug(f"⚠️  Filtered out {hotel.get('name')} - Wrong city: {hotel.get('address')}")
+                
+                if filtered_count > 0:
+                    logger.warning(f"⚠️  Filtered {filtered_count}/{total_results} hotels from wrong cities")
                 
                 # ✅ Filter and prioritize by preferred type
                 if preferred_type:
@@ -166,32 +225,95 @@ class HotelAgent(BaseAgent):
         return keyword_mapping.get(preferred_type.lower(), '') if preferred_type else ''
     
     def _classify_accommodation_type(self, hotel_data: Dict[str, Any], preferred_type: str) -> str:
-        """Classify accommodation type based on name and types"""
+        """
+        Classify accommodation type - matches frontend ACCOMMODATION_TYPES exactly
+        Priority order: Resort > Hostel > Aparthotel > Boutique > Guesthouse > Hotel
+        """
         name_lower = hotel_data.get('name', '').lower()
         types = hotel_data.get('types', [])
+        rating = hotel_data.get('rating', 0)
+        price_level = hotel_data.get('price_level', 0)
+        review_count = len(hotel_data.get('reviews', []))
         
-        # Check name for type indicators
-        if 'resort' in name_lower:
+        # Priority 1: Resort (vacation-focused properties)
+        if 'resort' in name_lower or 'resort' in types:
             return 'resort'
-        elif 'hostel' in name_lower or 'backpack' in name_lower:
+        
+        # Priority 2: Hostel (budget accommodation with shared facilities)
+        if any(word in name_lower for word in ['hostel', 'backpack', 'dormitory']):
             return 'hostel'
-        elif 'apartment' in name_lower or 'aparthotel' in name_lower:
+        
+        # Priority 3: Aparthotel (apartment-style accommodations)
+        if 'aparthotel' in name_lower or 'serviced apartment' in name_lower:
             return 'aparthotel'
-        elif 'inn' in name_lower or 'guesthouse' in name_lower or 'guest house' in name_lower:
-            return 'guesthouse'
-        elif 'boutique' in name_lower:
+        # Detect apartments marketed as lodging
+        if 'apartment' in name_lower and any(t in types for t in ['lodging', 'real_estate_agency']):
+            return 'aparthotel'
+        if any(word in name_lower for word in ['suites', 'residences']) and 'extended stay' in name_lower:
+            return 'aparthotel'
+        
+        # Priority 4: Boutique (small, high-quality, design-focused hotels)
+        if 'boutique' in name_lower:
             return 'boutique'
-        elif 'hotel' in name_lower:
+        # Heuristic: High-rated (4.5+), upscale (price level 3-4), but not large chain
+        if rating >= 4.5 and price_level in [3, 4] and review_count < 500:
+            if 'hotel' in name_lower:
+                return 'boutique'  # Small, high-quality = likely boutique
+        
+        # Priority 5: Guesthouse (intimate, home-style accommodations)
+        if any(word in name_lower for word in ['guesthouse', 'guest house', 'inn', 
+                                                'bed and breakfast', "b&b", 'lodge', 
+                                                'pension', 'homestay']):
+            return 'guesthouse'
+        # Check Google types
+        if any(t in types for t in ['guest_house', 'bed_and_breakfast']):
+            return 'guesthouse'
+        
+        # Priority 6: Hotel (standard hotel properties)
+        if 'hotel' in name_lower or 'lodging' in types:
             return 'hotel'
         
-        # Check Google Places types
-        if 'resort' in types:
-            return 'resort'
-        elif 'hostel' in types:
-            return 'hostel'
-        
-        # Default to hotel if uncertain
+        # Final fallback
         return 'hotel'
+    
+    def _validate_hotel_location(self, hotel: Dict[str, Any], target_city: str, target_municipality: str, coordinates: Dict[str, float]) -> bool:
+        """Validate that hotel is actually in the target city/municipality"""
+        
+        # If no target city info, allow all results (fallback to old behavior)
+        if not target_city and not target_municipality:
+            return True
+        
+        hotel_address = hotel.get('address', '').lower()
+        hotel_name = hotel.get('name', '').lower()
+        
+        # Check if target city appears in hotel address
+        if target_city:
+            # Remove common suffixes for matching
+            city_base = target_city.replace(' city', '').strip()
+            
+            if city_base in hotel_address or target_city in hotel_address:
+                return True
+        
+        # Check if target municipality appears in hotel address
+        if target_municipality:
+            municipality_base = target_municipality.replace(' city', '').strip()
+            
+            if municipality_base in hotel_address or target_municipality in hotel_address:
+                return True
+        
+        # Additional check: If hotel is very close (<5km), likely correct even if address doesn't match perfectly
+        distance_str = hotel.get('distance', '999 km')
+        try:
+            distance = float(distance_str.split(' ')[0])
+            if distance <= 5.0:
+                logger.debug(f"✅ Hotel {hotel.get('name')} within 5km, accepting despite address mismatch")
+                return True
+        except:
+            pass
+        
+        # Log detailed rejection reason
+        logger.info(f"❌ Rejected: {hotel.get('name')} | Address: {hotel_address} | Target: {target_city or target_municipality}")
+        return False
     
     def _filter_by_accommodation_type(self, hotels: list, preferred_type: str) -> list:
         """Filter and prioritize hotels by accommodation type"""

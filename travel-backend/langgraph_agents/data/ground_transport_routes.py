@@ -500,7 +500,7 @@ GROUND_TRANSPORT_ROUTES = {
         "frequency": "several weekly",
         "has_ferry": True,
         "scenic": True,
-        "notes": "Basilan to Zamboanga. Check travel advisories.",
+        "notes": "Basilan-Zamboanga ferry route. Check travel advisories before booking due to occasional security concerns and weather conditions in the BARMM region. Verify current ferry schedules with operator.",
     },
     
     # ========== INTER-VISAYAS FERRY ROUTES ==========

@@ -13,6 +13,7 @@ import {
   FaExclamationTriangle,
 } from "react-icons/fa";
 import { ACCOMMODATION_TYPES } from "../../constants/options";
+import { getAccommodationDisplay } from "../../utils/accommodationHelpers";
 import { Input } from "../../components/ui/input";
 import Select from "../../components/ui/select";
 import { UserProfileService } from "../../services/userProfileService";
@@ -187,12 +188,12 @@ const TravelServicesSelector = ({
 
   // Hotel options - using standardized constant
   const priceRangeOptions = [
-    { value: 1, label: "Budget", icon: "💰", desc: "₱500-1.5k/night" },
-    { value: 2, label: "Economy", icon: "🏷️", desc: "₱1.5-3.5k/night" },
-    { value: 3, label: "Mid-Range", icon: "⭐", desc: "₱3.5-8k/night" },
-    { value: 4, label: "Upscale", icon: "✨", desc: "₱8-15k/night" },
-    { value: 5, label: "Luxury", icon: "💎", desc: "₱15-30k/night" },
-    { value: 6, label: "Ultra-Luxury", icon: "👑", desc: "₱30k+/night" },
+    { value: 1, label: "Budget", icon: "💰", desc: "₱500-1,500" },
+    { value: 2, label: "Economy", icon: "🏷️", desc: "₱1,500-3,500" },
+    { value: 3, label: "Mid-Range", icon: "⭐", desc: "₱3,500-8,000" },
+    { value: 4, label: "Upscale", icon: "✨", desc: "₱8,000-15,000" },
+    { value: 5, label: "Luxury", icon: "💎", desc: "₱15,000-30,000" },
+    { value: 6, label: "Ultra-Luxury", icon: "👑", desc: "₱30,000+" },
   ];
 
   return (
@@ -203,7 +204,7 @@ const TravelServicesSelector = ({
           Travel Services
         </h2>
         <p className="text-gray-600 dark:text-gray-400 text-sm">
-          Choose services to include in your trip.
+          Select which services we should include when planning your trip
         </p>
       </div>
 
@@ -432,6 +433,16 @@ const TravelServicesSelector = ({
                             )}
                           </p>
                         )}
+                      
+                      {/* ✅ NEW: Show ferry route notes/advisories if available */}
+                      {transportAnalysis.groundTransport.notes && (
+                        <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700 rounded">
+                          <p className="text-[10px] text-amber-800 dark:text-amber-300">
+                            <strong>💡 Important:</strong>{" "}
+                            {transportAnalysis.groundTransport.notes}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1060,10 +1071,10 @@ const TravelServicesSelector = ({
                       : "text-gray-700 dark:text-gray-300"
                   }`}
                 >
-                  Hotel Search
+                  Find Hotels
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {hotelData.includeHotels ? "Enabled" : "Click to enable"}
+                  {hotelData.includeHotels ? "We'll search for accommodations" : "Add hotels to your trip"}
                 </p>
               </div>
             </div>
@@ -1105,8 +1116,8 @@ const TravelServicesSelector = ({
                   hotelData.preferredType && (
                   <div className="flex items-center gap-1 text-green-600 dark:text-green-400 text-xs animate-fade-in-scale stagger-1">
                     <FaCheck className="text-[10px]" />
-                    <span title="Auto-populated from profile">
-                      Profile: {profileSummary.accommodationPreference}
+                    <span title="Pre-filled from your saved preferences">
+                      From your profile: {getAccommodationDisplay(profileSummary.accommodationPreference)}
                     </span>
                   </div>
                 )}
@@ -1114,7 +1125,10 @@ const TravelServicesSelector = ({
               {/* Accommodation Type - Compact Grid */}
               <div className="animate-fade-in-scale stagger-2">
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Where You'd Like to Stay
+                  Accommodation Type
+                  <span className="font-normal text-gray-500 dark:text-gray-400 ml-1">
+                    (Choose your preferred lodging style)
+                  </span>
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {ACCOMMODATION_TYPES.map((option) => (
@@ -1144,10 +1158,10 @@ const TravelServicesSelector = ({
               {/* Price Range - Compact Grid */}
               <div className="animate-fade-in-scale stagger-3">
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Budget Level{" "}
+                  Hotel Budget Per Night
                   {formData?.location && (
-                    <span className="text-sky-600 dark:text-sky-400 font-normal">
-                      • {formData.location}
+                    <span className="text-sky-600 dark:text-sky-400 font-normal ml-1">
+                      in {formData.location}
                     </span>
                   )}
                 </label>
@@ -1193,9 +1207,7 @@ const TravelServicesSelector = ({
           </div>
           <div className="flex-1">
             <p className="text-sm text-sky-900 dark:text-sky-300 leading-relaxed">
-              <strong>Next Step:</strong> We'll calculate your personalized
-              budget based on these services, your destination, and trip
-              duration.
+              <strong>What's Next:</strong> We'll calculate your total trip cost based on your selected services, destination, and duration. You'll see the breakdown before confirming.
             </p>
           </div>
         </div>
