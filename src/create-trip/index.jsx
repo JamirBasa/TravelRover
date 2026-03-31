@@ -139,6 +139,20 @@ function CreateTrip() {
 
   // ✅ NEW: Load draft on mount
   useEffect(() => {
+    // Check for debug step parameter first (for screenshots)
+    const params = new URLSearchParams(location.search);
+    const debugStep = params.get("step");
+    
+    if (debugStep && /^\d+$/.test(debugStep)) {
+      const stepNum = Math.max(1, Math.min(parseInt(debugStep), STEPS.length));
+      setCurrentStep(stepNum);
+      toast.info(`Debug Mode: Showing Step ${stepNum}`, {
+        description: "Use the step selector to navigate pages",
+        duration: 3000,
+      });
+      return;
+    }
+
     const draft = loadDraft();
     if (draft && !location.state?.searchedLocation) {
       // Only restore draft if user didn't come from home with a search
@@ -163,7 +177,7 @@ function CreateTrip() {
       if (draft.customBudget) setCustomBudget(draft.customBudget);
       if (draft.currentStep) setCurrentStep(draft.currentStep);
     }
-  }, [location.state]);
+  }, [location.search, location.state]);
 
   // Check user profile on component mount
   useEffect(() => {
@@ -944,7 +958,11 @@ function CreateTrip() {
   };
 
   const nextStep = () => {
-    if (validateCurrentStep()) {
+    // Check if debug mode is active
+    const params = new URLSearchParams(location.search);
+    const isDebugMode = !!params.get("step");
+    
+    if (isDebugMode || validateCurrentStep()) {
       setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
     }
   };
@@ -3113,6 +3131,8 @@ function CreateTrip() {
                 const Icon = step.icon;
                 const isActive = currentStep === step.id;
                 const isCompleted = currentStep > step.id;
+                const params = new URLSearchParams(location.search);
+                const isDebugMode = !!params.get("step");
 
                 return (
                   <div
@@ -3120,13 +3140,22 @@ function CreateTrip() {
                     className="flex items-center shrink-0"
                   >
                     <div
+                      onClick={() => {
+                        // Allow clicking to jump to any step in debug mode
+                        if (isDebugMode) {
+                          setCurrentStep(step.id);
+                        }
+                      }}
                       className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full border-2 transition-all ${
+                        isDebugMode ? "cursor-pointer hover:scale-110" : ""
+                      } ${
                         isCompleted
                           ? "bg-green-500 dark:bg-green-600 border-green-500 dark:border-green-600 text-white"
                           : isActive
                           ? "bg-sky-600 dark:bg-sky-500 border-sky-600 dark:border-sky-500 text-white"
                           : "bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-400 dark:text-gray-500"
                       }`}
+                      title={isDebugMode ? `Jump to Step ${step.id}` : ""}
                     >
                       {isCompleted ? (
                         <FaCheck className="text-[10px] sm:text-xs md:text-sm" />
