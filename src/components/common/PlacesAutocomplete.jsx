@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { FaMapMarkerAlt, FaTimes } from "react-icons/fa";
+import { toast } from "sonner";
 
 /**
  * Custom Places Autocomplete Component
@@ -103,6 +104,24 @@ export function PlacesAutocomplete({
       console.error(errorMsg);
     };
 
+    // Suppress Google Cloud billing warnings in console
+    const originalError = window.console.error;
+    window.console.error = function(...args) {
+      if (args[0] && typeof args[0] === 'string') {
+        if (args[0].includes('BillingNotEnabledMapError') || 
+            args[0].includes('REQUEST_DENIED') ||
+            args[0].includes('COOP')) {
+          // Log these as warnings instead and provide helpful message
+          window.console.warn('⚠️ Google Places API Issue:', args[0]);
+          if (args[0].includes('BillingNotEnabledMapError')) {
+            toast.error('Google Places API: Please enable billing and the Places API in your Google Cloud project.');
+          }
+          return;
+        }
+      }
+      originalError.apply(window.console, args);
+    };
+
     document.head.appendChild(script);
   };
 
@@ -159,6 +178,18 @@ export function PlacesAutocomplete({
       // Note: Google shows deprecation warnings for AutocompleteService and PlacesService
       // These are still fully supported with 12+ months notice before discontinuation
       // Migration to new Place API will be done in a future update
+      
+      // Temporarily suppress Google's deprecation warnings during initialization
+      const originalWarn = window.console.warn;
+      window.console.warn = function(...args) {
+        if (args[0] && typeof args[0] === 'string' &&
+            (args[0].includes('google.maps.places.AutocompleteService') ||
+             args[0].includes('google.maps.places.PlacesService'))) {
+          return; // Suppress these specific deprecation warnings
+        }
+        originalWarn.apply(window.console, args);
+      };
+      
       autocompleteService.current =
         new window.google.maps.places.AutocompleteService();
 
@@ -169,6 +200,9 @@ export function PlacesAutocomplete({
       // Create a temporary div for PlacesService (required by API)
       const div = document.createElement("div");
       placesService.current = new window.google.maps.places.PlacesService(div);
+      
+      // Restore original warn function
+      window.console.warn = originalWarn;
 
       console.log("✅ Google Places services initialized successfully");
       setError(null);

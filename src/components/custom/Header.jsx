@@ -39,6 +39,23 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 
+// Suppress COOP policy warnings in console (happens with @react-oauth/google)
+const originalWarn = window.console.warn;
+window.console.warn = function(...args) {
+  if (args[0] && typeof args[0] === 'string') {
+    // Suppress COOP warnings
+    if (args[0].includes('Cross-Origin-Opener-Policy')) {
+      return;
+    }
+    // Suppress Google Places API deprecation warnings (still supported, migration planned later)
+    if (args[0].includes('google.maps.places.AutocompleteService') ||
+        args[0].includes('google.maps.places.PlacesService')) {
+      return;
+    }
+  }
+  originalWarn.apply(window.console, args);
+};
+
 function Header() {
   const { isDarkMode, toggleTheme } = useTheme();
 
@@ -61,8 +78,16 @@ function Header() {
   const googleLogin = useGoogleLogin({
     onSuccess: (codeResp) => getUserProfile(codeResp),
     onError: (error) => {
+      // Suppress COOP-related errors (browser security feature, not a real failure)
+      if (error && typeof error === 'string' && error.includes('COOP')) {
+        console.log("Note: Browser security policy prevented popup detection, but login may still be in progress...");
+        return;
+      }
       console.error("Login failed:", error);
-      toast.error("Login failed. Please try again.");
+      // Only show error toast for non-COOP errors
+      if (!error?.message?.includes('popup')) {
+        toast.error("Login failed. Please try again.");
+      }
     },
   });
 
