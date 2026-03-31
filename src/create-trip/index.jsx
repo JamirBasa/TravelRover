@@ -957,12 +957,93 @@ function CreateTrip() {
     return true;
   };
 
+  // ✅ NEW: Pre-flight API health check
+  // This verifies backend and all external APIs (Gemini, SerpAPI, Google Places) are operational
+  const checkApiHealth = async () => {
+    try {
+      const API_BASE_URL =
+        import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+
+      console.log("🔍 Running pre-flight API health check...");
+
+      const healthResponse = await axios.get(
+        `${API_BASE_URL}/langgraph/health/`,
+        { timeout: 5000 }
+      );
+
+      if (!healthResponse.data || healthResponse.data.status !== "healthy") {
+        console.error(
+          "❌ Backend health check failed:",
+          healthResponse.data
+        );
+        return {
+          isHealthy: false,
+          error:
+            "AI service is currently unavailable. Please try again in a few moments.",
+        };
+      }
+
+      console.log("✅ API health verified - all systems operational");
+      return { isHealthy: true };
+    } catch (error) {
+      console.error("❌ API health check failed:", error);
+
+      // Connection refused = Django not running
+      if (error.code === "ECONNREFUSED") {
+        return {
+          isHealthy: false,
+          error:
+            "Cannot connect to backend. Is Django running on http://localhost:8000?",
+        };
+      }
+
+      // Connection timeout or 408 = API key issues
+      if (
+        error.code === "ECONNABORTED" ||
+        error.response?.status === 408
+      ) {
+        return {
+          isHealthy: false,
+          error:
+            "API timeout - your backend API keys may be expired or invalid (Gemini, SerpAPI, etc). Check Django logs and .env file.",
+        };
+      }
+
+      // Network error
+      if (error.code === "ERR_NETWORK") {
+        return {
+          isHealthy: false,
+          error:
+            "Network error - check your internet connection and backend server.",
+        };
+      }
+
+      // Generic error
+      return {
+        isHealthy: false,
+        error: `API health check failed: ${error.message}`,
+      };
+    }
+  };
+
   const nextStep = () => {
     // Check if debug mode is active
     const params = new URLSearchParams(location.search);
     const isDebugMode = !!params.get("step");
     
-    if (isDebugMode || validateCurrentStep()) {
+    // ✅ SECURITY FIX: Restrict debug mode bypass for critical steps
+    // Debug mode only works for form steps (1-5), NOT for trip generation (step 6)
+    const allowDebugBypass = currentStep < 6;
+    
+    if (allowDebugBypass && isDebugMode) {
+      // Debug mode: skip validation for form steps only
+      console.warn(`⚠️ DEBUG MODE: Skipping validation for step ${currentStep}`);
+      setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
+      return;
+    }
+    
+    // Normal mode: enforce validation for all steps
+    if (validateCurrentStep()) {
       setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
     }
   };
@@ -1032,6 +1113,22 @@ function CreateTrip() {
     if (!validateCurrentStep()) {
       return;
     }
+
+    // ✅ NEW: Run pre-flight API health check BEFORE starting trip generation
+    console.log("🔍 Running pre-flight API check before trip generation...");
+    const apiHealthCheck = await checkApiHealth();
+
+    if (!apiHealthCheck.isHealthy) {
+      toast.error("API Unavailable", {
+        description: apiHealthCheck.error,
+        duration: 8000,
+      });
+      return; // Stop execution - don't proceed to trip generation
+    }
+
+    console.log(
+      "✅ Pre-flight check passed - proceeding with trip generation"
+    );
 
     // ✅ NEW: Wrap entire trip generation in deduplication
     return deduplicateTripGeneration(formData, async () => {

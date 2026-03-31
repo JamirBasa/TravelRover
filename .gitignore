@@ -77,10 +77,14 @@ travel-backend/venv/
 .npm/
 .eslintcache
 
-# Firebase cache
+# Firebase cache & credentials
 .firebase/
 firebase-debug.log
 firestore-debug.log
+serviceAccountKey.json
+**/serviceAccountKey.json
+*.key.json
+**/*.key.json
 
 # OS generated files
 .DS_Store?

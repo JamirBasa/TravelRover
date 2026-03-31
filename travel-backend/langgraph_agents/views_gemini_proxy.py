@@ -114,7 +114,7 @@ def gemini_generate(request):
         ]
         
         # Initialize model
-        model_name = generation_config.get('model', 'gemini-2.5-flash')
+        model_name = generation_config.get('model', 'gemini-3.0-flash') 
         model = genai.GenerativeModel(
             model_name=model_name,
             generation_config=config,

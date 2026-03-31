@@ -1,0 +1,223 @@
+{
+  "original_data": [
+    {
+      "trip_id": "1765700865402",
+      "destination": "El Nido, Palawan, Philippines",
+      "recommended_budget": 22300.0,
+      "actual_cost": 22000.0,
+      "variance_percent": -1.35,
+      "variance_amount": -300.0,
+      "recommended_tier": "Moderate",
+      "actual_tier": "Moderate",
+      "same_tier": true,
+      "within_tolerance": true,
+      "is_accurate": true,
+      "cost_breakdown": {
+        "flights": 2000.0,
+        "accommodation": 13500.0,
+        "activities": 6500.0
+      }
+    },
+    {
+      "trip_id": "1765700929069",
+      "destination": "Davao City, Davao del Sur, Philippines",
+      "recommended_budget": 16800.0,
+      "actual_cost": 22000.0,
+      "variance_percent": 30.95,
+      "variance_amount": 5200.0,
+      "recommended_tier": "Moderate",
+      "actual_tier": "Moderate",
+      "same_tier": true,
+      "within_tolerance": false,
+      "is_accurate": false,
+      "cost_breakdown": {
+        "flights": 2000.0,
+        "accommodation": 13500.0,
+        "activities": 6500.0
+      }
+    },
+    {
+      "trip_id": "1765700994545",
+      "destination": "Vigan, Ilocos Sur, Philippines",
+      "recommended_budget": 24700.0,
+      "actual_cost": 22000.0,
+      "variance_percent": -10.93,
+      "variance_amount": -2700.0,
+      "recommended_tier": "Moderate",
+      "actual_tier": "Moderate",
+      "same_tier": true,
+      "within_tolerance": true,
+      "is_accurate": true,
+      "cost_breakdown": {
+        "flights": 2000.0,
+        "accommodation": 13500.0,
+        "activities": 6500.0
+      }
+    },
+    {
+      "trip_id": "1765702690548",
+      "destination": "Baguio City, Benguet, Philippines",
+      "recommended_budget": 21200.0,
+      "actual_cost": 18275.0,
+      "variance_percent": -13.8,
+      "variance_amount": -2925.0,
+      "recommended_tier": "Moderate",
+      "actual_tier": "Moderate",
+      "same_tier": true,
+      "within_tolerance": true,
+      "is_accurate": true,
+      "cost_breakdown": {
+        "flights": 2815.0,
+        "accommodation": 10500.0,
+        "activities": 4960.0
+      }
+    },
+    {
+      "trip_id": "1765702762073",
+      "destination": "Davao City, Davao del Sur, Philippines",
+      "recommended_budget": 29100.0,
+      "actual_cost": 18275.0,
+      "variance_percent": -37.2,
+      "variance_amount": -10825.0,
+      "recommended_tier": "Moderate",
+      "actual_tier": "Moderate",
+      "same_tier": true,
+      "within_tolerance": false,
+      "is_accurate": false,
+      "cost_breakdown": {
+        "flights": 2815.0,
+        "accommodation": 10500.0,
+        "activities": 4960.0
+      }
+    },
+    {
+      "trip_id": "1765702803601",
+      "destination": "Cebu City, Cebu, Philippines",
+      "recommended_budget": 20100.0,
+      "actual_cost": 18275.0,
+      "variance_percent": -9.08,
+      "variance_amount": -1825.0,
+      "recommended_tier": "Moderate",
+      "actual_tier": "Moderate",
+      "same_tier": true,
+      "within_tolerance": true,
+      "is_accurate": true,
+      "cost_breakdown": {
+        "flights": 2815.0,
+        "accommodation": 10500.0,
+        "activities": 4960.0
+      }
+    },
+    {
+      "trip_id": "1765702865151",
+      "destination": "Kalibo, Aklan, Philippines",
+      "recommended_budget": 25500.0,
+      "actual_cost": 18275.0,
+      "variance_percent": -28.33,
+      "variance_amount": -7225.0,
+      "recommended_tier": "Moderate",
+      "actual_tier": "Moderate",
+      "same_tier": true,
+      "within_tolerance": false,
+      "is_accurate": false,
+      "cost_breakdown": {
+        "flights": 2815.0,
+        "accommodation": 10500.0,
+        "activities": 4960.0
+      }
+    },
+    {
+      "trip_id": "1765703628233",
+      "destination": "Zamboanga City, Zamboanga del Sur, Philippines",
+      "recommended_budget": 15700.0,
+      "actual_cost": 15100.0,
+      "variance_percent": -3.82,
+      "variance_amount": -600.0,
+      "recommended_tier": "Moderate",
+      "actual_tier": "Moderate",
+      "same_tier": true,
+      "within_tolerance": true,
+      "is_accurate": true,
+      "cost_breakdown": {
+        "flights": 330.0,
+        "accommodation": 10500.0,
+        "activities": 4270.0
+      }
+    },
+    {
+      "trip_id": "1765703740646",
+      "destination": "Panglao, Bohol, Philippines",
+      "recommended_budget": 20100.0,
+      "actual_cost": 18350.0,
+      "variance_percent": -8.71,
+      "variance_amount": -1750.0,
+      "recommended_tier": "Moderate",
+      "actual_tier": "Moderate",
+      "same_tier": true,
+      "within_tolerance": true,
+      "is_accurate": true,
+      "cost_breakdown": {
+        "flights": 2050.0,
+        "accommodation": 10500.0,
+        "activities": 5800.0
+      }
+    },
+    {
+      "trip_id": "1765703820168",
+      "destination": "Iloilo City, Iloilo, Philippines",
+      "recommended_budget": 20700.0,
+      "actual_cost": 18350.0,
+      "variance_percent": -11.35,
+      "variance_amount": -2350.0,
+      "recommended_tier": "Moderate",
+      "actual_tier": "Moderate",
+      "same_tier": true,
+      "within_tolerance": true,
+      "is_accurate": true,
+      "cost_breakdown": {
+        "flights": 2050.0,
+        "accommodation": 10500.0,
+        "activities": 5800.0
+      }
+    }
+  ],
+  "enhanced_metrics": {
+    "rmse": {
+      "value": 4739.541117028103,
+      "normalized_percentage": 24.827350010623903,
+      "interpretation": "Fair (20-30%)"
+    },
+    "mae": {
+      "value": 3570.0,
+      "percentage": 18.700890518596125
+    },
+    "mape": {
+      "value": 15.551904508822876
+    },
+    "r_squared": {
+      "value": -3.9833616185817444,
+      "variance_explained_percentage": -398.3361618581744
+    },
+    "accuracy_metrics": {
+      "tier_classification": 100.0,
+      "variance_tolerance": 70.0,
+      "combined": 70.0
+    },
+    "error_distribution": {
+      "mean_error": -2530.0,
+      "std_dev": 4224.57755942006,
+      "min_error": -10825.0,
+      "max_error": 5200.0,
+      "underestimates_count": 1,
+      "overestimates_count": 9
+    }
+  },
+  "timestamp": "2026-01-15",
+  "methodology": {
+    "rmse": "Root Mean Square Error - penalizes large errors",
+    "mae": "Mean Absolute Error - robust to outliers",
+    "mape": "Mean Absolute Percentage Error - scale-independent",
+    "r_squared": "Coefficient of determination - variance explained",
+    "combined_accuracy": "Tier match AND \u00b120% tolerance"
+  }
+}
