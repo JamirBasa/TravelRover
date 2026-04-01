@@ -4,7 +4,7 @@
     "builder": "dockerfile"
   },
   "deploy": {
-    "startCommand": "python manage.py check && python manage.py migrate --noinput && gunicorn travelapi.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --access-logfile - --error-logfile -",
+    "startCommand": "python manage.py check && gunicorn travelapi.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --access-logfile - --error-logfile -",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }

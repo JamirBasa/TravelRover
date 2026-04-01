@@ -25,5 +25,4 @@ EXPOSE 8000
 
 # Run migrations and start gunicorn
 CMD python manage.py check && \
-    python manage.py migrate --noinput && \
-    gunicorn travelapi.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --access-logfile - --error-logfile -
+    gunicorn travelapi.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --access-logfile - --error-logfile -
