@@ -48,7 +48,7 @@ def check_api_keys(app_configs, **kwargs):
     for key_name, info in all_keys.items():
         key_value = getattr(settings, key_name, None)
         
-        if not key_value or len(key_value.strip()) == 0:
+        if not key_value or (isinstance(key_value, str) and not key_value.strip()):
             warnings.append(
                 Warning(
                     f'{key_name} is not configured',
