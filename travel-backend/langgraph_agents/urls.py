@@ -6,6 +6,7 @@ from .views_places_proxy import GooglePlacesSearchProxyView
 from .views_geocoding_proxy import GoogleGeocodingProxyView
 from .views_gemini_proxy import gemini_generate, gemini_health
 from .views_longcat import longcat_chat, longcat_health
+from .views_cors_debug import cors_debug_view, cors_debug_raw
 
 app_name = 'langgraph_agents'
 
@@ -40,6 +41,10 @@ urlpatterns = [
     path('health/', views.LangGraphHealthCheckView.as_view(), name='health'),
     path('health/detailed/', HealthCheckView.as_view(), name='health_detailed'),
     path('health/ping/', QuickHealthView.as_view(), name='health_ping'),
+    
+    # CORS debugging (only for troubleshooting)
+    path('cors-debug/', cors_debug_view, name='cors_debug'),
+    path('cors-debug-raw/', cors_debug_raw, name='cors_debug_raw'),
     
     # Legacy endpoint for backwards compatibility
     path('orchestrate/', views.LangGraphTravelPlannerView.as_view(), name='orchestrate'),
