@@ -24,4 +24,4 @@ RUN python manage.py collectstatic --noinput --clear
 EXPOSE 8000
 
 # Run gunicorn directly
-CMD gunicorn travelapi.wsgi:application -c gunicorn_conf.py
+CMD python -m gunicorn travelapi.wsgi:application -c gunicorn_conf.py

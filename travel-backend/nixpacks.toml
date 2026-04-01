@@ -9,4 +9,4 @@ cmds = [
 ]
 
 [start]
-cmd = "gunicorn travelapi.wsgi:application -c gunicorn_conf.py"
+cmd = "python -m gunicorn travelapi.wsgi:application -c gunicorn_conf.py"
