@@ -70,15 +70,10 @@ class LangGraphTravelPlannerView(APIView):
                     'error_type': 'internal_error'
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        # Run async handler synchronously
+        # Run async handler synchronously using asyncio.run()
+        # This properly handles event loop creation/cleanup in gunicorn workers
         import asyncio
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(async_handler())
+        return asyncio.run(async_handler())
 
 class LangGraphSessionStatusView(APIView):
     """
@@ -128,15 +123,10 @@ class LangGraphSessionStatusView(APIView):
                     'error': str(e)
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        # Run async handler synchronously
+        # Run async handler synchronously using asyncio.run()
+        # This properly handles event loop creation/cleanup in gunicorn workers
         import asyncio
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(async_handler())
+        return asyncio.run(async_handler())
 
 class TransportModeAnalysisView(APIView):
     """
