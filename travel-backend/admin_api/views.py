@@ -780,13 +780,7 @@ class AdminAPIKeyMonitoringView(APIView):
                         logger.warning(f"⚠️ Error closing session: {cleanup_error}")
         
         # ✅ Run async handler (TravelRover async pattern)
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(async_handler())
+        return asyncio.run(async_handler())
     
 
 @method_decorator(csrf_exempt, name='dispatch') 
@@ -839,13 +833,7 @@ class AdminAPIKeyHistoryView(APIView):
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         # Run async handler
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(async_handler())
+        return asyncio.run(async_handler())
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AdminAPIKeyMonitoringView(APIView):
@@ -924,13 +912,7 @@ class AdminAPIKeyMonitoringView(APIView):
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         # Run async handler - TravelRover async pattern
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(async_handler())
+        return asyncio.run(async_handler())
     
     def _generate_recommendations(self, api_statuses: dict) -> list:
         """Generate actionable recommendations based on API key statuses"""
@@ -1022,10 +1004,4 @@ class AdminAPIKeyHistoryView(APIView):
                     'error': str(e)
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(async_handler())
+        return asyncio.run(async_handler())

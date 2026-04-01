@@ -31,27 +31,7 @@ class CoordinatorAgent(BaseAgent):
     def execute_sync(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Synchronous wrapper for the async execute method"""
         import asyncio
-        try:
-            # Create new event loop for this execution
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                return loop.run_until_complete(self._execute_logic(input_data))
-            finally:
-                loop.close()
-        except RuntimeError:
-            # If we're already in an async context, run in new loop
-            return self._run_in_new_loop(input_data)
-    
-    def _run_in_new_loop(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Run async logic in a new event loop"""
-        import asyncio
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            return loop.run_until_complete(self._execute_logic(input_data))
-        finally:
-            loop.close()
+        return asyncio.run(self._execute_logic(input_data))
     
     async def _execute_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Coordinate the entire travel planning workflow"""
