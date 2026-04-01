@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from asgiref.sync import async_to_sync
 
 from .services import OrchestrationService, SessionService
 from .utils import get_agent_logger, validate_email
@@ -70,10 +71,8 @@ class LangGraphTravelPlannerView(APIView):
                     'error_type': 'internal_error'
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        # Run async handler synchronously using asyncio.run()
-        # This properly handles event loop creation/cleanup in gunicorn workers
-        import asyncio
-        return asyncio.run(async_handler())
+        # Use async_to_sync instead of asyncio.run() for better gunicorn compatibility
+        return async_to_sync(async_handler)()
 
 class LangGraphSessionStatusView(APIView):
     """
@@ -123,10 +122,8 @@ class LangGraphSessionStatusView(APIView):
                     'error': str(e)
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        # Run async handler synchronously using asyncio.run()
-        # This properly handles event loop creation/cleanup in gunicorn workers
-        import asyncio
-        return asyncio.run(async_handler())
+        # Use async_to_sync instead of asyncio.run() for better gunicorn compatibility
+        return async_to_sync(async_handler)()
 
 class TransportModeAnalysisView(APIView):
     """
