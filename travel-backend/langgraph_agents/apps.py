@@ -9,7 +9,14 @@ class LanggraphAgentsConfig(AppConfig):
     
     def ready(self):
         """
-        Import checks when Django starts
-        This registers system checks for API key validation
+        Initialize app when Django starts
+        CRITICAL: Don't crash the entire app on initialization errors
         """
-        from . import checks  # noqa: F401
+        try:
+            # Import checks for system validation
+            from . import checks  # noqa: F401
+        except Exception as e:
+            # Log the error but don't crash
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"⚠️ Check registry initialization failed: {str(e)}", exc_info=True)
