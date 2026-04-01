@@ -1,12 +1,6 @@
-# Nixpacks configuration for Railway - Updated for deployment fix
+# Nixpacks configuration for Railway
 [phases.setup]
-nixPkgs = ["python311", "python311Packages.pip", "gcc", "postgresql"]
-
-[phases.install]
-cmds = [
-  "python -m pip install --upgrade pip",
-  "python -m pip install -r requirements.txt"
-]
+aptPkgs = ["gcc", "libpq-dev"]
 
 [phases.build]
 cmds = [
