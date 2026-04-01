@@ -23,6 +23,5 @@ RUN python manage.py collectstatic --noinput --clear
 # Expose port
 EXPOSE 8000
 
-# Run migrations and start gunicorn
-CMD python manage.py check && \
-    gunicorn travelapi.wsgi:application -c gunicorn_conf.py
+# Run gunicorn directly
+CMD gunicorn travelapi.wsgi:application -c gunicorn_conf.py

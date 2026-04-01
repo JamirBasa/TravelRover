@@ -5,9 +5,11 @@ import multiprocessing
 port = os.environ.get("PORT", "8000")
 bind = f"0.0.0.0:{port}"
 
+print(f"🚀 Gunicorn booting on {bind}")
+
 # Worker configuration
-# 2 workers are generally safe for 512MB RAM standard Railway container
-workers = 2 
+# 1 worker for API-heavy agents to prevent Railway 512MB RAM limits (OOM kills)
+workers = 1 
 worker_class = "sync"
 timeout = 120
 keepalive = 5
