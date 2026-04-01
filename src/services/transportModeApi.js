@@ -23,8 +23,11 @@ export const analyzeTransportMode = async (
     
     const response = await fetch(TRANSPORT_MODE_URL, {
       method: "POST",
+      mode: "cors",
+      credentials: "omit",  // Use 'omit' for simpler CORS, can change to 'include' if needed
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
       },
       body: JSON.stringify({
         departure_city: departureCity,

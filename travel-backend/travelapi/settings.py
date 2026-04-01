@@ -178,14 +178,51 @@ REST_FRAMEWORK = {
     }
 }
 
-# CORS Configuration
-CORS_ALLOWED_ORIGINS = config(
-    'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:5173,http://127.0.0.1:5173',
-    cast=lambda v: [s.strip().rstrip('/') for s in v.split(',')]
-)
+# CORS Configuration - Parse from environment with robust handling
+def parse_cors_origins():
+    """Parse CORS origins from environment variable with fallbacks."""
+    origins_str = os.environ.get('CORS_ALLOWED_ORIGINS', '')
+    
+    if not origins_str:
+        # Development fallback
+        return [
+            'http://localhost:5173',
+            'http://127.0.0.1:5173',
+            'http://localhost:3000',
+            'http://127.0.0.1:3000',
+        ]
+    
+    # Parse comma-separated origins and clean them
+    origins = [s.strip().rstrip('/') for s in origins_str.split(',') if s.strip()]
+    
+    # Always include localhost for debugging
+    if not DEBUG:  # Only in production
+        origins.extend([
+            'http://localhost:5173',
+            'http://127.0.0.1:5173',
+        ])
+    
+    return origins
 
+CORS_ALLOWED_ORIGINS = parse_cors_origins()
+
+# Explicit CORS headers configuration
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+CORS_EXPOSE_HEADERS = [
+    'content-type',
+    'x-csrftoken',
+]
 
 # Security settings for production
 if not DEBUG:
