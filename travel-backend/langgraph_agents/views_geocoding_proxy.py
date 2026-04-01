@@ -60,10 +60,10 @@ class GoogleGeocodingProxyView(View):
                 }, status=400)
             
             # Get API key from environment
-            api_key = getattr(settings, 'GOOGLE_PLACES_API_KEY', None)
+            api_key = getattr(settings, 'GOOGLE_MAPS_API_KEY', None) or getattr(settings, 'GOOGLE_PLACES_API_KEY', None)
             
             if not api_key:
-                logger.error("GOOGLE_PLACES_API_KEY not configured for geocoding")
+                logger.error("API keys not configured for geocoding")
                 return JsonResponse({
                     'success': False,
                     'error': 'API key not configured'
