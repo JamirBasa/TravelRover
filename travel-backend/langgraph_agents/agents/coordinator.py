@@ -29,9 +29,11 @@ class CoordinatorAgent(BaseAgent):
         self.use_ga_first = use_ga_first  # NEW: Enable GA-first itinerary generation
     
     def execute_sync(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Synchronous wrapper for the async execute method"""
-        import asyncio
-        return asyncio.run(self._execute_logic(input_data))
+        """Synchronous wrapper for the async execute method - should not be used with gunicorn"""
+        # NOTE: This method should not be called in production with gunicorn.
+        # Use async_to_sync from views.py instead
+        from asgiref.sync import async_to_sync
+        return async_to_sync(self._execute_logic)(input_data)
     
     async def _execute_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Coordinate the entire travel planning workflow"""
