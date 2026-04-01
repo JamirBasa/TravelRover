@@ -19,87 +19,86 @@ class LangGraphTravelPlannerView(APIView):
     """
     Main LangGraph Travel Planner API endpoint using modular services
     Rate Limited: 5 requests/hour per user, 2 requests/minute burst protection
+    IMPORTANT: Using async_to_sync for ASGI service compatibility with sync gunicorn workers
     """
     throttle_classes = [TripGenerationThrottle, BurstTripGenerationThrottle]
     
     def post(self, request):
         """Execute LangGraph travel planning workflow"""
         
-        async def async_handler():
-            try:
-                logger.info("🤖 Starting LangGraph travel planning request")
-                
-                # Extract and validate user email
-                user_email = validate_email(
-                    request.data.get('userEmail', request.data.get('user_email', ''))
-                )
-                
-                # Extract trip parameters
-                trip_params = request.data.get('tripParams', request.data)
-                
-                logger.info(f"🎯 Processing request for {user_email}: {trip_params.get('destination', 'Unknown')}")
-                
-                # Create orchestration service and execute workflow
-                orchestration_service = OrchestrationService()
-                results = await orchestration_service.execute_workflow(user_email, trip_params)
-                
-                logger.info(f"✅ LangGraph workflow completed: {results.get('session_id')}")
-                
-                return Response(results)
-                
-            except DataValidationError as e:
-                logger.warning(f"⚠️ Validation error: {str(e)}")
-                return Response({
-                    'success': False,
-                    'error': f"Validation error: {str(e)}",
-                    'error_type': 'validation'
-                }, status=status.HTTP_400_BAD_REQUEST)
-                
-            except LangGraphAgentError as e:
-                logger.error(f"❌ LangGraph agent error: {str(e)}")
-                return Response({
-                    'success': False,
-                    'error': str(e),
-                    'error_type': 'agent_error'
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                
-            except Exception as e:
-                logger.error(f"❌ Unexpected error: {str(e)}")
-                return Response({
-                    'success': False,
-                    'error': f"Internal server error: {str(e)}",
-                    'error_type': 'internal_error'
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        # Use async_to_sync instead of asyncio.run() for better gunicorn compatibility
-        return async_to_sync(async_handler)()
+        try:
+            logger.info("🤖 Starting LangGraph travel planning request")
+            
+            # Extract and validate user email
+            user_email = validate_email(
+                request.data.get('userEmail', request.data.get('user_email', ''))
+            )
+            
+            # Extract trip parameters
+            trip_params = request.data.get('tripParams', request.data)
+            
+            logger.info(f"🎯 Processing request for {user_email}: {trip_params.get('destination', 'Unknown')}")
+            
+            # Create orchestration service and execute workflow synchronously
+            orchestration_service = OrchestrationService()
+            # Call async execute_workflow using async_to_sync
+            results = async_to_sync(orchestration_service.execute_workflow)(user_email, trip_params)
+            
+            logger.info(f"✅ LangGraph workflow completed: {results.get('session_id')}")
+            
+            return Response(results)
+            
+        except DataValidationError as e:
+            logger.warning(f"⚠️ Validation error: {str(e)}")
+            return Response({
+                'success': False,
+                'error': f"Validation error: {str(e)}",
+                'error_type': 'validation'
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        except LangGraphAgentError as e:
+            logger.error(f"❌ LangGraph agent error: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e),
+                'error_type': 'agent_error'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+        except Exception as e:
+            logger.error(f"❌ Unexpected error: {str(e)}")
+            return Response({
+                'success': False,
+                'error': f"Internal server error: {str(e)}",
+                'error_type': 'internal_error'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class LangGraphSessionStatusView(APIView):
     """
     Get status and results of a LangGraph session using services
     Rate Limited: 30 requests/minute per user
+    IMPORTANT: Using async_to_sync for async service compatibility
     """
     throttle_classes = [SessionStatusThrottle]
     
     def get(self, request, session_id):
         """Get session status and results"""
         
-        async def async_handler():
+        def sync_handler():
             try:
                 logger.info(f"📊 Getting session status: {session_id}")
                 
                 session_service = SessionService()
                 
-                # Get session data
-                session_data = await session_service.get_session(session_id)
+                # Get session data synchronously
+                session_data = async_to_sync(session_service.get_session)(session_id)
                 if not session_data:
                     return Response({
                         'success': False,
                         'error': 'Session not found'
                     }, status=status.HTTP_404_NOT_FOUND)
                 
-                # Get execution logs
-                logs = await session_service.get_session_logs(session_id)
+                # Get execution logs synchronously
+                logs = async_to_sync(session_service.get_session_logs)(session_id)
                 
                 response_data = {
                     'success': True,
@@ -122,8 +121,7 @@ class LangGraphSessionStatusView(APIView):
                     'error': str(e)
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        # Use async_to_sync instead of asyncio.run() for better gunicorn compatibility
-        return async_to_sync(async_handler)()
+        return sync_handler()
 
 class TransportModeAnalysisView(APIView):
     """
@@ -260,11 +258,12 @@ class LangGraphHealthCheckView(APIView):
     """
     Health check endpoint for LangGraph system with comprehensive checks
     Rate Limited: 60 requests/minute
+    IMPORTANT: This is a synchronous endpoint (no async/await) for gunicorn compatibility
     """
     throttle_classes = [HealthCheckThrottle]
     
     def get(self, request):
-        """Check LangGraph system health"""
+        """Check LangGraph system health - Synchronous implementation"""
         
         try:
             from datetime import timedelta
@@ -303,7 +302,7 @@ class LangGraphHealthCheckView(APIView):
                 health_status['components']['database'] = f'unhealthy: {str(e)}'
                 health_status['status'] = 'degraded'
             
-            # Check agent services
+            # Check agent services - Don't import inside try to avoid mask errors
             try:
                 from .services import OrchestrationService
                 orchestration_service = OrchestrationService()
@@ -314,7 +313,8 @@ class LangGraphHealthCheckView(APIView):
                     'hotel_agent': 'active'
                 }
             except Exception as e:
-                health_status['components']['orchestration_service'] = f'unhealthy: {str(e)}'
+                logger.error(f"❌ Orchestration service check failed: {str(e)}")
+                health_status['components']['orchestration_service'] = 'unhealthy'
                 health_status['status'] = 'degraded'
             
             # Overall status
