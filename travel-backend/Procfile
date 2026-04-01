@@ -1,2 +1,2 @@
 # TravelRover Backend - Railway Deployment
-web: gunicorn travelapi.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 120 --access-logfile - --error-logfile -
+web: python manage.py check && python manage.py migrate --noinput && gunicorn travelapi.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --access-logfile - --error-logfile -

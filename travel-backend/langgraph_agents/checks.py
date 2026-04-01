@@ -13,12 +13,12 @@ def check_api_keys(app_configs, **kwargs):
     """
     Check that all required API keys are configured
     Runs on Django startup and `python manage.py check`
+    Note: Missing keys are warnings (non-blocking) to allow app startup with fallbacks
     """
-    errors = []
     warnings = []
     
-    # Critical API keys (system won't work without these)
-    critical_keys = {
+    # All API keys - missing keys return warnings but don't block startup
+    all_keys = {
         'SERPAPI_KEY': {
             'purpose': 'Real-time flight search functionality',
             'agent': 'FlightAgent',
@@ -33,11 +33,7 @@ def check_api_keys(app_configs, **kwargs):
             'purpose': 'AI-powered itinerary generation',
             'agent': 'CoordinatorAgent',
             'fallback': 'Trip generation will fail'
-        }
-    }
-    
-    # Optional API keys (system works without these)
-    optional_keys = {
+        },
         'GOOGLE_MAPS_API_KEY': {
             'purpose': 'Enhanced geocoding and mapping features',
             'fallback': 'Basic geocoding will be used'
@@ -48,42 +44,26 @@ def check_api_keys(app_configs, **kwargs):
         }
     }
     
-    # Check critical keys
-    for key_name, info in critical_keys.items():
-        key_value = getattr(settings, key_name, None)
-        
-        if not key_value or len(key_value.strip()) == 0:
-            errors.append(
-                Error(
-                    f'{key_name} is not configured',
-                    hint=(
-                        f'Add {key_name} to travel-backend/.env file\n'
-                        f'Purpose: {info["purpose"]}\n'
-                        f'Affected: {info["agent"]}\n'
-                        f'Fallback: {info["fallback"]}'
-                    ),
-                    id='travelrover.E001',
-                )
-            )
-    
-    # Check optional keys
-    for key_name, info in optional_keys.items():
+    # Check all keys - return warnings only (non-blocking)
+    for key_name, info in all_keys.items():
         key_value = getattr(settings, key_name, None)
         
         if not key_value or len(key_value.strip()) == 0:
             warnings.append(
                 Warning(
-                    f'{key_name} is not configured (optional)',
+                    f'{key_name} is not configured',
                     hint=(
-                        f'Add {key_name} to travel-backend/.env file for enhanced functionality\n'
+                        f'Add {key_name} to travel-backend/.env file\n'
                         f'Purpose: {info["purpose"]}\n'
-                        f'Fallback: {info["fallback"]}'
+                        f'Affected: {info["agent"]}\n'
+                        f'Fallback: {info["fallback"]}\n'
+                        f'Application will start with fallback behavior'
                     ),
                     id='travelrover.W001',
                 )
             )
     
-    return errors + warnings
+    return warnings
 
 
 @register(Tags.security)
