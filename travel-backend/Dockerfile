@@ -20,8 +20,5 @@ COPY . .
 # Collect static files
 RUN python manage.py collectstatic --noinput --clear
 
-# Expose port
-EXPOSE 8000
-
 # Run gunicorn directly
 CMD python -m gunicorn travelapi.wsgi:application -c gunicorn_conf.py
