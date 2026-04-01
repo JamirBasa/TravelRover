@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from asgiref.sync import async_to_sync
 
 from .services import OrchestrationService, SessionService
 from .utils import get_agent_logger, validate_email
@@ -24,61 +25,54 @@ class LangGraphTravelPlannerView(APIView):
     def post(self, request):
         """Execute LangGraph travel planning workflow"""
         
-        async def async_handler():
-            try:
-                logger.info("🤖 Starting LangGraph travel planning request")
-                
-                # Extract and validate user email
-                user_email = validate_email(
-                    request.data.get('userEmail', request.data.get('user_email', ''))
-                )
-                
-                # Extract trip parameters
-                trip_params = request.data.get('tripParams', request.data)
-                
-                logger.info(f"🎯 Processing request for {user_email}: {trip_params.get('destination', 'Unknown')}")
-                
-                # Create orchestration service and execute workflow
-                orchestration_service = OrchestrationService()
-                results = await orchestration_service.execute_workflow(user_email, trip_params)
-                
-                logger.info(f"✅ LangGraph workflow completed: {results.get('session_id')}")
-                
-                return Response(results)
-                
-            except DataValidationError as e:
-                logger.warning(f"⚠️ Validation error: {str(e)}")
-                return Response({
-                    'success': False,
-                    'error': f"Validation error: {str(e)}",
-                    'error_type': 'validation'
-                }, status=status.HTTP_400_BAD_REQUEST)
-                
-            except LangGraphAgentError as e:
-                logger.error(f"❌ LangGraph agent error: {str(e)}")
-                return Response({
-                    'success': False,
-                    'error': str(e),
-                    'error_type': 'agent_error'
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                
-            except Exception as e:
-                logger.error(f"❌ Unexpected error: {str(e)}")
-                return Response({
-                    'success': False,
-                    'error': f"Internal server error: {str(e)}",
-                    'error_type': 'internal_error'
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        # Run async handler synchronously
-        import asyncio
         try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(async_handler())
+            logger.info("🤖 Starting LangGraph travel planning request")
+            
+            # Extract and validate user email
+            user_email = validate_email(
+                request.data.get('userEmail', request.data.get('user_email', ''))
+            )
+            
+            # Extract trip parameters
+            trip_params = request.data.get('tripParams', request.data)
+            
+            logger.info(f"🎯 Processing request for {user_email}: {trip_params.get('destination', 'Unknown')}")
+            
+            # Create orchestration service
+            orchestration_service = OrchestrationService()
+            
+            # Execute async workflow using async_to_sync
+            results = async_to_sync(orchestration_service.execute_workflow)(user_email, trip_params)
+            
+            logger.info(f"✅ LangGraph workflow completed: {results.get('session_id')}")
+            
+            return Response(results)
+            
+        except DataValidationError as e:
+            logger.warning(f"⚠️ Validation error: {str(e)}")
+            return Response({
+                'success': False,
+                'error': f"Validation error: {str(e)}",
+                'error_type': 'validation'
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        except LangGraphAgentError as e:
+            logger.error(f"❌ LangGraph agent error: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e),
+                'error_type': 'agent_error'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+        except Exception as e:
+            logger.error(f"❌ Unexpected error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response({
+                'success': False,
+                'error': f"Internal server error: {str(e)}",
+                'error_type': 'internal_error'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class LangGraphSessionStatusView(APIView):
     """
@@ -90,53 +84,42 @@ class LangGraphSessionStatusView(APIView):
     def get(self, request, session_id):
         """Get session status and results"""
         
-        async def async_handler():
-            try:
-                logger.info(f"📊 Getting session status: {session_id}")
-                
-                session_service = SessionService()
-                
-                # Get session data
-                session_data = await session_service.get_session(session_id)
-                if not session_data:
-                    return Response({
-                        'success': False,
-                        'error': 'Session not found'
-                    }, status=status.HTTP_404_NOT_FOUND)
-                
-                # Get execution logs
-                logs = await session_service.get_session_logs(session_id)
-                
-                response_data = {
-                    'success': True,
-                    'session': session_data,
-                    'execution_logs': logs,
-                    'summary': {
-                        'total_agents': len(set(log['agent_type'] for log in logs)),
-                        'successful_executions': len([log for log in logs if log['status'] == 'success']),
-                        'failed_executions': len([log for log in logs if log['status'] == 'failed']),
-                        'total_execution_time_ms': sum(log.get('execution_time_ms', 0) for log in logs)
-                    }
-                }
-                
-                return Response(response_data)
-                
-            except Exception as e:
-                logger.error(f"❌ Error retrieving session {session_id}: {str(e)}")
+        try:
+            logger.info(f"📊 Getting session status: {session_id}")
+            
+            session_service = SessionService()
+            
+            # Get session data using async_to_sync
+            session_data = async_to_sync(session_service.get_session)(session_id)
+            if not session_data:
                 return Response({
                     'success': False,
-                    'error': str(e)
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        # Run async handler synchronously
-        import asyncio
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(async_handler())
+                    'error': 'Session not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Get execution logs
+            logs = async_to_sync(session_service.get_session_logs)(session_id)
+            
+            response_data = {
+                'success': True,
+                'session': session_data,
+                'execution_logs': logs,
+                'summary': {
+                    'total_agents': len(set(log['agent_type'] for log in logs)) if logs else 0,
+                    'successful_executions': len([log for log in logs if log['status'] == 'success']) if logs else 0,
+                    'failed_executions': len([log for log in logs if log['status'] == 'failed']) if logs else 0,
+                    'total_execution_time_ms': sum(log.get('execution_time_ms', 0) for log in logs) if logs else 0
+                }
+            }
+            
+            return Response(response_data)
+            
+        except Exception as e:
+            logger.error(f"❌ Error retrieving session {session_id}: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class TransportModeAnalysisView(APIView):
     """
