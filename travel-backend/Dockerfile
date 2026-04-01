@@ -25,4 +25,4 @@ EXPOSE 8000
 
 # Run migrations and start gunicorn
 CMD python manage.py check && \
-    gunicorn travelapi.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --access-logfile - --error-logfile -
+    gunicorn travelapi.wsgi:application -c gunicorn_conf.py
