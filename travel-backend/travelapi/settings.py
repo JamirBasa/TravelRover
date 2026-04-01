@@ -180,29 +180,34 @@ REST_FRAMEWORK = {
 
 # CORS Configuration - Parse from environment with robust handling
 def parse_cors_origins():
-    """Parse CORS origins from environment variable with fallbacks."""
+    """Parse CORS origins from environment variable with safe defaults."""
     origins_str = os.environ.get('CORS_ALLOWED_ORIGINS', '')
     
-    if not origins_str:
-        # Development fallback
-        return [
-            'http://localhost:5173',
-            'http://127.0.0.1:5173',
-            'http://localhost:3000',
-            'http://127.0.0.1:3000',
-        ]
+    # Always include these safe defaults
+    safe_defaults = [
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+    ]
     
-    # Parse comma-separated origins and clean them
-    origins = [s.strip().rstrip('/') for s in origins_str.split(',') if s.strip()]
-    
-    # Always include localhost for debugging
-    if not DEBUG:  # Only in production
-        origins.extend([
-            'http://localhost:5173',
-            'http://127.0.0.1:5173',
+    # In production, also add known production URLs
+    if not DEBUG:
+        safe_defaults.extend([
+            'https://travel-rover-ph.vercel.app',
+            'https://travelrover-production-9217.up.railway.app',
         ])
     
-    return origins
+    if not origins_str:
+        # No env var set - use safe defaults
+        return safe_defaults
+    
+    # Parse comma-separated origins from env var and clean them
+    custom_origins = [s.strip().rstrip('/') for s in origins_str.split(',') if s.strip()]
+    
+    # Merge with safe defaults (env var takes priority, but don't lose defaults)
+    all_origins = list(set(custom_origins + safe_defaults))
+    return all_origins
 
 CORS_ALLOWED_ORIGINS = parse_cors_origins()
 
