@@ -9,4 +9,4 @@ cmds = [
 ]
 
 [start]
-cmd = "python manage.py migrate --noinput && python -m gunicorn travelapi.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 180 --log-level info --access-logfile - --error-logfile -"
+cmd = "python manage.py migrate --noinput && python -m gunicorn travelapi.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 180 --log-level info --access-logfile - --error-logfile -"
