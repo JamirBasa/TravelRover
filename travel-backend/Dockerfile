@@ -21,4 +21,4 @@ COPY . .
 RUN python manage.py collectstatic --noinput --clear
 
 # Run gunicorn directly
-CMD ["sh", "-c", "python -m gunicorn travelapi.wsgi:application --bind 0.0.0.0:$PORT"]
+CMD ["python", "-m", "gunicorn", "travelapi.wsgi:application", "-c", "gunicorn_conf.py"]
