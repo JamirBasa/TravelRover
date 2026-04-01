@@ -179,7 +179,7 @@ REST_FRAMEWORK = {
 }
 
 # CORS Configuration - Parse from environment with robust handling
-def parse_cors_origins():
+# def parse_cors_origins():
     """Parse CORS origins from environment variable with safe defaults."""
     origins_str = os.environ.get('CORS_ALLOWED_ORIGINS', '')
     
@@ -209,7 +209,7 @@ def parse_cors_origins():
     all_origins = list(set(custom_origins + safe_defaults))
     return all_origins
 
-CORS_ALLOWED_ORIGINS = parse_cors_origins()
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Explicit CORS headers configuration
 CORS_ALLOW_CREDENTIALS = True
