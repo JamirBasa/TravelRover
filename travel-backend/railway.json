@@ -5,7 +5,7 @@
     "buildCommand": "python manage.py collectstatic --noinput --clear"
   },
   "deploy": {
-    "startCommand": "python manage.py migrate --noinput && python -m gunicorn travelapi.wsgi:application --preload --bind 0.0.0.0:$PORT --workers 1 --threads 1 --worker-tmp-dir /dev/shm --timeout 180 --log-level info --access-logfile - --error-logfile -",
+    "startCommand": "python manage.py migrate --noinput && gunicorn travelapi.wsgi:application --bind 0.0.0.0:$PORT --timeout 180",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
