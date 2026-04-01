@@ -1,13 +1,17 @@
 {
   "name": "ai-travel-planner",
   "private": true,
+  "engines": {
+    "node": "22.21.1"
+  },
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "vite build && vite preview --host 0.0.0.0 --port ${PORT:-4173}"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
