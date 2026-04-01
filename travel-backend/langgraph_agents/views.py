@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from asgiref.sync import async_to_sync
 
 from .services import OrchestrationService, SessionService
 from .utils import get_agent_logger, validate_email
@@ -17,111 +16,50 @@ logger = get_agent_logger("LangGraphViews")
 @method_decorator(csrf_exempt, name='dispatch')
 class LangGraphTravelPlannerView(APIView):
     """
-    Main LangGraph Travel Planner API endpoint using modular services
-    Rate Limited: 5 requests/hour per user, 2 requests/minute burst protection
-    IMPORTANT: Using async_to_sync for ASGI service compatibility with sync gunicorn workers
+    Main LangGraph Travel Planner API endpoint
+    TEMPORARY: Simplified to debug 502 errors
     """
     throttle_classes = [TripGenerationThrottle, BurstTripGenerationThrottle]
     
     def post(self, request):
         """Execute LangGraph travel planning workflow"""
-        
         try:
-            logger.info("🤖 Starting LangGraph travel planning request")
-            
-            # Extract and validate user email
-            user_email = validate_email(
-                request.data.get('userEmail', request.data.get('user_email', ''))
-            )
-            
-            # Extract trip parameters
-            trip_params = request.data.get('tripParams', request.data)
-            
-            logger.info(f"🎯 Processing request for {user_email}: {trip_params.get('destination', 'Unknown')}")
-            
-            # Create orchestration service and execute workflow synchronously
-            orchestration_service = OrchestrationService()
-            # Call async execute_workflow using async_to_sync
-            results = async_to_sync(orchestration_service.execute_workflow)(user_email, trip_params)
-            
-            logger.info(f"✅ LangGraph workflow completed: {results.get('session_id')}")
-            
-            return Response(results)
-            
-        except DataValidationError as e:
-            logger.warning(f"⚠️ Validation error: {str(e)}")
+            logger.info("🤖 Request received at /execute/")
             return Response({
                 'success': False,
-                'error': f"Validation error: {str(e)}",
-                'error_type': 'validation'
-            }, status=status.HTTP_400_BAD_REQUEST)
-            
-        except LangGraphAgentError as e:
-            logger.error(f"❌ LangGraph agent error: {str(e)}")
-            return Response({
-                'success': False,
-                'error': str(e),
-                'error_type': 'agent_error'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
+                'error': 'Trip generation temporarily disabled for debugging',
+                'message': 'Please check back soon - backend is being fixed',
+                'timestamp': __import__('django.utils.timezone', fromlist=['now']).now().isoformat()
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception as e:
-            logger.error(f"❌ Unexpected error: {str(e)}")
+            logger.error(f"❌ Error in travel planner: {str(e)}")
             return Response({
                 'success': False,
-                'error': f"Internal server error: {str(e)}",
-                'error_type': 'internal_error'
+                'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class LangGraphSessionStatusView(APIView):
     """
-    Get status and results of a LangGraph session using services
-    Rate Limited: 30 requests/minute per user
-    IMPORTANT: Using async_to_sync for async service compatibility
+    Get status of a LangGraph session
+    TEMPORARY: Simplified to debug 502 errors
     """
     throttle_classes = [SessionStatusThrottle]
     
     def get(self, request, session_id):
         """Get session status and results"""
-        
-        def sync_handler():
-            try:
-                logger.info(f"📊 Getting session status: {session_id}")
-                
-                session_service = SessionService()
-                
-                # Get session data synchronously
-                session_data = async_to_sync(session_service.get_session)(session_id)
-                if not session_data:
-                    return Response({
-                        'success': False,
-                        'error': 'Session not found'
-                    }, status=status.HTTP_404_NOT_FOUND)
-                
-                # Get execution logs synchronously
-                logs = async_to_sync(session_service.get_session_logs)(session_id)
-                
-                response_data = {
-                    'success': True,
-                    'session': session_data,
-                    'execution_logs': logs,
-                    'summary': {
-                        'total_agents': len(set(log['agent_type'] for log in logs)),
-                        'successful_executions': len([log for log in logs if log['status'] == 'success']),
-                        'failed_executions': len([log for log in logs if log['status'] == 'failed']),
-                        'total_execution_time_ms': sum(log.get('execution_time_ms', 0) for log in logs)
-                    }
-                }
-                
-                return Response(response_data)
-                
-            except Exception as e:
-                logger.error(f"❌ Error retrieving session {session_id}: {str(e)}")
-                return Response({
-                    'success': False,
-                    'error': str(e)
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        return sync_handler()
+        try:
+            logger.info(f"📊 Session status request for: {session_id}")
+            return Response({
+                'success': False,
+                'error': 'Session retrieval temporarily disabled',
+                'session_id': session_id
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        except Exception as e:
+            logger.error(f"❌ Error: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class TransportModeAnalysisView(APIView):
     """
@@ -256,81 +194,34 @@ class TransportModeAnalysisView(APIView):
 
 class LangGraphHealthCheckView(APIView):
     """
-    Health check endpoint for LangGraph system with comprehensive checks
-    Rate Limited: 60 requests/minute
-    IMPORTANT: This is a synchronous endpoint (no async/await) for gunicorn compatibility
+    Health check endpoint - Minimal version for debugging
     """
     throttle_classes = [HealthCheckThrottle]
     
     def get(self, request):
-        """Check LangGraph system health - Synchronous implementation"""
-        
+        """Check system health"""
         try:
-            from datetime import timedelta
             from django.db import connection
             from django.utils import timezone
             
             health_status = {
                 'status': 'healthy',
                 'timestamp': timezone.now().isoformat(),
-                'version': '1.0.0',
-                'components': {}
             }
             
-            # Check database connectivity
+            # Check database
             try:
                 with connection.cursor() as cursor:
                     cursor.execute("SELECT 1")
-                health_status['components']['database'] = 'healthy'
-                
-                # Get session statistics
-                session_count = TravelPlanningSession.objects.count()
-                recent_sessions = TravelPlanningSession.objects.filter(
-                    created_at__gte=timezone.now() - timedelta(hours=24)
-                )
-                
-                completed_sessions = recent_sessions.filter(status='completed')
-                success_rate = (completed_sessions.count() / recent_sessions.count() * 100) if recent_sessions.count() > 0 else 100
-                
-                health_status['metrics'] = {
-                    'total_sessions': session_count,
-                    'recent_sessions_24h': recent_sessions.count(),
-                    'success_rate_24h': round(success_rate, 1)
-                }
-                
             except Exception as e:
-                health_status['components']['database'] = f'unhealthy: {str(e)}'
                 health_status['status'] = 'degraded'
+                health_status['db_error'] = str(e)
             
-            # Check agent services - Don't import inside try to avoid mask errors
-            try:
-                from .services import OrchestrationService
-                orchestration_service = OrchestrationService()
-                health_status['components']['orchestration_service'] = 'healthy'
-                health_status['components']['agents'] = {
-                    'coordinator': 'active',
-                    'flight_agent': 'active',
-                    'hotel_agent': 'active'
-                }
-            except Exception as e:
-                logger.error(f"❌ Orchestration service check failed: {str(e)}")
-                health_status['components']['orchestration_service'] = 'unhealthy'
-                health_status['status'] = 'degraded'
-            
-            # Overall status
-            if any('unhealthy' in str(v) for v in health_status['components'].values()):
-                health_status['status'] = 'unhealthy'
-            elif any('degraded' in str(v) for v in health_status['components'].values()):
-                health_status['status'] = 'degraded'
-            
-            response_status = status.HTTP_200_OK if health_status['status'] == 'healthy' else status.HTTP_503_SERVICE_UNAVAILABLE
-            
-            return Response(health_status, status=response_status)
+            return Response(health_status)
             
         except Exception as e:
-            logger.error(f"❌ Health check failed: {str(e)}")
+            logger.error(f"Health check error: {str(e)}")
             return Response({
-                'status': 'unhealthy',
-                'error': str(e),
-                'timestamp': timezone.now().isoformat()
-            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                'status': 'error',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
