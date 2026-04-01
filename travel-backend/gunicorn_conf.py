@@ -5,7 +5,7 @@ import multiprocessing
 port = os.environ.get("PORT", "8000")
 bind = f"0.0.0.0:{port}"
 
-print(f"🚀 Gunicorn booting on {bind}")
+print(f"[*] Gunicorn booting on {bind}")
 
 # Worker configuration
 # 1 worker for API-heavy agents to prevent Railway 512MB RAM limits (OOM kills)
