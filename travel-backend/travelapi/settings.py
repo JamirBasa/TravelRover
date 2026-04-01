@@ -31,7 +31,7 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 # Production: Allow Railway domain and custom domains
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
-    default='localhost,127.0.0.1,.railway.app,.vercel.app',
+    default='.railway.app,.vercel.app,travelrover-production.up.railway.app,localhost,127.0.0.1',
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
 
